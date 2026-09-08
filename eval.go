@@ -506,6 +506,11 @@ func simplifyFunc(name string, args []Node) (Node, error) {
 		if c, ok := arg.(*ConstNode); ok && c.Name == "e" {
 			return mustRational(1, 1), nil
 		}
+		if pow, ok := arg.(*PowNode); ok {
+			if c, ok := pow.Base.(*ConstNode); ok && c.Name == "e" {
+				return pow.Exp, nil // ln(e^x) = x
+			}
+		}
 		rat, ok := arg.(*RationalNode)
 		if !ok {
 			return NewFunc(name, args)
