@@ -2,9 +2,14 @@
 *
 !.gitignore
 # ---AUTO-Generated---
+# .gitignores/.github.gitignore
+!.github/
+!.github/workflows/
+!.github/workflows/*.yml
 # .gitignores/root.gitignore
 !README.md
 !LICENSE.*
 !go.mod
 !go.sum
 !*.go
+!install.*

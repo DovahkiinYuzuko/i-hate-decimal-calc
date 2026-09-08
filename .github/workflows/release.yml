@@ -1,0 +1,103 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            target: ihd-linux-amd64
+            archive: tar.gz
+          - goos: linux
+            goarch: arm64
+            target: ihd-linux-arm64
+            archive: tar.gz
+          - goos: darwin
+            goarch: amd64
+            target: ihd-darwin-amd64
+            archive: tar.gz
+          - goos: darwin
+            goarch: arm64
+            target: ihd-darwin-arm64
+            archive: tar.gz
+          - goos: windows
+            goarch: amd64
+            target: ihd-windows-amd64
+            archive: zip
+            suffix: .exe
+          - goos: windows
+            goarch: arm64
+            target: ihd-windows-arm64
+            archive: zip
+            suffix: .exe
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Build binary
+        env:
+          CGO_ENABLED: '0'
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          BIN_NAME="ihd${{ matrix.suffix }}"
+          go build -ldflags="-s -w" -o "${BIN_NAME}" .
+          mkdir -p dist
+          if [ "${{ matrix.archive }}" = "zip" ]; then
+            zip "dist/${{ matrix.target }}.zip" "${BIN_NAME}" LICENSE.MIT README.md
+          else
+            tar -czvf "dist/${{ matrix.target }}.tar.gz" "${BIN_NAME}" LICENSE.MIT README.md
+          fi
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: dist/*
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+
+      - name: Prepare assets and checksums
+        run: |
+          mkdir -p dist
+          find release-artifacts -type f \( -name "*.zip" -o -name "*.tar.gz" \) -exec mv {} dist/ \;
+          cd dist
+          sha256sum * > checksums.txt
+          cat checksums.txt
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.zip
+            dist/*.tar.gz
+            dist/checksums.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

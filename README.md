@@ -25,14 +25,26 @@
 - **多彩な実行形態**: コマンドライン引数によるワンショット実行、対話型REPL、および標準入力パイプに対応しています。
 - **表示モード切替**: 人間が読みやすいUnicode記号表示を標準としつつ、スクリプト連携用の `--ascii` フラグや、参考値としての `--approx`（小数近似値併記）フラグを備えています。
 
-### インストール・ビルド
+### インストール
+
+#### ワンライナーインストール（推奨）
+
+**Linux / macOS (bash / zsh):**
+```bash
+curl -fsSL https://raw.githubusercontent.com/DovahkiinYuzuko/i-hate-decimal-calc/main/install.sh | bash
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/DovahkiinYuzuko/i-hate-decimal-calc/main/install.ps1 | iex
+```
+
+#### ソースコードからのビルド
 Go 1.22 以上がインストールされている環境で、リポジトリのルートディレクトリにて以下を実行してください。
 
 ```bash
 go build -o ihd .
 ```
-
-Windows環境の場合は `ihd.exe` が生成されます。
 
 ### 使い方
 
@@ -128,14 +140,26 @@ All decimal inputs are converted immediately into exact rational fractions (`big
 - **Multiple Execution Modes**: Supports one-shot execution via CLI arguments, interactive REPL, and standard input piping.
 - **Configurable Output**: Defaults to Unicode mathematical symbols, with `--ascii` for integration scripts and `--approx` for displaying reference floating-point approximations.
 
-### Installation & Build
+### Installation
+
+#### One-line Installer (Recommended)
+
+**Linux / macOS (bash / zsh):**
+```bash
+curl -fsSL https://raw.githubusercontent.com/DovahkiinYuzuko/i-hate-decimal-calc/main/install.sh | bash
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/DovahkiinYuzuko/i-hate-decimal-calc/main/install.ps1 | iex
+```
+
+#### Building from Source
 Requires Go 1.22 or higher. Build directly from the root of the repository:
 
 ```bash
 go build -o ihd .
 ```
-
-On Windows, this produces `ihd.exe`.
 
 ### Usage
 
