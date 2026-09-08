@@ -1,0 +1,10 @@
+# project:i-hate-decimal-calc
+*
+!.gitignore
+# ---AUTO-Generated---
+# .gitignores/root.gitignore
+!README.md
+!LICENSE.*
+!go.mod
+!go.sum
+!*.go
