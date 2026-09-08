@@ -87,7 +87,8 @@ func formatNode(n Node, opts FormatOptions) string {
 	case *PowNode:
 		baseStr := formatNode(v.Base, opts)
 		expStr := formatNode(v.Exp, opts)
-		if _, isOp := v.Base.(*AddNode); isOp {
+		switch v.Base.(type) {
+		case *AddNode, *MulNode, *UnaryOpNode, *ComplexNode:
 			baseStr = fmt.Sprintf("(%s)", baseStr)
 		}
 		return fmt.Sprintf("%s^%s", baseStr, expStr)

@@ -230,3 +230,36 @@ func TestEval_DomainErrors(t *testing.T) {
 		}
 	}
 }
+
+// TestEval_AdvancedCasFixes validates edge cases reported in Issue 5.1.
+func TestEval_AdvancedCasFixes(t *testing.T) {
+	testCases := []struct {
+		input    string
+		expected string
+	}{
+		{"(1 + 2*i) * (1 - 2*i)", "5"},
+		{"sin(pi/6)^2 + cos(pi/6)^2", "1"},
+		{"i^2", "-1"},
+		{"i^3", "-i"},
+		{"i^4", "1"},
+		{"(1 + i)^2", "2*i"},
+		{"1 / i", "-i"},
+		{"sqrt(8) / sqrt(2)", "2"},
+		{"sqrt(2)^2", "2"},
+		{"(-sqrt(2))^2", "2"},
+		{"(2*sqrt(3))^2", "12"},
+		{"((1 + sqrt(5)) / 2) * ((1 - sqrt(5)) / 2)", "-1"},
+	}
+
+	for _, tc := range testCases {
+		res, err := EvalString(tc.input)
+		if err != nil {
+			t.Errorf("eval error for %q: %v", tc.input, err)
+			continue
+		}
+		formatted := Format(res)
+		if formatted != tc.expected {
+			t.Errorf("input %q: expected %q, got %q (raw node: %s)", tc.input, tc.expected, formatted, res.String())
+		}
+	}
+}

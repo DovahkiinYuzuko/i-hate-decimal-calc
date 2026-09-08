@@ -303,6 +303,101 @@ func simplifyPow(base, exp Node) (Node, error) {
 		return simplifySqrt(base)
 	}
 
+	// Sqrt^Integer
+	if s, ok := base.(*SqrtNode); ok && expIsRat && ratExp.Val.IsInt() {
+		expInt := ratExp.Val.Num().Int64()
+		if expInt == 2 {
+			return s.Radicand, nil
+		}
+		if expInt > 0 && expInt%2 == 0 {
+			return simplifyPow(s.Radicand, &RationalNode{Val: big.NewRat(expInt/2, 1)})
+		}
+		if expInt > 2 {
+			radPow, err := simplifyPow(s.Radicand, &RationalNode{Val: big.NewRat(expInt/2, 1)})
+			if err != nil {
+				return nil, err
+			}
+			return simplifyMul([]Node{radPow, s})
+		}
+	}
+
+	// Mul^Integer: (A * B * ...)^n = A^n * B^n * ...
+	if mul, ok := base.(*MulNode); ok && expIsRat && ratExp.Val.IsInt() {
+		var poweredFactors []Node
+		for _, f := range mul.Factors {
+			pf, err := simplifyPow(f, exp)
+			if err != nil {
+				return nil, err
+			}
+			poweredFactors = append(poweredFactors, pf)
+		}
+		return simplifyMul(poweredFactors)
+	}
+
+	// UnaryOp("-", A)^Integer: (-A)^n
+	if uop, ok := base.(*UnaryOpNode); ok && uop.Op == "-" && expIsRat && ratExp.Val.IsInt() {
+		expInt := ratExp.Val.Num().Int64()
+		innerPow, err := simplifyPow(uop.Expr, exp)
+		if err != nil {
+			return nil, err
+		}
+		if expInt%2 == 0 {
+			return innerPow, nil
+		}
+		return simplifyUnaryOp("-", innerPow)
+	}
+
+	// Complex^Integer
+	if c, ok := base.(*ComplexNode); ok && expIsRat && ratExp.Val.IsInt() {
+		expInt := ratExp.Val.Num().Int64()
+		if expInt == -1 {
+			// 1 / (a + bi) = (a - bi) / (a^2 + b^2)
+			a2, err := simplifyPow(c.Real, mustRational(2, 1))
+			if err != nil {
+				return nil, err
+			}
+			b2, err := simplifyPow(c.Imag, mustRational(2, 1))
+			if err != nil {
+				return nil, err
+			}
+			denom, err := simplifyAdd([]Node{a2, b2})
+			if err != nil {
+				return nil, err
+			}
+			if isZero(denom) {
+				return nil, fmt.Errorf("division by zero: 1/(0+0i)")
+			}
+			negImag, err := simplifyUnaryOp("-", c.Imag)
+			if err != nil {
+				return nil, err
+			}
+			conj := NewComplex(c.Real, negImag)
+			invDenom, err := simplifyPow(denom, mustRational(-1, 1))
+			if err != nil {
+				return nil, err
+			}
+			return simplifyMul([]Node{conj, invDenom})
+		}
+		if expInt < -1 {
+			inv, err := simplifyPow(c, mustRational(-1, 1))
+			if err != nil {
+				return nil, err
+			}
+			return simplifyPow(inv, mustRational(-expInt, 1))
+		}
+		if expInt > 1 {
+			res := Node(c)
+			for i := int64(1); i < expInt; i++ {
+				var err error
+				res, err = simplifyMul([]Node{res, c})
+				if err != nil {
+					return nil, err
+				}
+			}
+			return res, nil
+		}
+	}
+
 	return NewPow(base, exp)
 }
 
@@ -653,7 +748,8 @@ func simplifyMul(factors []Node) (Node, error) {
 				// Multiply currentComplex by cf
 				ac, _ := simplifyMul([]Node{currentComplex.Real, cf.Real})
 				bd, _ := simplifyMul([]Node{currentComplex.Imag, cf.Imag})
-				realPart, _ := simplifyAdd([]Node{ac, &UnaryOpNode{Op: "-", Expr: bd}})
+				negBd, _ := simplifyUnaryOp("-", bd)
+				realPart, _ := simplifyAdd([]Node{ac, negBd})
 
 				ad, _ := simplifyMul([]Node{currentComplex.Real, cf.Imag})
 				bc, _ := simplifyMul([]Node{currentComplex.Imag, cf.Real})
@@ -703,6 +799,7 @@ func simplifyMul(factors []Node) (Node, error) {
 	// Check for monomial rationalization: e.g. Pow(sqrt(d), -1)
 	// coeff * otherFactors * Pow(sqrt(d), -1) -> (coeff / d) * otherFactors * sqrt(d)
 	var finalFactors []Node
+	didRationalize := false
 	for _, f := range otherFactors {
 		if pow, ok := f.(*PowNode); ok {
 			if rExp, ok := pow.Exp.(*RationalNode); ok && rExp.Val.Cmp(big.NewRat(-1, 1)) == 0 {
@@ -712,6 +809,7 @@ func simplifyMul(factors []Node) (Node, error) {
 						d := rRad.Val.Num()
 						coeff.Quo(coeff, new(big.Rat).SetInt(d))
 						finalFactors = append(finalFactors, s)
+						didRationalize = true
 						continue
 					}
 				}
@@ -732,6 +830,7 @@ func simplifyMul(factors []Node) (Node, error) {
 							cd := new(big.Rat).Mul(cRat, new(big.Rat).SetInt(d))
 							coeff.Quo(coeff, cd)
 							finalFactors = append(finalFactors, sNode)
+							didRationalize = true
 							continue
 						}
 					}
@@ -739,6 +838,11 @@ func simplifyMul(factors []Node) (Node, error) {
 			}
 		}
 		finalFactors = append(finalFactors, f)
+	}
+
+	if didRationalize {
+		all := append([]Node{&RationalNode{Val: coeff}}, finalFactors...)
+		return simplifyMul(all)
 	}
 
 	if coeff.Sign() == 0 {

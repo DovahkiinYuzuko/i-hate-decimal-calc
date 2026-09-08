@@ -15,6 +15,18 @@ func main() {
 }
 
 func run(args []string, in io.Reader, out io.Writer, errOut io.Writer) int {
+	var flagArgs []string
+	var exprArgs []string
+
+	for _, a := range args {
+		switch a {
+		case "-ascii", "--ascii", "-approx", "--approx", "-h", "--help":
+			flagArgs = append(flagArgs, a)
+		default:
+			exprArgs = append(exprArgs, a)
+		}
+	}
+
 	fs := flag.NewFlagSet("ihd", flag.ContinueOnError)
 	fs.SetOutput(errOut)
 
@@ -23,7 +35,7 @@ func run(args []string, in io.Reader, out io.Writer, errOut io.Writer) int {
 	helpFlag := fs.Bool("help", false, "Show help")
 	fs.BoolVar(helpFlag, "h", false, "Show help")
 
-	if err := fs.Parse(args); err != nil {
+	if err := fs.Parse(flagArgs); err != nil {
 		return 1
 	}
 
@@ -35,10 +47,9 @@ func run(args []string, in io.Reader, out io.Writer, errOut io.Writer) int {
 	opts := FormatOptions{AsciiOnly: *asciiFlag}
 	showApprox := *approxFlag
 
-	nonFlagArgs := fs.Args()
-	if len(nonFlagArgs) > 0 {
+	if len(exprArgs) > 0 {
 		// One-shot mode: join all non-flag arguments as the expression
-		expr := strings.Join(nonFlagArgs, " ")
+		expr := strings.Join(exprArgs, " ")
 		if err := evaluateLine(expr, opts, showApprox, out, errOut); err != nil {
 			return 1
 		}
