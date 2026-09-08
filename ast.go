@@ -307,6 +307,17 @@ func NewMul(factors []Node) *MulNode {
 func (n *MulNode) Type() NodeType { return NodeMul }
 
 func (n *MulNode) String() string {
+	if len(n.Factors) == 2 {
+		if r, ok := n.Factors[0].(*RationalNode); ok && !r.Val.IsInt() {
+			if r.Val.Num().Cmp(big.NewInt(1)) == 0 {
+				// 1/d * X -> X/d
+				return fmt.Sprintf("%s/%s", n.Factors[1].String(), r.Val.Denom().String())
+			} else if r.Val.Num().Cmp(big.NewInt(-1)) == 0 {
+				// -1/d * X -> -X/d
+				return fmt.Sprintf("-%s/%s", n.Factors[1].String(), r.Val.Denom().String())
+			}
+		}
+	}
 	strs := make([]string, len(n.Factors))
 	for i, f := range n.Factors {
 		strs[i] = f.String()
