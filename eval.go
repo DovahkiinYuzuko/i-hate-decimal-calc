@@ -784,6 +784,8 @@ func simplifyAdd(terms []Node) (Node, error) {
 
 	// 2. Separate into Coeff × Base
 	ratSum := big.NewRat(0, 1)
+	imagSum := big.NewRat(0, 1)
+	hasComplex := false
 	termMap := make(map[string]*termEntry)
 	var termOrder []string
 
@@ -791,6 +793,31 @@ func simplifyAdd(terms []Node) (Node, error) {
 		switch v := t.(type) {
 		case *RationalNode:
 			ratSum.Add(ratSum, v.Val)
+
+		case *ComplexNode:
+			hasComplex = true
+			if rRat, ok := v.Real.(*RationalNode); ok {
+				ratSum.Add(ratSum, rRat.Val)
+			} else if !isZero(v.Real) {
+				baseKey := v.Real.String()
+				if entry, exists := termMap[baseKey]; exists {
+					entry.coeff.Add(entry.coeff, big.NewRat(1, 1))
+				} else {
+					termMap[baseKey] = &termEntry{coeff: big.NewRat(1, 1), base: baseKey, node: v.Real}
+					termOrder = append(termOrder, baseKey)
+				}
+			}
+			if iRat, ok := v.Imag.(*RationalNode); ok {
+				imagSum.Add(imagSum, iRat.Val)
+			} else if !isZero(v.Imag) {
+				baseKey := fmt.Sprintf("(%s)*i", v.Imag.String())
+				if entry, exists := termMap[baseKey]; exists {
+					entry.coeff.Add(entry.coeff, big.NewRat(1, 1))
+				} else {
+					termMap[baseKey] = &termEntry{coeff: big.NewRat(1, 1), base: baseKey, node: v}
+					termOrder = append(termOrder, baseKey)
+				}
+			}
 
 		case *SqrtNode:
 			baseKey := v.String()
@@ -859,6 +886,18 @@ func simplifyAdd(terms []Node) (Node, error) {
 		} else {
 			resultTerms = append(resultTerms, NewMul([]Node{&RationalNode{Val: entry.coeff}, entry.node}))
 		}
+	}
+
+	if hasComplex && imagSum.Sign() != 0 {
+		var realPart Node
+		if len(resultTerms) == 0 {
+			realPart = mustRational(0, 1)
+		} else if len(resultTerms) == 1 {
+			realPart = resultTerms[0]
+		} else {
+			realPart = NewAdd(resultTerms)
+		}
+		return NewComplex(realPart, &RationalNode{Val: imagSum}), nil
 	}
 
 	if len(resultTerms) == 0 {
