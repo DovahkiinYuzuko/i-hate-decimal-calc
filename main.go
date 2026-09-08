@@ -62,6 +62,10 @@ func run(args []string, in io.Reader, out io.Writer, errOut io.Writer) int {
 			hadError = true
 		}
 	}
+	if err := scanner.Err(); err != nil {
+		fmt.Fprintf(errOut, "%s%v\n", MsgErrorPrefix, err)
+		return 1
+	}
 	if hadError {
 		return 1
 	}
@@ -118,6 +122,10 @@ func runREPL(in io.Reader, out, errOut io.Writer, opts FormatOptions, showApprox
 		}
 
 		_ = evaluateLine(line, opts, showApprox, out, errOut)
+	}
+	if err := scanner.Err(); err != nil {
+		fmt.Fprintf(errOut, "%s%v\n", MsgErrorPrefix, err)
+		return 1
 	}
 	return 0
 }

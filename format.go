@@ -71,17 +71,17 @@ func formatNode(n Node, opts FormatOptions) string {
 			return formatNode(v.Real, opts)
 		}
 		if realIsZero {
-			return formatImagPart(v.Imag, opts, false)
+			return formatImagPart(v.Imag, opts)
 		}
 
 		// Both non-zero: Real +/- Imag*i
 		realStr := formatNode(v.Real, opts)
 		if isNegative(v.Imag) {
 			posImag, _ := simplifyUnaryOp("-", v.Imag)
-			imagStr := formatImagPart(posImag, opts, false)
+			imagStr := formatImagPart(posImag, opts)
 			return fmt.Sprintf("%s - %s", realStr, imagStr)
 		}
-		imagStr := formatImagPart(v.Imag, opts, false)
+		imagStr := formatImagPart(v.Imag, opts)
 		return fmt.Sprintf("%s + %s", realStr, imagStr)
 
 	case *PowNode:
@@ -119,7 +119,7 @@ func formatNode(n Node, opts FormatOptions) string {
 	}
 }
 
-func formatImagPart(imag Node, opts FormatOptions, isMinus bool) string {
+func formatImagPart(imag Node, opts FormatOptions) string {
 	one := big.NewRat(1, 1)
 	negOne := big.NewRat(-1, 1)
 
