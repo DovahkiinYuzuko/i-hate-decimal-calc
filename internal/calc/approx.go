@@ -102,6 +102,17 @@ func evalComplex(n Node) (complex128, error) {
 			case "log":
 				// Single arg log(x) is log10(x)
 				return cmplx.Log10(arg), nil
+			case "abs":
+				return complex(cmplx.Abs(arg), 0), nil
+			case "cbrt":
+				if math.Abs(imag(arg)) < 1e-14 {
+					r := real(arg)
+					if r >= 0 {
+						return complex(math.Cbrt(r), 0), nil
+					}
+					return complex(-math.Cbrt(-r), 0), nil
+				}
+				return cmplx.Pow(arg, complex(1.0/3.0, 0)), nil
 			default:
 				return 0, fmt.Errorf("unknown function: %s", v.Name)
 			}

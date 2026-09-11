@@ -92,7 +92,7 @@ func Parse(input string) (Node, error) {
 
 func isReservedFunc(name string) bool {
 	switch name {
-	case "sqrt", "sin", "cos", "tan", "log", "ln":
+	case "sqrt", "sin", "cos", "tan", "log", "ln", "abs", "cbrt", "gcd", "lcm", "mod", "perm", "comb", "rand":
 		return true
 	default:
 		return false

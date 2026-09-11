@@ -181,6 +181,24 @@ func NewFunc(name string, args []Node) (*FuncNode, error) {
 		}
 		return &FuncNode{Name: name, Args: args}, nil
 
+	case "abs", "cbrt":
+		if len(args) != 1 {
+			return nil, fmt.Errorf("%s requires exactly 1 argument, got %d", name, len(args))
+		}
+		return &FuncNode{Name: name, Args: args}, nil
+
+	case "gcd", "lcm", "mod", "perm", "comb":
+		if len(args) != 2 {
+			return nil, fmt.Errorf("%s requires exactly 2 arguments, got %d", name, len(args))
+		}
+		return &FuncNode{Name: name, Args: args}, nil
+
+	case "rand":
+		if len(args) < 1 || len(args) > 3 {
+			return nil, fmt.Errorf("rand requires 1, 2, or 3 arguments, got %d", len(args))
+		}
+		return &FuncNode{Name: name, Args: args}, nil
+
 	default:
 		return nil, fmt.Errorf("unknown function: %s", name)
 	}

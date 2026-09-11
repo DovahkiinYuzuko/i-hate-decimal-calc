@@ -78,6 +78,19 @@ func TestIntegration_SpecificationExamples(t *testing.T) {
 		{"-3^2", "-9"},
 		{"(-3)^2", "9"},
 		{"(-sqrt(2))^2", "2"},
+
+		// 11. Scientific calculator basic pack (issue-14)
+		{"abs(-42)", "42"},
+		{"abs(3 + 4*i)", "5"},
+		{"abs(-sqrt(2))", "√2"},
+		{"cbrt(8)", "2"},
+		{"cbrt(-27)", "-3"},
+		{"cbrt(16)", "2*³√2"},
+		{"gcd(48, 18)", "6"},
+		{"lcm(4, 6)", "12"},
+		{"mod(23, 5)", "3"},
+		{"perm(6, 2)", "30"},
+		{"comb(6, 2)", "15"},
 	}
 
 	for _, tc := range testCases {

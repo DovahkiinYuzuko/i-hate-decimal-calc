@@ -24,6 +24,7 @@
   - 複素数への自動昇格と代数計算（例: `sqrt(-4)` → `2*i`, `(1+2*i)*(1-2*i)` → `5`）
   - 同類項の集約と分配法則による展開（例: `2*x + 3*x` → `5*x`）
   - 変数シンボル定義・代入（`x = 式`）および直前結果参照（`ans`）
+  - 関数電卓基本機能（絶対値 `abs`、3乗根 `cbrt`、最大公約数・最小公倍数 `gcd`/`lcm`、剰余 `mod`、順列・組合せ `perm`/`comb`、整数乱数 `rand`）
 - **厳格な構文解析**: 乗算記号の省略（例: `2pi` や `(1+2)(3+4)`）を禁止し、誤認識による計算ミスを防ぎます。
 - **多彩な実行形態と全角自動正規化**: コマンドライン引数によるワンショット実行、上下キー履歴呼び出しに対応したリッチ対話型REPL、および標準入力パイプに対応しています。また、日本語IMEが有効なまま入力された全角数字・英字・演算子（`＋`, `−`, `×`, `÷`, `＾`, `！`）・括弧・等号・空白を自動的に半角ASCIIへと透過正規化するため、すべての実行形態でストレスなく計算できます。
 - **表示モード切替**: 人間が読みやすいUnicode記号表示を標準としつつ、スクリプト連携用の `--ascii` フラグや、参考値としての `--approx`（小数近似値併記）フラグを備えています。
@@ -60,6 +61,15 @@ ihd "1/2 + 1/3"
 
 ihd "sqrt(2) + sqrt(8)"
 # 出力: 3*√2
+
+ihd "cbrt(16)"
+# 出力: 2*³√2
+
+ihd "abs(3 + 4*i)"
+# 出力: 5
+
+ihd "comb(10, 3)"
+# 出力: 120
 
 ihd "１＋２×３"
 # 出力: 7 （全角文字も自動正規化）
@@ -143,10 +153,16 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
 
 #### 関数
 - `sqrt(x)` または `√(x)`: 平方根（中身が負の場合は複素数へ自動昇格）
+- `cbrt(x)`: 3乗根（立方因子のくくり出し、実数負数の符号抽出）
+- `abs(x)`: 絶対値（実数は符号除去、複素数は $|a+bi| = \sqrt{a^2+b^2}$）
 - `sin(x)`, `cos(x)`, `tan(x)`: 三角関数（$\pi$ の有理数倍による特殊角を代数的に簡約）
 - `log(x)`: 常用対数（底10）
 - `log(base, x)`: 任意の底を指定する対数
 - `ln(x)`: 自然対数（底 $e$）
+- `gcd(a, b)`, `lcm(a, b)`: 最大公約数・最小公倍数（整数）
+- `mod(a, b)`: 整数剰余
+- `perm(n, r)`, `comb(n, r)`: 順列 $nPr$、組合せ $nCr$（非負整数）
+- `rand(max)`, `rand(min, max)`, `rand(seed, min, max)`: 整数擬似乱数（PCGアルゴリズム、シード指定による再現性担保）
 
 ### LICENSE
 [MIT](./LICENSE.MIT)
@@ -170,6 +186,7 @@ All decimal inputs are converted immediately into exact rational fractions (`big
   - Promotion to complex numbers and algebraic operations (e.g., `sqrt(-4)` → `2*i`, `(1+2*i)*(1-2*i)` → `5`)
   - Like-term aggregation and distributive expansion (e.g., `2*x + 3*x` → `5*x`)
   - Variable symbol assignment (`x = expr`) and previous result reference (`ans`)
+  - Scientific calculator functions: Absolute value `abs`, cube roots `cbrt`, number theory `gcd`/`lcm`, integer modulo `mod`, permutations/combinations `perm`/`comb`, and integer random generation `rand`
 - **Strict Parsing Rules**: Prohibits implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) to eliminate parse ambiguities.
 - **Multiple Execution Modes & Full-width Normalization**: Supports one-shot execution via CLI arguments, a rich interactive REPL with history browsing, and standard input piping. Automatically normalizes full-width (Zenkaku) characters (digits, letters, operators like `＋`, `−`, `×`, `÷`, `＾`, `！`, parentheses, equals, and spaces) to half-width ASCII across all input modes for seamless typing under Japanese IMEs.
 - **Configurable Output**: Defaults to Unicode mathematical symbols, with `--ascii` for integration scripts and `--approx` for displaying reference floating-point approximations.
@@ -206,6 +223,15 @@ ihd "1/2 + 1/3"
 
 ihd "sqrt(2) + sqrt(8)"
 # Output: 3*√2
+
+ihd "cbrt(16)"
+# Output: 2*³√2
+
+ihd "abs(3 + 4*i)"
+# Output: 5
+
+ihd "comb(10, 3)"
+# Output: 120
 
 ihd "１＋２×３"
 # Output: 7 (Full-width characters automatically normalized)
@@ -289,10 +315,16 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
 
 #### Functions
 - `sqrt(x)` or `√(x)`: Square root (promotes to complex numbers if radicand is negative)
+- `cbrt(x)`: Cube root (cube-free factorization and real sign extraction)
+- `abs(x)`: Absolute value (real magnitude or complex modulus $|a+bi| = \sqrt{a^2+b^2}$)
 - `sin(x)`, `cos(x)`, `tan(x)`: Trigonometric functions (exact values for rational multiples of $\pi$)
 - `log(x)`: Common logarithm (base 10)
 - `log(base, x)`: Logarithm with an arbitrary base
 - `ln(x)`: Natural logarithm (base $e$)
+- `gcd(a, b)`, `lcm(a, b)`: Greatest common divisor and least common multiple (integers)
+- `mod(a, b)`: Integer modulo
+- `perm(n, r)`, `comb(n, r)`: Permutations $nPr$ and combinations $nCr$ (non-negative integers)
+- `rand(max)`, `rand(min, max)`, `rand(seed, min, max)`: Integer pseudo-random generator via PCG algorithm (deterministic with seed)
 
 ### LICENSE
 [MIT](./LICENSE.MIT)

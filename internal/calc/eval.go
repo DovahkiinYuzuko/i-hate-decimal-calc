@@ -3,6 +3,7 @@ package calc
 import (
 	"fmt"
 	"math/big"
+	"math/rand/v2"
 	"sort"
 	"strings"
 )
@@ -358,6 +359,109 @@ func extractSquareFree(n *big.Int) (*big.Int, *big.Int) {
 		} else {
 			d.Add(d, two)
 			d2.Mul(d, d)
+		}
+	}
+
+	return out, val
+}
+
+// intCbrt calculates floor(n^(1/3)) for a non-negative big.Int using binary search.
+func intCbrt(n *big.Int) *big.Int {
+	if n.Sign() == 0 {
+		return big.NewInt(0)
+	}
+	one := big.NewInt(1)
+	if n.Cmp(one) <= 0 {
+		return big.NewInt(1)
+	}
+
+	bitLen := n.BitLen()
+	highBit := (bitLen + 2) / 3
+	high := new(big.Int).Lsh(one, uint(highBit))
+	low := big.NewInt(1)
+
+	res := big.NewInt(1)
+	mid := new(big.Int)
+	midCube := new(big.Int)
+
+	for low.Cmp(high) <= 0 {
+		mid.Add(low, high)
+		mid.Rsh(mid, 1)
+
+		midCube.Mul(mid, mid)
+		midCube.Mul(midCube, mid)
+
+		cmp := midCube.Cmp(n)
+		if cmp == 0 {
+			return mid
+		} else if cmp < 0 {
+			res.Set(mid)
+			low.Add(mid, one)
+		} else {
+			high.Sub(mid, one)
+		}
+	}
+	return res
+}
+
+// isRatPerfectCube checks if rational r is a perfect cube: r = (a/b)^3
+func isRatPerfectCube(r *big.Rat) (*big.Rat, bool) {
+	if r.Sign() == 0 {
+		return big.NewRat(0, 1), true
+	}
+	num := r.Num()
+	denom := r.Denom()
+
+	rootNum := intCbrt(num)
+	rootDenom := intCbrt(denom)
+
+	testNum := new(big.Int).Mul(rootNum, rootNum)
+	testNum.Mul(testNum, rootNum)
+
+	testDenom := new(big.Int).Mul(rootDenom, rootDenom)
+	testDenom.Mul(testDenom, rootDenom)
+
+	if testNum.Cmp(num) == 0 && testDenom.Cmp(denom) == 0 {
+		res := new(big.Rat).SetFrac(rootNum, rootDenom)
+		return res, true
+	}
+	return nil, false
+}
+
+// extractCubeFree extracts perfect cube factors: n = out^3 * rem
+func extractCubeFree(n *big.Int) (*big.Int, *big.Int) {
+	val := new(big.Int).Set(n)
+	out := big.NewInt(1)
+
+	two := big.NewInt(2)
+	eight := big.NewInt(8)
+	rem := new(big.Int)
+
+	// Factor out 2^3
+	for {
+		rem.Mod(val, eight)
+		if rem.Sign() == 0 {
+			out.Mul(out, two)
+			val.Div(val, eight)
+		} else {
+			break
+		}
+	}
+
+	// Factor out odd cubes: 3, 5, 7, 9...
+	d := big.NewInt(3)
+	d3 := new(big.Int).Mul(d, d)
+	d3.Mul(d3, d)
+
+	for d3.Cmp(val) <= 0 {
+		rem.Mod(val, d3)
+		if rem.Sign() == 0 {
+			out.Mul(out, d)
+			val.Div(val, d3)
+		} else {
+			d.Add(d, two)
+			d3.Mul(d, d)
+			d3.Mul(d3, d)
 		}
 	}
 
@@ -776,6 +880,226 @@ func simplifyFunc(name string, args []Node) (Node, error) {
 		}
 		if rat.Val.Cmp(big.NewRat(1, 1)) == 0 {
 			return mustRational(0, 1), nil
+		}
+		return NewFunc(name, args)
+
+	case "abs":
+		arg := args[0]
+		switch v := arg.(type) {
+		case *RationalNode:
+			newRat := new(big.Rat).Abs(v.Val)
+			return NewRationalFromBigRat(newRat), nil
+		case *ComplexNode:
+			// |a + bi| = sqrt(a^2 + b^2)
+			aSq := &PowNode{Base: v.Real, Exp: mustRational(2, 1)}
+			bSq := &PowNode{Base: v.Imag, Exp: mustRational(2, 1)}
+			sumNode := NewAdd([]Node{aSq, bSq})
+			evaledSum, err := Eval(sumNode)
+			if err != nil {
+				return nil, err
+			}
+			return simplifySqrt(evaledSum)
+		case *UnaryOpNode:
+			if v.Op == "-" {
+				return simplifyFunc("abs", []Node{v.Expr})
+			}
+		case *SqrtNode:
+			return v, nil
+		case *MulNode:
+			if len(v.Factors) > 0 {
+				if r, ok := v.Factors[0].(*RationalNode); ok && r.Val.Sign() < 0 {
+					posR := NewRationalFromBigRat(new(big.Rat).Abs(r.Val))
+					newFactors := make([]Node, len(v.Factors))
+					copy(newFactors, v.Factors)
+					newFactors[0] = posR
+					return simplifyMul(newFactors)
+				}
+			}
+		}
+		if isNegative(arg) {
+			neg, err := simplifyUnaryOp("-", arg)
+			if err == nil {
+				return simplifyFunc("abs", []Node{neg})
+			}
+		}
+		return NewFunc(name, args)
+
+	case "cbrt":
+		arg := args[0]
+		if u, ok := arg.(*UnaryOpNode); ok && u.Op == "-" {
+			sub, err := simplifyFunc("cbrt", []Node{u.Expr})
+			if err != nil {
+				return nil, err
+			}
+			return simplifyUnaryOp("-", sub)
+		}
+		if rat, ok := arg.(*RationalNode); ok {
+			if rat.Val.Sign() < 0 {
+				posRat := new(big.Rat).Abs(rat.Val)
+				sub, err := simplifyFunc("cbrt", []Node{NewRationalFromBigRat(posRat)})
+				if err != nil {
+					return nil, err
+				}
+				return simplifyUnaryOp("-", sub)
+			}
+			if rat.Val.Sign() == 0 {
+				return mustRational(0, 1), nil
+			}
+			if root, ok := isRatPerfectCube(rat.Val); ok {
+				return NewRationalFromBigRat(root), nil
+			}
+			numOut, numRem := extractCubeFree(rat.Val.Num())
+			denomOut, denomRem := extractCubeFree(rat.Val.Denom())
+			one := big.NewInt(1)
+			if numOut.Cmp(one) > 0 || denomOut.Cmp(one) > 0 {
+				coeff := new(big.Rat).SetFrac(numOut, denomOut)
+				rem := new(big.Rat).SetFrac(numRem, denomRem)
+				cbrtRem, _ := NewFunc("cbrt", []Node{NewRationalFromBigRat(rem)})
+				return simplifyMul([]Node{NewRationalFromBigRat(coeff), cbrtRem})
+			}
+		}
+		return NewFunc(name, args)
+
+	case "gcd":
+		aRat, aOk := args[0].(*RationalNode)
+		bRat, bOk := args[1].(*RationalNode)
+		if aOk && bOk {
+			if !aRat.Val.IsInt() || !bRat.Val.IsInt() {
+				return nil, fmt.Errorf("gcd domain error: arguments must be integers, got %s and %s", aRat.String(), bRat.String())
+			}
+			g := new(big.Int).GCD(nil, nil, aRat.Val.Num(), bRat.Val.Num())
+			return NewRationalFromBigRat(new(big.Rat).SetInt(g)), nil
+		}
+		return NewFunc(name, args)
+
+	case "lcm":
+		aRat, aOk := args[0].(*RationalNode)
+		bRat, bOk := args[1].(*RationalNode)
+		if aOk && bOk {
+			if !aRat.Val.IsInt() || !bRat.Val.IsInt() {
+				return nil, fmt.Errorf("lcm domain error: arguments must be integers, got %s and %s", aRat.String(), bRat.String())
+			}
+			if aRat.Val.Sign() == 0 || bRat.Val.Sign() == 0 {
+				return mustRational(0, 1), nil
+			}
+			aInt := aRat.Val.Num()
+			bInt := bRat.Val.Num()
+			g := new(big.Int).GCD(nil, nil, aInt, bInt)
+			div := new(big.Int).Div(aInt, g)
+			l := new(big.Int).Mul(div, bInt)
+			l.Abs(l)
+			return NewRationalFromBigRat(new(big.Rat).SetInt(l)), nil
+		}
+		return NewFunc(name, args)
+
+	case "mod":
+		aRat, aOk := args[0].(*RationalNode)
+		bRat, bOk := args[1].(*RationalNode)
+		if aOk && bOk {
+			if !aRat.Val.IsInt() || !bRat.Val.IsInt() {
+				return nil, fmt.Errorf("mod domain error: arguments must be integers, got %s and %s", aRat.String(), bRat.String())
+			}
+			if bRat.Val.Sign() == 0 {
+				return nil, fmt.Errorf("division by zero in mod")
+			}
+			m := new(big.Int).Mod(aRat.Val.Num(), bRat.Val.Num())
+			return NewRationalFromBigRat(new(big.Rat).SetInt(m)), nil
+		}
+		return NewFunc(name, args)
+
+	case "perm":
+		nRat, nOk := args[0].(*RationalNode)
+		rRat, rOk := args[1].(*RationalNode)
+		if nOk && rOk {
+			if !nRat.Val.IsInt() || !rRat.Val.IsInt() {
+				return nil, fmt.Errorf("perm domain error: arguments must be integers, got %s and %s", nRat.String(), rRat.String())
+			}
+			if nRat.Val.Sign() < 0 || rRat.Val.Sign() < 0 {
+				return nil, fmt.Errorf("perm domain error: arguments must be non-negative, got %s and %s", nRat.String(), rRat.String())
+			}
+			nVal := nRat.Val.Num()
+			rVal := rRat.Val.Num()
+			if rVal.Cmp(nVal) > 0 {
+				return mustRational(0, 1), nil
+			}
+			res := big.NewInt(1)
+			curr := new(big.Int).Set(nVal)
+			count := rVal.Int64()
+			one := big.NewInt(1)
+			for i := int64(0); i < count; i++ {
+				res.Mul(res, curr)
+				curr.Sub(curr, one)
+			}
+			return NewRationalFromBigRat(new(big.Rat).SetInt(res)), nil
+		}
+		return NewFunc(name, args)
+
+	case "comb":
+		nRat, nOk := args[0].(*RationalNode)
+		rRat, rOk := args[1].(*RationalNode)
+		if nOk && rOk {
+			if !nRat.Val.IsInt() || !rRat.Val.IsInt() {
+				return nil, fmt.Errorf("comb domain error: arguments must be integers, got %s and %s", nRat.String(), rRat.String())
+			}
+			if nRat.Val.Sign() < 0 || rRat.Val.Sign() < 0 {
+				return nil, fmt.Errorf("comb domain error: arguments must be non-negative, got %s and %s", nRat.String(), rRat.String())
+			}
+			nVal := nRat.Val.Num()
+			rVal := rRat.Val.Num()
+			if rVal.Cmp(nVal) > 0 {
+				return mustRational(0, 1), nil
+			}
+			res := new(big.Int).Binomial(nVal.Int64(), rVal.Int64())
+			return NewRationalFromBigRat(new(big.Rat).SetInt(res)), nil
+		}
+		return NewFunc(name, args)
+
+	case "rand":
+		if len(args) == 1 {
+			maxRat, ok := args[0].(*RationalNode)
+			if !ok || !maxRat.Val.IsInt() {
+				return nil, fmt.Errorf("rand domain error: max must be an integer, got %s", args[0].String())
+			}
+			maxVal := maxRat.Val.Num().Int64()
+			if maxVal < 0 {
+				return nil, fmt.Errorf("rand domain error: max must be non-negative, got %d", maxVal)
+			}
+			if maxVal == 0 {
+				return mustRational(0, 1), nil
+			}
+			val := rand.Int64N(maxVal + 1)
+			return mustRational(val, 1), nil
+		} else if len(args) == 2 {
+			minRat, minOk := args[0].(*RationalNode)
+			maxRat, maxOk := args[1].(*RationalNode)
+			if !minOk || !maxOk || !minRat.Val.IsInt() || !maxRat.Val.IsInt() {
+				return nil, fmt.Errorf("rand domain error: min and max must be integers, got %s and %s", args[0].String(), args[1].String())
+			}
+			minVal := minRat.Val.Num().Int64()
+			maxVal := maxRat.Val.Num().Int64()
+			if minVal > maxVal {
+				return nil, fmt.Errorf("rand domain error: min cannot be greater than max, got %d > %d", minVal, maxVal)
+			}
+			delta := maxVal - minVal + 1
+			val := minVal + rand.Int64N(delta)
+			return mustRational(val, 1), nil
+		} else if len(args) == 3 {
+			seedRat, sOk := args[0].(*RationalNode)
+			minRat, minOk := args[1].(*RationalNode)
+			maxRat, maxOk := args[2].(*RationalNode)
+			if !sOk || !minOk || !maxOk || !seedRat.Val.IsInt() || !minRat.Val.IsInt() || !maxRat.Val.IsInt() {
+				return nil, fmt.Errorf("rand domain error: seed, min, and max must be integers")
+			}
+			seedVal := seedRat.Val.Num().Int64()
+			minVal := minRat.Val.Num().Int64()
+			maxVal := maxRat.Val.Num().Int64()
+			if minVal > maxVal {
+				return nil, fmt.Errorf("rand domain error: min cannot be greater than max, got %d > %d", minVal, maxVal)
+			}
+			delta := maxVal - minVal + 1
+			rng := rand.New(rand.NewPCG(uint64(seedVal), 1))
+			val := minVal + rng.Int64N(delta)
+			return mustRational(val, 1), nil
 		}
 		return NewFunc(name, args)
 

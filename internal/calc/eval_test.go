@@ -394,5 +394,175 @@ func TestEval_ZenkakuExpressions(t *testing.T) {
 	}
 }
 
+// TestEval_Abs tests absolute value calculation for reals and complex numbers.
+func TestEval_Abs(t *testing.T) {
+	testCases := []struct {
+		input    string
+		expected string
+	}{
+		{"abs(-5)", "5"},
+		{"abs(5)", "5"},
+		{"abs(0)", "0"},
+		{"abs(-3/4)", "3/4"},
+		{"abs(3 + 4*i)", "5"},
+		{"abs(1 + i)", "√2"},
+		{"abs(-sqrt(2))", "√2"},
+	}
+
+	for _, tc := range testCases {
+		res, err := EvalString(tc.input)
+		if err != nil {
+			t.Errorf("eval error for %q: %v", tc.input, err)
+			continue
+		}
+		formatted := Format(res)
+		if formatted != tc.expected {
+			t.Errorf("input %q: expected %q, got %q", tc.input, tc.expected, formatted)
+		}
+	}
+}
+
+// TestEval_Cbrt tests cube root evaluation, cube-free factorization, and negative extraction.
+func TestEval_Cbrt(t *testing.T) {
+	testCases := []struct {
+		input       string
+		expected    string
+		asciiExpect string
+	}{
+		{"cbrt(0)", "0", "0"},
+		{"cbrt(8)", "2", "2"},
+		{"cbrt(-8)", "-2", "-2"},
+		{"cbrt(27/8)", "3/2", "3/2"},
+		{"cbrt(16)", "2*³√2", "2*cbrt(2)"},
+		{"cbrt(-54)", "-3*³√2", "-3*cbrt(2)"},
+	}
+
+	for _, tc := range testCases {
+		res, err := EvalString(tc.input)
+		if err != nil {
+			t.Errorf("eval error for %q: %v", tc.input, err)
+			continue
+		}
+		formatted := Format(res)
+		if formatted != tc.expected {
+			t.Errorf("input %q (unicode): expected %q, got %q", tc.input, tc.expected, formatted)
+		}
+		asciiFormatted := FormatWithOptions(res, FormatOptions{AsciiOnly: true})
+		if asciiFormatted != tc.asciiExpect {
+			t.Errorf("input %q (ascii): expected %q, got %q", tc.input, tc.asciiExpect, asciiFormatted)
+		}
+	}
+}
+
+// TestEval_NumberTheory tests gcd, lcm, and mod.
+func TestEval_NumberTheory(t *testing.T) {
+	testCases := []struct {
+		input    string
+		expected string
+	}{
+		{"gcd(24, 36)", "12"},
+		{"gcd(-24, 36)", "12"},
+		{"gcd(17, 13)", "1"},
+		{"lcm(4, 6)", "12"},
+		{"lcm(0, 5)", "0"},
+		{"mod(17, 5)", "2"},
+		{"mod(10, 2)", "0"},
+		{"mod(-7, 3)", "2"},
+	}
+
+	for _, tc := range testCases {
+		res, err := EvalString(tc.input)
+		if err != nil {
+			t.Errorf("eval error for %q: %v", tc.input, err)
+			continue
+		}
+		formatted := Format(res)
+		if formatted != tc.expected {
+			t.Errorf("input %q: expected %q, got %q", tc.input, tc.expected, formatted)
+		}
+	}
+
+	// Error cases
+	errorCases := []string{
+		"mod(5, 0)",
+		"gcd(1/2, 3)",
+		"lcm(2, 0.5)",
+	}
+	for _, ec := range errorCases {
+		_, err := EvalString(ec)
+		if err == nil {
+			t.Errorf("expected error for %q, got nil", ec)
+		}
+	}
+}
+
+// TestEval_PermComb tests permutation and combination calculations.
+func TestEval_PermComb(t *testing.T) {
+	testCases := []struct {
+		input    string
+		expected string
+	}{
+		{"perm(5, 2)", "20"},
+		{"perm(5, 0)", "1"},
+		{"perm(5, 5)", "120"},
+		{"perm(3, 5)", "0"},
+		{"comb(5, 2)", "10"},
+		{"comb(10, 3)", "120"},
+		{"comb(5, 0)", "1"},
+		{"comb(5, 5)", "1"},
+		{"comb(3, 5)", "0"},
+	}
+
+	for _, tc := range testCases {
+		res, err := EvalString(tc.input)
+		if err != nil {
+			t.Errorf("eval error for %q: %v", tc.input, err)
+			continue
+		}
+		formatted := Format(res)
+		if formatted != tc.expected {
+			t.Errorf("input %q: expected %q, got %q", tc.input, tc.expected, formatted)
+		}
+	}
+
+	// Error cases
+	errorCases := []string{
+		"comb(-1, 2)",
+		"perm(1/2, 1)",
+	}
+	for _, ec := range errorCases {
+		_, err := EvalString(ec)
+		if err == nil {
+			t.Errorf("expected error for %q, got nil", ec)
+		}
+	}
+}
+
+// TestEval_Rand tests deterministic and ranged integer random generation.
+func TestEval_Rand(t *testing.T) {
+	// Deterministic seed test
+	res1, err := EvalString("rand(42, 1, 100)")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	res2, err := EvalString("rand(42, 1, 100)")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if Format(res1) != Format(res2) {
+		t.Errorf("expected same result for same seed, got %s and %s", Format(res1), Format(res2))
+	}
+
+	// Range check
+	rat, ok := res1.(*RationalNode)
+	if !ok || !rat.Val.IsInt() {
+		t.Fatalf("expected integer rational, got %T", res1)
+	}
+	val := rat.Val.Num().Int64()
+	if val < 1 || val > 100 {
+		t.Errorf("expected value in [1, 100], got %d", val)
+	}
+}
+
 
 

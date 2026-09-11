@@ -57,6 +57,20 @@ func formatNode(n Node, opts FormatOptions) string {
 		return fmt.Sprintf("√(%s)", radStr)
 
 	case *FuncNode:
+		if v.Name == "cbrt" && len(v.Args) == 1 {
+			radStr := formatNode(v.Args[0], opts)
+			if opts.AsciiOnly {
+				return fmt.Sprintf("cbrt(%s)", radStr)
+			}
+			if rat, ok := v.Args[0].(*RationalNode); ok && rat.Val.IsInt() {
+				return fmt.Sprintf("³√%s", radStr)
+			}
+			return fmt.Sprintf("³√(%s)", radStr)
+		}
+		if v.Name == "abs" && len(v.Args) == 1 {
+			argStr := formatNode(v.Args[0], opts)
+			return fmt.Sprintf("|%s|", argStr)
+		}
 		argStrs := make([]string, len(v.Args))
 		for i, a := range v.Args {
 			argStrs[i] = formatNode(a, opts)
@@ -300,6 +314,12 @@ func formatLaTeXNode(n Node) string {
 		return fmt.Sprintf("\\sqrt{%s}", formatLaTeXNode(v.Radicand))
 
 	case *FuncNode:
+		if v.Name == "cbrt" && len(v.Args) == 1 {
+			return fmt.Sprintf("\\sqrt[3]{%s}", formatLaTeXNode(v.Args[0]))
+		}
+		if v.Name == "abs" && len(v.Args) == 1 {
+			return fmt.Sprintf("\\left|%s\\right|", formatLaTeXNode(v.Args[0]))
+		}
 		fnName := v.Name
 		switch fnName {
 		case "sin", "cos", "tan", "log", "ln":
