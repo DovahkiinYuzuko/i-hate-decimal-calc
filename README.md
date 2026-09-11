@@ -134,6 +134,11 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
   # --- + ----
   #  2     2  
   ```
+- `--deg`: 三角関数および逆三角関数を度数法（Degree）として解釈・計算します。
+  ```bash
+  ihd --deg "sin(30) + cos(60) + asin(1/2)"
+  # 出力: 31
+  ```
 - `-h`, `--help`: コマンドの使用方法を表示します。
 
 ### サポート構文と演算子
@@ -150,12 +155,14 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
 - `pi` または `π`: 円周率
 - `e`: 自然対数の底
 - `i`: 虚数単位（$i^2 = -1$）
+- `deg`: 度数法変換定数（$\pi/180$。通常モードで `sin(30*deg)` や `asin(1/2)/deg` のように利用可能）
 
 #### 関数
 - `sqrt(x)` または `√(x)`: 平方根（中身が負の場合は複素数へ自動昇格）
 - `cbrt(x)`: 3乗根（立方因子のくくり出し、実数負数の符号抽出）
 - `abs(x)`: 絶対値（実数は符号除去、複素数は $|a+bi| = \sqrt{a^2+b^2}$）
 - `sin(x)`, `cos(x)`, `tan(x)`: 三角関数（$\pi$ の有理数倍による特殊角を代数的に簡約）
+- `asin(x)`, `acos(x)`, `atan(x)`: 逆三角関数（特殊角を $\pi$ の有理数倍として代数的に簡約、主値管理）
 - `log(x)`: 常用対数（底10）
 - `log(base, x)`: 任意の底を指定する対数
 - `ln(x)`: 自然対数（底 $e$）
@@ -296,6 +303,11 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
   # --- + ----
   #  2     2  
   ```
+- `--deg`: Interpret and evaluate trigonometric and inverse trigonometric functions in degrees.
+  ```bash
+  ihd --deg "sin(30) + cos(60) + asin(1/2)"
+  # Output: 31
+  ```
 - `-h`, `--help`: Display the help message.
 
 ### Supported Syntax & Operators
@@ -312,12 +324,14 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
 - `pi` or `π`: The ratio of a circle's circumference to its diameter
 - `e`: Euler's number (base of the natural logarithm)
 - `i`: The imaginary unit ($i^2 = -1$)
+- `deg`: Degree-to-radian conversion constant ($\pi/180$. Usable directly as `sin(30*deg)` or `asin(1/2)/deg`)
 
 #### Functions
 - `sqrt(x)` or `√(x)`: Square root (promotes to complex numbers if radicand is negative)
 - `cbrt(x)`: Cube root (cube-free factorization and real sign extraction)
 - `abs(x)`: Absolute value (real magnitude or complex modulus $|a+bi| = \sqrt{a^2+b^2}$)
 - `sin(x)`, `cos(x)`, `tan(x)`: Trigonometric functions (exact values for rational multiples of $\pi$)
+- `asin(x)`, `acos(x)`, `atan(x)`: Inverse trigonometric functions (exact algebraic values for special angles, principal branch tracking)
 - `log(x)`: Common logarithm (base 10)
 - `log(base, x)`: Logarithm with an arbitrary base
 - `ln(x)`: Natural logarithm (base $e$)
