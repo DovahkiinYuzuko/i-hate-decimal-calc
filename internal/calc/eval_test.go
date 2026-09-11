@@ -368,4 +368,31 @@ func TestEval_UnboundVariableSimplification(t *testing.T) {
 	}
 }
 
+// TestEval_ZenkakuExpressions tests full-width character expression evaluation.
+func TestEval_ZenkakuExpressions(t *testing.T) {
+	testCases := []struct {
+		input    string
+		expected string
+	}{
+		{"１／２　＋　１／３", "5/6"},
+		{"２×ｘ　＋　３×ｘ", "5*x"},
+		{"ｓｑｒｔ（４）　＋　√（６４）", "10"},
+		{"（１＋２）＊３", "9"},
+		{"５．８８８", "736/125"},
+	}
+
+	for _, tc := range testCases {
+		res, err := EvalString(tc.input)
+		if err != nil {
+			t.Errorf("eval error for %q: %v", tc.input, err)
+			continue
+		}
+		formatted := Format(res)
+		if formatted != tc.expected {
+			t.Errorf("input %q: expected %q, got %q", tc.input, tc.expected, formatted)
+		}
+	}
+}
+
+
 

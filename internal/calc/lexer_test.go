@@ -130,3 +130,31 @@ func TestLexer_RepeatingDecimals(t *testing.T) {
 	}
 }
 
+// TestLexer_NormalizeZenkaku validates full-width (Zenkaku) character normalization.
+func TestLexer_NormalizeZenkaku(t *testing.T) {
+	testCases := []struct {
+		input    string
+		expected []TokenType
+	}{
+		{"１２３", []TokenType{TokenNumber, TokenEOF}},
+		{"（１＋２）＊３＾２", []TokenType{TokenLParen, TokenNumber, TokenPlus, TokenNumber, TokenRParen, TokenAsterisk, TokenNumber, TokenCaret, TokenNumber, TokenEOF}},
+		{"４　ー　２　÷　１", []TokenType{TokenNumber, TokenMinus, TokenNumber, TokenSlash, TokenNumber, TokenEOF}},
+		{"ｘ　＝　１／２", []TokenType{TokenIdent, TokenAssign, TokenNumber, TokenSlash, TokenNumber, TokenEOF}},
+	}
+
+	for _, tc := range testCases {
+		tokens, err := Tokenize(tc.input)
+		if err != nil {
+			t.Fatalf("unexpected error for %q: %v", tc.input, err)
+		}
+		if len(tokens) != len(tc.expected) {
+			t.Fatalf("input %q: expected %d tokens, got %d", tc.input, len(tc.expected), len(tokens))
+		}
+		for i, exp := range tc.expected {
+			if tokens[i].Type != exp {
+				t.Errorf("input %q token %d: expected type %v, got %v (%q)", tc.input, i, exp, tokens[i].Type, tokens[i].Literal)
+			}
+		}
+	}
+}
+

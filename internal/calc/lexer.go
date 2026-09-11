@@ -44,9 +44,10 @@ type Lexer struct {
 	ch      rune // current character
 }
 
-// NewLexer creates and initializes a Lexer.
+// NewLexer creates and initializes a Lexer after normalizing Zenkaku characters to Hankaku.
 func NewLexer(input string) *Lexer {
-	l := &Lexer{input: input}
+	normalized := NormalizeInput(input)
+	l := &Lexer{input: normalized}
 	l.readChar()
 	return l
 }
