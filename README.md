@@ -18,6 +18,8 @@
 - **自動数式簡約**:
   - 平方数のくくり出し（例: `sqrt(8)` → `2*√2`）
   - 単項ルートの自動有理化（例: `1/sqrt(2)` → `√2/2`）
+  - 二重根号の自動分解展開（例: `sqrt(5 + 2*sqrt(6))` → `√2 + √3`, `sqrt(7 + 4*sqrt(3))` → `2 + √3`）
+  - 循環小数の厳密分数化（例: `0.(3)` → `1/3`, `0.1(6)` → `1/6`, `0.(9)` → `1`）
   - 三角関数の特殊値評価（例: `sin(pi/6)` → `1/2`）
   - 複素数への自動昇格と代数計算（例: `sqrt(-4)` → `2*i`, `(1+2*i)*(1-2*i)` → `5`）
   - 同類項の集約と分配法則による展開
@@ -146,6 +148,8 @@ All decimal inputs are converted immediately into exact rational fractions (`big
 - **Automated Mathematical Simplification**:
   - Factoring out square components (e.g., `sqrt(8)` → `2*√2`)
   - Monomial root rationalization (e.g., `1/sqrt(2)` → `√2/2`)
+  - Automated radical denesting via Borodin (1985) algorithm (e.g., `sqrt(5 + 2*sqrt(6))` → `√2 + √3`)
+  - Exact conversion of repeating decimals (e.g., `0.(3)` → `1/3`, `0.1(6)` → `1/6`, `0.(9)` → `1`)
   - Evaluation of trigonometric special values (e.g., `sin(pi/6)` → `1/2`)
   - Promotion to complex numbers and algebraic operations (e.g., `sqrt(-4)` → `2*i`, `(1+2*i)*(1-2*i)` → `5`)
   - Like-term aggregation and distributive expansion

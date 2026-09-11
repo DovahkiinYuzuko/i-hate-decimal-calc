@@ -58,9 +58,15 @@ func TestIntegration_SpecificationExamples(t *testing.T) {
 		// 7. Factorials
 		{"3!", "6"},
 		{"0!", "1"},
+		{"5!", "120"},
 		{"5! / (3! * 2!)", "10"},
 
-		// 8. Power associativity and order of operations
+		// 8. Repeating decimals & radical denesting (issue-11)
+		{"0.(3) + 0.1(6)", "1/2"},
+		{"sqrt(5 + 2*sqrt(6))", "√2 + √3"},
+		{"sqrt(7 + 4*sqrt(3))", "2 + √3"},
+
+		// 9. Power associativity and order of operations
 		{"0^0", "1"},
 		{"2^3^2", "512"},
 		{"(2^3)^2", "64"},

@@ -263,3 +263,30 @@ func TestEval_AdvancedCasFixes(t *testing.T) {
 		}
 	}
 }
+
+// TestEval_DenestSqrt validates Borodin (1985) radical denesting algorithm.
+func TestEval_DenestSqrt(t *testing.T) {
+	testCases := []struct {
+		input    string
+		expected string
+	}{
+		{"sqrt(5 + 2*sqrt(6))", "√2 + √3"},
+		{"sqrt(5 - 2*sqrt(6))", "-√2 + √3"},
+		{"sqrt(3 + sqrt(8))", "1 + √2"},
+		{"sqrt(7 + 4*sqrt(3))", "2 + √3"},
+		{"sqrt(1 + sqrt(2))", "√(1 + √2)"},
+	}
+
+	for _, tc := range testCases {
+		res, err := EvalString(tc.input)
+		if err != nil {
+			t.Errorf("eval error for %q: %v", tc.input, err)
+			continue
+		}
+		formatted := Format(res)
+		if formatted != tc.expected {
+			t.Errorf("input %q: expected %q, got %q (raw node: %s)", tc.input, tc.expected, formatted, res.String())
+		}
+	}
+}
+

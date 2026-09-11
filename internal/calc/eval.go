@@ -112,7 +112,12 @@ func EvalString(input string) (Node, error) {
 func simplifySqrt(radicand Node) (Node, error) {
 	rat, ok := radicand.(*RationalNode)
 	if !ok {
-		// Non-rational radicand: keep as sqrt(expr)
+		// Non-rational radicand: check if it can be denested (Borodin 1985)
+		if add, isAdd := radicand.(*AddNode); isAdd {
+			if denested, ok := denestSqrtBinomial(add); ok {
+				return denested, nil
+			}
+		}
 		return NewSqrt(radicand), nil
 	}
 
@@ -161,6 +166,149 @@ func simplifySqrt(radicand Node) (Node, error) {
 
 	return NewMul([]Node{&RationalNode{Val: coeffRat}, sqrtNode}), nil
 }
+
+// denestSqrtBinomial attempts to denest sqrt(a + b*sqrt(r)) using Borodin (1985) algorithm.
+func denestSqrtBinomial(add *AddNode) (Node, bool) {
+	if len(add.Terms) != 2 {
+		return nil, false
+	}
+
+	var aRat *big.Rat
+	var bRat *big.Rat
+	var rRat *big.Rat
+
+	if r0, ok := add.Terms[0].(*RationalNode); ok {
+		aRat = r0.Val
+		b, r, okSqrt := extractSqrtTerm(add.Terms[1])
+		if !okSqrt {
+			return nil, false
+		}
+		bRat, rRat = b, r
+	} else if r1, ok := add.Terms[1].(*RationalNode); ok {
+		aRat = r1.Val
+		b, r, okSqrt := extractSqrtTerm(add.Terms[0])
+		if !okSqrt {
+			return nil, false
+		}
+		bRat, rRat = b, r
+	} else {
+		return nil, false
+	}
+
+	// For real denesting, a must be positive
+	if aRat.Sign() <= 0 {
+		return nil, false
+	}
+
+	// d = a^2 - b^2 * r
+	a2 := new(big.Rat).Mul(aRat, aRat)
+	b2 := new(big.Rat).Mul(bRat, bRat)
+	b2r := new(big.Rat).Mul(b2, rRat)
+	d := new(big.Rat).Sub(a2, b2r)
+
+	if d.Sign() <= 0 {
+		return nil, false
+	}
+
+	sqrtD, okSquare := isRatPerfectSquare(d)
+	if !okSquare {
+		return nil, false
+	}
+
+	// t1 = (a + sqrtD) / 2
+	two := big.NewRat(2, 1)
+	t1 := new(big.Rat).Add(aRat, sqrtD)
+	t1.Quo(t1, two)
+
+	// t2 = (a - sqrtD) / 2
+	t2 := new(big.Rat).Sub(aRat, sqrtD)
+	t2.Quo(t2, two)
+
+	if t1.Sign() <= 0 || t2.Sign() <= 0 {
+		return nil, false
+	}
+
+	s1, err1 := simplifySqrt(&RationalNode{Val: t1})
+	if err1 != nil {
+		return nil, false
+	}
+	s2, err2 := simplifySqrt(&RationalNode{Val: t2})
+	if err2 != nil {
+		return nil, false
+	}
+
+	if bRat.Sign() > 0 {
+		res, err := simplifyAdd([]Node{s1, s2})
+		if err != nil {
+			return nil, false
+		}
+		return res, true
+	} else {
+		negS2, err := simplifyUnaryOp("-", s2)
+		if err != nil {
+			return nil, false
+		}
+		res, err := simplifyAdd([]Node{s1, negS2})
+		if err != nil {
+			return nil, false
+		}
+		return res, true
+	}
+}
+
+func extractSqrtTerm(n Node) (*big.Rat, *big.Rat, bool) {
+	if s, ok := n.(*SqrtNode); ok {
+		if rRat, ok := s.Radicand.(*RationalNode); ok {
+			return big.NewRat(1, 1), rRat.Val, true
+		}
+		return nil, nil, false
+	}
+	if u, ok := n.(*UnaryOpNode); ok && u.Op == "-" {
+		if s, ok := u.Expr.(*SqrtNode); ok {
+			if rRat, ok := s.Radicand.(*RationalNode); ok {
+				return big.NewRat(-1, 1), rRat.Val, true
+			}
+		}
+		return nil, nil, false
+	}
+	if m, ok := n.(*MulNode); ok && len(m.Factors) == 2 {
+		r1, ok1 := m.Factors[0].(*RationalNode)
+		s2, ok2 := m.Factors[1].(*SqrtNode)
+		if ok1 && ok2 {
+			if rRat, ok := s2.Radicand.(*RationalNode); ok {
+				return r1.Val, rRat.Val, true
+			}
+		}
+		s1, ok1 := m.Factors[0].(*SqrtNode)
+		r2, ok2 := m.Factors[1].(*RationalNode)
+		if ok1 && ok2 {
+			if rRat, ok := s1.Radicand.(*RationalNode); ok {
+				return r2.Val, rRat.Val, true
+			}
+		}
+	}
+	return nil, nil, false
+}
+
+func isRatPerfectSquare(r *big.Rat) (*big.Rat, bool) {
+	if r.Sign() <= 0 {
+		return nil, false
+	}
+	num := r.Num()
+	denom := r.Denom()
+
+	sqrtNum := new(big.Int).Sqrt(num)
+	if new(big.Int).Mul(sqrtNum, sqrtNum).Cmp(num) != 0 {
+		return nil, false
+	}
+	sqrtDenom := new(big.Int).Sqrt(denom)
+	if new(big.Int).Mul(sqrtDenom, sqrtDenom).Cmp(denom) != 0 {
+		return nil, false
+	}
+
+	return new(big.Rat).SetFrac(sqrtNum, sqrtDenom), true
+}
+
 
 // extractSquareFree extracts perfect square factors: n = out^2 * rem
 func extractSquareFree(n *big.Int) (*big.Int, *big.Int) {

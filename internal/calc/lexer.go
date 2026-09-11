@@ -130,56 +130,196 @@ func (l *Lexer) NextToken() Token {
 	return tok
 }
 
+type numState int
+
+const (
+	stateInt numState = iota
+	stateDot
+	stateNonRepeat
+	stateOpenParen
+	stateRepeat
+	stateCloseParen
+)
+
 func (l *Lexer) readNumber(startPos int) Token {
-	hasDot := false
+	state := stateInt
 	var intPart strings.Builder
-	var fracPart strings.Builder
+	var nonRepeatPart strings.Builder
+	var repeatPart strings.Builder
 
-	for isDigit(l.ch) || (l.ch == '.' && !hasDot) {
-		if l.ch == '.' {
-			hasDot = true
-			l.readChar()
-			continue
+	for {
+		ch := l.ch
+		switch state {
+		case stateInt:
+			if isDigit(ch) {
+				intPart.WriteRune(ch)
+				l.readChar()
+			} else if ch == '.' {
+				state = stateDot
+				l.readChar()
+			} else {
+				// Pure integer
+				intStr := intPart.String()
+				numBig := new(big.Int)
+				numBig.SetString(intStr, 10)
+				rat := new(big.Rat).SetInt(numBig)
+				return Token{
+					Type:    TokenNumber,
+					Literal: intStr,
+					RatVal:  &RationalNode{Val: rat},
+					Pos:     startPos,
+				}
+			}
+
+		case stateDot:
+			if isDigit(ch) {
+				state = stateNonRepeat
+				nonRepeatPart.WriteRune(ch)
+				l.readChar()
+			} else if ch == '(' {
+				state = stateOpenParen
+				l.readChar()
+			} else {
+				// "123." without fraction digits -> treated as integer with dot
+				intStr := intPart.String()
+				numBig := new(big.Int)
+				numBig.SetString(intStr, 10)
+				rat := new(big.Rat).SetInt(numBig)
+				return Token{
+					Type:    TokenNumber,
+					Literal: intStr + ".",
+					RatVal:  &RationalNode{Val: rat},
+					Pos:     startPos,
+				}
+			}
+
+		case stateNonRepeat:
+			if isDigit(ch) {
+				nonRepeatPart.WriteRune(ch)
+				l.readChar()
+			} else if ch == '(' {
+				state = stateOpenParen
+				l.readChar()
+			} else {
+				// Finite decimal: intStr.fracStr -> Exact rational
+				intStr := intPart.String()
+				fracStr := nonRepeatPart.String()
+				numBig := new(big.Int)
+				numBig.SetString(intStr+fracStr, 10)
+				denomBig := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(len(fracStr))), nil)
+				rat := new(big.Rat).SetFrac(numBig, denomBig)
+				return Token{
+					Type:    TokenNumber,
+					Literal: intStr + "." + fracStr,
+					RatVal:  &RationalNode{Val: rat},
+					Pos:     startPos,
+				}
+			}
+
+		case stateOpenParen:
+			if isDigit(ch) {
+				state = stateRepeat
+				repeatPart.WriteRune(ch)
+				l.readChar()
+			} else {
+				// Empty repeating part like "0.()" or invalid char -> TokenIllegal
+				return Token{
+					Type:    TokenIllegal,
+					Literal: string(ch),
+					Pos:     l.pos,
+				}
+			}
+
+		case stateRepeat:
+			if isDigit(ch) {
+				repeatPart.WriteRune(ch)
+				l.readChar()
+			} else if ch == ')' {
+				state = stateCloseParen
+				l.readChar()
+			} else {
+				// Missing closing paren or non-digit in repeat part -> TokenIllegal
+				return Token{
+					Type:    TokenIllegal,
+					Literal: string(ch),
+					Pos:     l.pos,
+				}
+			}
+
+		case stateCloseParen:
+			intStr := intPart.String()
+			nonRepeatStr := nonRepeatPart.String()
+			repeatStr := repeatPart.String()
+
+			rat, err := repeatingDecimalToRat(intStr, nonRepeatStr, repeatStr)
+			if err != nil {
+				return Token{
+					Type:    TokenIllegal,
+					Literal: err.Error(),
+					Pos:     startPos,
+				}
+			}
+			lit := intStr + "." + nonRepeatStr + "(" + repeatStr + ")"
+			return Token{
+				Type:    TokenNumber,
+				Literal: lit,
+				RatVal:  &RationalNode{Val: rat},
+				Pos:     startPos,
+			}
 		}
-		if hasDot {
-			fracPart.WriteRune(l.ch)
-		} else {
-			intPart.WriteRune(l.ch)
-		}
-		l.readChar()
+	}
+}
+
+func repeatingDecimalToRat(intStr, nonRepeatStr, repeatStr string) (*big.Rat, error) {
+	if intStr == "" {
+		intStr = "0"
+	}
+	intBig, ok := new(big.Int).SetString(intStr, 10)
+	if !ok {
+		return nil, fmt.Errorf("invalid integer part: %s", intStr)
 	}
 
-	intStr := intPart.String()
-	fracStr := fracPart.String()
+	rLen := int64(len(repeatStr))
+	if rLen == 0 {
+		return nil, fmt.Errorf("repeating part cannot be empty")
+	}
 
-	if !hasDot {
-		// Pure integer
-		numBig := new(big.Int)
-		numBig.SetString(intStr, 10)
-		rat := new(big.Rat).SetInt(numBig)
-		return Token{
-			Type:    TokenNumber,
-			Literal: intStr,
-			RatVal:  &RationalNode{Val: rat},
-			Pos:     startPos,
+	repBig, ok := new(big.Int).SetString(repeatStr, 10)
+	if !ok {
+		return nil, fmt.Errorf("invalid repeating part: %s", repeatStr)
+	}
+
+	tenPowR := new(big.Int).Exp(big.NewInt(10), big.NewInt(rLen), nil)
+	nines := new(big.Int).Sub(tenPowR, big.NewInt(1))
+
+	nLen := int64(len(nonRepeatStr))
+	var fracRat *big.Rat
+
+	if nLen == 0 {
+		// Pure repeating decimal: R / (10^r - 1)
+		fracRat = new(big.Rat).SetFrac(repBig, nines)
+	} else {
+		// Mixed repeating decimal: (N * (10^r - 1) + R) / (10^n * (10^r - 1))
+		nonRepBig, ok := new(big.Int).SetString(nonRepeatStr, 10)
+		if !ok {
+			return nil, fmt.Errorf("invalid non-repeating part: %s", nonRepeatStr)
 		}
+		num := new(big.Int).Mul(nonRepBig, nines)
+		num.Add(num, repBig)
+
+		tenPowN := new(big.Int).Exp(big.NewInt(10), big.NewInt(nLen), nil)
+		denom := new(big.Int).Mul(tenPowN, nines)
+
+		fracRat = new(big.Rat).SetFrac(num, denom)
 	}
 
-	// Finite decimal: intStr.fracStr -> Exact rational without float64
-	// e.g. 6.441 -> (6 * 1000 + 441) / 1000 = 6441 / 1000
-	numBig := new(big.Int)
-	numBig.SetString(intStr+fracStr, 10)
-
-	denomBig := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(len(fracStr))), nil)
-	rat := new(big.Rat).SetFrac(numBig, denomBig)
-
-	lit := intStr + "." + fracStr
-	return Token{
-		Type:    TokenNumber,
-		Literal: lit,
-		RatVal:  &RationalNode{Val: rat},
-		Pos:     startPos,
+	result := new(big.Rat).SetInt(intBig)
+	if intBig.Sign() < 0 {
+		result.Sub(result, fracRat)
+	} else {
+		result.Add(result, fracRat)
 	}
+	return result, nil
 }
 
 func (l *Lexer) readIdentifier() string {
