@@ -17,5 +17,7 @@ Usage:
 Flags:
   --ascii     Output using standard ASCII text (e.g., sqrt, pi) instead of Unicode
   --approx    Display approximate decimal value alongside exact form
+  --latex     Output expression in LaTeX format ($$ ... $$)
+  --pretty    Output expression using 2D pretty-printed formatting
   -h, --help  Show this help message`
 )

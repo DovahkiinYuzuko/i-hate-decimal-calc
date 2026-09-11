@@ -51,6 +51,35 @@ func TestCLI_OneShot_Approx(t *testing.T) {
 	}
 }
 
+func TestCLI_OneShot_LaTeX(t *testing.T) {
+	out := new(bytes.Buffer)
+	errOut := new(bytes.Buffer)
+	code := run([]string{"--latex", "1/2 + sqrt(2)"}, strings.NewReader(""), out, errOut)
+
+	if code != 0 {
+		t.Fatalf("expected exit code 0, got %d. stderr: %s", code, errOut.String())
+	}
+	actual := strings.TrimSpace(out.String())
+	expected := "$$ \\frac{1}{2} + \\sqrt{2} $$"
+	if actual != expected {
+		t.Errorf("expected %q, got %q", expected, actual)
+	}
+}
+
+func TestCLI_OneShot_Pretty(t *testing.T) {
+	out := new(bytes.Buffer)
+	errOut := new(bytes.Buffer)
+	code := run([]string{"--pretty", "1/2"}, strings.NewReader(""), out, errOut)
+
+	if code != 0 {
+		t.Fatalf("expected exit code 0, got %d. stderr: %s", code, errOut.String())
+	}
+	actual := strings.TrimSpace(out.String())
+	if !strings.Contains(actual, "---") || !strings.Contains(actual, "1") || !strings.Contains(actual, "2") {
+		t.Errorf("expected 2D pretty fraction, got:\n%s", actual)
+	}
+}
+
 func TestCLI_OneShot_Errors(t *testing.T) {
 	testCases := []struct {
 		args          []string
@@ -119,7 +148,7 @@ func TestCLI_REPL(t *testing.T) {
 	out := new(bytes.Buffer)
 	errOut := new(bytes.Buffer)
 
-	code := runREPL(in, out, errOut, calc.FormatOptions{AsciiOnly: false}, false)
+	code := runREPL(in, out, errOut, runOptions{opts: calc.FormatOptions{AsciiOnly: false}})
 	if code != 0 {
 		t.Fatalf("expected code 0, got %d", code)
 	}

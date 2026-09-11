@@ -93,6 +93,19 @@ echo "sin(pi/6)^2 + cos(pi/6)^2" | ihd
   ihd --approx "sqrt(2)"
   # 出力: √2 (≈ 1.4142135623730951)
   ```
+- `--latex`: MarkdownやTeX論文等に貼り付け可能なLaTeX数式テキスト（`$$ ... $$`）で出力します。
+  ```bash
+  ihd --latex "1/2 + sqrt(2)"
+  # 出力: $$ \frac{1}{2} + \sqrt{2} $$
+  ```
+- `--pretty`: ターミナル上で分数や平方根を複数行で視覚的に整列表示する2Dプリティプリントで出力します。
+  ```bash
+  ihd --pretty "1/2 + sqrt(2)/2"
+  # 出力:
+  #  1     √2 
+  # --- + ----
+  #  2     2  
+  ```
 - `-h`, `--help`: コマンドの使用方法を表示します。
 
 ### サポート構文と演算子
@@ -207,6 +220,19 @@ echo "sin(pi/6)^2 + cos(pi/6)^2" | ihd
   ```bash
   ihd --approx "sqrt(2)"
   # Output: √2 (≈ 1.4142135623730951)
+  ```
+- `--latex`: Output expression in LaTeX format (`$$ ... $$`), ready to paste into Markdown or TeX papers.
+  ```bash
+  ihd --latex "1/2 + sqrt(2)"
+  # Output: $$ \frac{1}{2} + \sqrt{2} $$
+  ```
+- `--pretty`: Output expression in multi-line 2D pretty-printed Unicode formatting.
+  ```bash
+  ihd --pretty "1/2 + sqrt(2)/2"
+  # Output:
+  #  1     √2 
+  # --- + ----
+  #  2     2  
   ```
 - `-h`, `--help`: Display the help message.
 
