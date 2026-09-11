@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc"
 )
 
 func TestCLI_OneShot(t *testing.T) {
@@ -117,13 +119,13 @@ func TestCLI_REPL(t *testing.T) {
 	out := new(bytes.Buffer)
 	errOut := new(bytes.Buffer)
 
-	code := runREPL(in, out, errOut, FormatOptions{AsciiOnly: false}, false)
+	code := runREPL(in, out, errOut, calc.FormatOptions{AsciiOnly: false}, false)
 	if code != 0 {
 		t.Fatalf("expected code 0, got %d", code)
 	}
 
 	output := out.String()
-	if !strings.Contains(output, PromptREPL) {
+	if !strings.Contains(output, calc.PromptREPL) {
 		t.Errorf("expected REPL prompt, got %q", output)
 	}
 	if !strings.Contains(output, "2") {
@@ -132,7 +134,7 @@ func TestCLI_REPL(t *testing.T) {
 	if !strings.Contains(output, "6") {
 		t.Errorf("expected output 6, got %q", output)
 	}
-	if !strings.Contains(output, MsgREPLExit) {
+	if !strings.Contains(output, calc.MsgREPLExit) {
 		t.Errorf("expected exit message, got %q", output)
 	}
 }

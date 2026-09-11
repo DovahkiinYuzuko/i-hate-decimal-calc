@@ -1,4 +1,4 @@
-package main
+package calc
 
 // System messages and UI strings externalized for internationalization.
 const (

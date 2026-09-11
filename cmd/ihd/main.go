@@ -7,6 +7,8 @@ import (
 	"io"
 	"os"
 	"strings"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc"
 )
 
 func main() {
@@ -40,11 +42,11 @@ func run(args []string, in io.Reader, out io.Writer, errOut io.Writer) int {
 	}
 
 	if *helpFlag {
-		fmt.Fprintln(out, MsgHelp)
+		fmt.Fprintln(out, calc.MsgHelp)
 		return 0
 	}
 
-	opts := FormatOptions{AsciiOnly: *asciiFlag}
+	opts := calc.FormatOptions{AsciiOnly: *asciiFlag}
 	showApprox := *approxFlag
 
 	if len(exprArgs) > 0 {
@@ -74,7 +76,7 @@ func run(args []string, in io.Reader, out io.Writer, errOut io.Writer) int {
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		fmt.Fprintf(errOut, "%s%v\n", MsgErrorPrefix, err)
+		fmt.Fprintf(errOut, "%s%v\n", calc.MsgErrorPrefix, err)
 		return 1
 	}
 	if hadError {
@@ -93,16 +95,16 @@ func isTerminal(r io.Reader) bool {
 	return false
 }
 
-func evaluateLine(line string, opts FormatOptions, showApprox bool, out, errOut io.Writer) error {
-	node, err := EvalString(line)
+func evaluateLine(line string, opts calc.FormatOptions, showApprox bool, out, errOut io.Writer) error {
+	node, err := calc.EvalString(line)
 	if err != nil {
-		fmt.Fprintf(errOut, "%s%v\n", MsgErrorPrefix, err)
+		fmt.Fprintf(errOut, "%s%v\n", calc.MsgErrorPrefix, err)
 		return err
 	}
 
-	exactStr := FormatWithOptions(node, opts)
+	exactStr := calc.FormatWithOptions(node, opts)
 	if showApprox {
-		approxStr, err := Approx(node)
+		approxStr, err := calc.Approx(node)
 		if err == nil {
 			fmt.Fprintf(out, "%s (≈ %s)\n", exactStr, approxStr)
 			return nil
@@ -112,12 +114,12 @@ func evaluateLine(line string, opts FormatOptions, showApprox bool, out, errOut 
 	return nil
 }
 
-func runREPL(in io.Reader, out, errOut io.Writer, opts FormatOptions, showApprox bool) int {
-	fmt.Fprintln(out, MsgREPLWelcome)
+func runREPL(in io.Reader, out, errOut io.Writer, opts calc.FormatOptions, showApprox bool) int {
+	fmt.Fprintln(out, calc.MsgREPLWelcome)
 	scanner := bufio.NewScanner(in)
 
 	for {
-		fmt.Fprint(out, PromptREPL)
+		fmt.Fprint(out, calc.PromptREPL)
 		if !scanner.Scan() {
 			// EOF or interrupt
 			fmt.Fprintln(out)
@@ -128,14 +130,14 @@ func runREPL(in io.Reader, out, errOut io.Writer, opts FormatOptions, showApprox
 			continue
 		}
 		if line == "exit" || line == "quit" {
-			fmt.Fprintln(out, MsgREPLExit)
+			fmt.Fprintln(out, calc.MsgREPLExit)
 			break
 		}
 
 		_ = evaluateLine(line, opts, showApprox, out, errOut)
 	}
 	if err := scanner.Err(); err != nil {
-		fmt.Fprintf(errOut, "%s%v\n", MsgErrorPrefix, err)
+		fmt.Fprintf(errOut, "%s%v\n", calc.MsgErrorPrefix, err)
 		return 1
 	}
 	return 0

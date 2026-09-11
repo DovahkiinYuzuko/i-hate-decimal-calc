@@ -6,6 +6,14 @@
 !.github/
 !.github/workflows/
 !.github/workflows/*.yml
+# .gitignores/cmd.gitignore
+!cmd/
+!cmd/ihd/
+!cmd/ihd/*.go
+# .gitignores/internal.gitignore
+!internal/
+!internal/calc/
+!intenal/calc/*.go
 # .gitignores/root.gitignore
 !README.md
 !LICENSE.*

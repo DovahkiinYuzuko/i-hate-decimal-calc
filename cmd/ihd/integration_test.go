@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc"
 )
 
 // TestIntegration_SpecificationExamples verifies all primary calculation examples from specifications.
@@ -68,12 +70,12 @@ func TestIntegration_SpecificationExamples(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		res, err := EvalString(tc.input)
+		res, err := calc.EvalString(tc.input)
 		if err != nil {
-			t.Errorf("input %q: unexpected eval error: %v", tc.input, err)
+			t.Errorf("input %q: unexpected error: %v", tc.input, err)
 			continue
 		}
-		actual := Format(res)
+		actual := calc.Format(res)
 		if actual != tc.expected {
 			t.Errorf("input %q: expected %q, got %q", tc.input, tc.expected, actual)
 		}
@@ -115,7 +117,7 @@ func TestIntegration_DomainAndSyntaxErrors(t *testing.T) {
 	}
 
 	for _, tc := range errorInputs {
-		_, err := EvalString(tc.input)
+		_, err := calc.EvalString(tc.input)
 		if err == nil {
 			t.Errorf("input %q: expected error containing %q, got nil", tc.input, tc.errContains)
 			continue

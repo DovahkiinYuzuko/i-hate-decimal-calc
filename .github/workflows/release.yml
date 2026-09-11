@@ -57,7 +57,7 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
         run: |
           BIN_NAME="ihd${{ matrix.suffix }}"
-          go build -ldflags="-s -w" -o "${BIN_NAME}" .
+          go build -ldflags="-s -w" -o "${BIN_NAME}" ./cmd/ihd
           mkdir -p dist
           if [ "${{ matrix.archive }}" = "zip" ]; then
             zip "dist/${{ matrix.target }}.zip" "${BIN_NAME}" LICENSE.MIT README.md
