@@ -564,5 +564,152 @@ func TestEval_Rand(t *testing.T) {
 	}
 }
 
+// TestEval_InverseTrig tests inverse trigonometric exact simplification.
+func TestEval_InverseTrig(t *testing.T) {
+	testCases := []struct {
+		input    string
+		expected string
+	}{
+		// asin
+		{"asin(0)", "0"},
+		{"asin(1/2)", "π/6"},
+		{"asin(-1/2)", "-π/6"},
+		{"asin(sqrt(2)/2)", "π/4"},
+		{"asin(-sqrt(2)/2)", "-π/4"},
+		{"asin(sqrt(3)/2)", "π/3"},
+		{"asin(-sqrt(3)/2)", "-π/3"},
+		{"asin(1)", "π/2"},
+		{"asin(-1)", "-π/2"},
+
+		// acos
+		{"acos(0)", "π/2"},
+		{"acos(1/2)", "π/3"},
+		{"acos(-1/2)", "2/3*π"},
+		{"acos(sqrt(2)/2)", "π/4"},
+		{"acos(-sqrt(2)/2)", "3/4*π"},
+		{"acos(sqrt(3)/2)", "π/6"},
+		{"acos(-sqrt(3)/2)", "5/6*π"},
+		{"acos(1)", "0"},
+		{"acos(-1)", "π"},
+
+		// atan
+		{"atan(0)", "0"},
+		{"atan(sqrt(3)/3)", "π/6"},
+		{"atan(-sqrt(3)/3)", "-π/6"},
+		{"atan(1)", "π/4"},
+		{"atan(-1)", "-π/4"},
+		{"atan(sqrt(3))", "π/3"},
+		{"atan(-sqrt(3))", "-π/3"},
+	}
+
+	for _, tc := range testCases {
+		res, err := EvalString(tc.input)
+		if err != nil {
+			t.Errorf("eval error for %q: %v", tc.input, err)
+			continue
+		}
+		formatted := Format(res)
+		if formatted != tc.expected {
+			t.Errorf("input %q: expected %q, got %q", tc.input, tc.expected, formatted)
+		}
+	}
+
+	// Domain error cases
+	errorCases := []string{
+		"asin(2)",
+		"asin(-3/2)",
+		"acos(2)",
+		"acos(-5)",
+	}
+	for _, ec := range errorCases {
+		_, err := EvalString(ec)
+		if err == nil {
+			t.Errorf("expected error for %q, got nil", ec)
+		}
+	}
+}
+
+// TestEval_DegreeMode tests deg constant and ApplyDegreeMode AST transformations.
+func TestEval_DegreeMode(t *testing.T) {
+	// 1. Direct evaluation using built-in constant deg
+	degCases := []struct {
+		input    string
+		expected string
+	}{
+		{"sin(30*deg)", "1/2"},
+		{"cos(60*deg)", "1/2"},
+		{"tan(45*deg)", "1"},
+		{"asin(1/2) / deg", "30"},
+		{"atan(1) / deg", "45"},
+	}
+	for _, tc := range degCases {
+		res, err := EvalString(tc.input)
+		if err != nil {
+			t.Errorf("eval error for %q: %v", tc.input, err)
+			continue
+		}
+		formatted := Format(res)
+		if formatted != tc.expected {
+			t.Errorf("input %q: expected %q, got %q", tc.input, tc.expected, formatted)
+		}
+	}
+
+	// 2. ApplyDegreeMode transformation
+	modeCases := []struct {
+		input    string
+		expected string
+	}{
+		{"sin(30)", "1/2"},
+		{"cos(60)", "1/2"},
+		{"tan(45)", "1"},
+		{"asin(1/2)", "30"},
+		{"acos(1/2)", "60"},
+		{"atan(1)", "45"},
+	}
+	for _, tc := range modeCases {
+		parsed, err := Parse(tc.input)
+		if err != nil {
+			t.Fatalf("parse error for %q: %v", tc.input, err)
+		}
+		transformed := ApplyDegreeMode(parsed)
+		res, err := Eval(transformed)
+		if err != nil {
+			t.Errorf("eval error for %q in degree mode: %v", tc.input, err)
+			continue
+		}
+		formatted := Format(res)
+		if formatted != tc.expected {
+			t.Errorf("degree mode %q: expected %q, got %q", tc.input, tc.expected, formatted)
+		}
+	}
+}
+
+// TestEval_SymbolPowerCancellation tests merging and cancellation of identical base powers (sub-issue-15.1).
+func TestEval_SymbolPowerCancellation(t *testing.T) {
+	cases := []struct {
+		input    string
+		expected string
+	}{
+		{"pi * pi^-1", "1"},
+		{"(2*pi) * (3*pi^-1)", "6"},
+		{"x * x^-1", "1"},
+		{"x^2 * x^3", "x^5"},
+		{"x^3 * x^-3", "1"},
+		{"x * x", "x^2"},
+	}
+
+	for _, tc := range cases {
+		res, err := EvalString(tc.input)
+		if err != nil {
+			t.Errorf("eval error for %q: %v", tc.input, err)
+			continue
+		}
+		formatted := Format(res)
+		if formatted != tc.expected {
+			t.Errorf("input %q: expected %q, got %q", tc.input, tc.expected, formatted)
+		}
+	}
+}
+
 
 

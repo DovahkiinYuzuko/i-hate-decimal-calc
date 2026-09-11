@@ -71,6 +71,8 @@ func evalComplex(n Node) (complex128, error) {
 			return complex(math.Pi, 0), nil
 		case "e":
 			return complex(math.E, 0), nil
+		case "deg":
+			return complex(math.Pi/180.0, 0), nil
 		case "i":
 			return complex(0, 1), nil
 		default:
@@ -97,6 +99,12 @@ func evalComplex(n Node) (complex128, error) {
 				return cmplx.Cos(arg), nil
 			case "tan":
 				return cmplx.Tan(arg), nil
+			case "asin":
+				return cmplx.Asin(arg), nil
+			case "acos":
+				return cmplx.Acos(arg), nil
+			case "atan":
+				return cmplx.Atan(arg), nil
 			case "ln":
 				return cmplx.Log(arg), nil
 			case "log":

@@ -21,6 +21,7 @@ type runOptions struct {
 	showApprox bool
 	latex      bool
 	pretty     bool
+	deg        bool
 }
 
 func run(args []string, in io.Reader, out io.Writer, errOut io.Writer) int {
@@ -29,7 +30,7 @@ func run(args []string, in io.Reader, out io.Writer, errOut io.Writer) int {
 
 	for _, a := range args {
 		switch a {
-		case "-ascii", "--ascii", "-approx", "--approx", "-latex", "--latex", "-pretty", "--pretty", "-h", "--help":
+		case "-ascii", "--ascii", "-approx", "--approx", "-latex", "--latex", "-pretty", "--pretty", "-deg", "--deg", "-h", "--help":
 			flagArgs = append(flagArgs, a)
 		default:
 			exprArgs = append(exprArgs, a)
@@ -43,6 +44,7 @@ func run(args []string, in io.Reader, out io.Writer, errOut io.Writer) int {
 	approxFlag := fs.Bool("approx", false, "Show approximate decimal value")
 	latexFlag := fs.Bool("latex", false, "Output expression in LaTeX format ($$ ... $$)")
 	prettyFlag := fs.Bool("pretty", false, "Output expression using 2D pretty-printed formatting")
+	degFlag := fs.Bool("deg", false, "Use degree mode for trigonometric and inverse trigonometric functions")
 	helpFlag := fs.Bool("help", false, "Show help")
 	fs.BoolVar(helpFlag, "h", false, "Show help")
 
@@ -60,6 +62,7 @@ func run(args []string, in io.Reader, out io.Writer, errOut io.Writer) int {
 		showApprox: *approxFlag,
 		latex:      *latexFlag,
 		pretty:     *prettyFlag,
+		deg:        *degFlag,
 	}
 
 	if len(exprArgs) > 0 {
@@ -136,6 +139,10 @@ func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut 
 	if err != nil {
 		fmt.Fprintf(errOut, "%s%v\n", calc.MsgErrorPrefix, err)
 		return err
+	}
+
+	if ro.deg {
+		parsed = calc.ApplyDegreeModeToStatement(parsed)
 	}
 
 	switch v := parsed.(type) {

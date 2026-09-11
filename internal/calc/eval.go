@@ -25,7 +25,18 @@ func EvalWithEnv(n Node, env *Env) (Node, error) {
 	}
 
 	switch v := n.(type) {
-	case *RationalNode, *ConstNode:
+	case *RationalNode:
+		return v, nil
+
+	case *ConstNode:
+		if v.Name == "deg" {
+			return &MulNode{
+				Factors: []Node{
+					NewRationalFromBigRat(big.NewRat(1, 180)),
+					&ConstNode{Name: "pi"},
+				},
+			}, nil
+		}
 		return v, nil
 
 	case *VarNode:
@@ -122,6 +133,105 @@ func EvalStringWithEnv(input string, env *Env) (Node, error) {
 		return nil, err
 	}
 	return EvalWithEnv(node, env)
+}
+
+// ApplyDegreeMode transforms trigonometric and inverse trigonometric function calls in the AST
+// to work with degrees rather than radians.
+// sin(x), cos(x), tan(x) -> sin(x * deg), cos(x * deg), tan(x * deg)
+// asin(x), acos(x), atan(x) -> asin(x) / deg, acos(x) / deg, atan(x) / deg
+func ApplyDegreeMode(n Node) Node {
+	if n == nil {
+		return nil
+	}
+
+	degNode := &ConstNode{Name: "deg"}
+
+	switch v := n.(type) {
+	case *FuncNode:
+		newArgs := make([]Node, len(v.Args))
+		for i, a := range v.Args {
+			newArgs[i] = ApplyDegreeMode(a)
+		}
+
+		switch v.Name {
+		case "sin", "cos", "tan":
+			if len(newArgs) == 1 {
+				wrappedArg := &MulNode{
+					Factors: []Node{newArgs[0], degNode},
+				}
+				return &FuncNode{Name: v.Name, Args: []Node{wrappedArg}}
+			}
+			return &FuncNode{Name: v.Name, Args: newArgs}
+
+		case "asin", "acos", "atan":
+			fn := &FuncNode{Name: v.Name, Args: newArgs}
+			degInv := &PowNode{
+				Base: degNode,
+				Exp:  NewRationalFromBigRat(big.NewRat(-1, 1)),
+			}
+			return &MulNode{
+				Factors: []Node{fn, degInv},
+			}
+
+		default:
+			return &FuncNode{Name: v.Name, Args: newArgs}
+		}
+
+	case *AddNode:
+		newTerms := make([]Node, len(v.Terms))
+		for i, t := range v.Terms {
+			newTerms[i] = ApplyDegreeMode(t)
+		}
+		return &AddNode{Terms: newTerms}
+
+	case *MulNode:
+		newFactors := make([]Node, len(v.Factors))
+		for i, f := range v.Factors {
+			newFactors[i] = ApplyDegreeMode(f)
+		}
+		return &MulNode{Factors: newFactors}
+
+	case *PowNode:
+		return &PowNode{
+			Base: ApplyDegreeMode(v.Base),
+			Exp:  ApplyDegreeMode(v.Exp),
+		}
+
+	case *UnaryOpNode:
+		return &UnaryOpNode{
+			Op:   v.Op,
+			Expr: ApplyDegreeMode(v.Expr),
+		}
+
+	case *ComplexNode:
+		return &ComplexNode{
+			Real: ApplyDegreeMode(v.Real),
+			Imag: ApplyDegreeMode(v.Imag),
+		}
+
+	case *SqrtNode:
+		return &SqrtNode{
+			Radicand: ApplyDegreeMode(v.Radicand),
+		}
+
+	default:
+		return n
+	}
+}
+
+// ApplyDegreeModeToStatement applies degree mode to expressions within statements or plain expression nodes.
+func ApplyDegreeModeToStatement(stmt interface{}) interface{} {
+	switch s := stmt.(type) {
+	case *AssignStmt:
+		return &AssignStmt{
+			Name:  s.Name,
+			Value: ApplyDegreeMode(s.Value),
+		}
+	case Node:
+		return ApplyDegreeMode(s)
+	default:
+		return stmt
+	}
 }
 
 // -------------------------------------------------------------------------
@@ -810,6 +920,15 @@ func simplifyFunc(name string, args []Node) (Node, error) {
 		}
 		return NewFunc(name, args)
 
+	case "asin", "acos", "atan":
+		arg := args[0]
+		if val, ok, err := evalInverseTrig(name, arg); err != nil {
+			return nil, err
+		} else if ok {
+			return val, nil
+		}
+		return NewFunc(name, args)
+
 	case "log":
 		if len(args) == 1 {
 			// log10(x)
@@ -1254,6 +1373,183 @@ func evalTrigPi(fn string, r *big.Rat) (Node, bool) {
 	return nil, false
 }
 
+func piMultiple(num, denom int64) Node {
+	if num == 0 {
+		return mustRational(0, 1)
+	}
+	r := NewRationalFromBigRat(big.NewRat(num, denom))
+	pi := &ConstNode{Name: "pi"}
+	if r.Val.Cmp(big.NewRat(1, 1)) == 0 {
+		return pi
+	}
+	return &MulNode{Factors: []Node{r, pi}}
+}
+
+func classifyTrigVal(n Node) (string, bool) {
+	neg := false
+	cur := n
+	if isNegative(cur) {
+		neg = true
+		if negated, err := simplifyUnaryOp("-", cur); err == nil {
+			cur = negated
+		}
+	}
+
+	if rat, ok := cur.(*RationalNode); ok {
+		if rat.Val.Sign() == 0 {
+			return "0", false
+		}
+		if rat.Val.Cmp(big.NewRat(1, 2)) == 0 {
+			return "1/2", neg
+		}
+		if rat.Val.Cmp(big.NewRat(1, 1)) == 0 {
+			return "1", neg
+		}
+		return "", neg
+	}
+
+	if s, ok := cur.(*SqrtNode); ok {
+		if r, ok := s.Radicand.(*RationalNode); ok && r.Val.Cmp(big.NewRat(3, 1)) == 0 {
+			return "sqrt(3)", neg
+		}
+	}
+
+	if mul, ok := cur.(*MulNode); ok {
+		var rat *big.Rat
+		var sqrtN int64
+		for _, f := range mul.Factors {
+			if r, ok := f.(*RationalNode); ok {
+				if rat == nil {
+					rat = new(big.Rat).Set(r.Val)
+				} else {
+					rat.Mul(rat, r.Val)
+				}
+			} else if s, ok := f.(*SqrtNode); ok {
+				if r, ok := s.Radicand.(*RationalNode); ok && r.Val.IsInt() {
+					sqrtN = r.Val.Num().Int64()
+				}
+			} else if pow, ok := f.(*PowNode); ok {
+				if rBase, ok := pow.Base.(*RationalNode); ok {
+					if rExp, ok := pow.Exp.(*RationalNode); ok && rExp.Val.Cmp(big.NewRat(-1, 1)) == 0 {
+						inv := new(big.Rat).Inv(rBase.Val)
+						if rat == nil {
+							rat = inv
+						} else {
+							rat.Mul(rat, inv)
+						}
+					}
+				}
+			}
+		}
+		if rat != nil && sqrtN > 0 {
+			if sqrtN == 2 && rat.Cmp(big.NewRat(1, 2)) == 0 {
+				return "sqrt(2)/2", neg
+			}
+			if sqrtN == 3 && rat.Cmp(big.NewRat(1, 2)) == 0 {
+				return "sqrt(3)/2", neg
+			}
+			if sqrtN == 3 && rat.Cmp(big.NewRat(1, 3)) == 0 {
+				return "sqrt(3)/3", neg
+			}
+		}
+	}
+
+	return "", neg
+}
+
+func evalInverseTrig(fn string, arg Node) (Node, bool, error) {
+	// Domain check for rational arguments
+	if rat, ok := arg.(*RationalNode); ok {
+		if fn == "asin" || fn == "acos" {
+			one := big.NewRat(1, 1)
+			negOne := big.NewRat(-1, 1)
+			if rat.Val.Cmp(one) > 0 || rat.Val.Cmp(negOne) < 0 {
+				return nil, false, fmt.Errorf("%s domain error: argument must be in [-1, 1], got %s", fn, rat.String())
+			}
+		}
+	}
+
+	vType, isNeg := classifyTrigVal(arg)
+	if vType == "" {
+		return nil, false, nil
+	}
+
+	switch fn {
+	case "asin":
+		var posRes Node
+		switch vType {
+		case "0":
+			return mustRational(0, 1), true, nil
+		case "1/2":
+			posRes = piMultiple(1, 6)
+		case "sqrt(2)/2":
+			posRes = piMultiple(1, 4)
+		case "sqrt(3)/2":
+			posRes = piMultiple(1, 3)
+		case "1":
+			posRes = piMultiple(1, 2)
+		default:
+			return nil, false, nil
+		}
+		if isNeg {
+			res, err := simplifyUnaryOp("-", posRes)
+			return res, true, err
+		}
+		return posRes, true, nil
+
+	case "acos":
+		switch vType {
+		case "0":
+			return piMultiple(1, 2), true, nil
+		case "1/2":
+			if isNeg {
+				return piMultiple(2, 3), true, nil
+			}
+			return piMultiple(1, 3), true, nil
+		case "sqrt(2)/2":
+			if isNeg {
+				return piMultiple(3, 4), true, nil
+			}
+			return piMultiple(1, 4), true, nil
+		case "sqrt(3)/2":
+			if isNeg {
+				return piMultiple(5, 6), true, nil
+			}
+			return piMultiple(1, 6), true, nil
+		case "1":
+			if isNeg {
+				return piMultiple(1, 1), true, nil
+			}
+			return mustRational(0, 1), true, nil
+		default:
+			return nil, false, nil
+		}
+
+	case "atan":
+		var posRes Node
+		switch vType {
+		case "0":
+			return mustRational(0, 1), true, nil
+		case "sqrt(3)/3":
+			posRes = piMultiple(1, 6)
+		case "1":
+			posRes = piMultiple(1, 4)
+		case "sqrt(3)":
+			posRes = piMultiple(1, 3)
+		default:
+			return nil, false, nil
+		}
+		if isNeg {
+			res, err := simplifyUnaryOp("-", posRes)
+			return res, true, err
+		}
+		return posRes, true, nil
+
+	default:
+		return nil, false, nil
+	}
+}
+
 // -------------------------------------------------------------------------
 // Multiplication Simplification & Distributive Law Expansion
 // -------------------------------------------------------------------------
@@ -1429,6 +1725,66 @@ func simplifyMul(factors []Node) (Node, error) {
 		all := append([]Node{&RationalNode{Val: coeff}}, finalFactors...)
 		return simplifyMul(all)
 	}
+
+	// Merge powers of identical bases (e.g. pi * pi^-1 -> 1, x^2 * x^3 -> x^5)
+	var mergedFactors []Node
+	type baseEntry struct {
+		base Node
+		exp  *big.Rat
+	}
+	var baseList []*baseEntry
+
+	for _, f := range finalFactors {
+		var base Node
+		exp := big.NewRat(1, 1)
+
+		if pow, ok := f.(*PowNode); ok {
+			base = pow.Base
+			if rExp, ok := pow.Exp.(*RationalNode); ok {
+				exp = new(big.Rat).Set(rExp.Val)
+			} else {
+				mergedFactors = append(mergedFactors, f)
+				continue
+			}
+		} else if _, isConst := f.(*ConstNode); isConst {
+			base = f
+		} else if _, isVar := f.(*VarNode); isVar {
+			base = f
+		} else {
+			mergedFactors = append(mergedFactors, f)
+			continue
+		}
+
+		found := false
+		for _, be := range baseList {
+			if be.base.Equal(base) {
+				be.exp.Add(be.exp, exp)
+				found = true
+				break
+			}
+		}
+		if !found {
+			baseList = append(baseList, &baseEntry{base: base, exp: exp})
+		}
+	}
+
+	for _, be := range baseList {
+		if be.exp.Sign() == 0 {
+			// base^0 = 1 (cancels out)
+			continue
+		}
+		one := big.NewRat(1, 1)
+		if be.exp.Cmp(one) == 0 {
+			mergedFactors = append(mergedFactors, be.base)
+		} else {
+			powSimp, err := simplifyPow(be.base, &RationalNode{Val: be.exp})
+			if err != nil {
+				return nil, err
+			}
+			mergedFactors = append(mergedFactors, powSimp)
+		}
+	}
+	finalFactors = mergedFactors
 
 	if coeff.Sign() == 0 {
 		return mustRational(0, 1), nil

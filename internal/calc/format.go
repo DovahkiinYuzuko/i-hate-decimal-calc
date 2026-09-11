@@ -324,6 +324,12 @@ func formatLaTeXNode(n Node) string {
 		switch fnName {
 		case "sin", "cos", "tan", "log", "ln":
 			fnName = "\\" + fnName
+		case "asin":
+			fnName = "\\arcsin"
+		case "acos":
+			fnName = "\\arccos"
+		case "atan":
+			fnName = "\\arctan"
 		}
 		if len(v.Args) == 1 {
 			return fmt.Sprintf("%s(%s)", fnName, formatLaTeXNode(v.Args[0]))

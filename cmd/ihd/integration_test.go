@@ -91,6 +91,13 @@ func TestIntegration_SpecificationExamples(t *testing.T) {
 		{"mod(23, 5)", "3"},
 		{"perm(6, 2)", "30"},
 		{"comb(6, 2)", "15"},
+
+		// 12. Trigonometric pack (issue-15)
+		{"asin(1/2)", "π/6"},
+		{"acos(1/2)", "π/3"},
+		{"atan(1)", "π/4"},
+		{"sin(30*deg)", "1/2"},
+		{"asin(1/2) / deg", "30"},
 	}
 
 	for _, tc := range testCases {
@@ -175,5 +182,16 @@ func TestIntegration_CLIEndToEnd(t *testing.T) {
 	}
 	if strings.TrimSpace(out.String()) != "sqrt(2) + pi" {
 		t.Errorf("expected 'sqrt(2) + pi', got %q", strings.TrimSpace(out.String()))
+	}
+
+	// Degree mode flag (--deg)
+	out.Reset()
+	errOut.Reset()
+	code = run([]string{"--deg", "sin(30) + cos(60) + asin(1/2)"}, strings.NewReader(""), out, errOut)
+	if code != 0 {
+		t.Fatalf("CLI degree mode failed: %s", errOut.String())
+	}
+	if strings.TrimSpace(out.String()) != "31" {
+		t.Errorf("expected '31', got %q", strings.TrimSpace(out.String()))
 	}
 }

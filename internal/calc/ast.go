@@ -108,10 +108,10 @@ type ConstNode struct {
 	Name string
 }
 
-// NewConst creates a new ConstNode. Allowed names: "pi", "e".
+// NewConst creates a new ConstNode. Allowed names: "pi", "e", "deg".
 func NewConst(name string) (*ConstNode, error) {
 	switch name {
-	case "pi", "e":
+	case "pi", "e", "deg":
 		return &ConstNode{Name: name}, nil
 	default:
 		return nil, fmt.Errorf("unknown constant: %s", name)
@@ -143,13 +143,22 @@ type FuncNode struct {
 // NewFunc creates and validates a function node.
 func NewFunc(name string, args []Node) (*FuncNode, error) {
 	switch name {
-	case "sin", "cos", "tan", "ln":
+	case "sin", "cos", "tan", "ln", "asin", "acos", "atan":
 		if len(args) != 1 {
 			return nil, fmt.Errorf("%s requires exactly 1 argument, got %d", name, len(args))
 		}
 		if name == "ln" {
 			if rat, ok := args[0].(*RationalNode); ok && rat.Val.Sign() <= 0 {
 				return nil, fmt.Errorf("ln domain error: argument must be positive, got %s", rat.String())
+			}
+		}
+		if name == "asin" || name == "acos" {
+			if rat, ok := args[0].(*RationalNode); ok {
+				one := big.NewRat(1, 1)
+				negOne := big.NewRat(-1, 1)
+				if rat.Val.Cmp(one) > 0 || rat.Val.Cmp(negOne) < 0 {
+					return nil, fmt.Errorf("%s domain error: argument must be in [-1, 1], got %s", name, rat.String())
+				}
 			}
 		}
 		return &FuncNode{Name: name, Args: args}, nil
