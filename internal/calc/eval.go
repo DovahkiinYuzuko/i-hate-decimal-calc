@@ -546,7 +546,97 @@ func simplifyPow(base, exp Node) (Node, error) {
 		}
 	}
 
+	// Add^Integer: (a + b*sqrt(r))^-1 -> Rationalize binomial radical denominator
+	if add, ok := base.(*AddNode); ok && expIsRat && ratExp.Val.IsInt() {
+		expInt := ratExp.Val.Num().Int64()
+		if expInt == -1 {
+			if inv, ok := rationalizeBinomialDenominator(add); ok {
+				return inv, nil
+			}
+		}
+		if expInt < -1 {
+			if inv, ok := rationalizeBinomialDenominator(add); ok {
+				return simplifyPow(inv, mustRational(-expInt, 1))
+			}
+		}
+	}
+
 	return NewPow(base, exp)
+}
+
+func extractRadicalSquare(n Node) (*big.Rat, bool) {
+	switch v := n.(type) {
+	case *RationalNode:
+		sq := new(big.Rat).Mul(v.Val, v.Val)
+		return sq, true
+	case *SqrtNode:
+		if r, ok := v.Radicand.(*RationalNode); ok && r.Val.Sign() >= 0 {
+			return r.Val, true
+		}
+	case *UnaryOpNode:
+		if v.Op == "-" {
+			return extractRadicalSquare(v.Expr)
+		}
+	case *MulNode:
+		if len(v.Factors) == 2 {
+			r1, ok1 := v.Factors[0].(*RationalNode)
+			s2, ok2 := v.Factors[1].(*SqrtNode)
+			if ok1 && ok2 {
+				if rRat, ok := s2.Radicand.(*RationalNode); ok && rRat.Val.Sign() >= 0 {
+					k2 := new(big.Rat).Mul(r1.Val, r1.Val)
+					return new(big.Rat).Mul(k2, rRat.Val), true
+				}
+			}
+			s1, ok1 := v.Factors[0].(*SqrtNode)
+			r2, ok2 := v.Factors[1].(*RationalNode)
+			if ok1 && ok2 {
+				if rRat, ok := s1.Radicand.(*RationalNode); ok && rRat.Val.Sign() >= 0 {
+					k2 := new(big.Rat).Mul(r2.Val, r2.Val)
+					return new(big.Rat).Mul(k2, rRat.Val), true
+				}
+			}
+		}
+	}
+	return nil, false
+}
+
+func rationalizeBinomialDenominator(add *AddNode) (Node, bool) {
+	if len(add.Terms) != 2 {
+		return nil, false
+	}
+	t1 := add.Terms[0]
+	t2 := add.Terms[1]
+
+	sq1, ok1 := extractRadicalSquare(t1)
+	sq2, ok2 := extractRadicalSquare(t2)
+	if !ok1 || !ok2 {
+		return nil, false
+	}
+
+	norm := new(big.Rat).Sub(sq1, sq2)
+	if norm.Sign() == 0 {
+		return nil, false
+	}
+
+	// Conjugate: t1 - t2 = t1 + (-t2)
+	negT2, err := simplifyUnaryOp("-", t2)
+	if err != nil {
+		return nil, false
+	}
+	conj, err := simplifyAdd([]Node{t1, negT2})
+	if err != nil {
+		return nil, false
+	}
+
+	// 1 / D = (1 / norm) * conj
+	invNorm := new(big.Rat).Inv(norm)
+	invCoeff := &RationalNode{Val: invNorm}
+
+	res, err := simplifyMul([]Node{invCoeff, conj})
+	if err != nil {
+		return nil, false
+	}
+	return res, true
 }
 
 // -------------------------------------------------------------------------

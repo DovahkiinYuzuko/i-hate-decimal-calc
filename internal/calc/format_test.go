@@ -170,6 +170,16 @@ func TestFormatPretty2D(t *testing.T) {
 	if !strings.Contains(actual, "---") || !strings.Contains(actual, "√2") {
 		t.Errorf("expected pretty fraction with √2, got:\n%s", actual)
 	}
+
+	// 4. Negative power node: PowNode with Exp: -1 -> fraction box
+	negPowNode, err := NewPow(NewSqrt(mustRational(2, 1)), mustRational(-1, 1))
+	if err != nil {
+		t.Fatalf("unexpected NewPow error: %v", err)
+	}
+	actualPow := FormatPretty2D(negPowNode)
+	if !strings.Contains(actualPow, "---") || !strings.Contains(actualPow, "1") || !strings.Contains(actualPow, "√2") {
+		t.Errorf("expected 2D fraction for (√2)^-1, got:\n%s", actualPow)
+	}
 }
 
 

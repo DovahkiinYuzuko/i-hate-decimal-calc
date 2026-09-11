@@ -290,3 +290,30 @@ func TestEval_DenestSqrt(t *testing.T) {
 	}
 }
 
+// TestEval_ConjugateRationalization validates binomial radical denominator rationalization.
+func TestEval_ConjugateRationalization(t *testing.T) {
+	testCases := []struct {
+		input    string
+		expected string
+	}{
+		{"1 / (1 + sqrt(2))", "-1 + √2"},
+		{"1 / (2 + sqrt(3))", "2 - √3"},
+		{"(1 + sqrt(3)) / (2 + sqrt(5))", "-2 - 2*√3 + √15 + √5"},
+		{"1 / (sqrt(3) + sqrt(2))", "-√2 + √3"},
+		{"6 / (sqrt(5) - sqrt(2))", "2*√2 + 2*√5"},
+	}
+
+	for _, tc := range testCases {
+		res, err := EvalString(tc.input)
+		if err != nil {
+			t.Errorf("eval error for %q: %v", tc.input, err)
+			continue
+		}
+		formatted := Format(res)
+		if formatted != tc.expected {
+			t.Errorf("input %q: expected %q, got %q (raw node: %s)", tc.input, tc.expected, formatted, res.String())
+		}
+	}
+}
+
+

@@ -22,6 +22,7 @@ func TestCLI_OneShot(t *testing.T) {
 		{[]string{"--ascii", "-3^2"}, "-9", 0},
 		{[]string{"0.(3) + 0.1(6)"}, "1/2", 0},
 		{[]string{"sqrt(5 + 2*sqrt(6))"}, "√2 + √3", 0},
+		{[]string{"(1 + sqrt(3)) / (2 + sqrt(5))"}, "-2 - 2*√3 + √15 + √5", 0},
 	}
 
 	for _, tc := range testCases {

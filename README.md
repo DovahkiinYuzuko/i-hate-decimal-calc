@@ -17,7 +17,7 @@
 - **完全厳密計算**: 内部計算に `float64` などの浮動小数点型を使用せず、有理数演算および代数的簡約のみで計算を実行します。
 - **自動数式簡約**:
   - 平方数のくくり出し（例: `sqrt(8)` → `2*√2`）
-  - 単項ルートの自動有理化（例: `1/sqrt(2)` → `√2/2`）
+  - 単項ルートおよび2項無理数分母の共役有理化（例: `1/sqrt(2)` → `√2/2`, `(1 + sqrt(3)) / (2 + sqrt(5))` → `-2 - 2*√3 + √15 + √5`）
   - 二重根号の自動分解展開（例: `sqrt(5 + 2*sqrt(6))` → `√2 + √3`, `sqrt(7 + 4*sqrt(3))` → `2 + √3`）
   - 循環小数の厳密分数化（例: `0.(3)` → `1/3`, `0.1(6)` → `1/6`, `0.(9)` → `1`）
   - 三角関数の特殊値評価（例: `sin(pi/6)` → `1/2`）
@@ -147,7 +147,7 @@ All decimal inputs are converted immediately into exact rational fractions (`big
 - **Completely Exact Calculation**: Does not utilize `float64` or floating-point types for internal simplification, performing all operations via rational arithmetic and algebraic rules.
 - **Automated Mathematical Simplification**:
   - Factoring out square components (e.g., `sqrt(8)` → `2*√2`)
-  - Monomial root rationalization (e.g., `1/sqrt(2)` → `√2/2`)
+  - Monomial and binomial conjugate radical rationalization (e.g., `1/sqrt(2)` → `√2/2`, `(1 + sqrt(3)) / (2 + sqrt(5))` → `-2 - 2*√3 + √15 + √5`)
   - Automated radical denesting via Borodin (1985) algorithm (e.g., `sqrt(5 + 2*sqrt(6))` → `√2 + √3`)
   - Exact conversion of repeating decimals (e.g., `0.(3)` → `1/3`, `0.1(6)` → `1/6`, `0.(9)` → `1`)
   - Evaluation of trigonometric special values (e.g., `sin(pi/6)` → `1/2`)

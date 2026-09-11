@@ -631,6 +631,17 @@ func nodeToBox(n Node) Box {
 		return hConcat(realBox, newTextBox(" + "), imagToBox(v.Imag))
 
 	case *PowNode:
+		// Negative integer power: X^-1 -> 1 / X
+		if rExp, ok := v.Exp.(*RationalNode); ok && rExp.Val.IsInt() && rExp.Val.Sign() < 0 {
+			expVal := rExp.Val.Num().Int64()
+			if expVal == -1 {
+				return makeFracBox(newTextBox("1"), nodeToBox(v.Base))
+			}
+			posExpNode := mustRational(-expVal, 1)
+			denomBox := nodeToBox(&PowNode{Base: v.Base, Exp: posExpNode})
+			return makeFracBox(newTextBox("1"), denomBox)
+		}
+
 		baseBox := nodeToBox(v.Base)
 		expBox := nodeToBox(v.Exp)
 		switch v.Base.(type) {
@@ -704,6 +715,15 @@ func mulToBox(m *MulNode) Box {
 			negOne := big.NewRat(-1, 1)
 			if r.Val.Cmp(negOne) == 0 {
 				return hConcat(newTextBox("-"), nodeToBox(m.Factors[1]))
+			}
+		}
+
+		// Check for A * B^-1 -> A / B
+		if pow, ok := m.Factors[1].(*PowNode); ok {
+			if rExp, isRat := pow.Exp.(*RationalNode); isRat && rExp.Val.IsInt() && rExp.Val.Cmp(big.NewRat(-1, 1)) == 0 {
+				numBox := nodeToBox(m.Factors[0])
+				denomBox := nodeToBox(pow.Base)
+				return makeFracBox(numBox, denomBox)
 			}
 		}
 	}

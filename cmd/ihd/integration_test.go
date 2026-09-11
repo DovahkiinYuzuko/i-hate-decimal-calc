@@ -66,7 +66,12 @@ func TestIntegration_SpecificationExamples(t *testing.T) {
 		{"sqrt(5 + 2*sqrt(6))", "√2 + √3"},
 		{"sqrt(7 + 4*sqrt(3))", "2 + √3"},
 
-		// 9. Power associativity and order of operations
+		// 9. Binomial radical conjugate rationalization (issue-12)
+		{"(1 + sqrt(3)) / (2 + sqrt(5))", "-2 - 2*√3 + √15 + √5"},
+		{"1 / (2 + sqrt(3))", "2 - √3"},
+		{"6 / (sqrt(5) - sqrt(2))", "2*√2 + 2*√5"},
+
+		// 10. Power associativity and order of operations
 		{"0^0", "1"},
 		{"2^3^2", "512"},
 		{"(2^3)^2", "64"},
