@@ -42,6 +42,9 @@ func formatNode(n Node, opts FormatOptions) string {
 		}
 		return v.Name
 
+	case *VarNode:
+		return v.Name
+
 	case *SqrtNode:
 		radStr := formatNode(v.Radicand, opts)
 		if opts.AsciiOnly {
@@ -226,14 +229,16 @@ func termCategory(n Node) int {
 	switch v := n.(type) {
 	case *RationalNode:
 		return 1
-	case *SqrtNode:
+	case *VarNode:
 		return 2
-	case *ConstNode:
+	case *SqrtNode:
 		return 3
-	case *FuncNode:
+	case *ConstNode:
 		return 4
-	case *ComplexNode:
+	case *FuncNode:
 		return 5
+	case *ComplexNode:
+		return 6
 	case *MulNode:
 		if len(v.Factors) >= 2 {
 			return termCategory(v.Factors[len(v.Factors)-1])
@@ -286,6 +291,9 @@ func formatLaTeXNode(n Node) string {
 		if v.Name == "pi" {
 			return "\\pi"
 		}
+		return v.Name
+
+	case *VarNode:
 		return v.Name
 
 	case *SqrtNode:
@@ -585,6 +593,9 @@ func nodeToBox(n Node) Box {
 		if v.Name == "pi" {
 			return newTextBox("π")
 		}
+		return newTextBox(v.Name)
+
+	case *VarNode:
 		return newTextBox(v.Name)
 
 	case *SqrtNode:

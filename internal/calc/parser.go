@@ -90,6 +90,61 @@ func Parse(input string) (Node, error) {
 	return node, nil
 }
 
+func isReservedFunc(name string) bool {
+	switch name {
+	case "sqrt", "sin", "cos", "tan", "log", "ln":
+		return true
+	default:
+		return false
+	}
+}
+
+func isReservedConst(name string) bool {
+	switch name {
+	case "pi", "e", "i":
+		return true
+	default:
+		return false
+	}
+}
+
+// ParseStatement parses an input string as either an assignment statement (*AssignStmt) or an expression (Node).
+func ParseStatement(input string) (interface{}, error) {
+	l := NewLexer(input)
+	p := NewParser(l)
+
+	if p.curTok.Type == TokenEOF {
+		return nil, fmt.Errorf("syntax error: empty input")
+	}
+
+	// Check if this is an assignment: Ident = Expr
+	if p.curTok.Type == TokenIdent && p.peekTok.Type == TokenAssign {
+		varName := p.curTok.Literal
+		if isReservedConst(varName) || isReservedFunc(varName) {
+			return nil, fmt.Errorf(MsgErrReservedWord, varName)
+		}
+		p.nextToken() // move to '='
+		p.nextToken() // move to start of expression
+
+		if p.curTok.Type == TokenEOF {
+			return nil, fmt.Errorf("syntax error: missing expression after '='")
+		}
+
+		expr, err := p.ParseExpression(PREC_LOWEST)
+		if err != nil {
+			return nil, err
+		}
+
+		if p.peekTok.Type != TokenEOF {
+			return nil, fmt.Errorf("syntax error: unexpected token %q after expression", p.peekTok.Literal)
+		}
+
+		return &AssignStmt{Name: varName, Value: expr}, nil
+	}
+
+	return Parse(input)
+}
+
 // ParseExpression parses an expression with Pratt parsing algorithm.
 func (p *Parser) ParseExpression(precedence int) (Node, error) {
 	if p.curTok.Type == TokenIllegal {
@@ -134,17 +189,20 @@ func (p *Parser) parsePrefix() (Node, error) {
 			p.nextToken() // move to '('
 			return p.parseFuncCall(name)
 		}
+		if isReservedFunc(name) {
+			return nil, fmt.Errorf("syntax error at position %d: function %q missing arguments", p.curTok.Pos, name)
+		}
 		// Constants: pi, e, or imaginary unit i
 		if name == "i" {
 			zero, _ := NewRational(0, 1)
 			one, _ := NewRational(1, 1)
 			return NewComplex(zero, one), nil
 		}
-		c, err := NewConst(name)
-		if err != nil {
-			return nil, fmt.Errorf("syntax error at position %d: %w", p.curTok.Pos, err)
+		if isReservedConst(name) {
+			return NewConst(name)
 		}
-		return c, nil
+		// Otherwise, it is a variable symbol (e.g., "x", "ans")
+		return NewVar(name), nil
 
 	case TokenMinus:
 		// Unary minus: use PREC_PREFIX_MINUS so that -3^2 parses as -(3^2)

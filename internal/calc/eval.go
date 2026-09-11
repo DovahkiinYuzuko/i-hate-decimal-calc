@@ -12,8 +12,13 @@ func mustRational(num, denom int64) *RationalNode {
 	return &RationalNode{Val: big.NewRat(num, denom)}
 }
 
-// Eval evaluates and simplifies an AST node into its canonical exact form.
+// Eval evaluates and simplifies an AST node into its canonical exact form using an empty environment.
 func Eval(n Node) (Node, error) {
+	return EvalWithEnv(n, NewEnv())
+}
+
+// EvalWithEnv evaluates and simplifies an AST node in the context of the given environment.
+func EvalWithEnv(n Node, env *Env) (Node, error) {
 	if n == nil {
 		return nil, fmt.Errorf("cannot evaluate nil node")
 	}
@@ -22,19 +27,27 @@ func Eval(n Node) (Node, error) {
 	case *RationalNode, *ConstNode:
 		return v, nil
 
+	case *VarNode:
+		if env != nil {
+			if bound, ok := env.Get(v.Name); ok {
+				return EvalWithEnv(bound, env)
+			}
+		}
+		return v, nil
+
 	case *ComplexNode:
-		r, err := Eval(v.Real)
+		r, err := EvalWithEnv(v.Real, env)
 		if err != nil {
 			return nil, err
 		}
-		im, err := Eval(v.Imag)
+		im, err := EvalWithEnv(v.Imag, env)
 		if err != nil {
 			return nil, err
 		}
 		return NewComplex(r, im), nil
 
 	case *SqrtNode:
-		rad, err := Eval(v.Radicand)
+		rad, err := EvalWithEnv(v.Radicand, env)
 		if err != nil {
 			return nil, err
 		}
@@ -43,7 +56,7 @@ func Eval(n Node) (Node, error) {
 	case *FuncNode:
 		evaledArgs := make([]Node, len(v.Args))
 		for i, a := range v.Args {
-			ea, err := Eval(a)
+			ea, err := EvalWithEnv(a, env)
 			if err != nil {
 				return nil, err
 			}
@@ -52,18 +65,18 @@ func Eval(n Node) (Node, error) {
 		return simplifyFunc(v.Name, evaledArgs)
 
 	case *UnaryOpNode:
-		expr, err := Eval(v.Expr)
+		expr, err := EvalWithEnv(v.Expr, env)
 		if err != nil {
 			return nil, err
 		}
 		return simplifyUnaryOp(v.Op, expr)
 
 	case *PowNode:
-		base, err := Eval(v.Base)
+		base, err := EvalWithEnv(v.Base, env)
 		if err != nil {
 			return nil, err
 		}
-		exp, err := Eval(v.Exp)
+		exp, err := EvalWithEnv(v.Exp, env)
 		if err != nil {
 			return nil, err
 		}
@@ -72,7 +85,7 @@ func Eval(n Node) (Node, error) {
 	case *AddNode:
 		evaledTerms := make([]Node, len(v.Terms))
 		for i, t := range v.Terms {
-			et, err := Eval(t)
+			et, err := EvalWithEnv(t, env)
 			if err != nil {
 				return nil, err
 			}
@@ -83,7 +96,7 @@ func Eval(n Node) (Node, error) {
 	case *MulNode:
 		evaledFactors := make([]Node, len(v.Factors))
 		for i, f := range v.Factors {
-			ef, err := Eval(f)
+			ef, err := EvalWithEnv(f, env)
 			if err != nil {
 				return nil, err
 			}
@@ -96,13 +109,18 @@ func Eval(n Node) (Node, error) {
 	}
 }
 
-// EvalString parses and evaluates a math expression string.
+// EvalString parses and evaluates a math expression string using an empty environment.
 func EvalString(input string) (Node, error) {
+	return EvalStringWithEnv(input, NewEnv())
+}
+
+// EvalStringWithEnv parses and evaluates a math expression string using the given environment.
+func EvalStringWithEnv(input string, env *Env) (Node, error) {
 	node, err := Parse(input)
 	if err != nil {
 		return nil, err
 	}
-	return Eval(node)
+	return EvalWithEnv(node, env)
 }
 
 // -------------------------------------------------------------------------

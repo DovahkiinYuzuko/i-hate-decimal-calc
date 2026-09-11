@@ -22,9 +22,10 @@
   - 循環小数の厳密分数化（例: `0.(3)` → `1/3`, `0.1(6)` → `1/6`, `0.(9)` → `1`）
   - 三角関数の特殊値評価（例: `sin(pi/6)` → `1/2`）
   - 複素数への自動昇格と代数計算（例: `sqrt(-4)` → `2*i`, `(1+2*i)*(1-2*i)` → `5`）
-  - 同類項の集約と分配法則による展開
+  - 同類項の集約と分配法則による展開（例: `2*x + 3*x` → `5*x`）
+  - 変数シンボル定義・代入（`x = 式`）および直前結果参照（`ans`）
 - **厳格な構文解析**: 乗算記号の省略（例: `2pi` や `(1+2)(3+4)`）を禁止し、誤認識による計算ミスを防ぎます。
-- **多彩な実行形態**: コマンドライン引数によるワンショット実行、対話型REPL、および標準入力パイプに対応しています。
+- **多彩な実行形態**: コマンドライン引数によるワンショット実行、日本語IME（`√`, `π` 等）や上下キー履歴に完全対応したリッチ対話型REPL、および標準入力パイプに対応しています。
 - **表示モード切替**: 人間が読みやすいUnicode記号表示を標準としつつ、スクリプト連携用の `--ascii` フラグや、参考値としての `--approx`（小数近似値併記）フラグを備えています。
 
 ### インストール
@@ -68,10 +69,17 @@ ihd "sqrt(2) + sqrt(8)"
 $ ihd
 ihd: Exact Arithmetic Calculator
 Type 'exit' or 'quit' to exit.
-ihd> 4 + 4 * 6.441
-7441/250
-ihd> (1 + sqrt(2)) * (1 - sqrt(2))
--1
+ihd> 1/2 + 1/3
+5/6
+ihd> ans * 6
+5
+ihd> x = 1 + sqrt(2)
+1 + √2
+ihd> 2*x - x
+1 + √2
+ihd> vars
+ans = 1 + √2
+x = 1 + √2
 ihd> exit
 Goodbye.
 ```
@@ -152,9 +160,10 @@ All decimal inputs are converted immediately into exact rational fractions (`big
   - Exact conversion of repeating decimals (e.g., `0.(3)` → `1/3`, `0.1(6)` → `1/6`, `0.(9)` → `1`)
   - Evaluation of trigonometric special values (e.g., `sin(pi/6)` → `1/2`)
   - Promotion to complex numbers and algebraic operations (e.g., `sqrt(-4)` → `2*i`, `(1+2*i)*(1-2*i)` → `5`)
-  - Like-term aggregation and distributive expansion
+  - Like-term aggregation and distributive expansion (e.g., `2*x + 3*x` → `5*x`)
+  - Variable symbol assignment (`x = expr`) and previous result reference (`ans`)
 - **Strict Parsing Rules**: Prohibits implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) to eliminate parse ambiguities.
-- **Multiple Execution Modes**: Supports one-shot execution via CLI arguments, interactive REPL, and standard input piping.
+- **Multiple Execution Modes**: Supports one-shot execution via CLI arguments, a rich interactive REPL with full Japanese IME support and history browsing, and standard input piping.
 - **Configurable Output**: Defaults to Unicode mathematical symbols, with `--ascii` for integration scripts and `--approx` for displaying reference floating-point approximations.
 
 ### Installation
@@ -198,10 +207,17 @@ Running without arguments launches the interactive REPL:
 $ ihd
 ihd: Exact Arithmetic Calculator
 Type 'exit' or 'quit' to exit.
-ihd> 4 + 4 * 6.441
-7441/250
-ihd> (1 + sqrt(2)) * (1 - sqrt(2))
--1
+ihd> 1/2 + 1/3
+5/6
+ihd> ans * 6
+5
+ihd> x = 1 + sqrt(2)
+1 + √2
+ihd> 2*x - x
+1 + √2
+ihd> vars
+ans = 1 + √2
+x = 1 + √2
 ihd> exit
 Goodbye.
 ```

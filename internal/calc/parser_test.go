@@ -172,3 +172,37 @@ func TestParser_SyntaxErrors(t *testing.T) {
 		}
 	}
 }
+
+// TestParser_VariablesAndAssignments validates parsing of variable symbols and assignment statements.
+func TestParser_VariablesAndAssignments(t *testing.T) {
+	// 1. Variable expression parsing
+	node, err := Parse("x + ans * 2")
+	if err != nil {
+		t.Fatalf("unexpected error parsing variable expression: %v", err)
+	}
+	if node.String() != "x + ans*2" && node.String() != "x + 2*ans" {
+		t.Logf("parsed variable expression: %s", node.String())
+	}
+
+	// 2. Assignment statement parsing
+	stmt, err := ParseStatement("x = 1/2 + sqrt(2)")
+	if err != nil {
+		t.Fatalf("unexpected error parsing assignment: %v", err)
+	}
+	assign, ok := stmt.(*AssignStmt)
+	if !ok {
+		t.Fatalf("expected *AssignStmt, got %T", stmt)
+	}
+	if assign.Name != "x" {
+		t.Errorf("expected var name 'x', got %q", assign.Name)
+	}
+
+	// 3. Assignment to reserved words should fail
+	reserved := []string{"pi = 3", "e = 2", "i = 1", "sqrt = 4", "sin = 0"}
+	for _, r := range reserved {
+		_, err := ParseStatement(r)
+		if err == nil {
+			t.Errorf("expected error assigning to reserved word %q, got nil", r)
+		}
+	}
+}

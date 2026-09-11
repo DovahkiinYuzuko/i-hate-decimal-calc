@@ -5,7 +5,9 @@ const (
 	PromptREPL     = "ihd> "
 	MsgREPLWelcome = "ihd: Exact Arithmetic Calculator\nType 'exit' or 'quit' to exit."
 	MsgREPLExit    = "Goodbye."
-	MsgErrorPrefix = "Error: "
+	MsgErrorPrefix     = "Error: "
+	MsgNoVars          = "No variables defined."
+	MsgErrReservedWord = "cannot assign to reserved identifier %q"
 
 	MsgHelp = `ihd - Exact Arithmetic Calculator
 

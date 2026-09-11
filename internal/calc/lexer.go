@@ -25,6 +25,7 @@ const (
 	TokenLParen
 	TokenRParen
 	TokenComma
+	TokenAssign
 )
 
 // Token represents a single lexical token.
@@ -105,6 +106,9 @@ func (l *Lexer) NextToken() Token {
 		l.readChar()
 	case ',':
 		tok = Token{Type: TokenComma, Literal: ",", Pos: startPos}
+		l.readChar()
+	case '=':
+		tok = Token{Type: TokenAssign, Literal: "=", Pos: startPos}
 		l.readChar()
 	case '√':
 		tok = Token{Type: TokenIdent, Literal: "sqrt", Pos: startPos}

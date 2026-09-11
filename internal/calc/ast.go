@@ -19,6 +19,7 @@ const (
 	NodeMul
 	NodePow
 	NodeUnaryOp
+	NodeVar
 )
 
 // Node represents any node in the mathematical expression tree.
@@ -419,4 +420,42 @@ func (n *UnaryOpNode) Equal(other Node) bool {
 		return false
 	}
 	return n.Expr.Equal(o.Expr)
+}
+
+// -------------------------------------------------------------------------
+// VarNode (Variable Symbol)
+// -------------------------------------------------------------------------
+
+// VarNode represents a variable symbol (e.g., "x", "ans").
+type VarNode struct {
+	Name string
+}
+
+// NewVar creates a new VarNode with the given name.
+func NewVar(name string) *VarNode {
+	return &VarNode{Name: name}
+}
+
+func (n *VarNode) Type() NodeType { return NodeVar }
+
+func (n *VarNode) String() string {
+	return n.Name
+}
+
+func (n *VarNode) Equal(other Node) bool {
+	o, ok := other.(*VarNode)
+	if !ok {
+		return false
+	}
+	return n.Name == o.Name
+}
+
+// -------------------------------------------------------------------------
+// AssignStmt (Variable Assignment Statement)
+// -------------------------------------------------------------------------
+
+// AssignStmt represents a variable assignment statement (e.g., "x = 1/2").
+type AssignStmt struct {
+	Name  string
+	Value Node
 }

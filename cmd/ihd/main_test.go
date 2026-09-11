@@ -170,3 +170,56 @@ func TestCLI_REPL(t *testing.T) {
 		t.Errorf("expected exit message, got %q", output)
 	}
 }
+
+func TestCLI_REPL_VariablesAndCommands(t *testing.T) {
+	input := "x = 1/2\nx + 1\nans * 2\nvars\nexit\n"
+	in := strings.NewReader(input)
+	out := new(bytes.Buffer)
+	errOut := new(bytes.Buffer)
+
+	code := runREPL(in, out, errOut, runOptions{opts: calc.FormatOptions{AsciiOnly: false}})
+	if code != 0 {
+		t.Fatalf("expected code 0, got %d. stderr: %s", code, errOut.String())
+	}
+
+	output := out.String()
+	if !strings.Contains(output, "1/2") {
+		t.Errorf("expected output to contain '1/2', got %q", output)
+	}
+	if !strings.Contains(output, "3/2") {
+		t.Errorf("expected output to contain '3/2', got %q", output)
+	}
+	if !strings.Contains(output, "3") {
+		t.Errorf("expected output to contain '3', got %q", output)
+	}
+	if !strings.Contains(output, "x = 1/2") {
+		t.Errorf("expected vars output to contain 'x = 1/2', got %q", output)
+	}
+	if !strings.Contains(output, "ans = 3") {
+		t.Errorf("expected vars output to contain 'ans = 3', got %q", output)
+	}
+}
+
+func TestCLI_Pipe_Variables(t *testing.T) {
+	input := "x = 1/2\nx + 1\nans * 2\n"
+	in := strings.NewReader(input)
+	out := new(bytes.Buffer)
+	errOut := new(bytes.Buffer)
+
+	code := run([]string{}, in, out, errOut)
+	if code != 0 {
+		t.Fatalf("expected exit code 0, got %d. stderr: %s", code, errOut.String())
+	}
+
+	lines := strings.Split(strings.TrimSpace(out.String()), "\n")
+	expected := []string{"1/2", "3/2", "3"}
+	if len(lines) != len(expected) {
+		t.Fatalf("expected %d output lines, got %d (%v)", len(expected), len(lines), lines)
+	}
+	for i, exp := range expected {
+		if strings.TrimSpace(lines[i]) != exp {
+			t.Errorf("line %d: expected %q, got %q", i, exp, strings.TrimSpace(lines[i]))
+		}
+	}
+}
+

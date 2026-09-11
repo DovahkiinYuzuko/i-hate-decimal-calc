@@ -316,4 +316,56 @@ func TestEval_ConjugateRationalization(t *testing.T) {
 	}
 }
 
+// TestEval_VariablesAndEnvironment tests evaluation with variable bindings in Env.
+func TestEval_VariablesAndEnvironment(t *testing.T) {
+	env := NewEnv()
+	// Set x = 1/2
+	half := mustRational(1, 2)
+	env.Set("x", half)
+
+	// Evaluate "x + 1"
+	res, err := EvalStringWithEnv("x + 1", env)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if Format(res) != "3/2" {
+		t.Errorf("expected 3/2, got %s", Format(res))
+	}
+
+	// Set ans = 3/2 and evaluate "ans * 2"
+	env.Set("ans", res)
+	res2, err := EvalStringWithEnv("ans * 2", env)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if Format(res2) != "3" {
+		t.Errorf("expected 3, got %s", Format(res2))
+	}
+}
+
+// TestEval_UnboundVariableSimplification tests algebraic collection of like terms with unbound variables.
+func TestEval_UnboundVariableSimplification(t *testing.T) {
+	testCases := []struct {
+		input    string
+		expected string
+	}{
+		{"2*x + 3*x", "5*x"},
+		{"x - x", "0"},
+		{"5*x - 2*x", "3*x"},
+		{"(x + 1) * 2", "2 + 2*x"},
+	}
+
+	for _, tc := range testCases {
+		res, err := EvalString(tc.input)
+		if err != nil {
+			t.Errorf("eval error for %q: %v", tc.input, err)
+			continue
+		}
+		formatted := Format(res)
+		if formatted != tc.expected {
+			t.Errorf("input %q: expected %q, got %q", tc.input, tc.expected, formatted)
+		}
+	}
+}
+
 

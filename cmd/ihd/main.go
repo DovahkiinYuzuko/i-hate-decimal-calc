@@ -79,12 +79,13 @@ func run(args []string, in io.Reader, out io.Writer, errOut io.Writer) int {
 	// Pipe / redirect mode: process line by line
 	scanner := bufio.NewScanner(in)
 	hadError := false
+	env := calc.NewEnv()
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
-		if err := evaluateLine(line, ro, out, errOut); err != nil {
+		if err := evaluateLineWithEnv(line, ro, env, out, errOut); err != nil {
 			hadError = true
 		}
 	}
@@ -127,41 +128,41 @@ func formatOutput(node calc.Node, ro runOptions) string {
 }
 
 func evaluateLine(line string, ro runOptions, out, errOut io.Writer) error {
-	node, err := calc.EvalString(line)
+	return evaluateLineWithEnv(line, ro, calc.NewEnv(), out, errOut)
+}
+
+func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut io.Writer) error {
+	parsed, err := calc.ParseStatement(line)
 	if err != nil {
 		fmt.Fprintf(errOut, "%s%v\n", calc.MsgErrorPrefix, err)
 		return err
 	}
 
-	fmt.Fprintln(out, formatOutput(node, ro))
-	return nil
-}
-
-func runREPL(in io.Reader, out, errOut io.Writer, ro runOptions) int {
-	fmt.Fprintln(out, calc.MsgREPLWelcome)
-	scanner := bufio.NewScanner(in)
-
-	for {
-		fmt.Fprint(out, calc.PromptREPL)
-		if !scanner.Scan() {
-			// EOF or interrupt
-			fmt.Fprintln(out)
-			break
+	switch v := parsed.(type) {
+	case *calc.AssignStmt:
+		evaled, err := calc.EvalWithEnv(v.Value, env)
+		if err != nil {
+			fmt.Fprintf(errOut, "%s%v\n", calc.MsgErrorPrefix, err)
+			return err
 		}
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
-			continue
-		}
-		if line == "exit" || line == "quit" {
-			fmt.Fprintln(out, calc.MsgREPLExit)
-			break
-		}
+		env.Set(v.Name, evaled)
+		env.Set("ans", evaled)
+		fmt.Fprintln(out, formatOutput(evaled, ro))
+		return nil
 
-		_ = evaluateLine(line, ro, out, errOut)
-	}
-	if err := scanner.Err(); err != nil {
+	case calc.Node:
+		evaled, err := calc.EvalWithEnv(v, env)
+		if err != nil {
+			fmt.Fprintf(errOut, "%s%v\n", calc.MsgErrorPrefix, err)
+			return err
+		}
+		env.Set("ans", evaled)
+		fmt.Fprintln(out, formatOutput(evaled, ro))
+		return nil
+
+	default:
+		err := fmt.Errorf("unknown statement type: %T", parsed)
 		fmt.Fprintf(errOut, "%s%v\n", calc.MsgErrorPrefix, err)
-		return 1
+		return err
 	}
-	return 0
 }
