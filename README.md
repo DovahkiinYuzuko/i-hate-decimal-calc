@@ -25,7 +25,7 @@
   - 同類項の集約と分配法則による展開（例: `2*x + 3*x` → `5*x`）
   - 変数シンボル定義・代入（`x = 式`）および直前結果参照（`ans`）
 - **厳格な構文解析**: 乗算記号の省略（例: `2pi` や `(1+2)(3+4)`）を禁止し、誤認識による計算ミスを防ぎます。
-- **多彩な実行形態**: コマンドライン引数によるワンショット実行、日本語IME（`√`, `π` 等）や上下キー履歴に完全対応したリッチ対話型REPL、および標準入力パイプに対応しています。
+- **多彩な実行形態と全角自動正規化**: コマンドライン引数によるワンショット実行、上下キー履歴呼び出しに対応したリッチ対話型REPL、および標準入力パイプに対応しています。また、日本語IMEが有効なまま入力された全角数字・英字・演算子（`＋`, `−`, `×`, `÷`, `＾`, `！`）・括弧・等号・空白を自動的に半角ASCIIへと透過正規化するため、すべての実行形態でストレスなく計算できます。
 - **表示モード切替**: 人間が読みやすいUnicode記号表示を標準としつつ、スクリプト連携用の `--ascii` フラグや、参考値としての `--approx`（小数近似値併記）フラグを備えています。
 
 ### インストール
@@ -60,6 +60,9 @@ ihd "1/2 + 1/3"
 
 ihd "sqrt(2) + sqrt(8)"
 # 出力: 3*√2
+
+ihd "１＋２×３"
+# 出力: 7 （全角文字も自動正規化）
 ```
 
 #### 2. 対話モード（REPL）
@@ -85,11 +88,16 @@ Goodbye.
 ```
 
 #### 3. パイプ入力
-他のコマンドからの出力をパイプ経由で一括計算します。空行および `#` で始まるコメント行は自動的に無視されます。
+他のコマンドからの出力をパイプ経由で一括計算します。空行および `#` で始まるコメント行は自動的に無視されます。また、同一セッション内では変数が引き継がれるため、複数行の代入スクリプトも実行可能です。
 
 ```bash
 echo "sin(pi/6)^2 + cos(pi/6)^2" | ihd
 # 出力: 1
+
+printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
+# 出力:
+# 1/2 + √2
+# 1 + 2*√2
 ```
 
 #### 4. コマンドラインオプション
@@ -163,7 +171,7 @@ All decimal inputs are converted immediately into exact rational fractions (`big
   - Like-term aggregation and distributive expansion (e.g., `2*x + 3*x` → `5*x`)
   - Variable symbol assignment (`x = expr`) and previous result reference (`ans`)
 - **Strict Parsing Rules**: Prohibits implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) to eliminate parse ambiguities.
-- **Multiple Execution Modes**: Supports one-shot execution via CLI arguments, a rich interactive REPL with full Japanese IME support and history browsing, and standard input piping.
+- **Multiple Execution Modes & Full-width Normalization**: Supports one-shot execution via CLI arguments, a rich interactive REPL with history browsing, and standard input piping. Automatically normalizes full-width (Zenkaku) characters (digits, letters, operators like `＋`, `−`, `×`, `÷`, `＾`, `！`, parentheses, equals, and spaces) to half-width ASCII across all input modes for seamless typing under Japanese IMEs.
 - **Configurable Output**: Defaults to Unicode mathematical symbols, with `--ascii` for integration scripts and `--approx` for displaying reference floating-point approximations.
 
 ### Installation
@@ -198,6 +206,9 @@ ihd "1/2 + 1/3"
 
 ihd "sqrt(2) + sqrt(8)"
 # Output: 3*√2
+
+ihd "１＋２×３"
+# Output: 7 (Full-width characters automatically normalized)
 ```
 
 #### 2. Interactive REPL
@@ -223,11 +234,16 @@ Goodbye.
 ```
 
 #### 3. Piped Input
-Process expressions sequentially from standard input. Empty lines and lines starting with `#` are ignored:
+Process expressions sequentially from standard input. Empty lines and lines starting with `#` are ignored. Variable states persist across lines within the same piped session:
 
 ```bash
 echo "sin(pi/6)^2 + cos(pi/6)^2" | ihd
 # Output: 1
+
+printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
+# Output:
+# 1/2 + √2
+# 1 + 2*√2
 ```
 
 #### 4. Command-Line Options
