@@ -89,7 +89,8 @@ func (c *BrailleCanvas) toPixelY(y float64) int {
 	return py
 }
 
-func (c *BrailleCanvas) setPixel(px, py int) {
+// SetPixel sets the dot at (px, py) on the canvas. Out-of-bounds coordinates are clipped.
+func (c *BrailleCanvas) SetPixel(px, py int) {
 	if px >= 0 && px < c.PixelW && py >= 0 && py < c.PixelH {
 		c.Dots[py][px] = true
 	}
@@ -111,7 +112,7 @@ func (c *BrailleCanvas) drawLine(x0, y0, x1, y1 int) {
 
 	currX, currY := x0, y0
 	for {
-		c.setPixel(currX, currY)
+		c.SetPixel(currX, currY)
 		if currX == x1 && currY == y1 {
 			break
 		}
@@ -139,15 +140,15 @@ func (c *BrailleCanvas) Render() string {
 				py := cy*4 + dr
 				for dc := 0; dc < 2; dc++ {
 					px := cx*2 + dc
-					if px < c.PixelW && py < c.PixelH && c.Dots[py][px] {
+					if c.Dots[py][px] {
 						mask |= brailleDotMap[dr][dc]
 					}
 				}
 			}
-			if mask != 0 {
-				grid[cy][cx] = rune(0x2800 + mask)
-			} else {
+			if mask == 0 {
 				grid[cy][cx] = ' '
+			} else {
+				grid[cy][cx] = rune(0x2800) + mask
 			}
 		}
 	}
@@ -186,9 +187,10 @@ func (c *BrailleCanvas) Render() string {
 		cxAxis := pxAxis / 2
 		if cxAxis >= 0 && cxAxis < c.CharW {
 			for cy := 0; cy < c.CharH; cy++ {
-				if grid[cy][cxAxis] == ' ' {
+				switch grid[cy][cxAxis] {
+				case ' ':
 					grid[cy][cxAxis] = '│'
-				} else if grid[cy][cxAxis] == '─' {
+				case '─':
 					grid[cy][cxAxis] = '┼'
 				}
 			}
@@ -683,7 +685,7 @@ func EvalPlot(args []Node) (Node, error) {
 		if prevValid && !isDiscontinuous {
 			canvas.drawLine(prevPx, prevPy, px, py)
 		} else {
-			canvas.setPixel(px, py)
+			canvas.SetPixel(px, py)
 		}
 
 		prevPx = px
