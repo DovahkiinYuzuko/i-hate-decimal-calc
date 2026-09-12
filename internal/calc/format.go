@@ -745,6 +745,9 @@ func nodeToBox(n Node) Box {
 	case *AddNode:
 		return addToBox(v)
 
+	case *MatrixNode:
+		return matrixToBox(v)
+
 	default:
 		return newTextBox(n.String())
 	}
