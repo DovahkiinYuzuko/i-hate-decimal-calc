@@ -85,12 +85,14 @@ func exactSignEval(n Node, depth int) Sign {
 
 	case *SqrtNode:
 		radSign := exactSignEval(v.Radicand, depth)
-		if radSign == SignPositive {
+		switch radSign {
+		case SignPositive:
 			return SignPositive
-		} else if radSign == SignZero {
+		case SignZero:
 			return SignZero
+		default:
+			return SignUnknown
 		}
-		return SignUnknown
 
 	case *MulNode:
 		negCount := 0
@@ -168,15 +170,16 @@ func exactSignAdd(add *AddNode, depth int) Sign {
 	for i, t := range terms {
 		s := exactSignEval(t, depth)
 		termSigns[i] = s
-		if s == SignUnknown {
+		switch s {
+		case SignUnknown:
 			hasUnknown = true
 			allPositive = false
 			allNegative = false
 			allZero = false
-		} else if s == SignPositive {
+		case SignPositive:
 			allNegative = false
 			allZero = false
-		} else if s == SignNegative {
+		case SignNegative:
 			allPositive = false
 			allZero = false
 		}
