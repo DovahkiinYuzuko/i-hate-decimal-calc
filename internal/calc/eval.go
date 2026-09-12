@@ -1326,6 +1326,31 @@ func simplifyFunc(name string, args []Node) (Node, error) {
 		}
 		return evalTranspose(mat), nil
 
+	case "rref":
+		evaled, err := Eval(args[0])
+		if err != nil {
+			return nil, err
+		}
+		mat, ok := evaled.(*MatrixNode)
+		if !ok {
+			return nil, fmt.Errorf("rref error: argument must be a matrix, got %s", args[0].String())
+		}
+		return evalRREF(mat)
+
+	case "rank":
+		evaled, err := Eval(args[0])
+		if err != nil {
+			return nil, err
+		}
+		mat, ok := evaled.(*MatrixNode)
+		if !ok {
+			return nil, fmt.Errorf("rank error: argument must be a matrix, got %s", args[0].String())
+		}
+		return evalRank(mat)
+
+	case "solve_linear", "linsolve":
+		return evalSolveLinear(args[0], args[1])
+
 	case "taylor":
 		return evalTaylor(args[0], args[1], args[2], args[3])
 

@@ -295,6 +295,26 @@ func init() {
 		MinArgs: 1,
 		MaxArgs: 1,
 	})
+	RegisterFunction(FunctionSpec{
+		Name:    "rref",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "rank",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "solve_linear",
+		MinArgs: 2,
+		MaxArgs: 2,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "linsolve",
+		MinArgs: 2,
+		MaxArgs: 2,
+	})
 
 	// 3D Vector Calculus
 	RegisterFunction(FunctionSpec{

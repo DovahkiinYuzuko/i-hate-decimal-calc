@@ -37,7 +37,9 @@
     "plot_eval_max": "evaluating domain max: %v",
     "plot_complex_not_allowed": "complex result %v not supported on real plot",
     "plot_nan_or_inf": "result is NaN or Inf",
-    "arg_zero_undefined": "0の偏角は未定義です"
+    "arg_zero_undefined": "0の偏角は未定義です",
+    "linear_inconsistent": "連立方程式の解が存在しません（不能）",
+    "linear_dim_mismatch": "係数行列と定数ベクトルの次元が一致しません"
   },
   "plot": {
     "features_header": "[CAS Features Detected]\n",

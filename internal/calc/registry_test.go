@@ -12,7 +12,7 @@ func TestRegistry_AllFunctionsRegistered(t *testing.T) {
 		"arg", "polar", "polar_exp", "rect",
 		"gcd", "lcm", "mod", "perm", "comb", "rand",
 		"expand", "factor", "diff", "solve", "taylor", "sum",
-		"det", "inv", "transpose",
+		"det", "inv", "transpose", "rref", "rank", "solve_linear", "linsolve",
 		"dot", "cross", "norm", "grad", "div", "curl",
 		"line_intersect", "circle_intersect", "triangle_area", "triangle_centers",
 		"binom", "hyper", "geom", "bayes", "expect", "variance", "stddev",

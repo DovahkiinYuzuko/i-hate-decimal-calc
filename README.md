@@ -201,6 +201,9 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
 - `det(A)`: 厳密行列式（余因子展開法により除算を挟まない完全厳密解）
 - `inv(A)`: 厳密逆行列（余因子行列法による厳密逆行列算出、特異行列時はエラー検出）
 - `transpose(A)`: 行列の転置（行と列の反転）
+- `rref(A)`: 行簡約階段形（Reduced Row Echelon Form。Bareiss法による分数なし整数除算消去と後退正規化）
+- `rank(A)`: 行列の厳密な階数（ピボット列数）
+- `solve_linear(A, b)` または `linsolve(A, b)`: 連立一次方程式 $Ax=b$ の厳密解（一意解、不能判定、自由変数 $x_i$ を含む一般解）
 - `taylor(f, x, a, n)`: テイラー展開・マクローリン展開（式 $f$ を $x=a$ まわりで $n$ 次まで展開）
 - `sum(expr, k, start, end)`: 離散和（有限整数範囲の合算、または Faulhaber 公式による $n$ に関する多項式閉形式）
 - `dot(u, v)`: ベクトルの内積（$u \cdot v = \sum u_i v_i$）
@@ -422,6 +425,9 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
 - `det(A)`: Exact determinant of a square matrix via division-free Laplace expansion
 - `inv(A)`: Exact inverse of a square matrix via adjugate matrix method (detects singular matrices)
 - `transpose(A)`: Matrix transpose (swaps rows and columns)
+- `rref(A)`: Reduced Row Echelon Form via Bareiss fraction-free Gaussian elimination and back-normalization
+- `rank(A)`: Exact matrix rank (number of pivot columns)
+- `solve_linear(A, b)` or `linsolve(A, b)`: Exact solver for linear systems $Ax=b$ (handles unique solutions, inconsistency detection, and parametric general solutions with free variables $x_i$)
 - `taylor(f, x, a, n)`: Taylor / Maclaurin series expansion (expands $f$ around $x=a$ up to order $n$)
 - `sum(expr, k, start, end)`: Discrete summation (finite integer range sum, or exact symbolic polynomial closed form via Faulhaber's formula)
 - `dot(u, v)`: Vector dot product ($u \cdot v = \sum u_i v_i$)
