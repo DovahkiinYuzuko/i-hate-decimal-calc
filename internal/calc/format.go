@@ -139,6 +139,17 @@ func formatNode(n Node, opts FormatOptions) string {
 		}
 		return fmt.Sprintf("[%s]", strings.Join(elemStrs, ", "))
 
+	case *MatrixNode:
+		rowStrs := make([]string, v.Rows)
+		for r := 0; r < v.Rows; r++ {
+			elemStrs := make([]string, v.Cols)
+			for c := 0; c < v.Cols; c++ {
+				elemStrs[c] = formatNode(v.Data[r][c], opts)
+			}
+			rowStrs[r] = fmt.Sprintf("[%s]", strings.Join(elemStrs, ", "))
+		}
+		return fmt.Sprintf("[%s]", strings.Join(rowStrs, ", "))
+
 	default:
 		return n.String()
 	}
@@ -260,6 +271,8 @@ func termCategory(n Node) int {
 		return 5
 	case *ComplexNode:
 		return 6
+	case *MatrixNode:
+		return 7
 	case *MulNode:
 		if len(v.Factors) >= 2 {
 			return termCategory(v.Factors[len(v.Factors)-1])
@@ -409,6 +422,17 @@ func formatLaTeXNode(n Node) string {
 			elemStrs[i] = formatLaTeXNode(e)
 		}
 		return fmt.Sprintf("\\left[%s\\right]", strings.Join(elemStrs, ", "))
+
+	case *MatrixNode:
+		rowStrs := make([]string, v.Rows)
+		for r := 0; r < v.Rows; r++ {
+			elemStrs := make([]string, v.Cols)
+			for c := 0; c < v.Cols; c++ {
+				elemStrs[c] = formatLaTeXNode(v.Data[r][c])
+			}
+			rowStrs[r] = strings.Join(elemStrs, " & ")
+		}
+		return fmt.Sprintf("\\begin{pmatrix} %s \\end{pmatrix}", strings.Join(rowStrs, " \\\\ "))
 
 	default:
 		return n.String()
@@ -813,5 +837,49 @@ func addToBox(a *AddNode) Box {
 	}
 	return hConcat(boxes...)
 }
+
+func matrixToBox(m *MatrixNode) Box {
+	if m.Rows == 0 || m.Cols == 0 {
+		return newTextBox("[]")
+	}
+
+	// 1-line per row for basic 2D matrix box
+	rowStrs := make([]string, m.Rows)
+	for r := 0; r < m.Rows; r++ {
+		elemStrs := make([]string, m.Cols)
+		for c := 0; c < m.Cols; c++ {
+			elemStrs[c] = formatNode(m.Data[r][c], FormatOptions{})
+		}
+		rowStrs[r] = strings.Join(elemStrs, "  ")
+	}
+
+	// Find max width
+	maxW := 0
+	for _, s := range rowStrs {
+		if len(s) > maxW {
+			maxW = len(s)
+		}
+	}
+
+	lines := make([]string, m.Rows)
+	for r, s := range rowStrs {
+		pad := strings.Repeat(" ", maxW-len(s))
+		lines[r] = fmt.Sprintf("│ %s%s │", s, pad)
+	}
+
+	top := "┌" + strings.Repeat(" ", maxW+2) + "┐"
+	bot := "└" + strings.Repeat(" ", maxW+2) + "┘"
+
+	allLines := append([]string{top}, lines...)
+	allLines = append(allLines, bot)
+
+	return Box{
+		Lines:    allLines,
+		Width:    maxW + 4,
+		Height:   len(allLines),
+		Baseline: len(allLines) / 2,
+	}
+}
+
 
 

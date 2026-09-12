@@ -23,6 +23,21 @@ func Approx(n Node) (string, error) {
 		}
 		return fmt.Sprintf("[%s]", strings.Join(appStrs, ", ")), nil
 	}
+	if mat, ok := n.(*MatrixNode); ok {
+		rowStrs := make([]string, mat.Rows)
+		for r := 0; r < mat.Rows; r++ {
+			elemStrs := make([]string, mat.Cols)
+			for c := 0; c < mat.Cols; c++ {
+				str, err := Approx(mat.Data[r][c])
+				if err != nil {
+					return "", err
+				}
+				elemStrs[c] = str
+			}
+			rowStrs[r] = fmt.Sprintf("[%s]", strings.Join(elemStrs, ", "))
+		}
+		return fmt.Sprintf("[%s]", strings.Join(rowStrs, ", ")), nil
+	}
 	c, err := evalComplex(n)
 	if err != nil {
 		return "", err

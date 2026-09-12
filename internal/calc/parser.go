@@ -92,7 +92,7 @@ func Parse(input string) (Node, error) {
 
 func isReservedFunc(name string) bool {
 	switch name {
-	case "sqrt", "sin", "cos", "tan", "log", "ln", "abs", "cbrt", "gcd", "lcm", "mod", "perm", "comb", "rand", "asin", "acos", "atan", "expand", "diff", "solve":
+	case "sqrt", "sin", "cos", "tan", "log", "ln", "abs", "cbrt", "gcd", "lcm", "mod", "perm", "comb", "rand", "asin", "acos", "atan", "expand", "diff", "solve", "det", "inv", "transpose":
 		return true
 	default:
 		return false
@@ -229,6 +229,9 @@ func (p *Parser) parsePrefix() (Node, error) {
 		p.nextToken() // move curTok to ')'
 		return expr, nil
 
+	case TokenLBracket:
+		return p.parseBracketExpression()
+
 	default:
 		return nil, fmt.Errorf("syntax error: unexpected token %q at position %d", p.curTok.Literal, p.curTok.Pos)
 	}
@@ -336,9 +339,92 @@ func (p *Parser) parseFuncCall(name string) (Node, error) {
 
 func (p *Parser) isStartOfExpression(t TokenType) bool {
 	switch t {
-	case TokenNumber, TokenIdent, TokenLParen:
+	case TokenNumber, TokenIdent, TokenLParen, TokenLBracket:
 		return true
 	default:
 		return false
 	}
 }
+
+func (p *Parser) parseBracketExpression() (Node, error) {
+	// curTok is TokenLBracket '['
+	if p.peekTok.Type == TokenRBracket {
+		p.nextToken() // move to ']'
+		return NewList([]Node{}), nil
+	}
+
+	if p.peekTok.Type == TokenLBracket {
+		// Matrix literal: [[row1], [row2], ...]
+		var matrixData [][]Node
+		for {
+			if p.peekTok.Type != TokenLBracket {
+				return nil, fmt.Errorf("syntax error: expected '[' at start of matrix row, got %q", p.peekTok.Literal)
+			}
+			p.nextToken() // move to '[' of row
+
+			row, err := p.parseBracketList()
+			if err != nil {
+				return nil, err
+			}
+			matrixData = append(matrixData, row)
+
+			if p.peekTok.Type == TokenComma {
+				p.nextToken() // consume ','
+				continue
+			}
+			break
+		}
+
+		if p.peekTok.Type != TokenRBracket {
+			return nil, fmt.Errorf("syntax error: expected ']' to close matrix, got %q", p.peekTok.Literal)
+		}
+		p.nextToken() // move to ']' of matrix
+
+		rows := len(matrixData)
+		if rows == 0 {
+			return nil, fmt.Errorf("syntax error: empty matrix")
+		}
+		cols := len(matrixData[0])
+		return NewMatrix(rows, cols, matrixData)
+	}
+
+	// 1D list: [elem1, elem2, ...]
+	elems, err := p.parseBracketList()
+	if err != nil {
+		return nil, err
+	}
+	return NewList(elems), nil
+}
+
+func (p *Parser) parseBracketList() ([]Node, error) {
+	var elems []Node
+
+	if p.peekTok.Type == TokenRBracket {
+		p.nextToken() // move to ']'
+		return elems, nil
+	}
+
+	p.nextToken() // move to first expression
+	first, err := p.ParseExpression(PREC_LOWEST)
+	if err != nil {
+		return nil, err
+	}
+	elems = append(elems, first)
+
+	for p.peekTok.Type == TokenComma {
+		p.nextToken() // move to ','
+		p.nextToken() // move to next expression
+		next, err := p.ParseExpression(PREC_LOWEST)
+		if err != nil {
+			return nil, err
+		}
+		elems = append(elems, next)
+	}
+
+	if p.peekTok.Type != TokenRBracket {
+		return nil, fmt.Errorf("syntax error: expected ']', got %q", p.peekTok.Literal)
+	}
+	p.nextToken() // move to ']'
+	return elems, nil
+}
+

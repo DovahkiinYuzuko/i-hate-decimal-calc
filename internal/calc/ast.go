@@ -21,6 +21,7 @@ const (
 	NodeUnaryOp
 	NodeVar
 	NodeList
+	NodeMatrix
 )
 
 // Node represents any node in the mathematical expression tree.
@@ -218,6 +219,12 @@ func NewFunc(name string, args []Node) (*FuncNode, error) {
 	case "diff", "solve":
 		if len(args) != 2 {
 			return nil, fmt.Errorf("%s requires exactly 2 arguments, got %d", name, len(args))
+		}
+		return &FuncNode{Name: name, Args: args}, nil
+
+	case "det", "inv", "transpose":
+		if len(args) != 1 {
+			return nil, fmt.Errorf("%s requires exactly 1 argument, got %d", name, len(args))
 		}
 		return &FuncNode{Name: name, Args: args}, nil
 
@@ -536,4 +543,61 @@ func (n *ListNode) Equal(other Node) bool {
 	}
 	return true
 }
+
+// -------------------------------------------------------------------------
+// MatrixNode (2D Mathematical Matrix)
+// -------------------------------------------------------------------------
+
+// MatrixNode represents an exact 2D matrix of mathematical expression nodes.
+type MatrixNode struct {
+	Rows int
+	Cols int
+	Data [][]Node
+}
+
+// NewMatrix creates a new MatrixNode and validates that all rows have identical column length.
+func NewMatrix(rows, cols int, data [][]Node) (*MatrixNode, error) {
+	if rows <= 0 || cols <= 0 {
+		return nil, fmt.Errorf("matrix dimension error: rows and cols must be >= 1, got %dx%d", rows, cols)
+	}
+	if len(data) != rows {
+		return nil, fmt.Errorf("matrix dimension error: expected %d rows, got %d", rows, len(data))
+	}
+	for r, row := range data {
+		if len(row) != cols {
+			return nil, fmt.Errorf("matrix dimension error: row %d has %d elements, expected %d", r, len(row), cols)
+		}
+	}
+	return &MatrixNode{Rows: rows, Cols: cols, Data: data}, nil
+}
+
+func (n *MatrixNode) Type() NodeType { return NodeMatrix }
+
+func (n *MatrixNode) String() string {
+	rowStrs := make([]string, n.Rows)
+	for r := 0; r < n.Rows; r++ {
+		elemStrs := make([]string, n.Cols)
+		for c := 0; c < n.Cols; c++ {
+			elemStrs[c] = n.Data[r][c].String()
+		}
+		rowStrs[r] = fmt.Sprintf("[%s]", strings.Join(elemStrs, ", "))
+	}
+	return fmt.Sprintf("[%s]", strings.Join(rowStrs, ", "))
+}
+
+func (n *MatrixNode) Equal(other Node) bool {
+	o, ok := other.(*MatrixNode)
+	if !ok || n.Rows != o.Rows || n.Cols != o.Cols {
+		return false
+	}
+	for r := 0; r < n.Rows; r++ {
+		for c := 0; c < n.Cols; c++ {
+			if !n.Data[r][c].Equal(o.Data[r][c]) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 

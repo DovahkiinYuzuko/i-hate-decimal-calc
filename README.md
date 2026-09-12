@@ -173,6 +173,10 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
 - `expand(expr)`: 多項式展開（分配法則・べき乗の展開）
 - `diff(expr, var)`: 厳密記号微分（指定変数による導関数の代数的計算）
 - `solve(expr, var)`: 厳密代数方程式ソルバー（1次・2次方程式の根の公式による求解、複数解は `[ans1, ans2]` 形式で出力）
+- `det(A)`: 厳密行列式（余因子展開法により除算を挟まない完全厳密解）
+- `inv(A)`: 厳密逆行列（余因子行列法による厳密逆行列算出、特異行列時はエラー検出）
+- `transpose(A)`: 行列の転置（行と列の反転）
+- 行列リテラル記法: `[[1, 2], [3, 4]]`（加減算 `A + B`, `A - B`、乗算 `A * B`、スカラー倍 `2 * A` に対応）
 
 ### LICENSE
 [MIT](./LICENSE.MIT)
@@ -345,6 +349,10 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
 - `expand(expr)`: Polynomial expansion using distributive law and binomial expansion
 - `diff(expr, var)`: Exact symbolic differentiation with respect to the specified variable
 - `solve(expr, var)`: Exact algebraic equation solver for linear and quadratic equations (returns multiple roots as `[ans1, ans2]`)
+- `det(A)`: Exact determinant of a square matrix via division-free Laplace expansion
+- `inv(A)`: Exact inverse of a square matrix via adjugate matrix method (detects singular matrices)
+- `transpose(A)`: Matrix transpose (swaps rows and columns)
+- Matrix Literal Syntax: `[[1, 2], [3, 4]]` (supports addition `A + B`, subtraction `A - B`, multiplication `A * B`, and scalar multiplication `2 * A`)
 
 ### LICENSE
 [MIT](./LICENSE.MIT)

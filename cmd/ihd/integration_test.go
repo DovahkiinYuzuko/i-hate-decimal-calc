@@ -107,6 +107,12 @@ func TestIntegration_SpecificationExamples(t *testing.T) {
 		{"solve(2*x + 4, x)", "[-2]"},
 		{"solve(x^2 - 4, x)", "[-2, 2]"},
 		{"solve(x^2 + 1, x)", "[-i, i]"},
+
+		// 14. Matrix Pack: MatrixNode, det, inv, transpose (issue-17)
+		{"[[1, 2], [3, 4]] + [[1, 0], [0, 1]]", "[[2, 2], [3, 5]]"},
+		{"det([[1, 2], [3, 4]])", "-2"},
+		{"inv([[1, 2], [3, 4]])", "[[-2, 1], [3/2, -1/2]]"},
+		{"transpose([[1, 2, 3], [4, 5, 6]])", "[[1, 4], [2, 5], [3, 6]]"},
 	}
 
 	for _, tc := range testCases {

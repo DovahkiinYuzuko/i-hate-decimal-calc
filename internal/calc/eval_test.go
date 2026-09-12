@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -815,3 +816,70 @@ func TestEval_Solve(t *testing.T) {
 		}
 	}
 }
+
+// TestEval_Matrix tests exact matrix operations (addition, multiplication, det, inv, transpose).
+func TestEval_Matrix(t *testing.T) {
+	cases := []struct {
+		input    string
+		expected string
+	}{
+		// Parsing and addition / subtraction
+		{"[[1, 2], [3, 4]] + [[5, 6], [7, 8]]", "[[6, 8], [10, 12]]"},
+		{"[[1, 2], [3, 4]] - [[1, 0], [0, 1]]", "[[0, 2], [3, 3]]"},
+
+		// Scalar multiplication
+		{"2 * [[1, 2], [3, 4]]", "[[2, 4], [6, 8]]"},
+		{"[[1, 2], [3, 4]] * 3", "[[3, 6], [9, 12]]"},
+
+		// Matrix multiplication
+		{"[[1, 2], [3, 4]] * [[2, 0], [1, 2]]", "[[4, 4], [10, 8]]"},
+		{"[[1, 2, 3], [4, 5, 6]] * [[7, 8], [9, 1], [2, 3]]", "[[31, 19], [85, 55]]"},
+
+		// Determinant
+		{"det([[1, 2], [3, 4]])", "-2"},
+		{"det([[1, 2, 3], [0, 4, 5], [1, 0, 6]])", "22"},
+		{"det([[sqrt(2), 1], [1, sqrt(2)]])", "1"},
+		{"det([[i, 1], [1, i]])", "-2"},
+
+		// Inverse
+		{"inv([[1, 2], [3, 4]])", "[[-2, 1], [3/2, -1/2]]"},
+		{"[[1, 2], [3, 4]] * inv([[1, 2], [3, 4]])", "[[1, 0], [0, 1]]"},
+
+		// Transpose
+		{"transpose([[1, 2, 3], [4, 5, 6]])", "[[1, 4], [2, 5], [3, 6]]"},
+	}
+
+	for _, tc := range cases {
+		res, err := EvalString(tc.input)
+		if err != nil {
+			t.Errorf("eval error for %q: %v", tc.input, err)
+			continue
+		}
+		formatted := Format(res)
+		if formatted != tc.expected {
+			t.Errorf("matrix %q: expected %q, got %q", tc.input, tc.expected, formatted)
+		}
+	}
+
+	// Error cases
+	errorCases := []struct {
+		input       string
+		errContains string
+	}{
+		{"inv([[1, 2], [2, 4]])", "singular matrix"},
+		{"det([[1, 2, 3], [4, 5, 6]])", "square matrix"},
+		{"[[1, 2]] * [[1, 2]]", "dimension mismatch"},
+		{"[[1, 2]] + [[1], [2]]", "dimension mismatch"},
+	}
+	for _, tc := range errorCases {
+		_, err := EvalString(tc.input)
+		if err == nil {
+			t.Errorf("expected error containing %q for %q, got nil", tc.errContains, tc.input)
+			continue
+		}
+		if !strings.Contains(err.Error(), tc.errContains) {
+			t.Errorf("expected error containing %q for %q, got %v", tc.errContains, tc.input, err)
+		}
+	}
+}
+
