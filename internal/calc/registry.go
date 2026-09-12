@@ -70,6 +70,18 @@ func ValidateFuncArgs(name string, args []Node) error {
 	return nil
 }
 
+// EvaluateFunction invokes the registered evaluation hook for the named function.
+func EvaluateFunction(name string, args []Node) (Node, error) {
+	spec, ok := builtInFunctions[name]
+	if !ok {
+		return nil, fmt.Errorf("unknown function: %s", name)
+	}
+	if spec.Evaluate == nil {
+		return nil, fmt.Errorf("function %s has no evaluation handler registered", name)
+	}
+	return spec.Evaluate(args)
+}
+
 func init() {
 	// sqrt (creates SqrtNode in parser, but reserved as function)
 	RegisterFunction(FunctionSpec{
