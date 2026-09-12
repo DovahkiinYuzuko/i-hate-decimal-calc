@@ -223,3 +223,36 @@ func TestCLI_Pipe_Variables(t *testing.T) {
 	}
 }
 
+func TestCLI_Explain(t *testing.T) {
+	out := new(bytes.Buffer)
+	errOut := new(bytes.Buffer)
+	code := run([]string{"--explain", "1 / (sqrt(2) + 1)"}, nil, out, errOut)
+	if code != 0 {
+		t.Fatalf("expected code 0, got %d. stderr: %s", code, errOut.String())
+	}
+	output := out.String()
+	if !strings.Contains(output, "Step 1: 分母の有理化") {
+		t.Errorf("expected step output, got %q", output)
+	}
+	if !strings.Contains(output, "= -1 + √2") {
+		t.Errorf("expected final result, got %q", output)
+	}
+}
+
+func TestCLI_REPL_ExplainCommand(t *testing.T) {
+	input := "explain 1 / (sqrt(2) + 1)\nexit\n"
+	in := strings.NewReader(input)
+	out := new(bytes.Buffer)
+	errOut := new(bytes.Buffer)
+
+	code := runREPL(in, out, errOut, runOptions{opts: calc.FormatOptions{AsciiOnly: false}})
+	if code != 0 {
+		t.Fatalf("expected code 0, got %d. stderr: %s", code, errOut.String())
+	}
+	output := out.String()
+	if !strings.Contains(output, "Step 1: 分母の有理化") {
+		t.Errorf("expected REPL explain step output, got %q", output)
+	}
+}
+
+

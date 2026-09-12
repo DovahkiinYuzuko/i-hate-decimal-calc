@@ -141,6 +141,17 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
   ihd --deg "sin(30) + cos(60) + asin(1/2)"
   # 出力: 31
   ```
+- `--explain`: 代数的な項書き換えのプロセス（分母の有理化、二重根号外し、解の公式、微分の諸法則等）を2Dツリー形式の途中式として詳細表示します（REPLやパイプ入力でも `explain <式>` または `steps <式>` で実行可能）。
+  ```bash
+  ihd --explain "1 / (sqrt(2) + 1)"
+  # 出力:
+  # 式: 1 / (sqrt(2) + 1)
+  # ├── [Step 1: 分母の有理化]
+  # │   分母に共役式 (1 - √2) を乗算して有理化
+  # │   (1 + √2)^-1  ──>  -1 + √2
+  # └── [Result]
+  #     = -1 + √2
+  ```
 - `-h`, `--help`: コマンドの使用方法を表示します。
 
 ### サポート構文と演算子
@@ -330,6 +341,17 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
   ```bash
   ihd --deg "sin(30) + cos(60) + asin(1/2)"
   # Output: 31
+  ```
+- `--explain`: Outputs step-by-step educational explanations of algebraic transformations (rationalization, radical denesting, quadratic formula, differentiation rules, etc.) in a 2D tree format (also usable in REPL/pipe via `explain <expr>` or `steps <expr>`).
+  ```bash
+  ihd --explain "1 / (sqrt(2) + 1)"
+  # Output:
+  # 式: 1 / (sqrt(2) + 1)
+  # ├── [Step 1: 分母の有理化]
+  # │   分母に共役式 (1 - √2) を乗算して有理化
+  # │   (1 + √2)^-1  ──>  -1 + √2
+  # └── [Result]
+  #     = -1 + √2
   ```
 - `-h`, `--help`: Display the help message.
 

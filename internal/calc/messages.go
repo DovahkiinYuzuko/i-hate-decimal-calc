@@ -21,5 +21,7 @@ Flags:
   --approx    Display approximate decimal value alongside exact form
   --latex     Output expression in LaTeX format ($$ ... $$)
   --pretty    Output expression using 2D pretty-printed formatting
+  --deg       Use degree mode for trigonometric and inverse trigonometric functions
+  --explain   Show step-by-step algebraic rewriting explanations
   -h, --help  Show this help message`
 )

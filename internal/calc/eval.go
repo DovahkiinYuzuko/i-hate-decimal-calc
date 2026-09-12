@@ -269,6 +269,7 @@ func simplifySqrt(radicand Node) (Node, error) {
 		// Non-rational radicand: check if it can be denested (Borodin 1985)
 		if add, isAdd := radicand.(*AddNode); isAdd {
 			if denested, ok := denestSqrtBinomial(add); ok {
+				RecordTraceRewrite(RuleDenestRadical, NewSqrt(radicand), denested, "Borodinアルゴリズムによる二重根号の簡約")
 				return denested, nil
 			}
 		}
@@ -906,6 +907,7 @@ func rationalizeBinomialDenominator(add *AddNode) (Node, bool) {
 	if err != nil {
 		return nil, false
 	}
+	RecordTraceRewrite(RuleRationalize, &PowNode{Base: add, Exp: mustRational(-1, 1)}, res, fmt.Sprintf("分母に共役式 (%s) を乗算して有理化", Format(conj)))
 	return res, true
 }
 
@@ -2393,7 +2395,12 @@ func differentiate(n Node, varName string) (Node, error) {
 			if err != nil {
 				return nil, err
 			}
-			return simplifyMul([]Node{v.Exp, uPow, du})
+			res, err := simplifyMul([]Node{v.Exp, uPow, du})
+			if err != nil {
+				return nil, err
+			}
+			RecordTraceRewrite(RuleDiffPower, v, res, fmt.Sprintf("べき乗の微分公式: d/d%s [%s^%s] = %s", varName, Format(v.Base), Format(v.Exp), Format(res)))
+			return res, nil
 		} else if !baseHas && expHas {
 			// d/dx [ a^v(x) ] = a^v(x) * ln(a) * v'(x)
 			dv, err := differentiate(v.Exp, varName)
@@ -2744,7 +2751,9 @@ func solveEquation(expr Node, varName string) (Node, error) {
 		if err != nil {
 			return nil, err
 		}
-		return NewList([]Node{root}), nil
+		res := NewList([]Node{root})
+		RecordTraceRewrite(RuleSolveLinear, expr, res, fmt.Sprintf("1次方程式 %s = 0 を移項・除算して解を導出", Format(expanded)))
+		return res, nil
 	}
 
 	if maxDeg == 2 {
@@ -2792,7 +2801,9 @@ func solveEquation(expr Node, varName string) (Node, error) {
 			if err != nil {
 				return nil, err
 			}
-			return NewList([]Node{root}), nil
+			res := NewList([]Node{root})
+			RecordTraceRewrite(RuleSolveQuadratic, expr, res, fmt.Sprintf("2次方程式の重解: 判別式 D = 0 より %s = -b / (2a)", varName))
+			return res, nil
 		}
 
 		sqrtD, err := simplifySqrt(d)
@@ -2824,7 +2835,9 @@ func solveEquation(expr Node, varName string) (Node, error) {
 			return nil, err
 		}
 
-		return NewList([]Node{root1, root2}), nil
+		resList := NewList([]Node{root1, root2})
+		RecordTraceRewrite(RuleSolveQuadratic, expr, resList, fmt.Sprintf("2次方程式の解の公式: 判別式 D = b^2 - 4ac = %s, %s = (-b ± √D) / (2a)", Format(d), varName))
+		return resList, nil
 	}
 
 	return nil, fmt.Errorf("solve error: polynomial degree %d is not currently supported (only linear and quadratic equations)", maxDeg)
