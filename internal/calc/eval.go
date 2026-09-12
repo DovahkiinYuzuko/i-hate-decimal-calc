@@ -1260,6 +1260,18 @@ func simplifyFunc(name string, args []Node) (Node, error) {
 		}
 		return NewFunc(name, args)
 
+	case "factor":
+		if len(args) == 1 {
+			return Factor(args[0])
+		}
+		varName := "x"
+		if v, ok := args[1].(*VarNode); ok {
+			varName = v.Name
+		} else {
+			return nil, fmt.Errorf("factor error: second argument must be a variable name, got %s", args[1].String())
+		}
+		return Factor(args[0], varName)
+
 	case "expand":
 		return expandNode(args[0]), nil
 

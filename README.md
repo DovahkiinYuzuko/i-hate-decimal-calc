@@ -191,6 +191,7 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
 - `perm(n, r)`, `comb(n, r)`: 順列 $nPr$、組合せ $nCr$（非負整数）
 - `rand(max)`, `rand(min, max)`, `rand(seed, min, max)`: 整数擬似乱数（PCGアルゴリズム、シード指定による再現性担保）
 - `expand(expr)`: 多項式展開（分配法則・べき乗の展開）
+- `factor(expr)` または `factor(expr, var)`: 整数素因数分解（ホイール法）および有理数係数1変数多項式の因数分解（無平方分解・有理根定理・2次判別式）
 - `diff(expr, var)`: 厳密記号微分（指定変数による導関数の代数的計算）
 - `solve(expr, var)`: 厳密代数方程式ソルバー（1次・2次方程式の根の公式による求解、複数解は `[ans1, ans2]` 形式で出力）
 - `det(A)`: 厳密行列式（余因子展開法により除算を挟まない完全厳密解）
@@ -407,6 +408,7 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
 - `perm(n, r)`, `comb(n, r)`: Permutations $nPr$ and combinations $nCr$ (non-negative integers)
 - `rand(max)`, `rand(min, max)`, `rand(seed, min, max)`: Integer pseudo-random generator via PCG algorithm (deterministic with seed)
 - `expand(expr)`: Polynomial expansion using distributive law and binomial expansion
+- `factor(expr)` or `factor(expr, var)`: Integer prime factorization and univariate rational polynomial factorization (square-free decomposition, Rational Root Theorem, quadratic irreducibility)
 - `diff(expr, var)`: Exact symbolic differentiation with respect to the specified variable
 - `solve(expr, var)`: Exact algebraic equation solver for linear and quadratic equations (returns multiple roots as `[ans1, ans2]`)
 - `det(A)`: Exact determinant of a square matrix via division-free Laplace expansion

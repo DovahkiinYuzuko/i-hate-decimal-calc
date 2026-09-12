@@ -227,6 +227,11 @@ func init() {
 
 	// CAS / Calculus
 	RegisterFunction(FunctionSpec{
+		Name:    "factor",
+		MinArgs: 1,
+		MaxArgs: 2,
+	})
+	RegisterFunction(FunctionSpec{
 		Name:    "expand",
 		MinArgs: 1,
 		MaxArgs: 1,

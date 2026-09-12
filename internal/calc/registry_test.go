@@ -10,7 +10,7 @@ func TestRegistry_AllFunctionsRegistered(t *testing.T) {
 		"sqrt", "sin", "cos", "tan", "asin", "acos", "atan",
 		"ln", "log", "abs", "cbrt",
 		"gcd", "lcm", "mod", "perm", "comb", "rand",
-		"expand", "diff", "solve", "taylor", "sum",
+		"expand", "factor", "diff", "solve", "taylor", "sum",
 		"det", "inv", "transpose",
 		"dot", "cross", "norm", "grad", "div", "curl",
 		"line_intersect", "circle_intersect", "triangle_area", "triangle_centers",
