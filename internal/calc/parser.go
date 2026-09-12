@@ -93,12 +93,7 @@ func Parse(input string) (Node, error) {
 }
 
 func isReservedFunc(name string) bool {
-	switch name {
-	case "sqrt", "sin", "cos", "tan", "log", "ln", "abs", "cbrt", "gcd", "lcm", "mod", "perm", "comb", "rand", "asin", "acos", "atan", "expand", "diff", "solve", "det", "inv", "transpose", "taylor", "sum", "dot", "cross", "norm", "grad", "div", "curl", "line_intersect", "circle_intersect", "triangle_area", "triangle_centers":
-		return true
-	default:
-		return false
-	}
+	return IsReservedFunc(name)
 }
 
 func isReservedConst(name string) bool {
@@ -191,7 +186,7 @@ func (p *Parser) parsePrefix() (Node, error) {
 			p.nextToken() // move to '('
 			return p.parseFuncCall(name)
 		}
-		if isReservedFunc(name) {
+		if isReservedFunc(name) && !IsBareSymbolAllowed(name) {
 			return nil, fmt.Errorf("syntax error at position %d: function %q missing arguments", p.curTok.Pos, name)
 		}
 		// Constants: pi, e, or imaginary unit i
