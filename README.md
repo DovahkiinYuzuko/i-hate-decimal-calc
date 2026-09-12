@@ -194,6 +194,8 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
 - `mod(a, b)`: 整数剰余
 - `perm(n, r)`, `comb(n, r)`: 順列 $nPr$、組合せ $nCr$（非負整数）
 - `rand(max)`, `rand(min, max)`, `rand(seed, min, max)`: 整数擬似乱数（PCGアルゴリズム、シード指定による再現性担保）
+- `cfrac(expr)`: 正則連分数展開（有理数は有限リスト `[a0, a1, ...]`、平方根 $\sqrt{D}$ は周期リスト `[a0, [a1, ..., am]]`）
+- `from_cfrac(list)`: 連分数リストから厳密有理数への復元（例: `from_cfrac([3, 7, 16])` → `355/113`）
 - `expand(expr)`: 多項式展開（分配法則・べき乗の展開）
 - `factor(expr)` または `factor(expr, var)`: 整数素因数分解（ホイール法）および有理数係数1変数多項式の因数分解（無平方分解・有理根定理・2次判別式）
 - `diff(expr, var)`: 厳密記号微分（指定変数による導関数の代数的計算）
@@ -418,6 +420,8 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
 - `mod(a, b)`: Integer modulo
 - `perm(n, r)`, `comb(n, r)`: Permutations $nPr$ and combinations $nCr$ (non-negative integers)
 - `rand(max)`, `rand(min, max)`, `rand(seed, min, max)`: Integer pseudo-random generator via PCG algorithm (deterministic with seed)
+- `cfrac(expr)`: Regular continued fraction expansion (finite list `[a0, a1, ...]` for rationals, periodic list `[a0, [a1, ..., am]]` for square roots $\sqrt{D}$)
+- `from_cfrac(list)`: Reconstruct an exact rational number from a continued fraction list (e.g., `from_cfrac([3, 7, 16])` → `355/113`)
 - `expand(expr)`: Polynomial expansion using distributive law and binomial expansion
 - `factor(expr)` or `factor(expr, var)`: Integer prime factorization and univariate rational polynomial factorization (square-free decomposition, Rational Root Theorem, quadratic irreducibility)
 - `diff(expr, var)`: Exact symbolic differentiation with respect to the specified variable

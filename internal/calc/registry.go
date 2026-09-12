@@ -246,6 +246,16 @@ func init() {
 		MinArgs: 1,
 		MaxArgs: 3,
 	})
+	RegisterFunction(FunctionSpec{
+		Name:    "cfrac",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "from_cfrac",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
 
 	// CAS / Calculus
 	RegisterFunction(FunctionSpec{

@@ -39,7 +39,9 @@
     "plot_nan_or_inf": "result is NaN or Inf",
     "arg_zero_undefined": "0の偏角は未定義です",
     "linear_inconsistent": "連立方程式の解が存在しません（不能）",
-    "linear_dim_mismatch": "係数行列と定数ベクトルの次元が一致しません"
+    "linear_dim_mismatch": "係数行列と定数項ベクトルの次元が一致しません",
+    "cfrac_unsupported": "連分数展開は有理数または平方根のみ対応しています",
+    "from_cfrac_invalid": "from_cfrac には空でない整数のリストが必要です: %s"
   },
   "plot": {
     "features_header": "[CAS Features Detected]\n",

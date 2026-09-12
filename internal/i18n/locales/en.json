@@ -39,7 +39,9 @@
     "plot_nan_or_inf": "result is NaN or Inf",
     "arg_zero_undefined": "argument of zero is undefined",
     "linear_inconsistent": "linear system has no solution (inconsistent)",
-    "linear_dim_mismatch": "dimension mismatch between coefficient matrix and constant vector"
+    "linear_dim_mismatch": "dimension mismatch between coefficient matrix and constant vector",
+    "cfrac_unsupported": "continued fraction expansion is only supported for rational numbers and square roots",
+    "from_cfrac_invalid": "from_cfrac requires a non-empty list of integers, got %s"
   },
   "plot": {
     "features_header": "[CAS Features Detected]\n",

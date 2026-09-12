@@ -1351,6 +1351,12 @@ func simplifyFunc(name string, args []Node) (Node, error) {
 	case "solve_linear", "linsolve":
 		return evalSolveLinear(args[0], args[1])
 
+	case "cfrac":
+		return evalCFrac(args[0])
+
+	case "from_cfrac":
+		return evalFromCFrac(args[0])
+
 	case "taylor":
 		return evalTaylor(args[0], args[1], args[2], args[3])
 
