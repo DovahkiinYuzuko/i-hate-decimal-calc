@@ -3,7 +3,6 @@ package calc
 import (
 	"errors"
 	"fmt"
-	"math"
 )
 
 var (
@@ -236,29 +235,6 @@ func IntersectLines(l1, l2 Line2D) (Point2D, error) {
 	return Point2D{X: x, Y: y}, nil
 }
 
-func signNode(n Node) (int, error) {
-	simplified, err := Eval(n)
-	if err != nil {
-		return 0, err
-	}
-	if isZeroNode(simplified) {
-		return 0, nil
-	}
-	if r, ok := simplified.(*RationalNode); ok {
-		return r.Val.Sign(), nil
-	}
-	c, err := evalComplex(simplified)
-	if err != nil {
-		return 0, err
-	}
-	if math.Abs(real(c)) < 1e-12 {
-		return 0, nil
-	}
-	if real(c) > 0 {
-		return 1, nil
-	}
-	return -1, nil
-}
 
 // IntersectLineCircle finds the exact intersection points between a line and a circle.
 // Line: Ax + By + C = 0
