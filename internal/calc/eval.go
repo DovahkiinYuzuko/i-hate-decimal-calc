@@ -3118,11 +3118,12 @@ func evalTaylor(f Node, varNode Node, center Node, orderNode Node) (Node, error)
 		// term = coeff * (x - center)^k
 		var powerNode Node
 		if isZeroNode(center) {
-			if k == 0 {
+			switch k {
+			case 0:
 				powerNode = mustRational(1, 1)
-			} else if k == 1 {
+			case 1:
 				powerNode = v
-			} else {
+			default:
 				powerNode = &PowNode{Base: v, Exp: mustRational(k, 1)}
 			}
 		} else {
@@ -3130,11 +3131,12 @@ func evalTaylor(f Node, varNode Node, center Node, orderNode Node) (Node, error)
 			if err != nil {
 				return nil, err
 			}
-			if k == 0 {
+			switch k {
+			case 0:
 				powerNode = mustRational(1, 1)
-			} else if k == 1 {
+			case 1:
 				powerNode = diffTerm
-			} else {
+			default:
 				powerNode = expandNode(&PowNode{Base: diffTerm, Exp: mustRational(k, 1)})
 			}
 		}
