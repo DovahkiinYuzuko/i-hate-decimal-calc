@@ -22,6 +22,7 @@ const (
 	NodeVar
 	NodeList
 	NodeMatrix
+	NodePlot
 )
 
 // Node represents any node in the mathematical expression tree.
@@ -279,6 +280,12 @@ func NewFunc(name string, args []Node) (*FuncNode, error) {
 	case "expect", "variance", "stddev":
 		if len(args) < 1 || len(args) > 4 {
 			return nil, fmt.Errorf("%s requires 1 to 4 arguments, got %d", name, len(args))
+		}
+		return &FuncNode{Name: name, Args: args}, nil
+
+	case "plot":
+		if len(args) < 2 || len(args) > 3 {
+			return nil, fmt.Errorf("plot requires 2 or 3 arguments (expr, domainX, [domainY]), got %d", len(args))
 		}
 		return &FuncNode{Name: name, Args: args}, nil
 
@@ -653,5 +660,28 @@ func (n *MatrixNode) Equal(other Node) bool {
 	}
 	return true
 }
+
+// -------------------------------------------------------------------------
+// PlotNode (Rendered 2D Terminal Plot)
+// -------------------------------------------------------------------------
+
+// PlotNode represents a rendered 2D terminal plot string.
+type PlotNode struct {
+	Content string
+}
+
+func NewPlotNode(content string) *PlotNode {
+	return &PlotNode{Content: content}
+}
+
+func (n *PlotNode) Type() NodeType { return NodePlot }
+func (n *PlotNode) String() string { return n.Content }
+func (n *PlotNode) Equal(other Node) bool {
+	if o, ok := other.(*PlotNode); ok {
+		return n.Content == o.Content
+	}
+	return false
+}
+
 
 

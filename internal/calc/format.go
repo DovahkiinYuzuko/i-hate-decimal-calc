@@ -27,6 +27,9 @@ func FormatWithOptions(n Node, opts FormatOptions) string {
 
 func formatNode(n Node, opts FormatOptions) string {
 	switch v := n.(type) {
+	case *PlotNode:
+		return v.Content
+
 	case *RationalNode:
 		if v.Val.IsInt() {
 			return v.Val.Num().String()

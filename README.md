@@ -28,6 +28,7 @@
   - 高度解析・離散数列（高階微分によるテイラー展開・マクローリン展開 `taylor`、ベルヌーイ数漸化式およびFaulhaber公式による記号ベキ乗和 `sum`）
   - 3次元ベクトル解析（内積 `dot`、外積 `cross`、ユークリッドノルム `norm`、勾配 `grad`、発散 `div`、回転 `curl`）
   - 厳密離散確率・統計（二項分布 `binom`、超幾何分布 `hyper`、幾何分布 `geom`、ベイズ事後確率 `bayes`、期待値 `expect`、分散 `variance`、標準偏差 `stddev` の根号形式代数簡約）
+  - 厳密ターミナル関数プロッタ（Unicode Braille 2×4 サブピクセル描画、CAS連携による厳密代数根号ラベルピン留め、Tupper不連続判定による漸近線の偽結合防止）
 - **厳格な構文解析**: 乗算記号の省略（例: `2pi` や `(1+2)(3+4)`）を禁止し、誤認識による計算ミスを防ぎます。
 - **多彩な実行形態と全角自動正規化**: コマンドライン引数によるワンショット実行、上下キー履歴呼び出しに対応したリッチ対話型REPL、および標準入力パイプに対応しています。また、日本語IMEが有効なまま入力された全角数字・英字・演算子（`＋`, `−`, `×`, `÷`, `＾`, `！`）・括弧・等号・空白を自動的に半角ASCIIへと透過正規化するため、すべての実行形態でストレスなく計算できます。
 - **表示モード切替**: 人間が読みやすいUnicode記号表示を標準としつつ、スクリプト連携用の `--ascii` フラグや、参考値としての `--approx`（小数近似値併記）フラグを備えています。
@@ -209,6 +210,8 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
 - `expect(...)`: 離散確率変数の期待値 $E[X]$（`expect(binom, n, p)`, `expect(geom, p)`, `expect(hyper, N, K, n)`、またはリスト対 `expect([[x1, p1], ...])`）
 - `variance(...)`: 離散確率変数の分散 $V[X] = E[X^2] - (E[X])^2$
 - `stddev(...)`: 離散確率変数の標準偏差 $\sigma = \sqrt{V[X]}$（根号シンボルによる厳密代数簡約）
+- `plot(f(x), [x_min, x_max])`: 1変数関数のUnicode Braille高解像度ターミナルプロット（CASによる零点・極値の厳密代数ラベル表示）
+- `plot(f(x), [x_min, x_max], [y_min, y_max])`: y軸表示領域を指定した関数プロット（Tupper不連続判定による漸近線の破線描画）
 - 行列・ベクトル記法: `[[1, 2], [3, 4]]`（行列演算）、`[1, 2, 3]`（ベクトル演算）
 
 ### LICENSE
@@ -235,7 +238,8 @@ All decimal inputs are converted immediately into exact rational fractions (`big
   - Variable symbol assignment (`x = expr`) and previous result reference (`ans`)
   - Scientific calculator functions: Absolute value `abs`, cube roots `cbrt`, number theory `gcd`/`lcm`, integer modulo `mod`, permutations/combinations `perm`/`comb`, and integer random generation `rand`
   - Advanced calculus & discrete series: Taylor and Maclaurin expansions (`taylor`), discrete symbolic power sums via Bernoulli numbers and Faulhaber's formula (`sum`)
-  - 3D Vector calculus: Dot product `dot`, cross product `cross`, Euclidean norm `norm`, gradient `grad`, divergence `div`, and curl `curl`
+  - Discrete probability & statistics: Binomial PMF `binom`, hypergeometric PMF `hyper`, geometric PMF `geom`, Bayes posterior `bayes`, expectation `expect`, variance `variance`, and standard deviation `stddev` (in exact radical form)
+  - Strict Terminal Function Plotter: Unicode Braille (2x4 subpixel) high-resolution terminal graph plotting, CAS integration with exact algebraic coordinate pinning (roots, extrema), and Tupper (2001) discontinuity detection guarding rational vertical asymptotes
 - **Strict Parsing Rules**: Prohibits implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) to eliminate parse ambiguities.
 - **Multiple Execution Modes & Full-width Normalization**: Supports one-shot execution via CLI arguments, a rich interactive REPL with history browsing, and standard input piping. Automatically normalizes full-width (Zenkaku) characters (digits, letters, operators like `＋`, `−`, `×`, `÷`, `＾`, `！`, parentheses, equals, and spaces) to half-width ASCII across all input modes for seamless typing under Japanese IMEs.
 - **Configurable Output**: Defaults to Unicode mathematical symbols, with `--ascii` for integration scripts and `--approx` for displaying reference floating-point approximations.
@@ -417,6 +421,8 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
 - `expect(...)`: Expected value $E[X]$ of discrete distributions (`expect(binom, n, p)`, `expect([[x1, p1], ...])`, etc.)
 - `variance(...)`: Variance $V[X] = E[X^2] - (E[X])^2$
 - `stddev(...)`: Standard deviation $\sigma = \sqrt{V[X]}$ (exact radical form with automatic square-root simplification)
+- `plot(f(x), [x_min, x_max])`: Terminal Unicode Braille high-resolution function plotting (with CAS automatic roots/extrema detection and exact coordinate label pinning)
+- `plot(f(x), [x_min, x_max], [y_min, y_max])`: Function plot with explicit y-domain bounds (with Tupper discontinuity detection and dashed vertical asymptotes)
 - Matrix & Vector Literal Syntax: `[[1, 2], [3, 4]]` (matrices), `[1, 2, 3]` (vectors)
 
 ### LICENSE

@@ -221,3 +221,23 @@ func TestIntegration_CLIEndToEnd(t *testing.T) {
 		t.Errorf("expected '31', got %q", strings.TrimSpace(out.String()))
 	}
 }
+
+// TestIntegration_Plotter verifies terminal plotter execution via CLI run().
+func TestIntegration_Plotter(t *testing.T) {
+	out := new(bytes.Buffer)
+	errOut := new(bytes.Buffer)
+	code := run([]string{"plot(x^2 - 2, [-2, 2])"}, strings.NewReader(""), out, errOut)
+	if code != 0 {
+		t.Fatalf("CLI plot failed with exit code %d: %s", code, errOut.String())
+	}
+	output := out.String()
+	if !strings.Contains(output, "零点 (Zero)") {
+		t.Errorf("expected plot roots metadata, got:\n%s", output)
+	}
+	if !strings.Contains(output, "極小値 (Local Min)") {
+		t.Errorf("expected plot extrema metadata, got:\n%s", output)
+	}
+	if !strings.Contains(output, "[-√2, 0]") || !strings.Contains(output, "[√2, 0]") {
+		t.Errorf("expected pinned root coordinates, got:\n%s", output)
+	}
+}

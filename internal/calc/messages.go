@@ -17,6 +17,10 @@ const (
 	MsgErrInvalidDistribution = "invalid or unsupported distribution specification"
 	MsgErrProbSumNotOne       = "sum of probabilities in discrete distribution must equal 1"
 
+	MsgErrPlotInvalidDomain     = "invalid plot domain: lower bound must be less than upper bound"
+	MsgErrPlotVariableNotFound  = "plot requires an expression with a single variable"
+	MsgErrPlotEmptyDomain       = "plot domain cannot be empty"
+
 	MsgHelp = `ihd - Exact Arithmetic Calculator
 
 Usage:

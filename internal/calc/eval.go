@@ -1361,6 +1361,9 @@ func simplifyFunc(name string, args []Node) (Node, error) {
 	case "stddev":
 		return EvalStdDev(args)
 
+	case "plot":
+		return EvalPlot(args)
+
 	default:
 		return nil, fmt.Errorf("unknown function: %s", name)
 	}
