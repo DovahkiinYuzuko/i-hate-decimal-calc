@@ -240,6 +240,24 @@ func NewFunc(name string, args []Node) (*FuncNode, error) {
 		}
 		return &FuncNode{Name: name, Args: args}, nil
 
+	case "line_intersect":
+		if len(args) != 2 {
+			return nil, fmt.Errorf("line_intersect requires exactly 2 arguments, got %d", len(args))
+		}
+		return &FuncNode{Name: name, Args: args}, nil
+
+	case "circle_intersect":
+		if len(args) != 4 {
+			return nil, fmt.Errorf("circle_intersect requires exactly 4 arguments (center1, r1, center2, r2), got %d", len(args))
+		}
+		return &FuncNode{Name: name, Args: args}, nil
+
+	case "triangle_area", "triangle_centers":
+		if len(args) != 3 {
+			return nil, fmt.Errorf("%s requires exactly 3 arguments, got %d", name, len(args))
+		}
+		return &FuncNode{Name: name, Args: args}, nil
+
 	default:
 		return nil, fmt.Errorf("unknown function: %s", name)
 	}

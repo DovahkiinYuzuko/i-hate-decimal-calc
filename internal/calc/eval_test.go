@@ -1021,5 +1021,60 @@ func TestVectorCalculus(t *testing.T) {
 	}
 }
 
+func TestGeometryBuiltins(t *testing.T) {
+	cases := []struct {
+		input    string
+		expected string
+	}{
+		{"line_intersect([1, 1, -4], [1, -1, 0])", "[2, 2]"},
+		{"triangle_area([0, 0], [4, 0], [0, 3])", "6"},
+		{"triangle_centers([0, 0], [4, 0], [0, 3])", "[[4/3, 1], [2, 3/2], [0, 0], [1, 1]]"},
+		{"circle_intersect([0, 0], 1, [3, 0], 2)", "[[1, 0]]"},
+		{"circle_intersect([0, 0], 2, [0, 0], 1)", "[]"},
+	}
+
+	for _, tc := range cases {
+		res, err := EvalString(tc.input)
+		if err != nil {
+			t.Fatalf("unexpected error for %q: %v", tc.input, err)
+		}
+		formatted := Format(res)
+		if formatted != tc.expected {
+			t.Errorf("geometry %q: expected %q, got %q", tc.input, tc.expected, formatted)
+		}
+	}
+
+	// Two circles intersection with radicals
+	resCircles, err := EvalString("circle_intersect([0, 0], 2, [2, 0], 2)")
+	if err != nil {
+		t.Fatalf("unexpected error for circle_intersect: %v", err)
+	}
+	listNode, ok := resCircles.(*ListNode)
+	if !ok || len(listNode.Elements) != 2 {
+		t.Fatalf("expected list of 2 points, got %s", Format(resCircles))
+	}
+
+	// Error cases
+	errorCases := []struct {
+		input       string
+		errContains string
+	}{
+		{"line_intersect([1, 1, 1], [1, 1, 5])", "lines are parallel"},
+		{"triangle_centers([0, 0], [1, 1], [2, 2])", "points are collinear"},
+		{"circle_intersect([0, 0], 2, [0, 0], 2)", "circles are coincident"},
+	}
+	for _, tc := range errorCases {
+		_, err := EvalString(tc.input)
+		if err == nil {
+			t.Errorf("expected error for %q, got nil", tc.input)
+			continue
+		}
+		if !strings.Contains(err.Error(), tc.errContains) {
+			t.Errorf("expected error containing %q for %q, got %v", tc.errContains, tc.input, err)
+		}
+	}
+}
+
+
 
 

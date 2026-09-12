@@ -186,6 +186,10 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
 - `grad(f, [x, y, z])`: スカラー場の勾配ベクトル（$\nabla f$）
 - `div(F, [x, y, z])`: ベクトル場の発散（$\nabla \cdot F$）
 - `curl(F, [x, y, z])`: 3次元ベクトル場の回転（$\nabla \times F$）
+- `line_intersect(line1, line2)`: 2直線の厳密交点（$Ax+By+C=0$ を `[A, B, C]` で指定。クラメルの公式により交点 `[x, y]` を算出）
+- `circle_intersect(center1, r1, center2, r2)`: 2円の厳密交点（中心 `[x, y]` と半径 $r$。根軸次数下げにより交点リスト `[[x1, y1], ...]` を算出）
+- `triangle_area(p1, p2, p3)`: 3頂点からなる三角形の厳密面積（外積・Shoelace公式）
+- `triangle_centers(p1, p2, p3)`: 三角形の五心解析（重心・外心・垂心・内心を `[重心, 外心, 垂心, 内心]` のリストで一括算出）
 - 行列・ベクトル記法: `[[1, 2], [3, 4]]`（行列演算）、`[1, 2, 3]`（ベクトル演算）
 
 ### LICENSE
@@ -372,6 +376,10 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
 - `grad(f, [x, y, z])`: Gradient vector field ($\nabla f$)
 - `div(F, [x, y, z])`: Divergence of a vector field ($\nabla \cdot F$)
 - `curl(F, [x, y, z])`: 3D curl vector field ($\nabla \times F$)
+- `line_intersect(line1, line2)`: Exact intersection point of two lines ($Ax+By+C=0$ specified as `[A, B, C]`, computed via Cramer's rule as `[x, y]`)
+- `circle_intersect(center1, r1, center2, r2)`: Exact intersection points of two circles (centers `[x, y]` and radii $r$, solved via radical axis order reduction as `[[x1, y1], ...]`)
+- `triangle_area(p1, p2, p3)`: Exact area of a triangle given three vertices via Shoelace formula
+- `triangle_centers(p1, p2, p3)`: Triangle centers (returns centroid, circumcenter, orthocenter, and incenter as `[G, O, H, I]`)
 - Matrix & Vector Literal Syntax: `[[1, 2], [3, 4]]` (matrices), `[1, 2, 3]` (vectors)
 
 ### LICENSE
