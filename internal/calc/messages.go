@@ -9,6 +9,14 @@ const (
 	MsgNoVars          = "No variables defined."
 	MsgErrReservedWord = "cannot assign to reserved identifier %q"
 
+	MsgErrProbOutOfRange      = "probability must be between 0 and 1"
+	MsgErrProbNonNegativeInt  = "number of trials and successes must be non-negative integers"
+	MsgErrProbPositiveInt     = "trial count must be a positive integer"
+	MsgErrHyperParams         = "invalid hypergeometric distribution parameters"
+	MsgErrBayesZeroEvidence   = "marginal probability (evidence) cannot be zero"
+	MsgErrInvalidDistribution = "invalid or unsupported distribution specification"
+	MsgErrProbSumNotOne       = "sum of probabilities in discrete distribution must equal 1"
+
 	MsgHelp = `ihd - Exact Arithmetic Calculator
 
 Usage:

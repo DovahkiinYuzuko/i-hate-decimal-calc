@@ -1340,6 +1340,27 @@ func simplifyFunc(name string, args []Node) (Node, error) {
 	case "triangle_centers":
 		return evalTriangleCentersFunc(args[0], args[1], args[2])
 
+	case "binom":
+		return EvalBinomPMF(args)
+
+	case "hyper":
+		return EvalHyperPMF(args)
+
+	case "geom":
+		return EvalGeomPMF(args)
+
+	case "bayes":
+		return EvalBayes(args)
+
+	case "expect":
+		return EvalExpect(args)
+
+	case "variance":
+		return EvalVariance(args)
+
+	case "stddev":
+		return EvalStdDev(args)
+
 	default:
 		return nil, fmt.Errorf("unknown function: %s", name)
 	}

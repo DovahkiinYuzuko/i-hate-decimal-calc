@@ -258,6 +258,30 @@ func NewFunc(name string, args []Node) (*FuncNode, error) {
 		}
 		return &FuncNode{Name: name, Args: args}, nil
 
+	case "geom":
+		if len(args) != 2 {
+			return nil, fmt.Errorf("geom requires exactly 2 arguments, got %d", len(args))
+		}
+		return &FuncNode{Name: name, Args: args}, nil
+
+	case "binom", "bayes":
+		if len(args) != 3 {
+			return nil, fmt.Errorf("%s requires exactly 3 arguments, got %d", name, len(args))
+		}
+		return &FuncNode{Name: name, Args: args}, nil
+
+	case "hyper":
+		if len(args) != 4 {
+			return nil, fmt.Errorf("hyper requires exactly 4 arguments, got %d", len(args))
+		}
+		return &FuncNode{Name: name, Args: args}, nil
+
+	case "expect", "variance", "stddev":
+		if len(args) < 1 || len(args) > 4 {
+			return nil, fmt.Errorf("%s requires 1 to 4 arguments, got %d", name, len(args))
+		}
+		return &FuncNode{Name: name, Args: args}, nil
+
 	default:
 		return nil, fmt.Errorf("unknown function: %s", name)
 	}

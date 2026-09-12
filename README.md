@@ -27,6 +27,7 @@
   - 関数電卓基本機能（絶対値 `abs`、3乗根 `cbrt`、最大公約数・最小公倍数 `gcd`/`lcm`、剰余 `mod`、順列・組合せ `perm`/`comb`、整数乱数 `rand`）
   - 高度解析・離散数列（高階微分によるテイラー展開・マクローリン展開 `taylor`、ベルヌーイ数漸化式およびFaulhaber公式による記号ベキ乗和 `sum`）
   - 3次元ベクトル解析（内積 `dot`、外積 `cross`、ユークリッドノルム `norm`、勾配 `grad`、発散 `div`、回転 `curl`）
+  - 厳密離散確率・統計（二項分布 `binom`、超幾何分布 `hyper`、幾何分布 `geom`、ベイズ事後確率 `bayes`、期待値 `expect`、分散 `variance`、標準偏差 `stddev` の根号形式代数簡約）
 - **厳格な構文解析**: 乗算記号の省略（例: `2pi` や `(1+2)(3+4)`）を禁止し、誤認識による計算ミスを防ぎます。
 - **多彩な実行形態と全角自動正規化**: コマンドライン引数によるワンショット実行、上下キー履歴呼び出しに対応したリッチ対話型REPL、および標準入力パイプに対応しています。また、日本語IMEが有効なまま入力された全角数字・英字・演算子（`＋`, `−`, `×`, `÷`, `＾`, `！`）・括弧・等号・空白を自動的に半角ASCIIへと透過正規化するため、すべての実行形態でストレスなく計算できます。
 - **表示モード切替**: 人間が読みやすいUnicode記号表示を標準としつつ、スクリプト連携用の `--ascii` フラグや、参考値としての `--approx`（小数近似値併記）フラグを備えています。
@@ -201,6 +202,13 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
 - `circle_intersect(center1, r1, center2, r2)`: 2円の厳密交点（中心 `[x, y]` と半径 $r$。根軸次数下げにより交点リスト `[[x1, y1], ...]` を算出）
 - `triangle_area(p1, p2, p3)`: 3頂点からなる三角形の厳密面積（外積・Shoelace公式）
 - `triangle_centers(p1, p2, p3)`: 三角形の五心解析（重心・外心・垂心・内心を `[重心, 外心, 垂心, 内心]` のリストで一括算出）
+- `binom(n, k, p)`: 二項分布の確率質量関数（PMF）$P(X=k) = \binom{n}{k} p^k (1-p)^{n-k}$（巨大整数有理数）
+- `hyper(N, K, n, k)`: 超幾何分布の確率質量関数 $P(X=k) = \frac{\binom{K}{k}\binom{N-K}{n-k}}{\binom{N}{n}}$（非復元抽出）
+- `geom(p, k)`: 幾何分布の確率質量関数 $P(X=k) = (1-p)^{k-1} p$
+- `bayes(prior, likelihood, marginal)`: ベイズの定理による厳密事後確率 $P(A|B) = \frac{P(B|A)P(A)}{P(B)}$
+- `expect(...)`: 離散確率変数の期待値 $E[X]$（`expect(binom, n, p)`, `expect(geom, p)`, `expect(hyper, N, K, n)`、またはリスト対 `expect([[x1, p1], ...])`）
+- `variance(...)`: 離散確率変数の分散 $V[X] = E[X^2] - (E[X])^2$
+- `stddev(...)`: 離散確率変数の標準偏差 $\sigma = \sqrt{V[X]}$（根号シンボルによる厳密代数簡約）
 - 行列・ベクトル記法: `[[1, 2], [3, 4]]`（行列演算）、`[1, 2, 3]`（ベクトル演算）
 
 ### LICENSE
@@ -402,6 +410,13 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
 - `circle_intersect(center1, r1, center2, r2)`: Exact intersection points of two circles (centers `[x, y]` and radii $r$, solved via radical axis order reduction as `[[x1, y1], ...]`)
 - `triangle_area(p1, p2, p3)`: Exact area of a triangle given three vertices via Shoelace formula
 - `triangle_centers(p1, p2, p3)`: Triangle centers (returns centroid, circumcenter, orthocenter, and incenter as `[G, O, H, I]`)
+- `binom(n, k, p)`: Binomial distribution PMF $P(X=k) = \binom{n}{k} p^k (1-p)^{n-k}$ (exact rational via large integers)
+- `hyper(N, K, n, k)`: Hypergeometric distribution PMF $P(X=k) = \frac{\binom{K}{k}\binom{N-K}{n-k}}{\binom{N}{n}}$ (without replacement)
+- `geom(p, k)`: Geometric distribution PMF $P(X=k) = (1-p)^{k-1} p$
+- `bayes(prior, likelihood, marginal)`: Bayes' theorem exact posterior probability $P(A|B) = \frac{P(B|A)P(A)}{P(B)}$
+- `expect(...)`: Expected value $E[X]$ of discrete distributions (`expect(binom, n, p)`, `expect([[x1, p1], ...])`, etc.)
+- `variance(...)`: Variance $V[X] = E[X^2] - (E[X])^2$
+- `stddev(...)`: Standard deviation $\sigma = \sqrt{V[X]}$ (exact radical form with automatic square-root simplification)
 - Matrix & Vector Literal Syntax: `[[1, 2], [3, 4]]` (matrices), `[1, 2, 3]` (vectors)
 
 ### LICENSE

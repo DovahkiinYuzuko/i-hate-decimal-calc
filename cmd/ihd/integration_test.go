@@ -113,6 +113,17 @@ func TestIntegration_SpecificationExamples(t *testing.T) {
 		{"det([[1, 2], [3, 4]])", "-2"},
 		{"inv([[1, 2], [3, 4]])", "[[-2, 1], [3/2, -1/2]]"},
 		{"transpose([[1, 2, 3], [4, 5, 6]])", "[[1, 4], [2, 5], [3, 6]]"},
+
+		// 15. Probability Pack: binom, hyper, geom, bayes, expect, variance, stddev (issue-20)
+		{"binom(10, 3, 1/2)", "15/128"},
+		{"hyper(10, 3, 2, 1)", "7/15"},
+		{"geom(1/3, 4)", "8/81"},
+		{"bayes(1/100, 9/10, 1/10)", "9/100"},
+		{"expect(binom, 10, 1/2)", "5"},
+		{"variance(binom, 10, 1/2)", "5/2"},
+		{"stddev(binom, 10, 1/2)", "√10/2"},
+		{"expect([[1, 1/4], [2, 1/2], [3, 1/4]])", "2"},
+		{"variance([[1, 1/4], [2, 1/2], [3, 1/4]])", "1/2"},
 	}
 
 	for _, tc := range testCases {
