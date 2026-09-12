@@ -48,7 +48,7 @@ irm https://raw.githubusercontent.com/DovahkiinYuzuko/i-hate-decimal-calc/main/i
 ```
 
 #### ソースコードからのビルド
-Go 1.22 以上がインストールされている環境で、リポジトリのルートディレクトリにて以下を実行してください。
+Go 1.26 以上（または `go.mod` で指定されたバージョン）がインストールされている環境で、リポジトリのルートディレクトリにて以下を実行してください。
 
 ```bash
 go build -o ihd ./cmd/ihd
@@ -264,7 +264,7 @@ irm https://raw.githubusercontent.com/DovahkiinYuzuko/i-hate-decimal-calc/main/i
 ```
 
 #### Building from Source
-Requires Go 1.22 or higher. Build directly from the root of the repository:
+Requires Go 1.26 or higher (or the version specified in `go.mod`). Build directly from the root of the repository:
 
 ```bash
 go build -o ihd ./cmd/ihd
