@@ -538,9 +538,10 @@ func polyToNode(poly []*big.Int, varName string) Node {
 		}
 
 		cRat := &RationalNode{Val: new(big.Rat).SetInt(coeff)}
-		if deg == 0 {
+		switch deg {
+		case 0:
 			terms = append(terms, cRat)
-		} else if deg == 1 {
+		case 1:
 			xNode := &VarNode{Name: varName}
 			if coeff.Cmp(big.NewInt(1)) == 0 {
 				terms = append(terms, xNode)
@@ -549,7 +550,7 @@ func polyToNode(poly []*big.Int, varName string) Node {
 			} else {
 				terms = append(terms, NewMul([]Node{cRat, xNode}))
 			}
-		} else {
+		default:
 			xNode := &VarNode{Name: varName}
 			powNode, _ := NewPow(xNode, mustRational(int64(deg), 1))
 			if coeff.Cmp(big.NewInt(1)) == 0 {
