@@ -883,3 +883,143 @@ func TestEval_Matrix(t *testing.T) {
 	}
 }
 
+func TestTaylor(t *testing.T) {
+	cases := []struct {
+		input    string
+		expected string
+	}{
+		{"taylor(sin(x), x, 0, 3)", "x - x^3/6"},
+		{"taylor(cos(x), x, 0, 4)", "1 - x^2/2 + x^4/24"},
+		{"taylor(1/(1 - x), x, 0, 3)", "1 + x + x^2 + x^3"},
+		{"taylor(x^3 + 2*x + 1, x, 0, 2)", "1 + 2*x"},
+	}
+
+	for _, tc := range cases {
+		res, err := EvalString(tc.input)
+		if err != nil {
+			t.Errorf("eval error for %q: %v", tc.input, err)
+			continue
+		}
+		formatted := Format(res)
+		if formatted != tc.expected {
+			t.Errorf("taylor %q: expected %q, got %q", tc.input, tc.expected, formatted)
+		}
+	}
+
+	// Error cases
+	errorCases := []struct {
+		input       string
+		errContains string
+	}{
+		{"taylor(sin(x), x, 0, -1)", "order must be non-negative"},
+		{"taylor(sin(x), 1, 0, 2)", "second argument must be a variable"},
+	}
+	for _, tc := range errorCases {
+		_, err := EvalString(tc.input)
+		if err == nil {
+			t.Errorf("expected error for %q, got nil", tc.input)
+			continue
+		}
+		if !strings.Contains(err.Error(), tc.errContains) {
+			t.Errorf("expected error containing %q for %q, got %v", tc.errContains, tc.input, err)
+		}
+	}
+}
+
+func TestSum(t *testing.T) {
+	cases := []struct {
+		input    string
+		expected string
+	}{
+		{"sum(k, k, 1, 10)", "55"},
+		{"sum(k^2, k, 1, 5)", "55"},
+		{"sum(2^k, k, 0, 4)", "31"},
+		{"sum(1/k, k, 1, 4)", "25/12"},
+		{"sum(1, k, 1, n)", "n"},
+		{"sum(k, k, 1, n)", "n/2 + n^2/2"},
+		{"sum(k^2, k, 1, n)", "n/6 + n^2/2 + n^3/3"},
+	}
+
+	for _, tc := range cases {
+		res, err := EvalString(tc.input)
+		if err != nil {
+			t.Errorf("eval error for %q: %v", tc.input, err)
+			continue
+		}
+		formatted := Format(res)
+		if formatted != tc.expected {
+			t.Errorf("sum %q: expected %q, got %q", tc.input, tc.expected, formatted)
+		}
+	}
+
+	// Error cases
+	errorCases := []struct {
+		input       string
+		errContains string
+	}{
+		{"sum(k, 1, 1, 10)", "second argument must be a variable"},
+		{"sum(k, k, 5, 2)", "start value exceeds end value"},
+	}
+	for _, tc := range errorCases {
+		_, err := EvalString(tc.input)
+		if err == nil {
+			t.Errorf("expected error for %q, got nil", tc.input)
+			continue
+		}
+		if !strings.Contains(err.Error(), tc.errContains) {
+			t.Errorf("expected error containing %q for %q, got %v", tc.errContains, tc.input, err)
+		}
+	}
+}
+
+func TestVectorCalculus(t *testing.T) {
+	cases := []struct {
+		input    string
+		expected string
+	}{
+		{"dot([1, 2, 3], [4, 5, 6])", "32"},
+		{"cross([1, 0, 0], [0, 1, 0])", "[0, 0, 1]"},
+		{"cross([1, 2, 3], [4, 5, 6])", "[-3, 6, -3]"},
+		{"norm([3, 4])", "5"},
+		{"norm([1, 1, 1])", "√3"},
+		{"norm([1, 2, 2])", "3"},
+		{"grad(x^2 + y^2 + z^2, [x, y, z])", "[2*x, 2*y, 2*z]"},
+		{"div([x^2, y^2, z^2], [x, y, z])", "2*x + 2*y + 2*z"},
+		{"curl([y, -x, 0], [x, y, z])", "[0, 0, -2]"},
+	}
+
+	for _, tc := range cases {
+		res, err := EvalString(tc.input)
+		if err != nil {
+			t.Errorf("eval error for %q: %v", tc.input, err)
+			continue
+		}
+		formatted := Format(res)
+		if formatted != tc.expected {
+			t.Errorf("vector calc %q: expected %q, got %q", tc.input, tc.expected, formatted)
+		}
+	}
+
+	// Error cases
+	errorCases := []struct {
+		input       string
+		errContains string
+	}{
+		{"dot([1, 2], [1, 2, 3])", "dimension mismatch"},
+		{"cross([1, 2], [3, 4])", "cross product requires 3-dimensional vectors"},
+		{"curl([x, y], [x, y])", "curl requires 3-dimensional vectors"},
+	}
+	for _, tc := range errorCases {
+		_, err := EvalString(tc.input)
+		if err == nil {
+			t.Errorf("expected error for %q, got nil", tc.input)
+			continue
+		}
+		if !strings.Contains(err.Error(), tc.errContains) {
+			t.Errorf("expected error containing %q for %q, got %v", tc.errContains, tc.input, err)
+		}
+	}
+}
+
+
+

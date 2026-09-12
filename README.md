@@ -25,6 +25,8 @@
   - 同類項の集約と分配法則による展開（例: `2*x + 3*x` → `5*x`）
   - 変数シンボル定義・代入（`x = 式`）および直前結果参照（`ans`）
   - 関数電卓基本機能（絶対値 `abs`、3乗根 `cbrt`、最大公約数・最小公倍数 `gcd`/`lcm`、剰余 `mod`、順列・組合せ `perm`/`comb`、整数乱数 `rand`）
+  - 高度解析・離散数列（高階微分によるテイラー展開・マクローリン展開 `taylor`、ベルヌーイ数漸化式およびFaulhaber公式による記号ベキ乗和 `sum`）
+  - 3次元ベクトル解析（内積 `dot`、外積 `cross`、ユークリッドノルム `norm`、勾配 `grad`、発散 `div`、回転 `curl`）
 - **厳格な構文解析**: 乗算記号の省略（例: `2pi` や `(1+2)(3+4)`）を禁止し、誤認識による計算ミスを防ぎます。
 - **多彩な実行形態と全角自動正規化**: コマンドライン引数によるワンショット実行、上下キー履歴呼び出しに対応したリッチ対話型REPL、および標準入力パイプに対応しています。また、日本語IMEが有効なまま入力された全角数字・英字・演算子（`＋`, `−`, `×`, `÷`, `＾`, `！`）・括弧・等号・空白を自動的に半角ASCIIへと透過正規化するため、すべての実行形態でストレスなく計算できます。
 - **表示モード切替**: 人間が読みやすいUnicode記号表示を標準としつつ、スクリプト連携用の `--ascii` フラグや、参考値としての `--approx`（小数近似値併記）フラグを備えています。
@@ -176,7 +178,15 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
 - `det(A)`: 厳密行列式（余因子展開法により除算を挟まない完全厳密解）
 - `inv(A)`: 厳密逆行列（余因子行列法による厳密逆行列算出、特異行列時はエラー検出）
 - `transpose(A)`: 行列の転置（行と列の反転）
-- 行列リテラル記法: `[[1, 2], [3, 4]]`（加減算 `A + B`, `A - B`、乗算 `A * B`、スカラー倍 `2 * A` に対応）
+- `taylor(f, x, a, n)`: テイラー展開・マクローリン展開（式 $f$ を $x=a$ まわりで $n$ 次まで展開）
+- `sum(expr, k, start, end)`: 離散和（有限整数範囲の合算、または Faulhaber 公式による $n$ に関する多項式閉形式）
+- `dot(u, v)`: ベクトルの内積（$u \cdot v = \sum u_i v_i$）
+- `cross(u, v)`: 3次元ベクトルの外積（$u \times v$）
+- `norm(v)`: ベクトルのユークリッドノルム（$\sqrt{\sum v_i^2}$、根号簡約対応）
+- `grad(f, [x, y, z])`: スカラー場の勾配ベクトル（$\nabla f$）
+- `div(F, [x, y, z])`: ベクトル場の発散（$\nabla \cdot F$）
+- `curl(F, [x, y, z])`: 3次元ベクトル場の回転（$\nabla \times F$）
+- 行列・ベクトル記法: `[[1, 2], [3, 4]]`（行列演算）、`[1, 2, 3]`（ベクトル演算）
 
 ### LICENSE
 [MIT](./LICENSE.MIT)
@@ -201,6 +211,8 @@ All decimal inputs are converted immediately into exact rational fractions (`big
   - Like-term aggregation and distributive expansion (e.g., `2*x + 3*x` → `5*x`)
   - Variable symbol assignment (`x = expr`) and previous result reference (`ans`)
   - Scientific calculator functions: Absolute value `abs`, cube roots `cbrt`, number theory `gcd`/`lcm`, integer modulo `mod`, permutations/combinations `perm`/`comb`, and integer random generation `rand`
+  - Advanced calculus & discrete series: Taylor and Maclaurin expansions (`taylor`), discrete symbolic power sums via Bernoulli numbers and Faulhaber's formula (`sum`)
+  - 3D Vector calculus: Dot product `dot`, cross product `cross`, Euclidean norm `norm`, gradient `grad`, divergence `div`, and curl `curl`
 - **Strict Parsing Rules**: Prohibits implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) to eliminate parse ambiguities.
 - **Multiple Execution Modes & Full-width Normalization**: Supports one-shot execution via CLI arguments, a rich interactive REPL with history browsing, and standard input piping. Automatically normalizes full-width (Zenkaku) characters (digits, letters, operators like `＋`, `−`, `×`, `÷`, `＾`, `！`, parentheses, equals, and spaces) to half-width ASCII across all input modes for seamless typing under Japanese IMEs.
 - **Configurable Output**: Defaults to Unicode mathematical symbols, with `--ascii` for integration scripts and `--approx` for displaying reference floating-point approximations.
@@ -352,7 +364,15 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
 - `det(A)`: Exact determinant of a square matrix via division-free Laplace expansion
 - `inv(A)`: Exact inverse of a square matrix via adjugate matrix method (detects singular matrices)
 - `transpose(A)`: Matrix transpose (swaps rows and columns)
-- Matrix Literal Syntax: `[[1, 2], [3, 4]]` (supports addition `A + B`, subtraction `A - B`, multiplication `A * B`, and scalar multiplication `2 * A`)
+- `taylor(f, x, a, n)`: Taylor / Maclaurin series expansion (expands $f$ around $x=a$ up to order $n$)
+- `sum(expr, k, start, end)`: Discrete summation (finite integer range sum, or exact symbolic polynomial closed form via Faulhaber's formula)
+- `dot(u, v)`: Vector dot product ($u \cdot v = \sum u_i v_i$)
+- `cross(u, v)`: 3D vector cross product ($u \times v$)
+- `norm(v)`: Euclidean vector norm ($\sqrt{\sum v_i^2}$, with radical simplification)
+- `grad(f, [x, y, z])`: Gradient vector field ($\nabla f$)
+- `div(F, [x, y, z])`: Divergence of a vector field ($\nabla \cdot F$)
+- `curl(F, [x, y, z])`: 3D curl vector field ($\nabla \times F$)
+- Matrix & Vector Literal Syntax: `[[1, 2], [3, 4]]` (matrices), `[1, 2, 3]` (vectors)
 
 ### LICENSE
 [MIT](./LICENSE.MIT)

@@ -222,9 +222,21 @@ func NewFunc(name string, args []Node) (*FuncNode, error) {
 		}
 		return &FuncNode{Name: name, Args: args}, nil
 
-	case "det", "inv", "transpose":
+	case "det", "inv", "transpose", "norm":
 		if len(args) != 1 {
 			return nil, fmt.Errorf("%s requires exactly 1 argument, got %d", name, len(args))
+		}
+		return &FuncNode{Name: name, Args: args}, nil
+
+	case "dot", "cross", "grad", "div", "curl":
+		if len(args) != 2 {
+			return nil, fmt.Errorf("%s requires exactly 2 arguments, got %d", name, len(args))
+		}
+		return &FuncNode{Name: name, Args: args}, nil
+
+	case "taylor", "sum":
+		if len(args) != 4 {
+			return nil, fmt.Errorf("%s requires exactly 4 arguments, got %d", name, len(args))
 		}
 		return &FuncNode{Name: name, Args: args}, nil
 

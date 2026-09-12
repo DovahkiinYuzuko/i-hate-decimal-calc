@@ -1302,6 +1302,30 @@ func simplifyFunc(name string, args []Node) (Node, error) {
 		}
 		return evalTranspose(mat), nil
 
+	case "taylor":
+		return evalTaylor(args[0], args[1], args[2], args[3])
+
+	case "sum":
+		return evalSum(args[0], args[1], args[2], args[3])
+
+	case "dot":
+		return evalDot(args[0], args[1])
+
+	case "cross":
+		return evalCross(args[0], args[1])
+
+	case "norm":
+		return evalNorm(args[0])
+
+	case "grad":
+		return evalGrad(args[0], args[1])
+
+	case "div":
+		return evalDiv(args[0], args[1])
+
+	case "curl":
+		return evalCurl(args[0], args[1])
+
 	default:
 		return nil, fmt.Errorf("unknown function: %s", name)
 	}
@@ -3018,8 +3042,582 @@ func evalTranspose(m *MatrixNode) *MatrixNode {
 	return res
 }
 
+// -------------------------------------------------------------------------
+// Taylor / Maclaurin Series Expansion
+// -------------------------------------------------------------------------
+
+func isZeroNode(n Node) bool {
+	if n == nil {
+		return false
+	}
+	switch v := n.(type) {
+	case *RationalNode:
+		return v.Val.Sign() == 0
+	case *MulNode:
+		for _, f := range v.Factors {
+			if isZeroNode(f) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func evalTaylor(f Node, varNode Node, center Node, orderNode Node) (Node, error) {
+	v, ok := varNode.(*VarNode)
+	if !ok {
+		return nil, fmt.Errorf("taylor error: second argument must be a variable, got %s", varNode.String())
+	}
+	varName := v.Name
+
+	rOrder, ok := orderNode.(*RationalNode)
+	if !ok || !rOrder.Val.IsInt() || rOrder.Val.Sign() < 0 {
+		return nil, fmt.Errorf("taylor error: order must be non-negative integer, got %s", orderNode.String())
+	}
+	n := rOrder.Val.Num().Int64()
+
+	subEnv := NewEnv()
+	subEnv.Set(varName, center)
+
+	currentDeriv := f
+	var terms []Node
+
+	kFact := big.NewInt(1)
+
+	for k := int64(0); k <= n; k++ {
+		if k > 0 {
+			kFact.Mul(kFact, big.NewInt(k))
+			d, err := differentiate(currentDeriv, varName)
+			if err != nil {
+				return nil, fmt.Errorf("taylor error in %d-th derivative: %w", k, err)
+			}
+			currentDeriv = d
+		}
+
+		// evaluate f^(k)(center)
+		fVal, err := EvalWithEnv(currentDeriv, subEnv)
+		if err != nil {
+			return nil, fmt.Errorf("taylor error: cannot evaluate derivative at center: %w", err)
+		}
+
+		if isZeroNode(fVal) {
+			continue
+		}
+
+		// coeff = fVal / k!
+		factRat := new(big.Rat).SetInt(kFact)
+		invFact := new(big.Rat).Inv(factRat)
+		coeff, err := simplifyMul([]Node{fVal, NewRationalFromBigRat(invFact)})
+		if err != nil {
+			return nil, err
+		}
+		if isZeroNode(coeff) {
+			continue
+		}
+
+		// term = coeff * (x - center)^k
+		var powerNode Node
+		if isZeroNode(center) {
+			if k == 0 {
+				powerNode = mustRational(1, 1)
+			} else if k == 1 {
+				powerNode = v
+			} else {
+				powerNode = &PowNode{Base: v, Exp: mustRational(k, 1)}
+			}
+		} else {
+			diffTerm, err := simplifyAdd([]Node{v, &MulNode{Factors: []Node{mustRational(-1, 1), center}}})
+			if err != nil {
+				return nil, err
+			}
+			if k == 0 {
+				powerNode = mustRational(1, 1)
+			} else if k == 1 {
+				powerNode = diffTerm
+			} else {
+				powerNode = expandNode(&PowNode{Base: diffTerm, Exp: mustRational(k, 1)})
+			}
+		}
+
+		term, err := simplifyMul([]Node{coeff, powerNode})
+		if err != nil {
+			return nil, err
+		}
+		term = expandNode(term)
+		terms = append(terms, term)
+	}
+
+	if len(terms) == 0 {
+		return mustRational(0, 1), nil
+	}
+	res, err := simplifyAdd(terms)
+	if err != nil {
+		return nil, err
+	}
+	return expandNode(res), nil
+}
+
+// -------------------------------------------------------------------------
+// Discrete Series & Summation Engine (Faulhaber & Bernoulli)
+// -------------------------------------------------------------------------
+
+func computeBernoulli(m int) []*big.Rat {
+	B := make([]*big.Rat, m+1)
+	for i := 0; i <= m; i++ {
+		B[i] = big.NewRat(0, 1)
+	}
+	B[0] = big.NewRat(1, 1)
+
+	for i := 1; i <= m; i++ {
+		sum := big.NewRat(0, 1)
+		for j := 0; j < i; j++ {
+			c := big.NewInt(0).Binomial(int64(i+1), int64(j))
+			term := new(big.Rat).Mul(new(big.Rat).SetInt(c), B[j])
+			sum.Add(sum, term)
+		}
+		denom := big.NewRat(int64(i+1), 1)
+		B[i].Quo(new(big.Rat).Neg(sum), denom)
+	}
+
+	if m >= 1 {
+		B[1] = big.NewRat(1, 2)
+	}
+	return B
+}
+
+func faulhaberSum(p int64, nVar Node) (Node, error) {
+	if p == 0 {
+		return nVar, nil
+	}
+	B := computeBernoulli(int(p))
+	var terms []Node
+
+	pPlus1 := p + 1
+	pPlus1Rat := big.NewRat(pPlus1, 1)
+
+	for j := int64(0); j <= p; j++ {
+		c := big.NewInt(0).Binomial(pPlus1, j)
+		coeffRat := new(big.Rat).Mul(new(big.Rat).SetInt(c), B[j])
+		coeffRat.Quo(coeffRat, pPlus1Rat)
+
+		if coeffRat.Sign() == 0 {
+			continue
+		}
+
+		expVal := pPlus1 - j
+		var nPow Node
+		if expVal == 1 {
+			nPow = nVar
+		} else {
+			nPow = &PowNode{Base: nVar, Exp: mustRational(expVal, 1)}
+		}
+
+		term, err := simplifyMul([]Node{NewRationalFromBigRat(coeffRat), nPow})
+		if err != nil {
+			return nil, err
+		}
+		terms = append(terms, term)
+	}
+
+	res, err := simplifyAdd(terms)
+	if err != nil {
+		return nil, err
+	}
+	return expandNode(res), nil
+}
+
+func extractPowerOfK(term Node, kVar string) (Node, int64, error) {
+	if !containsVar(term, kVar) {
+		return term, 0, nil
+	}
+	if v, ok := term.(*VarNode); ok && v.Name == kVar {
+		return mustRational(1, 1), 1, nil
+	}
+	if pow, ok := term.(*PowNode); ok {
+		if v, ok := pow.Base.(*VarNode); ok && v.Name == kVar {
+			if rExp, ok := pow.Exp.(*RationalNode); ok && rExp.Val.IsInt() && rExp.Val.Sign() >= 0 {
+				return mustRational(1, 1), rExp.Val.Num().Int64(), nil
+			}
+		}
+	}
+	if mul, ok := term.(*MulNode); ok {
+		var otherFactors []Node
+		totalPow := int64(0)
+		for _, f := range mul.Factors {
+			if containsVar(f, kVar) {
+				subCoeff, subPow, err := extractPowerOfK(f, kVar)
+				if err != nil {
+					return nil, 0, err
+				}
+				if !isOneRat(subCoeff) {
+					otherFactors = append(otherFactors, subCoeff)
+				}
+				totalPow += subPow
+			} else {
+				otherFactors = append(otherFactors, f)
+			}
+		}
+		coeff, err := simplifyMul(otherFactors)
+		if err != nil {
+			return nil, 0, err
+		}
+		return coeff, totalPow, nil
+	}
+	return nil, 0, fmt.Errorf("sum error: cannot handle term %s in symbolic sum", term.String())
+}
+
+func isOneRat(n Node) bool {
+	if r, ok := n.(*RationalNode); ok && r.Val.Cmp(big.NewRat(1, 1)) == 0 {
+		return true
+	}
+	return false
+}
+
+func evalSum(expr Node, kVarNode Node, startNode Node, endNode Node) (Node, error) {
+	v, ok := kVarNode.(*VarNode)
+	if !ok {
+		return nil, fmt.Errorf("sum error: second argument must be a variable, got %s", kVarNode.String())
+	}
+	kName := v.Name
+
+	rStart, okStart := startNode.(*RationalNode)
+	rEnd, okEnd := endNode.(*RationalNode)
+
+	if okStart && okEnd && rStart.Val.IsInt() && rEnd.Val.IsInt() {
+		startVal := rStart.Val.Num().Int64()
+		endVal := rEnd.Val.Num().Int64()
+		if startVal > endVal {
+			return nil, fmt.Errorf("sum error: start value exceeds end value: %d > %d", startVal, endVal)
+		}
+
+		var sumTerms []Node
+		for k := startVal; k <= endVal; k++ {
+			subEnv := NewEnv()
+			subEnv.Set(kName, mustRational(k, 1))
+			val, err := EvalWithEnv(expr, subEnv)
+			if err != nil {
+				return nil, fmt.Errorf("sum error at %s=%d: %w", kName, k, err)
+			}
+			sumTerms = append(sumTerms, val)
+		}
+		if len(sumTerms) == 0 {
+			return mustRational(0, 1), nil
+		}
+		res, err := simplifyAdd(sumTerms)
+		if err != nil {
+			return nil, err
+		}
+		return res, nil
+	}
+
+	if okStart && rStart.Val.Cmp(big.NewRat(1, 1)) == 0 {
+		expanded := expandNode(expr)
+		var terms []Node
+		if add, ok := expanded.(*AddNode); ok {
+			terms = add.Terms
+		} else {
+			terms = []Node{expanded}
+		}
+
+		var resultTerms []Node
+		for _, t := range terms {
+			coeff, pow, err := extractPowerOfK(t, kName)
+			if err != nil {
+				return nil, err
+			}
+			sNode, err := faulhaberSum(pow, endNode)
+			if err != nil {
+				return nil, err
+			}
+			termProd, err := simplifyMul([]Node{coeff, sNode})
+			if err != nil {
+				return nil, err
+			}
+			resultTerms = append(resultTerms, expandNode(termProd))
+		}
+
+		res, err := simplifyAdd(resultTerms)
+		if err != nil {
+			return nil, err
+		}
+		return expandNode(res), nil
+	}
+
+	return nil, fmt.Errorf("sum error: unsupported bounds %s to %s", startNode.String(), endNode.String())
+}
+
+// -------------------------------------------------------------------------
+// 3D Vector Calculus (dot, cross, norm, grad, div, curl)
+// -------------------------------------------------------------------------
+
+func toVectorElements(n Node) ([]Node, error) {
+	if n == nil {
+		return nil, fmt.Errorf("vector cannot be nil")
+	}
+	switch v := n.(type) {
+	case *ListNode:
+		return v.Elements, nil
+	case *MatrixNode:
+		if v.Rows == 1 {
+			return v.Data[0], nil
+		}
+		if v.Cols == 1 {
+			elems := make([]Node, v.Rows)
+			for r := 0; r < v.Rows; r++ {
+				elems[r] = v.Data[r][0]
+			}
+			return elems, nil
+		}
+		return nil, fmt.Errorf("argument must be a 1D vector or 1xN/Nx1 matrix, got %dx%d matrix", v.Rows, v.Cols)
+	default:
+		return nil, fmt.Errorf("argument must be a vector (list or 1D matrix), got %s", n.String())
+	}
+}
+
+func evalDot(uNode, vNode Node) (Node, error) {
+	u, err := toVectorElements(uNode)
+	if err != nil {
+		return nil, fmt.Errorf("dot error: %w", err)
+	}
+	v, err := toVectorElements(vNode)
+	if err != nil {
+		return nil, fmt.Errorf("dot error: %w", err)
+	}
+	if len(u) != len(v) {
+		return nil, fmt.Errorf("dot error: dimension mismatch: %d and %d", len(u), len(v))
+	}
+	if len(u) == 0 {
+		return mustRational(0, 1), nil
+	}
+
+	var prods []Node
+	for i := range u {
+		p, err := simplifyMul([]Node{u[i], v[i]})
+		if err != nil {
+			return nil, err
+		}
+		prods = append(prods, p)
+	}
+	res, err := simplifyAdd(prods)
+	if err != nil {
+		return nil, err
+	}
+	return expandNode(res), nil
+}
+
+func evalCross(uNode, vNode Node) (*ListNode, error) {
+	u, err := toVectorElements(uNode)
+	if err != nil {
+		return nil, fmt.Errorf("cross error: %w", err)
+	}
+	v, err := toVectorElements(vNode)
+	if err != nil {
+		return nil, fmt.Errorf("cross error: %w", err)
+	}
+	if len(u) != 3 || len(v) != 3 {
+		return nil, fmt.Errorf("cross error: cross product requires 3-dimensional vectors, got %d and %d", len(u), len(v))
+	}
+
+	w1p1, err := simplifyMul([]Node{u[1], v[2]})
+	if err != nil {
+		return nil, err
+	}
+	w1p2, err := simplifyMul([]Node{mustRational(-1, 1), u[2], v[1]})
+	if err != nil {
+		return nil, err
+	}
+	w1, err := simplifyAdd([]Node{w1p1, w1p2})
+	if err != nil {
+		return nil, err
+	}
+
+	w2p1, err := simplifyMul([]Node{u[2], v[0]})
+	if err != nil {
+		return nil, err
+	}
+	w2p2, err := simplifyMul([]Node{mustRational(-1, 1), u[0], v[2]})
+	if err != nil {
+		return nil, err
+	}
+	w2, err := simplifyAdd([]Node{w2p1, w2p2})
+	if err != nil {
+		return nil, err
+	}
+
+	w3p1, err := simplifyMul([]Node{u[0], v[1]})
+	if err != nil {
+		return nil, err
+	}
+	w3p2, err := simplifyMul([]Node{mustRational(-1, 1), u[1], v[0]})
+	if err != nil {
+		return nil, err
+	}
+	w3, err := simplifyAdd([]Node{w3p1, w3p2})
+	if err != nil {
+		return nil, err
+	}
+
+	return &ListNode{Elements: []Node{expandNode(w1), expandNode(w2), expandNode(w3)}}, nil
+}
+
+func evalNorm(vNode Node) (Node, error) {
+	v, err := toVectorElements(vNode)
+	if err != nil {
+		return nil, fmt.Errorf("norm error: %w", err)
+	}
+	if len(v) == 0 {
+		return mustRational(0, 1), nil
+	}
+
+	var squares []Node
+	for _, elem := range v {
+		sq, err := simplifyMul([]Node{elem, elem})
+		if err != nil {
+			return nil, err
+		}
+		squares = append(squares, sq)
+	}
+	sumSq, err := simplifyAdd(squares)
+	if err != nil {
+		return nil, err
+	}
+	return simplifySqrt(sumSq)
+}
+
+func evalGrad(fNode Node, varsNode Node) (*ListNode, error) {
+	vars, err := toVectorElements(varsNode)
+	if err != nil {
+		return nil, fmt.Errorf("grad error: %w", err)
+	}
+	if len(vars) == 0 {
+		return nil, fmt.Errorf("grad error: coordinate variables vector cannot be empty")
+	}
+
+	results := make([]Node, len(vars))
+	for i, vn := range vars {
+		v, ok := vn.(*VarNode)
+		if !ok {
+			return nil, fmt.Errorf("grad error: element %d of coordinates must be a variable, got %s", i+1, vn.String())
+		}
+		d, err := differentiate(fNode, v.Name)
+		if err != nil {
+			return nil, fmt.Errorf("grad error in d/d%s: %w", v.Name, err)
+		}
+		results[i] = expandNode(d)
+	}
+	return &ListNode{Elements: results}, nil
+}
+
+func evalDiv(FNode Node, varsNode Node) (Node, error) {
+	F, err := toVectorElements(FNode)
+	if err != nil {
+		return nil, fmt.Errorf("div error: %w", err)
+	}
+	vars, err := toVectorElements(varsNode)
+	if err != nil {
+		return nil, fmt.Errorf("div error: %w", err)
+	}
+	if len(F) != len(vars) {
+		return nil, fmt.Errorf("div error: vector field and coordinates dimension mismatch: %d and %d", len(F), len(vars))
+	}
+
+	var terms []Node
+	for i := range F {
+		v, ok := vars[i].(*VarNode)
+		if !ok {
+			return nil, fmt.Errorf("div error: coordinate %d must be a variable, got %s", i+1, vars[i].String())
+		}
+		d, err := differentiate(F[i], v.Name)
+		if err != nil {
+			return nil, fmt.Errorf("div error in d/d%s: %w", v.Name, err)
+		}
+		terms = append(terms, d)
+	}
+	res, err := simplifyAdd(terms)
+	if err != nil {
+		return nil, err
+	}
+	return expandNode(res), nil
+}
+
+func evalCurl(FNode Node, varsNode Node) (*ListNode, error) {
+	F, err := toVectorElements(FNode)
+	if err != nil {
+		return nil, fmt.Errorf("curl error: %w", err)
+	}
+	vars, err := toVectorElements(varsNode)
+	if err != nil {
+		return nil, fmt.Errorf("curl error: %w", err)
+	}
+	if len(F) != 3 || len(vars) != 3 {
+		return nil, fmt.Errorf("curl error: curl requires 3-dimensional vectors, got %d and %d", len(F), len(vars))
+	}
+
+	vx, okX := vars[0].(*VarNode)
+	vy, okY := vars[1].(*VarNode)
+	vz, okZ := vars[2].(*VarNode)
+	if !okX || !okY || !okZ {
+		return nil, fmt.Errorf("curl error: all coordinate elements must be variables")
+	}
+
+	dF3dy, err := differentiate(F[2], vy.Name)
+	if err != nil {
+		return nil, err
+	}
+	dF2dz, err := differentiate(F[1], vz.Name)
+	if err != nil {
+		return nil, err
+	}
+	negDF2dz, err := simplifyMul([]Node{mustRational(-1, 1), dF2dz})
+	if err != nil {
+		return nil, err
+	}
+	c1, err := simplifyAdd([]Node{dF3dy, negDF2dz})
+	if err != nil {
+		return nil, err
+	}
+
+	dF1dz, err := differentiate(F[0], vz.Name)
+	if err != nil {
+		return nil, err
+	}
+	dF3dx, err := differentiate(F[2], vx.Name)
+	if err != nil {
+		return nil, err
+	}
+	negDF3dx, err := simplifyMul([]Node{mustRational(-1, 1), dF3dx})
+	if err != nil {
+		return nil, err
+	}
+	c2, err := simplifyAdd([]Node{dF1dz, negDF3dx})
+	if err != nil {
+		return nil, err
+	}
+
+	dF2dx, err := differentiate(F[1], vx.Name)
+	if err != nil {
+		return nil, err
+	}
+	dF1dy, err := differentiate(F[0], vy.Name)
+	if err != nil {
+		return nil, err
+	}
+	negDF1dy, err := simplifyMul([]Node{mustRational(-1, 1), dF1dy})
+	if err != nil {
+		return nil, err
+	}
+	c3, err := simplifyAdd([]Node{dF2dx, negDF1dy})
+	if err != nil {
+		return nil, err
+	}
+
+	return &ListNode{Elements: []Node{expandNode(c1), expandNode(c2), expandNode(c3)}}, nil
+}
+
 // Suppress unused imports
 var _ = sort.Strings
 var _ = strings.Join
+
+
 
 
