@@ -154,6 +154,11 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
   # └── [Result]
   #     = -1 + √2
   ```
+- `--lang <code/auto>`: 表示言語（ロケール）を指定します（例: `en`, `ja`, `auto`）。指定した言語は `~/.ihd/config.json` に永続化され、次回以降の実行にも引き継がれます。また、`~/.ihd/locales/{locale}.json` または `./locales/{locale}.json` に配置したカスタム言語辞書ファイルを自動認識します。
+  ```bash
+  ihd --lang ja "1/2 + 1/3"
+  ihd --lang en "1/2 + 1/3"
+  ```
 - `-h`, `--help`: コマンドの使用方法を表示します。
 
 ### サポート構文と演算子
@@ -364,6 +369,11 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
   # │   (1 + √2)^-1  ──>  -1 + √2
   # └── [Result]
   #     = -1 + √2
+  ```
+- `--lang <code/auto>`: Specify display language/locale (e.g., `en`, `ja`, `auto`). The chosen locale is persisted in `~/.ihd/config.json` for subsequent runs. Custom translation dictionaries placed in `~/.ihd/locales/{locale}.json` or `./locales/{locale}.json` are automatically discovered and loaded.
+  ```bash
+  ihd --lang ja "1/2 + 1/3"
+  ihd --lang en "1/2 + 1/3"
   ```
 - `-h`, `--help`: Display the help message.
 

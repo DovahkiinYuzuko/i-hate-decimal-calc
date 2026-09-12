@@ -3,6 +3,8 @@ package calc
 import (
 	"fmt"
 	"math/big"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
 // extractRat extracts *big.Rat from a Node if it is a RationalNode.
@@ -18,11 +20,11 @@ func extractRat(n Node, context string) (*big.Rat, error) {
 func extractNonNegativeInt(n Node, context string) (*big.Int, error) {
 	rat, ok := n.(*RationalNode)
 	if !ok || !rat.Val.IsInt() {
-		return nil, fmt.Errorf("%s: %s", context, MsgErrProbNonNegativeInt)
+		return nil, fmt.Errorf("%s: %s", context, i18n.T("errors.prob_non_negative_int"))
 	}
 	val := rat.Val.Num()
 	if val.Sign() < 0 {
-		return nil, fmt.Errorf("%s: %s", context, MsgErrProbNonNegativeInt)
+		return nil, fmt.Errorf("%s: %s", context, i18n.T("errors.prob_non_negative_int"))
 	}
 	return new(big.Int).Set(val), nil
 }
@@ -31,11 +33,11 @@ func extractNonNegativeInt(n Node, context string) (*big.Int, error) {
 func extractPositiveInt(n Node, context string) (*big.Int, error) {
 	rat, ok := n.(*RationalNode)
 	if !ok || !rat.Val.IsInt() {
-		return nil, fmt.Errorf("%s: %s", context, MsgErrProbPositiveInt)
+		return nil, fmt.Errorf("%s: %s", context, i18n.T("errors.prob_positive_int"))
 	}
 	val := rat.Val.Num()
 	if val.Sign() <= 0 {
-		return nil, fmt.Errorf("%s: %s", context, MsgErrProbPositiveInt)
+		return nil, fmt.Errorf("%s: %s", context, i18n.T("errors.prob_positive_int"))
 	}
 	return new(big.Int).Set(val), nil
 }
@@ -49,7 +51,7 @@ func extractProbRat(n Node, context string) (*big.Rat, error) {
 	zero := big.NewRat(0, 1)
 	one := big.NewRat(1, 1)
 	if rat.Cmp(zero) < 0 || rat.Cmp(one) > 0 {
-		return nil, fmt.Errorf("%s: %s (got %s)", context, MsgErrProbOutOfRange, rat.RatString())
+		return nil, fmt.Errorf("%s: %s (got %s)", context, i18n.T("errors.prob_out_of_range"), rat.RatString())
 	}
 	return rat, nil
 }
@@ -178,24 +180,24 @@ func EvalHyperPMF(args []Node) (Node, error) {
 	}
 
 	if K.Cmp(N) > 0 || n.Cmp(N) > 0 {
-		return nil, fmt.Errorf("%s: K and n cannot exceed N (got N=%s, K=%s, n=%s)", MsgErrHyperParams, N.String(), K.String(), n.String())
+		return nil, fmt.Errorf("%s: K and n cannot exceed N (got N=%s, K=%s, n=%s)", i18n.T("errors.hyper_params"), N.String(), K.String(), n.String())
 	}
-
-	// Check support condition: max(0, n - (N - K)) <= k <= min(n, K)
-	nMinusKAll := new(big.Int).Sub(N, K)
-	nMinusKDraw := new(big.Int).Sub(n, k)
-
-	if k.Cmp(K) > 0 || k.Cmp(n) > 0 || nMinusKDraw.Sign() < 0 || nMinusKDraw.Cmp(nMinusKAll) > 0 {
+	if k.Cmp(K) > 0 || k.Cmp(n) > 0 {
+		return mustRational(0, 1), nil
+	}
+	// Support case where k < 0 or k < n - (N - K)
+	nMinusK := new(big.Int).Sub(N, K)
+	minK := new(big.Int).Sub(n, nMinusK)
+	if minK.Sign() > 0 && k.Cmp(minK) < 0 {
 		return mustRational(0, 1), nil
 	}
 
 	combKk := combBig(K, k)
-	combRest := combBig(nMinusKAll, nMinusKDraw)
-	num := new(big.Int).Mul(combKk, combRest)
-
+	nMinusK_nMinusK := combBig(nMinusK, new(big.Int).Sub(n, k))
+	num := new(big.Int).Mul(combKk, nMinusK_nMinusK)
 	denom := combBig(N, n)
 	if denom.Sign() == 0 {
-		return nil, fmt.Errorf("%s: division by zero in hypergeometric denominator", MsgErrHyperParams)
+		return nil, fmt.Errorf("%s: division by zero in hypergeometric denominator", i18n.T("errors.hyper_params"))
 	}
 
 	ans := new(big.Rat).SetFrac(num, denom)
@@ -237,29 +239,29 @@ func EvalBayes(args []Node) (Node, error) {
 		return nil, fmt.Errorf("bayes requires 3 arguments (prior, likelihood, marginal), got %d", len(args))
 	}
 
-	prior, err := extractProbRat(args[0], "bayes: prior P(A)")
+	priorRat, err := extractProbRat(args[0], "bayes: prior P(A)")
 	if err != nil {
 		return nil, err
 	}
-	likelihood, err := extractProbRat(args[1], "bayes: likelihood P(B|A)")
+	likelihoodRat, err := extractProbRat(args[1], "bayes: likelihood P(B|A)")
 	if err != nil {
 		return nil, err
 	}
-	marginal, err := extractProbRat(args[2], "bayes: marginal P(B)")
+	marginalRat, err := extractProbRat(args[2], "bayes: marginal P(B)")
 	if err != nil {
 		return nil, err
 	}
 
-	if marginal.Sign() == 0 {
-		return nil, fmt.Errorf("%s", MsgErrBayesZeroEvidence)
+	if marginalRat.Sign() == 0 {
+		return nil, fmt.Errorf("%s", i18n.T("errors.bayes_zero_evidence"))
 	}
 
-	num := new(big.Rat).Mul(prior, likelihood)
-	ans := new(big.Rat).Quo(num, marginal)
+	num := new(big.Rat).Mul(priorRat, likelihoodRat)
+	ans := new(big.Rat).Quo(num, marginalRat)
 
 	one := big.NewRat(1, 1)
 	if ans.Cmp(one) > 0 {
-		return nil, fmt.Errorf("%s: posterior exceeds 1 (got %s)", MsgErrProbOutOfRange, ans.RatString())
+		return nil, fmt.Errorf("%s: posterior exceeds 1 (got %s)", i18n.T("errors.prob_out_of_range"), ans.RatString())
 	}
 
 	return NewRationalFromBigRat(ans), nil
@@ -313,7 +315,7 @@ func extractDiscretePairs(n Node) ([]probPair, error) {
 	}
 	one := big.NewRat(1, 1)
 	if sumProb.Cmp(one) != 0 {
-		return nil, fmt.Errorf("%s (sum = %s)", MsgErrProbSumNotOne, sumProb.RatString())
+		return nil, fmt.Errorf("%s (sum = %s)", i18n.T("errors.prob_sum_not_one"), sumProb.RatString())
 	}
 
 	return pairs, nil
@@ -384,16 +386,16 @@ func EvalExpect(args []Node) (Node, error) {
 		if err != nil {
 			return nil, err
 		}
-		if K.Cmp(N) > 0 || n.Cmp(N) > 0 {
-			return nil, fmt.Errorf("%s", MsgErrHyperParams)
+		if N.Sign() <= 0 || n.Cmp(N) > 0 {
+			return nil, fmt.Errorf("%s", i18n.T("errors.hyper_params"))
 		}
-		// E = n * K / N
+		// E[X] = n * K / N
 		num := new(big.Int).Mul(n, K)
-		ans := new(big.Rat).SetFrac(num, N)
-		return NewRationalFromBigRat(ans), nil
+		rat := new(big.Rat).SetFrac(num, N)
+		return NewRationalFromBigRat(rat), nil
 
 	default:
-		return nil, fmt.Errorf("%s: %s", MsgErrInvalidDistribution, args[0].String())
+		return nil, fmt.Errorf("%s: %s", i18n.T("errors.invalid_distribution"), args[0].String())
 	}
 }
 
@@ -469,31 +471,26 @@ func EvalVariance(args []Node) (Node, error) {
 		if err != nil {
 			return nil, err
 		}
-		if K.Cmp(N) > 0 || n.Cmp(N) > 0 {
-			return nil, fmt.Errorf("%s", MsgErrHyperParams)
-		}
 		// If N == 1, variance is 0
 		oneInt := big.NewInt(1)
 		if N.Cmp(oneInt) == 0 {
 			return mustRational(0, 1), nil
 		}
-		// V = n * (K/N) * ((N-K)/N) * ((N-n)/(N-1))
-		nMinusK := new(big.Int).Sub(N, K)
-		nMinusDraw := new(big.Int).Sub(N, n)
-		nMinusOne := new(big.Int).Sub(N, oneInt)
+		if N.Sign() <= 0 || n.Cmp(N) > 0 {
+			return nil, fmt.Errorf("%s", i18n.T("errors.hyper_params"))
+		}
+		numK := new(big.Int).Mul(K, new(big.Int).Sub(N, K))
+		numN := new(big.Int).Mul(n, new(big.Int).Sub(N, n))
+		num := new(big.Int).Mul(numK, numN)
 
-		num := new(big.Int).Mul(n, K)
-		num.Mul(num, nMinusK)
-		num.Mul(num, nMinusDraw)
-
-		denom := new(big.Int).Mul(N, N)
-		denom.Mul(denom, nMinusOne)
-
-		ans := new(big.Rat).SetFrac(num, denom)
-		return NewRationalFromBigRat(ans), nil
+		denomN := new(big.Int).Mul(N, N)
+		denomNMinus1 := new(big.Int).Sub(N, big.NewInt(1))
+		denom := new(big.Int).Mul(denomN, denomNMinus1)
+		rat := new(big.Rat).SetFrac(num, denom)
+		return NewRationalFromBigRat(rat), nil
 
 	default:
-		return nil, fmt.Errorf("%s: %s", MsgErrInvalidDistribution, args[0].String())
+		return nil, fmt.Errorf("%s: %s", i18n.T("errors.invalid_distribution"), args[0].String())
 	}
 }
 

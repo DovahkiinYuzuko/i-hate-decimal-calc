@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc"
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
 func TestCLI_OneShot(t *testing.T) {
@@ -157,7 +158,7 @@ func TestCLI_REPL(t *testing.T) {
 	}
 
 	output := out.String()
-	if !strings.Contains(output, calc.PromptREPL) {
+	if !strings.Contains(output, i18n.T("cli.prompt")) {
 		t.Errorf("expected REPL prompt, got %q", output)
 	}
 	if !strings.Contains(output, "2") {
@@ -166,7 +167,7 @@ func TestCLI_REPL(t *testing.T) {
 	if !strings.Contains(output, "6") {
 		t.Errorf("expected output 6, got %q", output)
 	}
-	if !strings.Contains(output, calc.MsgREPLExit) {
+	if !strings.Contains(output, i18n.T("cli.repl_exit")) {
 		t.Errorf("expected exit message, got %q", output)
 	}
 }

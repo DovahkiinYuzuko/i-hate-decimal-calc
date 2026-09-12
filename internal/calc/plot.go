@@ -5,6 +5,8 @@ import (
 	"math"
 	"math/big"
 	"strings"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
 // Braille dot bitmasks for a 2x4 cell:
@@ -287,25 +289,25 @@ func (c *BrailleCanvas) Render() string {
 	sb.WriteString("\n\n")
 
 	// Metadata section: Detected CAS features
-	sb.WriteString("[CAS Features Detected]\n")
+	sb.WriteString(i18n.T("plot.features_header"))
 	hasFeature := false
 	for _, feat := range c.Features {
 		hasFeature = true
 		switch feat.Kind {
 		case "root":
-			sb.WriteString(fmt.Sprintf("* 零点 (Zero):       x = %s\n", Format(feat.XNode)))
+			sb.WriteString(i18n.T("plot.zero", Format(feat.XNode)))
 		case "min":
-			sb.WriteString(fmt.Sprintf("* 極小値 (Local Min): (%s, %s)\n", Format(feat.XNode), Format(feat.YNode)))
+			sb.WriteString(i18n.T("plot.local_min", Format(feat.XNode), Format(feat.YNode)))
 		case "max":
-			sb.WriteString(fmt.Sprintf("* 極大値 (Local Max): (%s, %s)\n", Format(feat.XNode), Format(feat.YNode)))
+			sb.WriteString(i18n.T("plot.local_max", Format(feat.XNode), Format(feat.YNode)))
 		case "asymptote":
-			sb.WriteString(fmt.Sprintf("* 漸近線 (Asymptote): x = %s (不連続分離)\n", Format(feat.XNode)))
+			sb.WriteString(i18n.T("plot.asymptote", Format(feat.XNode)))
 		}
 	}
 	if !hasFeature {
-		sb.WriteString("* 特異点・極値なし（単調・滑らかな曲線）\n")
+		sb.WriteString(i18n.T("plot.no_features"))
 	}
-	sb.WriteString(fmt.Sprintf("* 表示領域 (Domain):  x ∈ [%s, %s], y ∈ [%s, %s]\n",
+	sb.WriteString(i18n.T("plot.domain",
 		Format(c.XMinNode), Format(c.XMaxNode), Format(c.YMinNode), Format(c.YMaxNode)))
 
 	return sb.String()
@@ -318,11 +320,11 @@ func evalNodeFloat(n Node) (float64, error) {
 		return 0, err
 	}
 	if math.Abs(imag(cVal)) > 1e-12 {
-		return 0, fmt.Errorf("complex result %v not supported on real plot", cVal)
+		return 0, fmt.Errorf("%s", i18n.T("errors.plot_complex_not_allowed", cVal))
 	}
 	r := real(cVal)
 	if math.IsNaN(r) || math.IsInf(r, 0) {
-		return 0, fmt.Errorf("result is NaN or Inf")
+		return 0, fmt.Errorf("%s", i18n.T("errors.plot_nan_or_inf"))
 	}
 	return r, nil
 }
@@ -416,7 +418,7 @@ func parseDomain(n Node) (Node, Node, float64, float64, error) {
 	switch v := n.(type) {
 	case *ListNode:
 		if len(v.Elements) != 2 {
-			return nil, nil, 0, 0, fmt.Errorf("domain must have 2 elements [min, max], got %d", len(v.Elements))
+			return nil, nil, 0, 0, fmt.Errorf("%s", i18n.T("errors.plot_domain_elements", len(v.Elements)))
 		}
 		lowerNode = v.Elements[0]
 		upperNode = v.Elements[1]
@@ -425,23 +427,23 @@ func parseDomain(n Node) (Node, Node, float64, float64, error) {
 			lowerNode = v.Data[0][0]
 			upperNode = v.Data[0][1]
 		} else {
-			return nil, nil, 0, 0, fmt.Errorf("matrix domain must be 1x2 [min, max]")
+			return nil, nil, 0, 0, fmt.Errorf("%s", i18n.T("errors.plot_matrix_domain"))
 		}
 	default:
-		return nil, nil, 0, 0, fmt.Errorf("domain must be a list [min, max], got %s", n.String())
+		return nil, nil, 0, 0, fmt.Errorf("%s", i18n.T("errors.plot_domain_list", n.String()))
 	}
 
 	lowerVal, err := evalNodeFloat(lowerNode)
 	if err != nil {
-		return nil, nil, 0, 0, fmt.Errorf("evaluating domain min: %v", err)
+		return nil, nil, 0, 0, fmt.Errorf("%s", i18n.T("errors.plot_eval_min", err))
 	}
 	upperVal, err := evalNodeFloat(upperNode)
 	if err != nil {
-		return nil, nil, 0, 0, fmt.Errorf("evaluating domain max: %v", err)
+		return nil, nil, 0, 0, fmt.Errorf("%s", i18n.T("errors.plot_eval_max", err))
 	}
 
 	if lowerVal >= upperVal {
-		return nil, nil, 0, 0, fmt.Errorf("%s", MsgErrPlotInvalidDomain)
+		return nil, nil, 0, 0, fmt.Errorf("%s", i18n.T("errors.plot_invalid_domain"))
 	}
 
 	return lowerNode, upperNode, lowerVal, upperVal, nil
@@ -508,7 +510,7 @@ func findAsymptotes(expr Node, varName string, xMin, xMax float64) []plotFeature
 // EvalPlot parses arguments and renders a 2D exact terminal plot.
 func EvalPlot(args []Node) (Node, error) {
 	if len(args) < 2 || len(args) > 3 {
-		return nil, fmt.Errorf("plot requires 2 or 3 arguments (expr, domainX, [domainY]), got %d", len(args))
+		return nil, fmt.Errorf("%s", i18n.T("errors.plot_args_count", len(args)))
 	}
 
 	expr := args[0]

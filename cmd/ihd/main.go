@@ -9,11 +9,12 @@ import (
 	"strings"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc"
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
 func main() {
-	exitCode := run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr)
-	os.Exit(exitCode)
+	code := run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr)
+	os.Exit(code)
 }
 
 type runOptions struct {
@@ -25,11 +26,25 @@ type runOptions struct {
 	explain    bool
 }
 
-func run(args []string, in io.Reader, out io.Writer, errOut io.Writer) int {
+func run(args []string, in io.Reader, out, errOut io.Writer) int {
+	// Partition args into flags and expressions.
 	var flagArgs []string
 	var exprArgs []string
 
-	for _, a := range args {
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		if a == "-lang" || a == "--lang" {
+			flagArgs = append(flagArgs, a)
+			if i+1 < len(args) {
+				i++
+				flagArgs = append(flagArgs, args[i])
+			}
+			continue
+		}
+		if strings.HasPrefix(a, "-lang=") || strings.HasPrefix(a, "--lang=") {
+			flagArgs = append(flagArgs, a)
+			continue
+		}
 		switch a {
 		case "-ascii", "--ascii", "-approx", "--approx", "-latex", "--latex", "-pretty", "--pretty", "-deg", "--deg", "-explain", "--explain", "-h", "--help":
 			flagArgs = append(flagArgs, a)
@@ -41,6 +56,7 @@ func run(args []string, in io.Reader, out io.Writer, errOut io.Writer) int {
 	fs := flag.NewFlagSet("ihd", flag.ContinueOnError)
 	fs.SetOutput(errOut)
 
+	langFlag := fs.String("lang", "", "Set language locale (e.g., en, ja)")
 	asciiFlag := fs.Bool("ascii", false, "Output ASCII characters only")
 	approxFlag := fs.Bool("approx", false, "Show approximate decimal value")
 	latexFlag := fs.Bool("latex", false, "Output expression in LaTeX format ($$ ... $$)")
@@ -54,8 +70,14 @@ func run(args []string, in io.Reader, out io.Writer, errOut io.Writer) int {
 		return 1
 	}
 
+	// Initialize i18n engine with specified or persistent locale
+	_ = i18n.Init(*langFlag)
+	if *langFlag != "" {
+		_ = i18n.SaveConfigLocale(*langFlag)
+	}
+
 	if *helpFlag {
-		fmt.Fprintln(out, calc.MsgHelp)
+		fmt.Fprintln(out, i18n.T("cli.help"))
 		return 0
 	}
 
@@ -96,7 +118,7 @@ func run(args []string, in io.Reader, out io.Writer, errOut io.Writer) int {
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		fmt.Fprintf(errOut, "%s%v\n", calc.MsgErrorPrefix, err)
+		fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
 		return 1
 	}
 	if hadError {
@@ -108,9 +130,10 @@ func run(args []string, in io.Reader, out io.Writer, errOut io.Writer) int {
 func isTerminal(r io.Reader) bool {
 	if f, ok := r.(*os.File); ok {
 		stat, err := f.Stat()
-		if err == nil {
-			return (stat.Mode() & os.ModeCharDevice) != 0
+		if err != nil {
+			return false
 		}
+		return (stat.Mode() & os.ModeCharDevice) != 0
 	}
 	return false
 }
@@ -134,7 +157,8 @@ func formatOutput(node calc.Node, ro runOptions) string {
 }
 
 func evaluateLine(line string, ro runOptions, out, errOut io.Writer) error {
-	return evaluateLineWithEnv(line, ro, calc.NewEnv(), out, errOut)
+	env := calc.NewEnv()
+	return evaluateLineWithEnv(line, ro, env, out, errOut)
 }
 
 func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut io.Writer) error {
@@ -146,7 +170,7 @@ func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut 
 
 	parsed, err := calc.ParseStatement(line)
 	if err != nil {
-		fmt.Fprintf(errOut, "%s%v\n", calc.MsgErrorPrefix, err)
+		fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
 		return err
 	}
 
@@ -164,7 +188,7 @@ func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut 
 			evaled, err = calc.EvalWithEnv(v.Value, env)
 		}
 		if err != nil {
-			fmt.Fprintf(errOut, "%s%v\n", calc.MsgErrorPrefix, err)
+			fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
 			return err
 		}
 		env.Set(v.Name, evaled)
@@ -185,7 +209,7 @@ func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut 
 			evaled, err = calc.EvalWithEnv(v, env)
 		}
 		if err != nil {
-			fmt.Fprintf(errOut, "%s%v\n", calc.MsgErrorPrefix, err)
+			fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
 			return err
 		}
 		env.Set("ans", evaled)
@@ -198,7 +222,7 @@ func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut 
 
 	default:
 		err := fmt.Errorf("unknown statement type: %T", parsed)
-		fmt.Fprintf(errOut, "%s%v\n", calc.MsgErrorPrefix, err)
+		fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
 		return err
 	}
 }

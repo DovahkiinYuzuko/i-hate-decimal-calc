@@ -1,0 +1,50 @@
+{
+  "meta": {
+    "name": "English",
+    "name_local": "English"
+  },
+  "cli": {
+    "repl_welcome": "ihd: Exact Arithmetic Calculator",
+    "repl_lang_label": "Language: %s [%s]",
+    "repl_exit_hint": "Type 'exit' or 'quit' to exit.",
+    "repl_exit": "Goodbye.",
+    "no_vars": "No variables defined.",
+    "prompt": "ihd> ",
+    "error_prefix": "Error: ",
+    "help": "ihd - Exact Arithmetic Calculator\n\nUsage:\n  ihd [flags] [expression]\n  ihd [flags]                (Starts interactive REPL)\n  echo \"expr\" | ihd [flags]   (Evaluates piped input)\n\nFlags:\n  --lang      Set language locale (e.g., en, ja)\n  --ascii     Output using standard ASCII text (e.g., sqrt, pi) instead of Unicode\n  --approx    Display approximate decimal value alongside exact form\n  --latex     Output expression in LaTeX format ($$ ... $$)\n  --pretty    Output expression using 2D pretty-printed formatting\n  --deg       Use degree mode for trigonometric and inverse trigonometric functions\n  --explain   Show step-by-step algebraic rewriting explanations\n  -h, --help  Show this help message"
+  },
+  "errors": {
+    "reserved_word": "cannot assign to reserved identifier %q",
+    "zero_division": "division by zero",
+    "domain_error": "domain error",
+    "syntax_error": "syntax error",
+    "implicit_multiplication": "implicit multiplication is not allowed",
+    "prob_out_of_range": "probability must be between 0 and 1",
+    "prob_non_negative_int": "number of trials and successes must be non-negative integers",
+    "prob_positive_int": "trial count must be a positive integer",
+    "hyper_params": "invalid hypergeometric distribution parameters",
+    "bayes_zero_evidence": "marginal probability (evidence) cannot be zero",
+    "invalid_distribution": "invalid or unsupported distribution specification",
+    "prob_sum_not_one": "sum of probabilities in discrete distribution must equal 1",
+    "plot_invalid_domain": "invalid plot domain: lower bound must be less than upper bound",
+    "plot_variable_not_found": "plot requires an expression with a single variable",
+    "plot_empty_domain": "plot domain cannot be empty",
+    "plot_args_count": "plot requires 2 or 3 arguments (expr, domainX, [domainY]), got %d",
+    "plot_domain_elements": "domain must have 2 elements [min, max], got %d",
+    "plot_matrix_domain": "matrix domain must be 1x2 [min, max]",
+    "plot_domain_list": "domain must be a list [min, max], got %s",
+    "plot_eval_min": "evaluating domain min: %v",
+    "plot_eval_max": "evaluating domain max: %v",
+    "plot_complex_not_allowed": "complex result %v not supported on real plot",
+    "plot_nan_or_inf": "result is NaN or Inf"
+  },
+  "plot": {
+    "features_header": "[CAS Features Detected]\n",
+    "zero": "* Zero:              x = %s\n",
+    "local_min": "* Local Min:         (%s, %s)\n",
+    "local_max": "* Local Max:         (%s, %s)\n",
+    "asymptote": "* Asymptote:         x = %s (discontinuous)\n",
+    "no_features": "* No singularities or extrema (smooth monotonic curve)\n",
+    "domain": "* Domain:            x ∈ [%s, %s], y ∈ [%s, %s]\n"
+  }
+}

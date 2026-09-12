@@ -226,7 +226,7 @@ func TestIntegration_CLIEndToEnd(t *testing.T) {
 func TestIntegration_Plotter(t *testing.T) {
 	out := new(bytes.Buffer)
 	errOut := new(bytes.Buffer)
-	code := run([]string{"plot(x^2 - 2, [-2, 2])"}, strings.NewReader(""), out, errOut)
+	code := run([]string{"--lang", "ja", "plot(x^2 - 2, [-2, 2])"}, strings.NewReader(""), out, errOut)
 	if code != 0 {
 		t.Fatalf("CLI plot failed with exit code %d: %s", code, errOut.String())
 	}
@@ -239,5 +239,17 @@ func TestIntegration_Plotter(t *testing.T) {
 	}
 	if !strings.Contains(output, "[-√2, 0]") || !strings.Contains(output, "[√2, 0]") {
 		t.Errorf("expected pinned root coordinates, got:\n%s", output)
+	}
+
+	// Also verify English default
+	out.Reset()
+	errOut.Reset()
+	code = run([]string{"--lang", "en", "plot(x^2 - 2, [-2, 2])"}, strings.NewReader(""), out, errOut)
+	if code != 0 {
+		t.Fatalf("CLI plot with --lang en failed: %s", errOut.String())
+	}
+	outputEn := out.String()
+	if !strings.Contains(outputEn, "Zero:") || !strings.Contains(outputEn, "Local Min:") {
+		t.Errorf("expected English plot metadata, got:\n%s", outputEn)
 	}
 }

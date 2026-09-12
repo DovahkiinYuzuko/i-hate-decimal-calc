@@ -13,7 +13,11 @@
 # .gitignores/internal.gitignore
 !internal/
 !internal/calc/
-!intenal/calc/*.go
+!internal/calc/*.go
+!internal/i18n/
+!internal/i18n/*.go
+!internal/i18n/locales/
+!internal/i18n/locales/*.json
 # .gitignores/root.gitignore
 !README.md
 !LICENSE.*

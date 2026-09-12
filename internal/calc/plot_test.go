@@ -51,7 +51,7 @@ func TestPlot_RationalAsymptote(t *testing.T) {
 	content := plotNode.Content
 
 	// Verify vertical asymptote detection
-	if !strings.Contains(content, "x = 0") || !strings.Contains(content, "漸近線") {
+	if !strings.Contains(content, "x = 0") || (!strings.Contains(content, "Asymptote") && !strings.Contains(content, "漸近線")) {
 		t.Errorf("expected vertical asymptote x = 0 in output, got:\n%s", content)
 	}
 

@@ -2,6 +2,8 @@ package calc
 
 import (
 	"fmt"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
 // Precedence levels for Pratt parsing
@@ -121,7 +123,7 @@ func ParseStatement(input string) (interface{}, error) {
 	if p.curTok.Type == TokenIdent && p.peekTok.Type == TokenAssign {
 		varName := p.curTok.Literal
 		if isReservedConst(varName) || isReservedFunc(varName) {
-			return nil, fmt.Errorf(MsgErrReservedWord, varName)
+			return nil, fmt.Errorf("%s", i18n.T("errors.reserved_word", varName))
 		}
 		p.nextToken() // move to '='
 		p.nextToken() // move to start of expression
