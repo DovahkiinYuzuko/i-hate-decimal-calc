@@ -20,6 +20,7 @@ const (
 	NodePow
 	NodeUnaryOp
 	NodeVar
+	NodeList
 )
 
 // Node represents any node in the mathematical expression tree.
@@ -205,6 +206,18 @@ func NewFunc(name string, args []Node) (*FuncNode, error) {
 	case "rand":
 		if len(args) < 1 || len(args) > 3 {
 			return nil, fmt.Errorf("rand requires 1, 2, or 3 arguments, got %d", len(args))
+		}
+		return &FuncNode{Name: name, Args: args}, nil
+
+	case "expand":
+		if len(args) != 1 {
+			return nil, fmt.Errorf("expand requires exactly 1 argument, got %d", len(args))
+		}
+		return &FuncNode{Name: name, Args: args}, nil
+
+	case "diff", "solve":
+		if len(args) != 2 {
+			return nil, fmt.Errorf("%s requires exactly 2 arguments, got %d", name, len(args))
 		}
 		return &FuncNode{Name: name, Args: args}, nil
 
@@ -486,3 +499,41 @@ type AssignStmt struct {
 	Name  string
 	Value Node
 }
+
+// -------------------------------------------------------------------------
+// ListNode (Multiple Elements / Equation Roots)
+// -------------------------------------------------------------------------
+
+// ListNode represents a list of elements (e.g., roots of an equation "[2, 3]").
+type ListNode struct {
+	Elements []Node
+}
+
+// NewList creates a new ListNode with the given elements.
+func NewList(elements []Node) *ListNode {
+	return &ListNode{Elements: elements}
+}
+
+func (n *ListNode) Type() NodeType { return NodeList }
+
+func (n *ListNode) String() string {
+	strs := make([]string, len(n.Elements))
+	for i, e := range n.Elements {
+		strs[i] = e.String()
+	}
+	return fmt.Sprintf("[%s]", strings.Join(strs, ", "))
+}
+
+func (n *ListNode) Equal(other Node) bool {
+	o, ok := other.(*ListNode)
+	if !ok || len(n.Elements) != len(o.Elements) {
+		return false
+	}
+	for i := range n.Elements {
+		if !n.Elements[i].Equal(o.Elements[i]) {
+			return false
+		}
+	}
+	return true
+}
+

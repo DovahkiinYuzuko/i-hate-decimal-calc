@@ -132,6 +132,13 @@ func formatNode(n Node, opts FormatOptions) string {
 	case *AddNode:
 		return formatAdd(v, opts)
 
+	case *ListNode:
+		elemStrs := make([]string, len(v.Elements))
+		for i, e := range v.Elements {
+			elemStrs[i] = formatNode(e, opts)
+		}
+		return fmt.Sprintf("[%s]", strings.Join(elemStrs, ", "))
+
 	default:
 		return n.String()
 	}
@@ -395,6 +402,13 @@ func formatLaTeXNode(n Node) string {
 
 	case *AddNode:
 		return formatLaTeXAdd(v)
+
+	case *ListNode:
+		elemStrs := make([]string, len(v.Elements))
+		for i, e := range v.Elements {
+			elemStrs[i] = formatLaTeXNode(e)
+		}
+		return fmt.Sprintf("\\left[%s\\right]", strings.Join(elemStrs, ", "))
 
 	default:
 		return n.String()

@@ -170,6 +170,9 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
 - `mod(a, b)`: 整数剰余
 - `perm(n, r)`, `comb(n, r)`: 順列 $nPr$、組合せ $nCr$（非負整数）
 - `rand(max)`, `rand(min, max)`, `rand(seed, min, max)`: 整数擬似乱数（PCGアルゴリズム、シード指定による再現性担保）
+- `expand(expr)`: 多項式展開（分配法則・べき乗の展開）
+- `diff(expr, var)`: 厳密記号微分（指定変数による導関数の代数的計算）
+- `solve(expr, var)`: 厳密代数方程式ソルバー（1次・2次方程式の根の公式による求解、複数解は `[ans1, ans2]` 形式で出力）
 
 ### LICENSE
 [MIT](./LICENSE.MIT)
@@ -339,6 +342,9 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
 - `mod(a, b)`: Integer modulo
 - `perm(n, r)`, `comb(n, r)`: Permutations $nPr$ and combinations $nCr$ (non-negative integers)
 - `rand(max)`, `rand(min, max)`, `rand(seed, min, max)`: Integer pseudo-random generator via PCG algorithm (deterministic with seed)
+- `expand(expr)`: Polynomial expansion using distributive law and binomial expansion
+- `diff(expr, var)`: Exact symbolic differentiation with respect to the specified variable
+- `solve(expr, var)`: Exact algebraic equation solver for linear and quadratic equations (returns multiple roots as `[ans1, ans2]`)
 
 ### LICENSE
 [MIT](./LICENSE.MIT)

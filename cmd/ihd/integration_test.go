@@ -98,6 +98,15 @@ func TestIntegration_SpecificationExamples(t *testing.T) {
 		{"atan(1)", "π/4"},
 		{"sin(30*deg)", "1/2"},
 		{"asin(1/2) / deg", "30"},
+
+		// 13. CAS Pack: expand, diff, solve (issue-16)
+		{"expand((x + 1) * (x - 2))", "-2 - x + x^2"},
+		{"expand((x + 1)^2)", "1 + 2*x + x^2"},
+		{"diff(x^3 - 3*x^2 + 2*x - 5, x)", "2 - 6*x + 3*x^2"},
+		{"diff(sin(x), x)", "cos(x)"},
+		{"solve(2*x + 4, x)", "[-2]"},
+		{"solve(x^2 - 4, x)", "[-2, 2]"},
+		{"solve(x^2 + 1, x)", "[-i, i]"},
 	}
 
 	for _, tc := range testCases {

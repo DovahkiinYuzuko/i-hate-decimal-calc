@@ -711,5 +711,107 @@ func TestEval_SymbolPowerCancellation(t *testing.T) {
 	}
 }
 
+// TestEval_Expand tests polynomial expansion.
+func TestEval_Expand(t *testing.T) {
+	cases := []struct {
+		input    string
+		expected string
+	}{
+		{"expand((x + 1) * (x - 2))", "-2 - x + x^2"},
+		{"expand((x + 1)^2)", "1 + 2*x + x^2"},
+		{"expand((x + 1) * (x + 1))", "1 + 2*x + x^2"},
+		{"expand(2 * (x + 3))", "6 + 2*x"},
+		{"expand((x + 1)^3)", "1 + 3*x + 3*x^2 + x^3"},
+		{"expand((x + 2) * (x - 2))", "-4 + x^2"},
+	}
 
+	for _, tc := range cases {
+		res, err := EvalString(tc.input)
+		if err != nil {
+			t.Errorf("eval error for %q: %v", tc.input, err)
+			continue
+		}
+		formatted := Format(res)
+		if formatted != tc.expected {
+			t.Errorf("expand %q: expected %q, got %q", tc.input, tc.expected, formatted)
+		}
+	}
+}
 
+// TestEval_Diff tests exact symbolic differentiation.
+func TestEval_Diff(t *testing.T) {
+	cases := []struct {
+		input    string
+		expected string
+	}{
+		// Polynomial
+		{"diff(x^3 - 3*x^2 + 2*x - 5, x)", "2 - 6*x + 3*x^2"},
+		{"diff(5, x)", "0"},
+		{"diff(pi, x)", "0"},
+		{"diff(y, x)", "0"},
+		{"diff(x, x)", "1"},
+		{"diff(2*x, x)", "2"},
+
+		// Trigonometric
+		{"diff(sin(x), x)", "cos(x)"},
+		{"diff(cos(x), x)", "-sin(x)"},
+		{"diff(sin(2*x), x)", "2*cos(2*x)"},
+
+		// Exponential & Logarithm
+		{"diff(ln(x), x)", "x^-1"},
+		{"diff(e^x, x)", "e^x"},
+
+		// Power & Fraction
+		{"diff(x^-1, x)", "-x^-2"},
+		{"diff(x^2, x)", "2*x"},
+	}
+
+	for _, tc := range cases {
+		res, err := EvalString(tc.input)
+		if err != nil {
+			t.Errorf("eval error for %q: %v", tc.input, err)
+			continue
+		}
+		formatted := Format(res)
+		if formatted != tc.expected {
+			t.Errorf("diff %q: expected %q, got %q", tc.input, tc.expected, formatted)
+		}
+	}
+}
+
+// TestEval_Solve tests algebraic equation solving.
+func TestEval_Solve(t *testing.T) {
+	cases := []struct {
+		input    string
+		expected string
+	}{
+		// Linear
+		{"solve(2*x + 4, x)", "[-2]"},
+		{"solve(3*x - 1, x)", "[1/3]"},
+		{"solve(x - 5, x)", "[5]"},
+
+		// Quadratic (integer roots)
+		{"solve(x^2 - 4, x)", "[-2, 2]"},
+		{"solve(x^2 - 5*x + 6, x)", "[2, 3]"},
+		{"solve(x^2 - 4*x + 4, x)", "[2]"}, // Repeated root
+
+		// Quadratic (irrational / radical roots)
+		{"solve(x^2 - 2, x)", "[-√2, √2]"},
+
+		// Quadratic (complex / imaginary roots)
+		{"solve(x^2 + 1, x)", "[-i, i]"},
+		{"solve(x^2 + 4, x)", "[-2*i, 2*i]"},
+	}
+
+	for _, tc := range cases {
+		res, err := EvalString(tc.input)
+		if err != nil {
+			t.Errorf("eval error for %q: %v", tc.input, err)
+			continue
+		}
+		formatted := Format(res)
+		if formatted != tc.expected {
+			t.Errorf("solve %q: expected %q, got %q", tc.input, tc.expected, formatted)
+		}
+	}
+}

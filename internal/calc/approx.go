@@ -4,12 +4,24 @@ import (
 	"fmt"
 	"math"
 	"math/cmplx"
+	"strings"
 )
 
 // Approx evaluates an AST node into an approximate decimal string representation.
 func Approx(n Node) (string, error) {
 	if n == nil {
 		return "", fmt.Errorf("cannot approximate nil node")
+	}
+	if list, ok := n.(*ListNode); ok {
+		appStrs := make([]string, len(list.Elements))
+		for i, e := range list.Elements {
+			str, err := Approx(e)
+			if err != nil {
+				return "", err
+			}
+			appStrs[i] = str
+		}
+		return fmt.Sprintf("[%s]", strings.Join(appStrs, ", ")), nil
 	}
 	c, err := evalComplex(n)
 	if err != nil {

@@ -116,6 +116,17 @@ func EvalWithEnv(n Node, env *Env) (Node, error) {
 		}
 		return simplifyMul(evaledFactors)
 
+	case *ListNode:
+		evaledElements := make([]Node, len(v.Elements))
+		for i, e := range v.Elements {
+			ee, err := EvalWithEnv(e, env)
+			if err != nil {
+				return nil, err
+			}
+			evaledElements[i] = ee
+		}
+		return NewList(evaledElements), nil
+
 	default:
 		return nil, fmt.Errorf("unknown node type for evaluation: %T", n)
 	}
@@ -1222,6 +1233,27 @@ func simplifyFunc(name string, args []Node) (Node, error) {
 		}
 		return NewFunc(name, args)
 
+	case "expand":
+		return expandNode(args[0]), nil
+
+	case "diff":
+		varName := "x"
+		if v, ok := args[1].(*VarNode); ok {
+			varName = v.Name
+		} else {
+			return nil, fmt.Errorf("diff error: second argument must be a variable name, got %s", args[1].String())
+		}
+		return differentiate(args[0], varName)
+
+	case "solve":
+		varName := "x"
+		if v, ok := args[1].(*VarNode); ok {
+			varName = v.Name
+		} else {
+			return nil, fmt.Errorf("solve error: second argument must be a variable name, got %s", args[1].String())
+		}
+		return solveEquation(args[0], varName)
+
 	default:
 		return nil, fmt.Errorf("unknown function: %s", name)
 	}
@@ -1962,6 +1994,697 @@ func isZero(n Node) bool {
 	return false
 }
 
+// -------------------------------------------------------------------------
+// CAS: Polynomial Expansion (expand)
+// -------------------------------------------------------------------------
+
+// expandNode recursively expands an AST node using distributive laws and binomial expansion.
+func expandNode(n Node) Node {
+	if n == nil {
+		return nil
+	}
+	switch v := n.(type) {
+	case *AddNode:
+		newTerms := make([]Node, len(v.Terms))
+		for i, t := range v.Terms {
+			newTerms[i] = expandNode(t)
+		}
+		res, _ := simplifyAdd(newTerms)
+		return res
+
+	case *MulNode:
+		if len(v.Factors) == 0 {
+			return mustRational(1, 1)
+		}
+		current := expandNode(v.Factors[0])
+		for i := 1; i < len(v.Factors); i++ {
+			next := expandNode(v.Factors[i])
+			current = expandMul2(current, next)
+		}
+		return current
+
+	case *PowNode:
+		base := expandNode(v.Base)
+		if r, ok := v.Exp.(*RationalNode); ok && r.Val.IsInt() && r.Val.Sign() >= 0 {
+			expInt := r.Val.Num().Int64()
+			if expInt == 0 {
+				return mustRational(1, 1)
+			}
+			if expInt == 1 {
+				return base
+			}
+			if expInt <= 10 {
+				res := base
+				for i := int64(1); i < expInt; i++ {
+					res = expandMul2(res, base)
+				}
+				return res
+			}
+		}
+		res, err := simplifyPow(base, v.Exp)
+		if err != nil {
+			return &PowNode{Base: base, Exp: v.Exp}
+		}
+		return res
+
+	case *UnaryOpNode:
+		if v.Op == "-" {
+			expanded := expandNode(v.Expr)
+			res, _ := simplifyUnaryOp("-", expanded)
+			return res
+		}
+		return v
+
+	case *FuncNode:
+		newArgs := make([]Node, len(v.Args))
+		for i, a := range v.Args {
+			newArgs[i] = expandNode(a)
+		}
+		res, err := simplifyFunc(v.Name, newArgs)
+		if err != nil {
+			return &FuncNode{Name: v.Name, Args: newArgs}
+		}
+		return res
+
+	default:
+		return n
+	}
+}
+
+// expandMul2 multiplies two already expanded nodes using the distributive law.
+func expandMul2(a, b Node) Node {
+	addA, isAddA := a.(*AddNode)
+	addB, isAddB := b.(*AddNode)
+
+	if isAddA && isAddB {
+		var terms []Node
+		for _, ta := range addA.Terms {
+			for _, tb := range addB.Terms {
+				prod, _ := simplifyMul([]Node{ta, tb})
+				terms = append(terms, prod)
+			}
+		}
+		res, _ := simplifyAdd(terms)
+		return res
+	} else if isAddA {
+		var terms []Node
+		for _, ta := range addA.Terms {
+			prod, _ := simplifyMul([]Node{ta, b})
+			terms = append(terms, prod)
+		}
+		res, _ := simplifyAdd(terms)
+		return res
+	} else if isAddB {
+		var terms []Node
+		for _, tb := range addB.Terms {
+			prod, _ := simplifyMul([]Node{a, tb})
+			terms = append(terms, prod)
+		}
+		res, _ := simplifyAdd(terms)
+		return res
+	} else {
+		prod, _ := simplifyMul([]Node{a, b})
+		return prod
+	}
+}
+
+// -------------------------------------------------------------------------
+// CAS: Symbolic Differentiation (diff)
+// -------------------------------------------------------------------------
+
+// containsVar checks if an AST node contains the given variable name.
+func containsVar(n Node, varName string) bool {
+	if n == nil {
+		return false
+	}
+	switch v := n.(type) {
+	case *VarNode:
+		return v.Name == varName
+	case *AddNode:
+		for _, t := range v.Terms {
+			if containsVar(t, varName) {
+				return true
+			}
+		}
+		return false
+	case *MulNode:
+		for _, f := range v.Factors {
+			if containsVar(f, varName) {
+				return true
+			}
+		}
+		return false
+	case *PowNode:
+		return containsVar(v.Base, varName) || containsVar(v.Exp, varName)
+	case *UnaryOpNode:
+		return containsVar(v.Expr, varName)
+	case *FuncNode:
+		for _, a := range v.Args {
+			if containsVar(a, varName) {
+				return true
+			}
+		}
+		return false
+	case *SqrtNode:
+		return containsVar(v.Radicand, varName)
+	case *ComplexNode:
+		return containsVar(v.Real, varName) || containsVar(v.Imag, varName)
+	case *ListNode:
+		for _, e := range v.Elements {
+			if containsVar(e, varName) {
+				return true
+			}
+		}
+		return false
+	default:
+		return false
+	}
+}
+
+// differentiate computes the exact symbolic derivative of node n with respect to varName.
+func differentiate(n Node, varName string) (Node, error) {
+	if n == nil {
+		return nil, fmt.Errorf("cannot differentiate nil node")
+	}
+
+	// If n does not contain varName, derivative is 0
+	if !containsVar(n, varName) {
+		return mustRational(0, 1), nil
+	}
+
+	switch v := n.(type) {
+	case *VarNode:
+		if v.Name == varName {
+			return mustRational(1, 1), nil
+		}
+		return mustRational(0, 1), nil
+
+	case *AddNode:
+		dTerms := make([]Node, len(v.Terms))
+		for i, t := range v.Terms {
+			dt, err := differentiate(t, varName)
+			if err != nil {
+				return nil, err
+			}
+			dTerms[i] = dt
+		}
+		return simplifyAdd(dTerms)
+
+	case *UnaryOpNode:
+		if v.Op == "-" {
+			de, err := differentiate(v.Expr, varName)
+			if err != nil {
+				return nil, err
+			}
+			return simplifyUnaryOp("-", de)
+		}
+		return nil, fmt.Errorf("cannot differentiate unary operator %s", v.Op)
+
+	case *MulNode:
+		// Product rule: d(f_1 * ... * f_k) = sum_i (f_i' * prod_{j != i} f_j)
+		var sumTerms []Node
+		for i, fi := range v.Factors {
+			dfi, err := differentiate(fi, varName)
+			if err != nil {
+				return nil, err
+			}
+			if isZero(dfi) {
+				continue
+			}
+			var prodFactors []Node
+			prodFactors = append(prodFactors, dfi)
+			for j, fj := range v.Factors {
+				if j != i {
+					prodFactors = append(prodFactors, fj)
+				}
+			}
+			p, err := simplifyMul(prodFactors)
+			if err != nil {
+				return nil, err
+			}
+			sumTerms = append(sumTerms, p)
+		}
+		if len(sumTerms) == 0 {
+			return mustRational(0, 1), nil
+		}
+		return simplifyAdd(sumTerms)
+
+	case *PowNode:
+		baseHas := containsVar(v.Base, varName)
+		expHas := containsVar(v.Exp, varName)
+
+		if baseHas && !expHas {
+			// d/dx [ u(x)^n ] = n * u(x)^(n-1) * u'(x)
+			du, err := differentiate(v.Base, varName)
+			if err != nil {
+				return nil, err
+			}
+			expMinus1, err := simplifyAdd([]Node{v.Exp, mustRational(-1, 1)})
+			if err != nil {
+				return nil, err
+			}
+			uPow, err := simplifyPow(v.Base, expMinus1)
+			if err != nil {
+				return nil, err
+			}
+			return simplifyMul([]Node{v.Exp, uPow, du})
+		} else if !baseHas && expHas {
+			// d/dx [ a^v(x) ] = a^v(x) * ln(a) * v'(x)
+			dv, err := differentiate(v.Exp, varName)
+			if err != nil {
+				return nil, err
+			}
+			var lnBase Node
+			if c, ok := v.Base.(*ConstNode); ok && c.Name == "e" {
+				lnBase = mustRational(1, 1)
+			} else {
+				lnBase, err = simplifyFunc("ln", []Node{v.Base})
+				if err != nil {
+					return nil, err
+				}
+			}
+			return simplifyMul([]Node{v, lnBase, dv})
+		} else {
+			// General form: d/dx [ u^v ] = u^v * ( v' * ln(u) + v * u'/u )
+			du, err := differentiate(v.Base, varName)
+			if err != nil {
+				return nil, err
+			}
+			dv, err := differentiate(v.Exp, varName)
+			if err != nil {
+				return nil, err
+			}
+			lnU, err := simplifyFunc("ln", []Node{v.Base})
+			if err != nil {
+				return nil, err
+			}
+			term1, err := simplifyMul([]Node{dv, lnU})
+			if err != nil {
+				return nil, err
+			}
+			uInv, err := simplifyPow(v.Base, mustRational(-1, 1))
+			if err != nil {
+				return nil, err
+			}
+			term2, err := simplifyMul([]Node{v.Exp, du, uInv})
+			if err != nil {
+				return nil, err
+			}
+			bracket, err := simplifyAdd([]Node{term1, term2})
+			if err != nil {
+				return nil, err
+			}
+			return simplifyMul([]Node{v, bracket})
+		}
+
+	case *SqrtNode:
+		// sqrt(u) = u^(1/2) -> d/dx = 1/2 * u' * sqrt(u)^-1
+		du, err := differentiate(v.Radicand, varName)
+		if err != nil {
+			return nil, err
+		}
+		invSqrt, err := simplifyPow(v, mustRational(-1, 1))
+		if err != nil {
+			return nil, err
+		}
+		return simplifyMul([]Node{mustRational(1, 2), du, invSqrt})
+
+	case *FuncNode:
+		if len(v.Args) == 1 {
+			u := v.Args[0]
+			du, err := differentiate(u, varName)
+			if err != nil {
+				return nil, err
+			}
+			var dfDu Node
+			switch v.Name {
+			case "sin":
+				dfDu, err = simplifyFunc("cos", []Node{u})
+			case "cos":
+				sinU, err2 := simplifyFunc("sin", []Node{u})
+				if err2 != nil {
+					return nil, err2
+				}
+				dfDu, err = simplifyUnaryOp("-", sinU)
+			case "tan":
+				cosU, err2 := simplifyFunc("cos", []Node{u})
+				if err2 != nil {
+					return nil, err2
+				}
+				dfDu, err = simplifyPow(cosU, mustRational(-2, 1))
+			case "ln":
+				dfDu, err = simplifyPow(u, mustRational(-1, 1))
+			case "log":
+				uInv, err2 := simplifyPow(u, mustRational(-1, 1))
+				if err2 != nil {
+					return nil, err2
+				}
+				ln10, err2 := simplifyFunc("ln", []Node{mustRational(10, 1)})
+				if err2 != nil {
+					return nil, err2
+				}
+				ln10Inv, err2 := simplifyPow(ln10, mustRational(-1, 1))
+				if err2 != nil {
+					return nil, err2
+				}
+				dfDu, err = simplifyMul([]Node{uInv, ln10Inv})
+			case "asin":
+				u2, err2 := simplifyPow(u, mustRational(2, 1))
+				if err2 != nil {
+					return nil, err2
+				}
+				negU2, err2 := simplifyUnaryOp("-", u2)
+				if err2 != nil {
+					return nil, err2
+				}
+				oneMinusU2, err2 := simplifyAdd([]Node{mustRational(1, 1), negU2})
+				if err2 != nil {
+					return nil, err2
+				}
+				sqrtVal, err2 := simplifySqrt(oneMinusU2)
+				if err2 != nil {
+					return nil, err2
+				}
+				dfDu, err = simplifyPow(sqrtVal, mustRational(-1, 1))
+			case "acos":
+				u2, err2 := simplifyPow(u, mustRational(2, 1))
+				if err2 != nil {
+					return nil, err2
+				}
+				negU2, err2 := simplifyUnaryOp("-", u2)
+				if err2 != nil {
+					return nil, err2
+				}
+				oneMinusU2, err2 := simplifyAdd([]Node{mustRational(1, 1), negU2})
+				if err2 != nil {
+					return nil, err2
+				}
+				sqrtVal, err2 := simplifySqrt(oneMinusU2)
+				if err2 != nil {
+					return nil, err2
+				}
+				posInv, err2 := simplifyPow(sqrtVal, mustRational(-1, 1))
+				if err2 != nil {
+					return nil, err2
+				}
+				dfDu, err = simplifyUnaryOp("-", posInv)
+			case "atan":
+				u2, err2 := simplifyPow(u, mustRational(2, 1))
+				if err2 != nil {
+					return nil, err2
+				}
+				onePlusU2, err2 := simplifyAdd([]Node{mustRational(1, 1), u2})
+				if err2 != nil {
+					return nil, err2
+				}
+				dfDu, err = simplifyPow(onePlusU2, mustRational(-1, 1))
+			case "cbrt":
+				uPow, err2 := simplifyPow(u, mustRational(-2, 3))
+				if err2 != nil {
+					return nil, err2
+				}
+				dfDu, err = simplifyMul([]Node{mustRational(1, 3), uPow})
+			case "abs":
+				absU, err2 := simplifyFunc("abs", []Node{u})
+				if err2 != nil {
+					return nil, err2
+				}
+				absUInv, err2 := simplifyPow(absU, mustRational(-1, 1))
+				if err2 != nil {
+					return nil, err2
+				}
+				dfDu, err = simplifyMul([]Node{u, absUInv})
+			default:
+				return nil, fmt.Errorf("differentiation of function %s is not supported", v.Name)
+			}
+			if err != nil {
+				return nil, err
+			}
+			return simplifyMul([]Node{dfDu, du})
+		} else if v.Name == "log" && len(v.Args) == 2 {
+			if containsVar(v.Args[0], varName) {
+				return nil, fmt.Errorf("differentiation of log with variable base is not supported")
+			}
+			u := v.Args[1]
+			du, err := differentiate(u, varName)
+			if err != nil {
+				return nil, err
+			}
+			uInv, err := simplifyPow(u, mustRational(-1, 1))
+			if err != nil {
+				return nil, err
+			}
+			lnBase, err := simplifyFunc("ln", []Node{v.Args[0]})
+			if err != nil {
+				return nil, err
+			}
+			lnBaseInv, err := simplifyPow(lnBase, mustRational(-1, 1))
+			if err != nil {
+				return nil, err
+			}
+			return simplifyMul([]Node{uInv, lnBaseInv, du})
+		}
+		return nil, fmt.Errorf("cannot differentiate function %s with %d arguments", v.Name, len(v.Args))
+
+	default:
+		return nil, fmt.Errorf("cannot differentiate node of type %T", n)
+	}
+}
+
+// -------------------------------------------------------------------------
+// CAS: Polynomial Equation Solving (solve)
+// -------------------------------------------------------------------------
+
+// extractPolyCoeffs extracts polynomial coefficients a_k of expr with respect to varName.
+func extractPolyCoeffs(expr Node, varName string) (map[int]Node, error) {
+	coeffs := make(map[int]Node)
+
+	addCoeff := func(deg int, coeff Node) error {
+		if existing, ok := coeffs[deg]; ok {
+			sum, err := simplifyAdd([]Node{existing, coeff})
+			if err != nil {
+				return err
+			}
+			coeffs[deg] = sum
+		} else {
+			coeffs[deg] = coeff
+		}
+		return nil
+	}
+
+	var processTerm func(t Node) error
+	processTerm = func(t Node) error {
+		if !containsVar(t, varName) {
+			return addCoeff(0, t)
+		}
+		if v, ok := t.(*VarNode); ok && v.Name == varName {
+			return addCoeff(1, mustRational(1, 1))
+		}
+		if pow, ok := t.(*PowNode); ok {
+			if v, ok := pow.Base.(*VarNode); ok && v.Name == varName {
+				if r, ok := pow.Exp.(*RationalNode); ok && r.Val.IsInt() && r.Val.Sign() > 0 {
+					return addCoeff(int(r.Val.Num().Int64()), mustRational(1, 1))
+				}
+			}
+			return fmt.Errorf("solve error: non-polynomial exponent in %s", t.String())
+		}
+		if mul, ok := t.(*MulNode); ok {
+			var varFactor Node
+			var otherFactors []Node
+			varFound := false
+			for _, f := range mul.Factors {
+				if containsVar(f, varName) {
+					if varFound {
+						return fmt.Errorf("solve error: multiple variable factors in term %s", t.String())
+					}
+					varFactor = f
+					varFound = true
+				} else {
+					otherFactors = append(otherFactors, f)
+				}
+			}
+			coeffNode, err := simplifyMul(otherFactors)
+			if err != nil {
+				return err
+			}
+			if v, ok := varFactor.(*VarNode); ok && v.Name == varName {
+				return addCoeff(1, coeffNode)
+			}
+			if pow, ok := varFactor.(*PowNode); ok {
+				if v, ok := pow.Base.(*VarNode); ok && v.Name == varName {
+					if r, ok := pow.Exp.(*RationalNode); ok && r.Val.IsInt() && r.Val.Sign() > 0 {
+						return addCoeff(int(r.Val.Num().Int64()), coeffNode)
+					}
+				}
+			}
+			return fmt.Errorf("solve error: non-polynomial factor in term %s", t.String())
+		}
+		return fmt.Errorf("solve error: non-polynomial term %s", t.String())
+	}
+
+	if add, ok := expr.(*AddNode); ok {
+		for _, t := range add.Terms {
+			if err := processTerm(t); err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		if err := processTerm(expr); err != nil {
+			return nil, err
+		}
+	}
+
+	// Clean zero coefficients
+	for d, c := range coeffs {
+		if isZero(c) {
+			delete(coeffs, d)
+		}
+	}
+
+	return coeffs, nil
+}
+
+// solveEquation algebraically solves expr = 0 for varName.
+func solveEquation(expr Node, varName string) (Node, error) {
+	if expr == nil {
+		return nil, fmt.Errorf("cannot solve nil equation")
+	}
+
+	// 1. Expand the expression to standard form
+	expanded := expandNode(expr)
+
+	// Check if varName is in the equation
+	if !containsVar(expanded, varName) {
+		if isZero(expanded) {
+			return nil, fmt.Errorf("solve: identity equation (infinite solutions)")
+		}
+		return nil, fmt.Errorf("solve: equation has no solution (contradiction: %s = 0)", expanded.String())
+	}
+
+	// 2. Extract polynomial coefficients
+	coeffs, err := extractPolyCoeffs(expanded, varName)
+	if err != nil {
+		return nil, err
+	}
+
+	maxDeg := 0
+	for d := range coeffs {
+		if d > maxDeg {
+			maxDeg = d
+		}
+	}
+
+	if maxDeg == 0 {
+		return nil, fmt.Errorf("solve: equation contains no degree of %s", varName)
+	}
+
+	a0 := coeffs[0]
+	if a0 == nil {
+		a0 = mustRational(0, 1)
+	}
+
+	if maxDeg == 1 {
+		// Linear equation: a1 * x + a0 = 0  =>  x = -a0 / a1
+		a1 := coeffs[1]
+		negA0, err := simplifyUnaryOp("-", a0)
+		if err != nil {
+			return nil, err
+		}
+		invA1, err := simplifyPow(a1, mustRational(-1, 1))
+		if err != nil {
+			return nil, err
+		}
+		root, err := simplifyMul([]Node{negA0, invA1})
+		if err != nil {
+			return nil, err
+		}
+		return NewList([]Node{root}), nil
+	}
+
+	if maxDeg == 2 {
+		// Quadratic equation: a2 * x^2 + a1 * x + a0 = 0
+		a2 := coeffs[2]
+		a1 := coeffs[1]
+		if a1 == nil {
+			a1 = mustRational(0, 1)
+		}
+
+		// Discriminant D = a1^2 - 4 * a2 * a0
+		a1Sq, err := simplifyPow(a1, mustRational(2, 1))
+		if err != nil {
+			return nil, err
+		}
+		fourA2A0, err := simplifyMul([]Node{mustRational(4, 1), a2, a0})
+		if err != nil {
+			return nil, err
+		}
+		negFour, err := simplifyUnaryOp("-", fourA2A0)
+		if err != nil {
+			return nil, err
+		}
+		d, err := simplifyAdd([]Node{a1Sq, negFour})
+		if err != nil {
+			return nil, err
+		}
+
+		negA1, err := simplifyUnaryOp("-", a1)
+		if err != nil {
+			return nil, err
+		}
+		twoA2, err := simplifyMul([]Node{mustRational(2, 1), a2})
+		if err != nil {
+			return nil, err
+		}
+		invTwoA2, err := simplifyPow(twoA2, mustRational(-1, 1))
+		if err != nil {
+			return nil, err
+		}
+
+		if isZero(d) {
+			// Single repeated root: x = -a1 / (2*a2)
+			root, err := simplifyMul([]Node{negA1, invTwoA2})
+			if err != nil {
+				return nil, err
+			}
+			return NewList([]Node{root}), nil
+		}
+
+		sqrtD, err := simplifySqrt(d)
+		if err != nil {
+			return nil, err
+		}
+		negSqrtD, err := simplifyUnaryOp("-", sqrtD)
+		if err != nil {
+			return nil, err
+		}
+
+		// root1 = (-a1 - sqrt(D)) / (2*a2)
+		// root2 = (-a1 + sqrt(D)) / (2*a2)
+		num1, err := simplifyAdd([]Node{negA1, negSqrtD})
+		if err != nil {
+			return nil, err
+		}
+		root1, err := simplifyMul([]Node{num1, invTwoA2})
+		if err != nil {
+			return nil, err
+		}
+
+		num2, err := simplifyAdd([]Node{negA1, sqrtD})
+		if err != nil {
+			return nil, err
+		}
+		root2, err := simplifyMul([]Node{num2, invTwoA2})
+		if err != nil {
+			return nil, err
+		}
+
+		return NewList([]Node{root1, root2}), nil
+	}
+
+	return nil, fmt.Errorf("solve error: polynomial degree %d is not currently supported (only linear and quadratic equations)", maxDeg)
+}
+
 // Suppress unused imports
 var _ = sort.Strings
 var _ = strings.Join
+
