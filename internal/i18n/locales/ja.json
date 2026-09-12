@@ -36,7 +36,8 @@
     "plot_eval_min": "evaluating domain min: %v",
     "plot_eval_max": "evaluating domain max: %v",
     "plot_complex_not_allowed": "complex result %v not supported on real plot",
-    "plot_nan_or_inf": "result is NaN or Inf"
+    "plot_nan_or_inf": "result is NaN or Inf",
+    "arg_zero_undefined": "0の偏角は未定義です"
   },
   "plot": {
     "features_header": "[CAS Features Detected]\n",

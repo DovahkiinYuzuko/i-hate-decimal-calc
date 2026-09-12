@@ -142,6 +142,28 @@ func init() {
 		MaxArgs: 1,
 	})
 
+	// Complex / Polar Form
+	RegisterFunction(FunctionSpec{
+		Name:    "arg",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "polar",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "polar_exp",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "rect",
+		MinArgs: 2,
+		MaxArgs: 2,
+	})
+
 	// Logarithmic
 	RegisterFunction(FunctionSpec{
 		Name:    "ln",

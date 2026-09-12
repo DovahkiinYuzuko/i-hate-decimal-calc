@@ -9,6 +9,7 @@ func TestRegistry_AllFunctionsRegistered(t *testing.T) {
 	expectedFuncs := []string{
 		"sqrt", "sin", "cos", "tan", "asin", "acos", "atan",
 		"ln", "log", "abs", "cbrt",
+		"arg", "polar", "polar_exp", "rect",
 		"gcd", "lcm", "mod", "perm", "comb", "rand",
 		"expand", "factor", "diff", "solve", "taylor", "sum",
 		"det", "inv", "transpose",

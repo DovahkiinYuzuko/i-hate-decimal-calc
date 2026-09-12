@@ -81,10 +81,15 @@ func evalTrigPi(fn string, r *big.Rat) (Node, bool) {
 		return NewSqrt(&RationalNode{Val: big.NewRat(3, 1)})
 	}
 
+	rKey := rMod.String()
+	if rMod.IsInt() {
+		rKey = rMod.Num().String()
+	}
+
 	// Match key angles: 0, 1/6, 1/4, 1/3, 1/2, 2/3, 3/4, 5/6, 1...
 	switch fn {
 	case "sin":
-		switch rMod.String() {
+		switch rKey {
 		case "0", "1":
 			return mustRational(0, 1), true
 		case "1/6", "5/6":
@@ -108,7 +113,7 @@ func evalTrigPi(fn string, r *big.Rat) (Node, bool) {
 		}
 
 	case "cos":
-		switch rMod.String() {
+		switch rKey {
 		case "0":
 			return mustRational(1, 1), true
 		case "1/6", "11/6":
@@ -132,7 +137,7 @@ func evalTrigPi(fn string, r *big.Rat) (Node, bool) {
 		}
 
 	case "tan":
-		switch rMod.String() {
+		switch rKey {
 		case "0", "1":
 			return mustRational(0, 1), true
 		case "1/6", "7/6":

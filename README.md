@@ -183,6 +183,10 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
 - `abs(x)`: 絶対値（実数は符号除去、複素数は $|a+bi| = \sqrt{a^2+b^2}$）
 - `sin(x)`, `cos(x)`, `tan(x)`: 三角関数（$\pi$ の有理数倍による特殊角を代数的に簡約）
 - `asin(x)`, `acos(x)`, `atan(x)`: 逆三角関数（特殊角を $\pi$ の有理数倍として代数的に簡約、主値管理）
+- `arg(z)`: 複素数の厳密偏角（主値 $\theta \in (-\pi, \pi]$。特殊角比率の代数的逆引き）
+- `polar(z)`: 複素数の極形式変換 $r(\cos\theta + i\sin\theta)$（例: `polar(1 + i)` → `√2*(cos(π/4) + i*sin(π/4))`）
+- `polar_exp(z)`: オイラーの公式による指数形式変換 $r e^{i\theta}$（例: `polar_exp(1 + i)` → `√2*e^i*1/4*π`）
+- `rect(r, theta)`: 極形式（動径 $r$ と偏角 $\theta$）から直交形式 $a + bi$ への厳密逆変換（例: `rect(sqrt(2), pi/4)` → `1 + i`）
 - `log(x)`: 常用対数（底10）
 - `log(base, x)`: 任意の底を指定する対数
 - `ln(x)`: 自然対数（底 $e$）
@@ -400,6 +404,10 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
 - `abs(x)`: Absolute value (real magnitude or complex modulus $|a+bi| = \sqrt{a^2+b^2}$)
 - `sin(x)`, `cos(x)`, `tan(x)`: Trigonometric functions (exact values for rational multiples of $\pi$)
 - `asin(x)`, `acos(x)`, `atan(x)`: Inverse trigonometric functions (exact algebraic values for special angles, principal branch tracking)
+- `arg(z)`: Exact principal complex argument $\theta \in (-\pi, \pi]$ via algebraic special angle matching
+- `polar(z)`: Exact complex polar form conversion $r(\cos\theta + i\sin\theta)$ (e.g., `polar(1 + i)` → `√2*(cos(π/4) + i*sin(π/4))`)
+- `polar_exp(z)`: Euler's formula exponential form conversion $r e^{i\theta}$ (e.g., `polar_exp(1 + i)` → `√2*e^i*1/4*π`)
+- `rect(r, theta)`: Convert polar representation (modulus $r$ and argument $\theta$) back into exact rectangular complex form $a + bi$ (e.g., `rect(sqrt(2), pi/4)` → `1 + i`)
 - `log(x)`: Common logarithm (base 10)
 - `log(base, x)`: Logarithm with an arbitrary base
 - `ln(x)`: Natural logarithm (base $e$)

@@ -1260,6 +1260,18 @@ func simplifyFunc(name string, args []Node) (Node, error) {
 		}
 		return NewFunc(name, args)
 
+	case "arg":
+		return evalArg(args[0])
+
+	case "polar":
+		return evalPolar(args[0])
+
+	case "polar_exp":
+		return evalPolarExp(args[0])
+
+	case "rect":
+		return evalRect(args[0], args[1])
+
 	case "factor":
 		if len(args) == 1 {
 			return Factor(args[0])
@@ -1476,9 +1488,8 @@ func simplifyMul(factors []Node) (Node, error) {
 		}
 	}
 
-	// Multiply complex factors: (a + bi)*(c + di) = (ac - bd) + (ad + bc)i
+	var currentComplex *ComplexNode
 	if len(complexFactors) > 0 {
-		var currentComplex *ComplexNode
 		for _, cf := range complexFactors {
 			if currentComplex == nil {
 				currentComplex = cf
@@ -1496,18 +1507,18 @@ func simplifyMul(factors []Node) (Node, error) {
 				currentComplex = NewComplex(realPart, imagPart)
 			}
 		}
-		// If coeff != 1, scale currentComplex
-		if coeff.Cmp(big.NewRat(1, 1)) != 0 {
-			scale := &RationalNode{Val: coeff}
-			newReal, _ := simplifyMul([]Node{scale, currentComplex.Real})
-			newImag, _ := simplifyMul([]Node{scale, currentComplex.Imag})
-			currentComplex = NewComplex(newReal, newImag)
-		}
-		// If imag is 0, reduce to real part
-		if isZero(currentComplex.Imag) {
-			return currentComplex.Real, nil
-		}
 		if len(otherFactors) == 0 && !hasRadicand {
+			// If coeff != 1, scale currentComplex
+			if coeff.Cmp(big.NewRat(1, 1)) != 0 {
+				scale := &RationalNode{Val: coeff}
+				newReal, _ := simplifyMul([]Node{scale, currentComplex.Real})
+				newImag, _ := simplifyMul([]Node{scale, currentComplex.Imag})
+				currentComplex = NewComplex(newReal, newImag)
+			}
+			// If imag is 0, reduce to real part
+			if isZero(currentComplex.Imag) {
+				return currentComplex.Real, nil
+			}
 			return currentComplex, nil
 		}
 	}
@@ -1647,20 +1658,33 @@ func simplifyMul(factors []Node) (Node, error) {
 		return mustRational(0, 1), nil
 	}
 
+	var realScalar Node
 	if len(finalFactors) == 0 {
-		return &RationalNode{Val: coeff}, nil
-	}
-
-	one := big.NewRat(1, 1)
-	if coeff.Cmp(one) == 0 {
-		if len(finalFactors) == 1 {
-			return finalFactors[0], nil
+		realScalar = &RationalNode{Val: coeff}
+	} else {
+		one := big.NewRat(1, 1)
+		if coeff.Cmp(one) == 0 {
+			if len(finalFactors) == 1 {
+				realScalar = finalFactors[0]
+			} else {
+				realScalar = NewMul(finalFactors)
+			}
+		} else {
+			all := append([]Node{&RationalNode{Val: coeff}}, finalFactors...)
+			realScalar = NewMul(all)
 		}
-		return NewMul(finalFactors), nil
 	}
 
-	all := append([]Node{&RationalNode{Val: coeff}}, finalFactors...)
-	return NewMul(all), nil
+	if currentComplex != nil {
+		newReal, _ := simplifyMul([]Node{realScalar, currentComplex.Real})
+		newImag, _ := simplifyMul([]Node{realScalar, currentComplex.Imag})
+		if isZero(newImag) {
+			return newReal, nil
+		}
+		return NewComplex(newReal, newImag), nil
+	}
+
+	return realScalar, nil
 }
 
 // -------------------------------------------------------------------------
