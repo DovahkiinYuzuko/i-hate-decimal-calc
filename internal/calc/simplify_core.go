@@ -862,49 +862,5 @@ func expandMul2(a, b Node) Node {
 
 // containsVar checks if an AST node contains the given variable name.
 func containsVar(n Node, varName string) bool {
-	if n == nil {
-		return false
-	}
-	switch v := n.(type) {
-	case *VarNode:
-		return v.Name == varName
-	case *AddNode:
-		for _, t := range v.Terms {
-			if containsVar(t, varName) {
-				return true
-			}
-		}
-		return false
-	case *MulNode:
-		for _, f := range v.Factors {
-			if containsVar(f, varName) {
-				return true
-			}
-		}
-		return false
-	case *PowNode:
-		return containsVar(v.Base, varName) || containsVar(v.Exp, varName)
-	case *UnaryOpNode:
-		return containsVar(v.Expr, varName)
-	case *FuncNode:
-		for _, a := range v.Args {
-			if containsVar(a, varName) {
-				return true
-			}
-		}
-		return false
-	case *SqrtNode:
-		return containsVar(v.Radicand, varName)
-	case *ComplexNode:
-		return containsVar(v.Real, varName) || containsVar(v.Imag, varName)
-	case *ListNode:
-		for _, e := range v.Elements {
-			if containsVar(e, varName) {
-				return true
-			}
-		}
-		return false
-	default:
-		return false
-	}
+	return ContainsVar(n, varName)
 }

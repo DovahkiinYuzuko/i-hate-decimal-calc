@@ -331,82 +331,14 @@ func evalNodeFloat(n Node) (float64, error) {
 
 // substituteVar replaces occurrences of varName with valNode in an expression tree.
 func substituteVar(n Node, varName string, valNode Node) Node {
-	if n == nil {
-		return nil
-	}
-	switch v := n.(type) {
-	case *VarNode:
-		if v.Name == varName {
-			return valNode
-		}
-		return v
-	case *AddNode:
-		newTerms := make([]Node, len(v.Terms))
-		for i, t := range v.Terms {
-			newTerms[i] = substituteVar(t, varName, valNode)
-		}
-		return &AddNode{Terms: newTerms}
-	case *MulNode:
-		newFactors := make([]Node, len(v.Factors))
-		for i, f := range v.Factors {
-			newFactors[i] = substituteVar(f, varName, valNode)
-		}
-		return &MulNode{Factors: newFactors}
-	case *PowNode:
-		return &PowNode{
-			Base: substituteVar(v.Base, varName, valNode),
-			Exp:  substituteVar(v.Exp, varName, valNode),
-		}
-	case *SqrtNode:
-		return &SqrtNode{Radicand: substituteVar(v.Radicand, varName, valNode)}
-	case *FuncNode:
-		newArgs := make([]Node, len(v.Args))
-		for i, a := range v.Args {
-			newArgs[i] = substituteVar(a, varName, valNode)
-		}
-		return &FuncNode{Name: v.Name, Args: newArgs}
-	case *UnaryOpNode:
-		return &UnaryOpNode{Op: v.Op, Expr: substituteVar(v.Expr, varName, valNode)}
-	default:
-		return n
-	}
+	return Substitute(n, varName, valNode)
 }
 
 // findFreeVariable finds the variable in the expression.
 func findFreeVariable(n Node) string {
-	vars := make(map[string]bool)
-	var walk func(node Node)
-	walk = func(node Node) {
-		if node == nil {
-			return
-		}
-		switch v := node.(type) {
-		case *VarNode:
-			vars[v.Name] = true
-		case *AddNode:
-			for _, t := range v.Terms {
-				walk(t)
-			}
-		case *MulNode:
-			for _, f := range v.Factors {
-				walk(f)
-			}
-		case *PowNode:
-			walk(v.Base)
-			walk(v.Exp)
-		case *SqrtNode:
-			walk(v.Radicand)
-		case *FuncNode:
-			for _, a := range v.Args {
-				walk(a)
-			}
-		case *UnaryOpNode:
-			walk(v.Expr)
-		}
-	}
-	walk(n)
-	for v := range vars {
-		return v
+	vars := ExtractFreeVariables(n)
+	if len(vars) > 0 {
+		return vars[0]
 	}
 	return "x"
 }
