@@ -279,6 +279,20 @@ func init() {
 		MaxArgs: 1,
 	})
 	RegisterFunction(FunctionSpec{
+		Name:    "integrate",
+		MinArgs: 2,
+		MaxArgs: 4,
+		Validate: func(args []Node) error {
+			if len(args) != 2 && len(args) != 4 {
+				return fmt.Errorf("integrate requires 2 arguments (indefinite) or 4 arguments (definite), got %d", len(args))
+			}
+			if _, ok := args[1].(*VarNode); !ok {
+				return fmt.Errorf("integrate error: second argument must be a variable name, got %s", args[1].String())
+			}
+			return nil
+		},
+	})
+	RegisterFunction(FunctionSpec{
 		Name:    "diff",
 		MinArgs: 2,
 		MaxArgs: 2,
