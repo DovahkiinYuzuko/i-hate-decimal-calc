@@ -158,7 +158,7 @@ func evalDet(m *MatrixNode) (Node, error) {
 // evalInv calculates the exact matrix inverse using the adjugate matrix method.
 func evalInv(m *MatrixNode) (*MatrixNode, error) {
 	if m.Rows != m.Cols {
-		return nil, fmt.Errorf("matrix dimension error: inv requires square matrix, got %dx%d", m.Rows, m.Cols)
+		return nil, NewDimensionMismatchError("errors.matrix_dim_error", "matrix dimension error: inv requires square matrix, got %dx%d", m.Rows, m.Cols)
 	}
 
 	d, err := evalDet(m)
@@ -166,7 +166,7 @@ func evalInv(m *MatrixNode) (*MatrixNode, error) {
 		return nil, err
 	}
 	if isZero(d) {
-		return nil, fmt.Errorf("math error: singular matrix (det = 0), inverse does not exist")
+		return nil, NewSingularMatrixError("math error: singular matrix (det = 0), inverse does not exist")
 	}
 
 	invDet, err := simplifyPow(d, mustRational(-1, 1))

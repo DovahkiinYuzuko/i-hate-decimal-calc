@@ -125,7 +125,7 @@ func init() {
 				one := big.NewRat(1, 1)
 				negOne := big.NewRat(-1, 1)
 				if rat.Val.Cmp(one) > 0 || rat.Val.Cmp(negOne) < 0 {
-					return fmt.Errorf("asin domain error: argument must be in [-1, 1], got %s", rat.String())
+					return NewDomainError("errors.domain_error", "asin domain error: argument must be in [-1, 1], got %s", rat.String())
 				}
 			}
 			return nil
@@ -140,7 +140,7 @@ func init() {
 				one := big.NewRat(1, 1)
 				negOne := big.NewRat(-1, 1)
 				if rat.Val.Cmp(one) > 0 || rat.Val.Cmp(negOne) < 0 {
-					return fmt.Errorf("acos domain error: argument must be in [-1, 1], got %s", rat.String())
+					return NewDomainError("errors.domain_error", "acos domain error: argument must be in [-1, 1], got %s", rat.String())
 				}
 			}
 			return nil
@@ -181,7 +181,7 @@ func init() {
 		MaxArgs: 1,
 		Validate: func(args []Node) error {
 			if rat, ok := args[0].(*RationalNode); ok && rat.Val.Sign() <= 0 {
-				return fmt.Errorf("ln domain error: argument must be positive, got %s", rat.String())
+				return NewDomainError("errors.domain_ln_arg", "ln domain error: argument must be positive, got %s", rat.String())
 			}
 			return nil
 		},
@@ -193,22 +193,22 @@ func init() {
 		Validate: func(args []Node) error {
 			if len(args) == 1 {
 				if rat, ok := args[0].(*RationalNode); ok && rat.Val.Sign() <= 0 {
-					return fmt.Errorf("log domain error: argument must be positive, got %s", rat.String())
+					return NewDomainError("errors.domain_log_arg", "log domain error: argument must be positive, got %s", rat.String())
 				}
 			} else if len(args) == 2 {
 				base := args[0]
 				arg := args[1]
 				if ratBase, ok := base.(*RationalNode); ok {
 					if ratBase.Val.Sign() <= 0 {
-						return fmt.Errorf("log base error: base must be positive, got %s", ratBase.String())
+						return NewDomainError("errors.domain_log_base", "log base error: base must be positive, got %s", ratBase.String())
 					}
 					one := big.NewRat(1, 1)
 					if ratBase.Val.Cmp(one) == 0 {
-						return fmt.Errorf("log base error: base cannot be 1")
+						return NewDomainError("errors.domain_log_base_one", "log base error: base cannot be 1")
 					}
 				}
 				if ratArg, ok := arg.(*RationalNode); ok && ratArg.Val.Sign() <= 0 {
-					return fmt.Errorf("log domain error: argument must be positive, got %s", ratArg.String())
+					return NewDomainError("errors.domain_log_arg", "log domain error: argument must be positive, got %s", ratArg.String())
 				}
 			}
 			return nil

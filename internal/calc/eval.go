@@ -423,7 +423,7 @@ func simplifyFuncWithEnv(name string, args []Node, env *Env) (Node, error) {
 			// r - 1/2 is integer?
 			rMinusHalf := new(big.Rat).Sub(r, big.NewRat(1, 2))
 			if rMinusHalf.IsInt() {
-				return nil, fmt.Errorf("math error: tan(%s) is undefined (division by zero)", arg.String())
+				return nil, NewZeroDivisionError("math error: tan(%s) is undefined (division by zero)", arg.String())
 			}
 			if val, ok := evalTrigPi("tan", r); ok {
 				return val, nil
@@ -454,7 +454,7 @@ func simplifyFuncWithEnv(name string, args []Node, env *Env) (Node, error) {
 				return NewFunc(name, args)
 			}
 			if rat.Val.Sign() <= 0 {
-				return nil, fmt.Errorf("log domain error: argument must be positive, got %s", rat.String())
+				return nil, NewDomainError("errors.domain_log_arg", "log domain error: argument must be positive, got %s", rat.String())
 			}
 			if rat.Val.IsInt() {
 				n := rat.Val.Num().Int64()
@@ -474,14 +474,14 @@ func simplifyFuncWithEnv(name string, args []Node, env *Env) (Node, error) {
 		xRat, xOk := args[1].(*RationalNode)
 		if baseOk {
 			if baseRat.Val.Sign() <= 0 {
-				return nil, fmt.Errorf("log base error: base must be positive, got %s", baseRat.String())
+				return nil, NewDomainError("errors.domain_log_base", "log base error: base must be positive, got %s", baseRat.String())
 			}
 			if baseRat.Val.Cmp(big.NewRat(1, 1)) == 0 {
-				return nil, fmt.Errorf("log base error: base cannot be 1")
+				return nil, NewDomainError("errors.domain_log_base_one", "log base error: base cannot be 1")
 			}
 		}
 		if xOk && xRat.Val.Sign() <= 0 {
-			return nil, fmt.Errorf("log domain error: argument must be positive, got %s", xRat.String())
+			return nil, NewDomainError("errors.domain_log_arg", "log domain error: argument must be positive, got %s", xRat.String())
 		}
 		if baseOk && xOk && baseRat.Val.IsInt() && xRat.Val.IsInt() {
 			b := baseRat.Val.Num().Int64()
@@ -512,7 +512,7 @@ func simplifyFuncWithEnv(name string, args []Node, env *Env) (Node, error) {
 			return NewFunc(name, args)
 		}
 		if rat.Val.Sign() <= 0 {
-			return nil, fmt.Errorf("ln domain error: argument must be positive, got %s", rat.String())
+			return nil, NewDomainError("errors.domain_ln_arg", "ln domain error: argument must be positive, got %s", rat.String())
 		}
 		if rat.Val.Cmp(big.NewRat(1, 1)) == 0 {
 			return mustRational(0, 1), nil
@@ -636,7 +636,7 @@ func simplifyFuncWithEnv(name string, args []Node, env *Env) (Node, error) {
 				return nil, fmt.Errorf("mod domain error: arguments must be integers, got %s and %s", aRat.String(), bRat.String())
 			}
 			if bRat.Val.Sign() == 0 {
-				return nil, fmt.Errorf("division by zero in mod")
+				return nil, NewZeroDivisionError("division by zero in mod")
 			}
 			m := new(big.Int).Mod(aRat.Val.Num(), bRat.Val.Num())
 			return NewRationalFromBigRat(new(big.Rat).SetInt(m)), nil

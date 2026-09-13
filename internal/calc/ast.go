@@ -47,7 +47,7 @@ type RationalNode struct {
 // Automatically reduces the fraction. Returns an error if denominator is zero.
 func NewRational(num, denom int64) (*RationalNode, error) {
 	if denom == 0 {
-		return nil, fmt.Errorf("division by zero: denominator cannot be zero")
+		return nil, NewZeroDivisionError("division by zero: denominator cannot be zero")
 	}
 	r := new(big.Rat).SetFrac64(num, denom)
 	return &RationalNode{Val: r}, nil
@@ -320,7 +320,7 @@ type PowNode struct {
 func NewPow(base, exp Node) (*PowNode, error) {
 	if ratBase, ok := base.(*RationalNode); ok && ratBase.Val.Sign() == 0 {
 		if ratExp, ok := exp.(*RationalNode); ok && ratExp.Val.Sign() < 0 {
-			return nil, fmt.Errorf("division by zero: 0^(negative number) is undefined")
+			return nil, NewZeroDivisionError("division by zero: 0^(negative number) is undefined")
 		}
 	}
 	return &PowNode{Base: base, Exp: exp}, nil
@@ -359,10 +359,10 @@ func NewUnaryOp(op string, expr Node) (*UnaryOpNode, error) {
 	case "!":
 		if rat, ok := expr.(*RationalNode); ok {
 			if !rat.Val.IsInt() {
-				return nil, fmt.Errorf("factorial domain error: factorial of non-integer rational (%s) is undefined", rat.String())
+				return nil, NewDomainError("errors.domain_factorial_non_int", "factorial domain error: factorial of non-integer rational (%s) is undefined", rat.String())
 			}
 			if rat.Val.Sign() < 0 {
-				return nil, fmt.Errorf("factorial domain error: factorial of negative integer (%s) is undefined", rat.String())
+				return nil, NewDomainError("errors.domain_factorial_negative", "factorial domain error: factorial of negative integer (%s) is undefined", rat.String())
 			}
 		}
 		return &UnaryOpNode{Op: op, Expr: expr}, nil

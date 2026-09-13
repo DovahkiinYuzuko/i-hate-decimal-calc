@@ -85,7 +85,7 @@ func simplifyPow(base, exp Node) (Node, error) {
 	// 0^exp
 	if baseIsRat && ratBase.Val.Sign() == 0 {
 		if expIsRat && ratExp.Val.Sign() < 0 {
-			return nil, fmt.Errorf("division by zero: 0^(negative) is undefined")
+			return nil, NewZeroDivisionError("division by zero: 0^(negative) is undefined")
 		}
 		if expIsRat && ratExp.Val.Sign() == 0 {
 			return mustRational(1, 1), nil // 0^0 = 1 by specification
@@ -110,7 +110,7 @@ func simplifyPow(base, exp Node) (Node, error) {
 		if expInt < 0 {
 			// Invert base
 			if ratBase.Val.Sign() == 0 {
-				return nil, fmt.Errorf("division by zero: reciprocal of 0")
+				return nil, NewZeroDivisionError("division by zero: reciprocal of 0")
 			}
 			inv := new(big.Rat).Inv(ratBase.Val)
 			return simplifyPow(&RationalNode{Val: inv}, &RationalNode{Val: big.NewRat(-expInt, 1)})
@@ -188,7 +188,7 @@ func simplifyPow(base, exp Node) (Node, error) {
 				return nil, err
 			}
 			if isZero(denom) {
-				return nil, fmt.Errorf("division by zero: 1/(0+0i)")
+				return nil, NewZeroDivisionError("division by zero: 1/(0+0i)")
 			}
 			negImag, err := simplifyUnaryOp("-", c.Imag)
 			if err != nil {
