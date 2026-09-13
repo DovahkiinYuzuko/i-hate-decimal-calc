@@ -766,6 +766,12 @@ func simplifyFuncWithEnv(name string, args []Node, env *Env) (Node, error) {
 	case "expand":
 		return expandNode(args[0]), nil
 
+	case "trig_expand":
+		return EvalTrigExpand(args[0], env)
+
+	case "trig_reduce":
+		return EvalTrigReduce(args[0], env)
+
 	case "integrate":
 		varName := "x"
 		if v, ok := args[1].(*VarNode); ok {

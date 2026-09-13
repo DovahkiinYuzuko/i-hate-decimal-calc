@@ -113,7 +113,7 @@ func TestEvalIntegration_Parts(t *testing.T) {
 		want  string
 	}{
 		// x * cos(x)
-		{"integrate(x * cos(x), x)", "sin(x)*x + cos(x)"},
+		{"integrate(x * cos(x), x)", "cos(x) + x*sin(x)"},
 		{"integrate(x * cos(x), x, 0, pi/2)", "-1 + π/2"},
 		// x * e^x
 		{"integrate(x * e^x, x)", "e^x*x - e^x"},

@@ -279,6 +279,16 @@ func init() {
 		MaxArgs: 1,
 	})
 	RegisterFunction(FunctionSpec{
+		Name:    "trig_expand",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "trig_reduce",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
 		Name:    "integrate",
 		MinArgs: 2,
 		MaxArgs: 4,

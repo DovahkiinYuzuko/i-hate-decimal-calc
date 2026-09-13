@@ -23,6 +23,8 @@ const (
 	RuleMatrixDet      RuleID = "MatrixDet"
 	RuleMatrixInv      RuleID = "MatrixInv"
 	RuleIntegrate      RuleID = "Integrate"
+	RuleTrigExpand     RuleID = "TrigExpand"
+	RuleTrigReduce     RuleID = "TrigReduce"
 )
 
 // RewriteEvent records an atomic term-rewriting step.
@@ -128,6 +130,9 @@ var ruleTitles = map[RuleID]string{
 	RuleSumFaulhaber:   "Faulhaberの公式によるべき乗和の閉形式導出",
 	RuleMatrixDet:      "余因子展開による行列式の計算",
 	RuleMatrixInv:      "余因子行列による逆行列の計算",
+	RuleIntegrate:      "記号不定積分・定積分の計算",
+	RuleTrigExpand:     "三角関数の加法定理・多倍角展開",
+	RuleTrigReduce:     "積和公式・次数下げ・三角関数の合成",
 }
 
 // CompressTrace converts low-level rewrite events into user-facing pedagogical steps.

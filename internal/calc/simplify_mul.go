@@ -227,6 +227,8 @@ func simplifyMul(factors []Node) (Node, error) {
 			base = f
 		} else if _, isVar := f.(*VarNode); isVar {
 			base = f
+		} else if _, isFunc := f.(*FuncNode); isFunc {
+			base = f
 		} else {
 			mergedFactors = append(mergedFactors, f)
 			continue
