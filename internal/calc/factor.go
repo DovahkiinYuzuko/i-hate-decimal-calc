@@ -115,12 +115,22 @@ func factorInteger(n *big.Int) (Node, error) {
 		factors = append(factors, primeFactor{prime: big.NewInt(3), exp: count3})
 	}
 
+	// If val is already prime, stop trial division early!
+	if val.Cmp(big.NewInt(1)) > 0 && val.ProbablyPrime(20) {
+		factors = append(factors, primeFactor{prime: new(big.Int).Set(val), exp: 1})
+		val.SetInt64(1)
+	}
+
 	// Wheel 6k +/- 1: d = 5, 7, 11, 13, 17, 19, 23, 25...
 	d := big.NewInt(5)
 	step := big.NewInt(2)
 	d2 := new(big.Int).Mul(d, d)
 
 	for d2.Cmp(val) <= 0 {
+		if val.ProbablyPrime(20) {
+			break
+		}
+
 		count := 0
 		for {
 			rem.Mod(val, d)

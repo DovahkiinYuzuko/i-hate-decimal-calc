@@ -59,6 +59,9 @@ func simplifyUnaryOp(op string, expr Node) (Node, error) {
 		if !ok || !rat.Val.IsInt() || rat.Val.Sign() < 0 {
 			return nil, fmt.Errorf("factorial domain error: factorial requires non-negative integer, got %s", expr.String())
 		}
+		if !rat.Val.Num().IsInt64() || rat.Val.Num().Int64() > 100000 {
+			return nil, fmt.Errorf("factorial domain error: factorial is too large to compute, got %s", expr.String())
+		}
 		n := rat.Val.Num().Int64()
 		res := big.NewInt(1)
 		for i := int64(2); i <= n; i++ {

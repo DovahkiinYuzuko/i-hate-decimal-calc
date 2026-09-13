@@ -156,3 +156,36 @@ func TestCFrac_Errors(t *testing.T) {
 		}
 	}
 }
+
+func TestCFrac_BigInt(t *testing.T) {
+	// Rational beyond 64-bit integer
+	res, err := EvalString("cfrac((10^20 + 1) / 10^20)")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	expected := "[1, 100000000000000000000]"
+	if res.String() != expected {
+		t.Errorf("got %s, want %s", res.String(), expected)
+	}
+
+	// Reconstruction from big.Int continued fraction
+	resRecon, err := EvalString("from_cfrac([1, 100000000000000000000])")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	expectedRecon := "100000000000000000001/100000000000000000000"
+	if resRecon.String() != expectedRecon {
+		t.Errorf("got %s, want %s", resRecon.String(), expectedRecon)
+	}
+
+	// Perfect square beyond 64-bit
+	resSq, err := EvalString("cfrac(sqrt(1000000000000000000000000))")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	expectedSq := "[1000000000000]"
+	if resSq.String() != expectedSq {
+		t.Errorf("got %s, want %s", resSq.String(), expectedSq)
+	}
+}
+

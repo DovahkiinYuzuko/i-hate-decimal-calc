@@ -2,7 +2,6 @@ package calc
 
 import (
 	"fmt"
-	"math"
 	"math/big"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
@@ -33,7 +32,7 @@ func cfracRational(r *big.Rat) (*ListNode, error) {
 
 	for {
 		a := floorRat(cur)
-		elems = append(elems, mustRational(a.Int64(), 1))
+		elems = append(elems, NewRationalFromBigRat(new(big.Rat).SetInt(a)))
 
 		aRat := new(big.Rat).SetInt(a)
 		frac := new(big.Rat).Sub(cur, aRat)
@@ -46,41 +45,47 @@ func cfracRational(r *big.Rat) (*ListNode, error) {
 	return &ListNode{Elements: elems}, nil
 }
 
-// cfracSqrt computes the periodic continued fraction expansion of sqrt(D).
+// cfracSqrt computes the periodic continued fraction expansion of sqrt(D) using arbitrary precision big.Int.
 // Returns [a0, [a1, a2, ..., am]] where a0 is the floor and [a1...am] is the repeating period.
-func cfracSqrt(d int64) (*ListNode, error) {
-	if d < 0 {
-		return nil, fmt.Errorf("continued fraction of imaginary square root sqrt(%d) is not supported", d)
+func cfracSqrt(d *big.Int) (*ListNode, error) {
+	if d.Sign() < 0 {
+		return nil, fmt.Errorf("continued fraction of imaginary square root sqrt(%s) is not supported", d.String())
 	}
-	if d == 0 {
+	if d.Sign() == 0 {
 		return &ListNode{Elements: []Node{mustRational(0, 1)}}, nil
 	}
 
-	a0 := int64(math.Floor(math.Sqrt(float64(d))))
-	if a0*a0 == d {
+	a0 := new(big.Int).Sqrt(d)
+	a0Sq := new(big.Int).Mul(a0, a0)
+	if a0Sq.Cmp(d) == 0 {
 		// Perfect square
-		return &ListNode{Elements: []Node{mustRational(a0, 1)}}, nil
+		return &ListNode{Elements: []Node{NewRationalFromBigRat(new(big.Rat).SetInt(a0))}}, nil
 	}
 
-	m := int64(0)
-	denom := int64(1)
-	a := a0
+	m := big.NewInt(0)
+	denom := big.NewInt(1)
+	a := new(big.Int).Set(a0)
+	twoA0 := new(big.Int).Lsh(a0, 1)
 	var period []Node
 
 	// Continued fraction expansion of sqrt(d) algorithm
 	const maxIterations = 2000
 	for iter := 0; iter < maxIterations; iter++ {
-		m = denom*a - m
-		denom = (d - m*m) / denom
-		a = (a0 + m) / denom
-		period = append(period, mustRational(a, 1))
-		if a == 2*a0 {
+		// m = denom * a - m
+		m = new(big.Int).Sub(new(big.Int).Mul(denom, a), m)
+		// denom = (d - m^2) / denom
+		mSq := new(big.Int).Mul(m, m)
+		denom = new(big.Int).Div(new(big.Int).Sub(d, mSq), denom)
+		// a = (a0 + m) / denom
+		a = new(big.Int).Div(new(big.Int).Add(a0, m), denom)
+		period = append(period, NewRationalFromBigRat(new(big.Rat).SetInt(a)))
+		if a.Cmp(twoA0) == 0 {
 			break
 		}
 	}
 
 	periodList := &ListNode{Elements: period}
-	return &ListNode{Elements: []Node{mustRational(a0, 1), periodList}}, nil
+	return &ListNode{Elements: []Node{NewRationalFromBigRat(new(big.Rat).SetInt(a0)), periodList}}, nil
 }
 
 // evalCFrac evaluates the cfrac(expr) function.
@@ -95,11 +100,11 @@ func evalCFrac(arg Node) (Node, error) {
 		return cfracRational(v.Val)
 	case *SqrtNode:
 		if rat, ok := v.Radicand.(*RationalNode); ok && rat.Val.IsInt() && rat.Val.Sign() >= 0 {
-			return cfracSqrt(rat.Val.Num().Int64())
+			return cfracSqrt(rat.Val.Num())
 		}
 	default:
 		if sq, ok := extractRadicalSquare(evaled); ok && sq.IsInt() && sq.Sign() >= 0 {
-			return cfracSqrt(sq.Num().Int64())
+			return cfracSqrt(sq.Num())
 		}
 	}
 

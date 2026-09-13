@@ -150,4 +150,28 @@ func TestFactor_ExplicitVariable(t *testing.T) {
 	}
 }
 
+func TestFactor_BigInt(t *testing.T) {
+	// Large prime beyond 64-bit integer: 10^20 + 39 is prime
+	primeStr := "100000000000000000039"
+	res, err := EvalString("factor(" + primeStr + ")")
+	if err != nil {
+		t.Fatalf("unexpected error for large prime: %v", err)
+	}
+	if Format(res) != primeStr {
+		t.Errorf("got %q, want %q", Format(res), primeStr)
+	}
+
+	// Large semiprime: 2 * (10^20 + 39) = 200000000000000000078
+	semiStr := "200000000000000000078"
+	resSemi, err := EvalString("factor(" + semiStr + ")")
+	if err != nil {
+		t.Fatalf("unexpected error for large semiprime: %v", err)
+	}
+	expectedSemi := "2*" + primeStr
+	if Format(resSemi) != expectedSemi {
+		t.Errorf("got %q, want %q", Format(resSemi), expectedSemi)
+	}
+}
+
+
 
