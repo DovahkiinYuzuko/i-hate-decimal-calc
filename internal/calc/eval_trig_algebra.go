@@ -47,7 +47,7 @@ func EvalTrigReduce(expr Node, env *Env) (Node, error) {
 	curr = reduceTrigProducts(curr, env)
 
 	// 4. Harmonic addition: a*sin(x) + b*cos(x) -> R*sin(x + alpha)
-	curr = reduceTrigHarmonic(curr, env)
+	curr = reduceTrigHarmonic(curr)
 
 	// 5. Final algebraic simplification
 	res, err := EvalWithEnv(curr, env)
@@ -318,7 +318,8 @@ func reduceTrigPowers(n Node, env *Env) Node {
 			arg := fn.Args[0]
 			twoArg := &MulNode{Factors: []Node{mustRational(2, 1), arg}}
 
-			if fn.Name == "sin" {
+			switch fn.Name {
+			case "sin":
 				if k == 2 {
 					// sin^2(x) = 1/2 - 1/2*cos(2x)
 					half := mustRational(1, 2)
@@ -333,7 +334,7 @@ func reduceTrigPowers(n Node, env *Env) Node {
 					prod := expandNode(&MulNode{Factors: []Node{sin2, sinRest}})
 					return reduceTrigProducts(prod, env)
 				}
-			} else if fn.Name == "cos" {
+			case "cos":
 				if k == 2 {
 					// cos^2(x) = 1/2 + 1/2*cos(2x)
 					half := mustRational(1, 2)
@@ -518,7 +519,7 @@ type trigTermInfo struct {
 	coeff Node
 }
 
-func reduceTrigHarmonic(n Node, env *Env) Node {
+func reduceTrigHarmonic(n Node) Node {
 	add, ok := n.(*AddNode)
 	if !ok {
 		return n
