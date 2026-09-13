@@ -230,6 +230,28 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
 - `plot(f(x), [x_min, x_max], [y_min, y_max])`: y軸表示領域を指定した関数プロット（Tupper不連続判定による漸近線の破線描画）
 - 行列・ベクトル記法: `[[1, 2], [3, 4]]`（行列演算）、`[1, 2, 3]`（ベクトル演算）
 
+### 実演ショウケースと実践レシピ集（Exam & Cookbook）
+
+`ihd` で高校数学（数I・A・II・B・III・C）、難関大入試、大学教養〜理工系専門数学（線形代数・多変数微積分・高等整数論）、および数学オリンピック等の代表的な24問を実際に解く実演デモおよびレシピ集が `exam/` ディレクトリに用意されています。
+
+#### 自動実演ショウケースの実行
+端末で以下のコマンドを実行するだけで、`ihd` が自動でプロセス起動し、全24問を次々に解いて画面上で実演します（二重根号外しや分母の有理化では `--explain` による途中計算ステップも表示されます）。
+
+**Windows (PowerShell):**
+```powershell
+pwsh exam/exam.ps1
+```
+
+**Linux / macOS (Bash):**
+```bash
+./exam/exam.sh
+```
+
+#### 実践レシピ集ドキュメント
+各問題の数式、解法、`ihd` 入力コマンド、出力結果、および途中式解説は以下を参照してください。
+- [日本語版レシピ集 (exam/problems.ja.md)](./exam/problems.ja.md)
+- [英語版レシピ集 (exam/problems.en.md)](./exam/problems.en.md)
+
 ### LICENSE
 [MIT](./LICENSE.MIT)
 
@@ -455,6 +477,28 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
 - `plot(f(x), [x_min, x_max])`: Terminal Unicode Braille high-resolution function plotting (with CAS automatic roots/extrema detection and exact coordinate label pinning)
 - `plot(f(x), [x_min, x_max], [y_min, y_max])`: Function plot with explicit y-domain bounds (with Tupper discontinuity detection and dashed vertical asymptotes)
 - Matrix & Vector Literal Syntax: `[[1, 2], [3, 4]]` (matrices), `[1, 2, 3]` (vectors)
+
+### Mathematical Exam & Cookbook Showcase
+
+A live mathematical showcase and practical problem cookbook solving 24 benchmark problems (high school math, university STEM, and competitions) are provided in the `exam/` directory.
+
+#### Running the Live Showcase
+Execute the runner script in your terminal to see `ihd` automatically launch and solve all 24 problems with step-by-step `--explain` algebraic derivation trees:
+
+**Windows (PowerShell):**
+```powershell
+pwsh exam/exam.ps1
+```
+
+**Linux / macOS (Bash):**
+```bash
+./exam/exam.sh
+```
+
+#### Practical Cookbook Recipes
+For complete problem statements, mathematical derivations, `ihd` input commands, exact outputs, and step-by-step explanations, see:
+- [Japanese Edition Cookbook (exam/problems.ja.md)](./exam/problems.ja.md)
+- [English Edition Cookbook (exam/problems.en.md)](./exam/problems.en.md)
 
 ### LICENSE
 [MIT](./LICENSE.MIT)

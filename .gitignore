@@ -10,6 +10,12 @@
 !cmd/
 !cmd/ihd/
 !cmd/ihd/*.go
+# .gitignores/exam.gitignore
+# exam folder
+!exam/
+!exam/*.ps1
+!exam/*.sh
+!exam/*.md
 # .gitignores/internal.gitignore
 !internal/
 !internal/calc/
