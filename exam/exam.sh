@@ -8,6 +8,15 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 IHD_BIN="$PROJECT_ROOT/ihd"
 
+# Locate ihd binary across repository, ~/.ihd/bin, or PATH
+if [ ! -f "$IHD_BIN" ]; then
+    if [ -f "$PROJECT_ROOT/bin/ihd" ]; then
+        IHD_BIN="$PROJECT_ROOT/bin/ihd"
+    elif command -v ihd >/dev/null 2>&1; then
+        IHD_BIN="$(command -v ihd)"
+    fi
+fi
+
 echo ""
 echo -e "\033[36m================================================================================\033[0m"
 echo -e "\033[36m   i-hate-decimal-calc (ihd) - Live Mathematical Exam & Showcase\033[0m"
@@ -17,12 +26,14 @@ echo "  - Part 1: High School Math (Algebra, Trigonometry, Calculus & Vectors)"
 echo "  - Part 2: Advanced Math (Pell Equation, Harmonics, Vandermonde & Olympiad)"
 echo "--------------------------------------------------------------------------------"
 
-# Build ihd if binary not present
+# Build ihd if binary not present and go source is available
 if [ ! -f "$IHD_BIN" ]; then
-    echo -e "\033[33m[BUILD] Building ihd binary from source...\033[0m"
-    (cd "$PROJECT_ROOT" && go build -o ihd ./cmd/ihd)
+    if [ -f "$PROJECT_ROOT/go.mod" ]; then
+        echo -e "\033[33m[BUILD] Building ihd binary from source...\033[0m"
+        (cd "$PROJECT_ROOT" && go build -o ihd ./cmd/ihd)
+    fi
     if [ ! -f "$IHD_BIN" ]; then
-        echo "Failed to build ihd binary" >&2
+        echo "Error: ihd binary not found. Please ensure ihd is installed or build it from source." >&2
         exit 1
     fi
     echo -e "\033[32m[BUILD] Built successfully: $IHD_BIN\033[0m"

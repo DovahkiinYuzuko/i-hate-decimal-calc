@@ -9,6 +9,16 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectRoot = Split-Path -Parent $ScriptDir
 $IhdBin = Join-Path $ProjectRoot "ihd.exe"
 
+# Locate ihd binary across repository, ~/.ihd/bin, or PATH
+if (-not (Test-Path $IhdBin)) {
+    $SiblingBin = Join-Path $ProjectRoot "bin\ihd.exe"
+    if (Test-Path $SiblingBin) {
+        $IhdBin = $SiblingBin
+    } elseif (Get-Command "ihd" -ErrorAction SilentlyContinue) {
+        $IhdBin = (Get-Command "ihd").Source
+    }
+}
+
 Write-Host ""
 Write-Host "================================================================================" -ForegroundColor Cyan
 Write-Host "   i-hate-decimal-calc (ihd) - Live Mathematical Exam & Showcase" -ForegroundColor Cyan
@@ -18,17 +28,19 @@ Write-Host "  - Part 1: High School Math (Algebra, Trigonometry, Calculus & Vect
 Write-Host "  - Part 2: Advanced Math (Pell Equation, Harmonics, Vandermonde & Olympiad)"
 Write-Host "--------------------------------------------------------------------------------"
 
-# Build ihd if binary not present
+# Build ihd if binary not present and go source is available
 if (-not (Test-Path $IhdBin)) {
-    Write-Host "[BUILD] Building ihd.exe from source..." -ForegroundColor Yellow
-    Push-Location $ProjectRoot
-    try {
-        go build -o ihd.exe ./cmd/ihd
-    } finally {
-        Pop-Location
+    if (Test-Path (Join-Path $ProjectRoot "go.mod")) {
+        Write-Host "[BUILD] Building ihd.exe from source..." -ForegroundColor Yellow
+        Push-Location $ProjectRoot
+        try {
+            go build -o ihd.exe ./cmd/ihd
+        } finally {
+            Pop-Location
+        }
     }
     if (-not (Test-Path $IhdBin)) {
-        Write-Error "Failed to build ihd.exe"
+        Write-Error "ihd.exe binary not found. Please ensure ihd is installed or build it from source."
         exit 1
     }
     Write-Host "[BUILD] Built successfully: $IhdBin" -ForegroundColor Green
