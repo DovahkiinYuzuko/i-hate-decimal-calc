@@ -766,6 +766,18 @@ func simplifyFuncWithEnv(name string, args []Node, env *Env) (Node, error) {
 	case "expand":
 		return expandNode(args[0]), nil
 
+	case "integrate":
+		varName := "x"
+		if v, ok := args[1].(*VarNode); ok {
+			varName = v.Name
+		} else {
+			return nil, fmt.Errorf("integrate error: second argument must be a variable name, got %s", args[1].String())
+		}
+		if len(args) == 2 {
+			return evalIndefiniteIntegral(args[0], varName)
+		}
+		return evalDefiniteIntegral(args[0], varName, args[2], args[3])
+
 	case "diff":
 		varName := "x"
 		if v, ok := args[1].(*VarNode); ok {

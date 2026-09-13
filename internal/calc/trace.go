@@ -22,6 +22,7 @@ const (
 	RuleSumFaulhaber   RuleID = "SumFaulhaber"
 	RuleMatrixDet      RuleID = "MatrixDet"
 	RuleMatrixInv      RuleID = "MatrixInv"
+	RuleIntegrate      RuleID = "Integrate"
 )
 
 // RewriteEvent records an atomic term-rewriting step.
