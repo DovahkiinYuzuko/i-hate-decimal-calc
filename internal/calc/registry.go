@@ -3,6 +3,7 @@ package calc
 import (
 	"fmt"
 	"math/big"
+	"strings"
 )
 
 // FunctionSpec defines the specification, validation rules, and evaluation hook for a built-in function.
@@ -22,27 +23,36 @@ func RegisterFunction(spec FunctionSpec) {
 	builtInFunctions[spec.Name] = spec
 }
 
-// LookupFunction retrieves a FunctionSpec by function name.
+// LookupFunction retrieves a FunctionSpec by function name, supporting case-insensitive fallback.
 func LookupFunction(name string) (FunctionSpec, bool) {
-	spec, ok := builtInFunctions[name]
+	if spec, ok := builtInFunctions[name]; ok {
+		return spec, true
+	}
+	spec, ok := builtInFunctions[strings.ToLower(name)]
 	return spec, ok
 }
 
-// IsReservedFunc reports whether the given identifier name is a reserved built-in function name.
+// IsReservedFunc reports whether the given identifier name is a reserved built-in function name, case-insensitively.
 func IsReservedFunc(name string) bool {
-	_, ok := builtInFunctions[name]
+	if _, ok := builtInFunctions[name]; ok {
+		return true
+	}
+	_, ok := builtInFunctions[strings.ToLower(name)]
 	return ok
 }
 
-// IsBareSymbolAllowed reports whether the function name can appear as an isolated symbol.
+// IsBareSymbolAllowed reports whether the function name can appear as an isolated symbol, case-insensitively.
 func IsBareSymbolAllowed(name string) bool {
-	spec, ok := builtInFunctions[name]
+	if spec, ok := builtInFunctions[name]; ok {
+		return spec.AllowBareSymbol
+	}
+	spec, ok := builtInFunctions[strings.ToLower(name)]
 	return ok && spec.AllowBareSymbol
 }
 
 // ValidateFuncArgs checks argument count and specific domain constraints for a function call.
 func ValidateFuncArgs(name string, args []Node) error {
-	spec, ok := builtInFunctions[name]
+	spec, ok := LookupFunction(name)
 	if !ok {
 		return fmt.Errorf("unknown function: %s", name)
 	}
@@ -72,7 +82,7 @@ func ValidateFuncArgs(name string, args []Node) error {
 
 // EvaluateFunction invokes the registered evaluation hook for the named function.
 func EvaluateFunction(name string, args []Node) (Node, error) {
-	spec, ok := builtInFunctions[name]
+	spec, ok := LookupFunction(name)
 	if !ok {
 		return nil, fmt.Errorf("unknown function: %s", name)
 	}

@@ -51,14 +51,14 @@ func runREPL(in io.Reader, out, errOut io.Writer, ro runOptions) int {
 		if line == "" {
 			continue
 		}
-		if line == "exit" || line == "quit" {
+		if strings.EqualFold(line, "exit") || strings.EqualFold(line, "quit") {
 			fmt.Fprintln(out, i18n.T("cli.repl_exit"))
 			break
 		}
 
 		history.Add(line)
 
-		if line == "vars" {
+		if strings.EqualFold(line, "vars") {
 			printVars(env, ro, out)
 			continue
 		}
@@ -81,11 +81,11 @@ func runScannerREPL(in io.Reader, out, errOut io.Writer, ro runOptions, env *cal
 		if line == "" {
 			continue
 		}
-		if line == "exit" || line == "quit" {
+		if strings.EqualFold(line, "exit") || strings.EqualFold(line, "quit") {
 			fmt.Fprintln(out, i18n.T("cli.repl_exit"))
 			break
 		}
-		if line == "vars" {
+		if strings.EqualFold(line, "vars") {
 			printVars(env, ro, out)
 			continue
 		}

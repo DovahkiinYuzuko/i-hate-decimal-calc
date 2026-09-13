@@ -113,3 +113,34 @@ func TestRegistry_ValidateFuncArgs_Constraints(t *testing.T) {
 		t.Errorf("expected log(-1, 2) with base<0 to fail")
 	}
 }
+
+func TestRegistry_CaseInsensitive(t *testing.T) {
+	testCases := []struct {
+		inputName string
+		wantName  string
+	}{
+		{"Sqrt", "sqrt"},
+		{"SQRT", "sqrt"},
+		{"sQrT", "sqrt"},
+		{"SIN", "sin"},
+		{"Sin", "sin"},
+		{"cbrt", "cbrt"},
+		{"CBRT", "cbrt"},
+		{"TaYlOr", "taylor"},
+		{"Abs", "abs"},
+		{"ABS", "abs"},
+	}
+
+	for _, tc := range testCases {
+		if !IsReservedFunc(tc.inputName) {
+			t.Errorf("expected IsReservedFunc(%q) to be true", tc.inputName)
+		}
+		spec, ok := LookupFunction(tc.inputName)
+		if !ok {
+			t.Errorf("expected LookupFunction(%q) to succeed", tc.inputName)
+		}
+		if spec.Name != tc.wantName {
+			t.Errorf("LookupFunction(%q).Name = %q, want %q", tc.inputName, spec.Name, tc.wantName)
+		}
+	}
+}

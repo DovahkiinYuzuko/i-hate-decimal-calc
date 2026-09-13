@@ -256,4 +256,46 @@ func TestCLI_REPL_ExplainCommand(t *testing.T) {
 	}
 }
 
+func TestCLI_OneShot_CaseInsensitive(t *testing.T) {
+	testCases := []struct {
+		expr     string
+		expected string
+	}{
+		{"100*5/3+Sqrt(541)", "500/3 + √541"},
+		{"SIN(pi/6)", "1/2"},
+		{"Abs(-5)", "5"},
+		{"Cbrt(8)", "2"},
+	}
+
+	for _, tc := range testCases {
+		out := new(bytes.Buffer)
+		errOut := new(bytes.Buffer)
+		code := run([]string{tc.expr}, strings.NewReader(""), out, errOut)
+		if code != 0 {
+			t.Errorf("expr %q: expected exit code 0, got %d. stderr: %s", tc.expr, code, errOut.String())
+		}
+		actual := strings.TrimSpace(out.String())
+		if actual != tc.expected {
+			t.Errorf("expr %q: expected stdout %q, got %q", tc.expr, tc.expected, actual)
+		}
+	}
+}
+
+func TestCLI_REPL_CaseInsensitiveCommands(t *testing.T) {
+	// Test Exit, Quit, Vars in mixed case
+	input := "x = 10\nVars\nExit\n"
+	in := strings.NewReader(input)
+	out := new(bytes.Buffer)
+	errOut := new(bytes.Buffer)
+
+	code := runREPL(in, out, errOut, runOptions{opts: calc.FormatOptions{AsciiOnly: false}})
+	if code != 0 {
+		t.Fatalf("expected code 0, got %d. stderr: %s", code, errOut.String())
+	}
+	output := out.String()
+	if !strings.Contains(output, "x = 10") {
+		t.Errorf("expected Vars output to contain 'x = 10', got %q", output)
+	}
+}
+
 

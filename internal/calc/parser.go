@@ -311,6 +311,10 @@ func (p *Parser) parseInfix(left Node) (Node, error) {
 }
 
 func (p *Parser) parseFuncCall(name string) (Node, error) {
+	if spec, ok := LookupFunction(name); ok {
+		name = spec.Name
+	}
+
 	// curTok is '('
 	if p.peekTok.Type == TokenRParen {
 		if spec, ok := LookupFunction(name); ok && spec.MinArgs == 0 {

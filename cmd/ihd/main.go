@@ -162,7 +162,8 @@ func evaluateLine(line string, ro runOptions, out, errOut io.Writer) error {
 }
 
 func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut io.Writer) error {
-	if strings.HasPrefix(line, "explain ") || strings.HasPrefix(line, "steps ") {
+	lowerLine := strings.ToLower(line)
+	if strings.HasPrefix(lowerLine, "explain ") || strings.HasPrefix(lowerLine, "steps ") {
 		parts := strings.SplitN(line, " ", 2)
 		ro.explain = true
 		line = strings.TrimSpace(parts[1])
