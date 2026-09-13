@@ -10,14 +10,19 @@ import (
 const (
 	_ int = iota
 	PREC_LOWEST
-	PREC_SUM         // + -
+	PREC_RELATIONAL   // > < >= <=
+	PREC_SUM          // + -
 	PREC_PREFIX_MINUS // unary - (lower than POWER, so -3^2 becomes -(3^2))
-	PREC_PRODUCT     // * /
-	PREC_POWER       // ^ (right-associative)
-	PREC_POSTFIX     // !
+	PREC_PRODUCT      // * /
+	PREC_POWER        // ^ (right-associative)
+	PREC_POSTFIX      // !
 )
 
 var precedences = map[TokenType]int{
+	TokenGT:       PREC_RELATIONAL,
+	TokenLT:       PREC_RELATIONAL,
+	TokenGTE:      PREC_RELATIONAL,
+	TokenLTE:      PREC_RELATIONAL,
 	TokenPlus:     PREC_SUM,
 	TokenMinus:    PREC_SUM,
 	TokenAsterisk: PREC_PRODUCT,
@@ -236,6 +241,15 @@ func (p *Parser) parsePrefix() (Node, error) {
 
 func (p *Parser) parseInfix(left Node) (Node, error) {
 	switch p.curTok.Type {
+	case TokenGT, TokenLT, TokenGTE, TokenLTE:
+		op := p.curTok.Literal
+		p.nextToken()
+		right, err := p.ParseExpression(PREC_RELATIONAL)
+		if err != nil {
+			return nil, err
+		}
+		return NewRelOp(left, op, right), nil
+
 	case TokenPlus:
 		p.nextToken()
 		right, err := p.ParseExpression(PREC_SUM)
@@ -299,6 +313,10 @@ func (p *Parser) parseInfix(left Node) (Node, error) {
 func (p *Parser) parseFuncCall(name string) (Node, error) {
 	// curTok is '('
 	if p.peekTok.Type == TokenRParen {
+		if spec, ok := LookupFunction(name); ok && spec.MinArgs == 0 {
+			p.nextToken() // move to ')'
+			return NewFunc(name, nil)
+		}
 		return nil, fmt.Errorf("syntax error: function %q requires arguments", name)
 	}
 

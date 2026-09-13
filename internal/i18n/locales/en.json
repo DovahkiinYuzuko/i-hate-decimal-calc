@@ -41,7 +41,11 @@
     "linear_inconsistent": "linear system has no solution (inconsistent)",
     "linear_dim_mismatch": "dimension mismatch between coefficient matrix and constant vector",
     "cfrac_unsupported": "continued fraction expansion is only supported for rational numbers and square roots",
-    "from_cfrac_invalid": "from_cfrac requires a non-empty list of integers, got %s"
+    "from_cfrac_invalid": "from_cfrac requires a non-empty list of integers, got %s",
+    "assume_inconsistent": "inconsistent assumption for variable '%s'",
+    "assume_invalid": "invalid assumption specification: %s",
+    "assume_unsupported": "unsupported assumption relation or property: %s",
+    "no_assumptions": "No assumptions defined."
   },
   "plot": {
     "features_header": "[CAS Features Detected]\n",

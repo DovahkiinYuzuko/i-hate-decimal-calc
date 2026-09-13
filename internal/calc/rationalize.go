@@ -10,9 +10,44 @@ import (
 // -------------------------------------------------------------------------
 
 func simplifySqrt(radicand Node) (Node, error) {
+	return simplifySqrtWithEnv(radicand, nil)
+}
+
+func simplifySqrtWithEnv(radicand Node, env *Env) (Node, error) {
 	rat, ok := radicand.(*RationalNode)
 	if !ok {
-		// Non-rational radicand: check if it can be denested (Borodin 1985)
+		// Non-rational radicand:
+		// 1. Check if radicand is PowNode: e.g. x^2, x^4
+		if pow, isPow := radicand.(*PowNode); isPow {
+			if rExp, okExp := pow.Exp.(*RationalNode); okExp && rExp.Val.IsInt() {
+				expInt := rExp.Val.Num().Int64()
+				if expInt > 0 && expInt%2 == 0 {
+					halfExp := expInt / 2
+					base := pow.Base
+					// Check assumption on base if it's a variable
+					if v, okVar := base.(*VarNode); okVar && env != nil {
+						if env.IsPositive(v.Name) || env.IsNonNegative(v.Name) {
+							if halfExp == 1 {
+								return base, nil
+							}
+							return simplifyPow(base, mustRational(halfExp, 1))
+						} else if env.IsNegative(v.Name) || env.IsNonPositive(v.Name) {
+							negBase, _ := simplifyUnaryOp("-", base)
+							if halfExp == 1 {
+								return negBase, nil
+							}
+							return simplifyPow(negBase, mustRational(halfExp, 1))
+						}
+					}
+					// If halfExp == 1 and unconstrained, return abs(base)
+					if halfExp == 1 {
+						return NewFunc("abs", []Node{base})
+					}
+				}
+			}
+		}
+
+		// 2. Check if it can be denested (Borodin 1985)
 		if add, isAdd := radicand.(*AddNode); isAdd {
 			if denested, ok := denestSqrtBinomial(add); ok {
 				RecordTraceRewrite(RuleDenestRadical, NewSqrt(radicand), denested, "Borodinアルゴリズムによる二重根号の簡約")

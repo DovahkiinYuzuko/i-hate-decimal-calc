@@ -41,7 +41,11 @@
     "linear_inconsistent": "連立方程式の解が存在しません（不能）",
     "linear_dim_mismatch": "係数行列と定数項ベクトルの次元が一致しません",
     "cfrac_unsupported": "連分数展開は有理数または平方根のみ対応しています",
-    "from_cfrac_invalid": "from_cfrac には空でない整数のリストが必要です: %s"
+    "from_cfrac_invalid": "from_cfrac には空でない整数のリストが必要です: %s",
+    "assume_inconsistent": "変数 '%s' に対する前提条件に矛盾があります",
+    "assume_invalid": "不正な前提条件の指定です: %s",
+    "assume_unsupported": "未対応の前提条件または関係式です: %s",
+    "no_assumptions": "前提条件は設定されていません。"
   },
   "plot": {
     "features_header": "[CAS Features Detected]\n",

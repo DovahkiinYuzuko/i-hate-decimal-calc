@@ -28,6 +28,10 @@ const (
 	TokenAssign
 	TokenLBracket
 	TokenRBracket
+	TokenGT
+	TokenLT
+	TokenGTE
+	TokenLTE
 )
 
 // Token represents a single lexical token.
@@ -65,6 +69,14 @@ func (l *Lexer) readChar() {
 		l.pos = l.readPos
 		l.readPos += size
 	}
+}
+
+func (l *Lexer) peekChar() rune {
+	if l.readPos >= len(l.input) {
+		return 0
+	}
+	r, _ := utf8.DecodeRuneInString(l.input[l.readPos:])
+	return r
 }
 
 func (l *Lexer) skipWhitespace() {
@@ -110,6 +122,26 @@ func (l *Lexer) NextToken() Token {
 	case ',':
 		tok = Token{Type: TokenComma, Literal: ",", Pos: startPos}
 		l.readChar()
+	case '>':
+		if l.peekChar() == '=' {
+			ch := l.ch
+			l.readChar()
+			tok = Token{Type: TokenGTE, Literal: string(ch) + string(l.ch), Pos: startPos}
+			l.readChar()
+		} else {
+			tok = Token{Type: TokenGT, Literal: ">", Pos: startPos}
+			l.readChar()
+		}
+	case '<':
+		if l.peekChar() == '=' {
+			ch := l.ch
+			l.readChar()
+			tok = Token{Type: TokenLTE, Literal: string(ch) + string(l.ch), Pos: startPos}
+			l.readChar()
+		} else {
+			tok = Token{Type: TokenLT, Literal: "<", Pos: startPos}
+			l.readChar()
+		}
 	case '=':
 		tok = Token{Type: TokenAssign, Literal: "=", Pos: startPos}
 		l.readChar()

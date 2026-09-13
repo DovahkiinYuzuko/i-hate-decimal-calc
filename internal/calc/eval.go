@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math/big"
 	"math/rand/v2"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
 // mustRational creates a RationalNode directly for guaranteed non-zero denominators.
@@ -61,7 +63,7 @@ func EvalWithEnv(n Node, env *Env) (Node, error) {
 		if err != nil {
 			return nil, err
 		}
-		return simplifySqrt(rad)
+		return simplifySqrtWithEnv(rad, env)
 
 	case *FuncNode:
 		evaledArgs := make([]Node, len(v.Args))
@@ -72,7 +74,7 @@ func EvalWithEnv(n Node, env *Env) (Node, error) {
 			}
 			evaledArgs[i] = ea
 		}
-		return simplifyFunc(v.Name, evaledArgs)
+		return simplifyFuncWithEnv(v.Name, evaledArgs, env)
 
 	case *UnaryOpNode:
 		expr, err := EvalWithEnv(v.Expr, env)
@@ -138,6 +140,17 @@ func EvalWithEnv(n Node, env *Env) (Node, error) {
 			}
 		}
 		return NewMatrix(v.Rows, v.Cols, evaledData)
+
+	case *RelOpNode:
+		lhs, err := EvalWithEnv(v.LHS, env)
+		if err != nil {
+			return nil, err
+		}
+		rhs, err := EvalWithEnv(v.RHS, env)
+		if err != nil {
+			return nil, err
+		}
+		return NewRelOp(lhs, v.Op, rhs), nil
 
 	default:
 		return nil, fmt.Errorf("unknown node type for evaluation: %T", n)
@@ -282,7 +295,96 @@ func ApplyDegreeModeToStatement(stmt interface{}) interface{} {
 // -------------------------------------------------------------------------
 
 func simplifyFunc(name string, args []Node) (Node, error) {
+	return simplifyFuncWithEnv(name, args, nil)
+}
+
+func simplifyFuncWithEnv(name string, args []Node, env *Env) (Node, error) {
 	switch name {
+	case "assume":
+		if env == nil {
+			return nil, fmt.Errorf("no environment available for assumptions")
+		}
+		if len(args) == 1 {
+			// e.g. assume(x > 0), assume(x >= 0), assume(x < 0), assume(x <= 0)
+			if rel, ok := args[0].(*RelOpNode); ok {
+				v, okVar := rel.LHS.(*VarNode)
+				r, okRat := rel.RHS.(*RationalNode)
+				if okVar && okRat && r.Val.Sign() == 0 {
+					var prop Property
+					switch rel.Op {
+					case ">":
+						prop = PropPositive
+					case ">=":
+						prop = PropNonNegative
+					case "<":
+						prop = PropNegative
+					case "<=":
+						prop = PropNonPositive
+					default:
+						return nil, fmt.Errorf("%s", i18n.T("errors.assume_unsupported", rel.Op))
+					}
+					if err := env.Assumptions().Assume(v.Name, prop); err != nil {
+						return nil, err
+					}
+					return &VarNode{Name: "ok"}, nil
+				}
+			}
+			return nil, fmt.Errorf("%s", i18n.T("errors.assume_invalid", args[0].String()))
+		}
+		if len(args) == 2 {
+			// e.g. assume(x, "positive"), assume(n, integer)
+			v, okVar := args[0].(*VarNode)
+			if !okVar {
+				return nil, fmt.Errorf("%s", i18n.T("errors.assume_invalid", args[0].String()))
+			}
+			propName := ""
+			if vProp, okVProp := args[1].(*VarNode); okVProp {
+				propName = vProp.Name
+			} else {
+				propName = args[1].String()
+			}
+			prop, err := ParseProperty(propName)
+			if err != nil {
+				return nil, err
+			}
+			if err := env.Assumptions().Assume(v.Name, prop); err != nil {
+				return nil, err
+			}
+			return &VarNode{Name: "ok"}, nil
+		}
+		return nil, fmt.Errorf("assume requires 1 or 2 arguments")
+
+	case "unassume":
+		if env == nil {
+			return &VarNode{Name: "ok"}, nil
+		}
+		if len(args) == 0 {
+			env.Assumptions().ClearAll()
+			return &VarNode{Name: "ok"}, nil
+		}
+		if v, ok := args[0].(*VarNode); ok {
+			env.Assumptions().Unassume(v.Name)
+			return &VarNode{Name: "ok"}, nil
+		}
+		return nil, fmt.Errorf("unassume expects a variable name")
+
+	case "assumptions":
+		if env == nil {
+			return NewList(nil), nil
+		}
+		list := env.Assumptions().ListAssumptions()
+		var elems []Node
+		for _, s := range list {
+			elems = append(elems, &VarNode{Name: s})
+		}
+		return NewList(elems), nil
+
+	case "clear_assumptions":
+		if env != nil {
+			env.Assumptions().ClearAll()
+		}
+		return &VarNode{Name: "ok"}, nil
+
 	case "sin":
 		arg := args[0]
 		if r, ok := matchPiMultiple(arg); ok {
@@ -290,6 +392,9 @@ func simplifyFunc(name string, args []Node) (Node, error) {
 			if val, ok := evalTrigPi("sin", r); ok {
 				return val, nil
 			}
+		}
+		if val, ok := evalTrigWithAssumptions("sin", arg, env); ok {
+			return val, nil
 		}
 		if rat, ok := arg.(*RationalNode); ok && rat.Val.Sign() == 0 {
 			return mustRational(0, 1), nil
@@ -302,6 +407,9 @@ func simplifyFunc(name string, args []Node) (Node, error) {
 			if val, ok := evalTrigPi("cos", r); ok {
 				return val, nil
 			}
+		}
+		if val, ok := evalTrigWithAssumptions("cos", arg, env); ok {
+			return val, nil
 		}
 		if rat, ok := arg.(*RationalNode); ok && rat.Val.Sign() == 0 {
 			return mustRational(1, 1), nil
@@ -320,6 +428,9 @@ func simplifyFunc(name string, args []Node) (Node, error) {
 			if val, ok := evalTrigPi("tan", r); ok {
 				return val, nil
 			}
+		}
+		if val, ok := evalTrigWithAssumptions("tan", arg, env); ok {
+			return val, nil
 		}
 		if rat, ok := arg.(*RationalNode); ok && rat.Val.Sign() == 0 {
 			return mustRational(0, 1), nil

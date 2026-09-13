@@ -36,8 +36,14 @@ func matchPiMultiple(n Node) (*big.Rat, bool) {
 						} else {
 							rat.Mul(rat, inv)
 						}
+					} else {
+						return nil, false
 					}
+				} else {
+					return nil, false
 				}
+			} else {
+				return nil, false
 			}
 		}
 		if hasPi {
@@ -45,6 +51,59 @@ func matchPiMultiple(n Node) (*big.Rat, bool) {
 				return big.NewRat(1, 1), true
 			}
 			return rat, true
+		}
+	}
+	return nil, false
+}
+
+// evalTrigWithAssumptions evaluates trigonometric expressions involving variables with assumptions.
+func evalTrigWithAssumptions(fn string, arg Node, env *Env) (Node, bool) {
+	if env == nil {
+		return nil, false
+	}
+
+	// Match: coeff * var * pi or var * pi
+	if mul, ok := arg.(*MulNode); ok {
+		var hasPi bool
+		var varName string
+		coeff := big.NewRat(1, 1)
+
+		for _, f := range mul.Factors {
+			if c, okConst := f.(*ConstNode); okConst && c.Name == "pi" {
+				hasPi = true
+			} else if r, okRat := f.(*RationalNode); okRat {
+				coeff.Mul(coeff, r.Val)
+			} else if v, okVar := f.(*VarNode); okVar {
+				if varName == "" {
+					varName = v.Name
+				} else {
+					return nil, false
+				}
+			} else {
+				return nil, false
+			}
+		}
+
+		if hasPi && varName != "" && coeff.IsInt() {
+			if env.IsInteger(varName) {
+				k := coeff.Num().Int64()
+				isEven := env.IsEven(varName) || k%2 == 0
+				isOdd := env.IsOdd(varName) && k%2 != 0
+
+				switch fn {
+				case "sin":
+					return mustRational(0, 1), true
+				case "tan":
+					return mustRational(0, 1), true
+				case "cos":
+					if isEven {
+						return mustRational(1, 1), true
+					}
+					if isOdd {
+						return mustRational(-1, 1), true
+					}
+				}
+			}
 		}
 	}
 	return nil, false

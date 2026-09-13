@@ -426,4 +426,26 @@ func init() {
 		MinArgs: 2,
 		MaxArgs: 3,
 	})
+
+	// Assumptions
+	RegisterFunction(FunctionSpec{
+		Name:    "assume",
+		MinArgs: 1,
+		MaxArgs: 2,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "unassume",
+		MinArgs: 0,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "assumptions",
+		MinArgs: 0,
+		MaxArgs: 0,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "clear_assumptions",
+		MinArgs: 0,
+		MaxArgs: 0,
+	})
 }

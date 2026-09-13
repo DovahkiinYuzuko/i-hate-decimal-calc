@@ -23,6 +23,7 @@ const (
 	NodeList
 	NodeMatrix
 	NodePlot
+	NodeRelOp
 )
 
 // Node represents any node in the mathematical expression tree.
@@ -538,6 +539,34 @@ func (n *PlotNode) Equal(other Node) bool {
 		return n.Content == o.Content
 	}
 	return false
+}
+
+// -------------------------------------------------------------------------
+// RelOpNode (Relational Operation: >, <, >=, <=)
+// -------------------------------------------------------------------------
+
+// RelOpNode represents a binary relational operation such as x > 0 or n <= 5.
+type RelOpNode struct {
+	LHS Node
+	Op  string
+	RHS Node
+}
+
+// NewRelOp creates a new RelOpNode.
+func NewRelOp(lhs Node, op string, rhs Node) *RelOpNode {
+	return &RelOpNode{LHS: lhs, Op: op, RHS: rhs}
+}
+
+func (n *RelOpNode) Type() NodeType { return NodeRelOp }
+func (n *RelOpNode) String() string {
+	return fmt.Sprintf("%s %s %s", n.LHS.String(), n.Op, n.RHS.String())
+}
+func (n *RelOpNode) Equal(other Node) bool {
+	o, ok := other.(*RelOpNode)
+	if !ok {
+		return false
+	}
+	return n.Op == o.Op && n.LHS.Equal(o.LHS) && n.RHS.Equal(o.RHS)
 }
 
 
