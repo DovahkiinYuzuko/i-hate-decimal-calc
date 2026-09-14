@@ -48,7 +48,7 @@ func EvalLaplace(f Node, tName, sName string, env *Env) (Node, error) {
 
 	var laplaceTerms []Node
 	for _, term := range terms {
-		lTerm, err := laplaceTerm(term, tName, sVar, env)
+		lTerm, err := laplaceTerm(term, tName, sVar)
 		if err != nil {
 			return nil, err
 		}
@@ -59,7 +59,7 @@ func EvalLaplace(f Node, tName, sName string, env *Env) (Node, error) {
 }
 
 // laplaceTerm transforms a single term (or product of factors)
-func laplaceTerm(term Node, tName string, sVar *VarNode, env *Env) (Node, error) {
+func laplaceTerm(term Node, tName string, sVar *VarNode) (Node, error) {
 	// If term does not contain t, L[C] = C / s
 	if !ContainsVar(term, tName) {
 		invS, err := simplifyPow(sVar, mustRational(-1, 1))
