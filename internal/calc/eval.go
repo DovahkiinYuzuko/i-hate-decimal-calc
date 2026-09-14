@@ -993,7 +993,30 @@ func simplifyFuncWithEnv(name string, args []Node, env *Env) (Node, error) {
 		}
 		return EvalEigenvects(mat, env)
 
+	case "poly_gcd":
+		var vName string
+		if len(args) >= 3 {
+			if v, ok := args[2].(*VarNode); ok {
+				vName = v.Name
+			} else {
+				return nil, fmt.Errorf("poly_gcd error: third argument must be a variable name, got %s", args[2].String())
+			}
+		}
+		return EvalPolyGCD(args[0], args[1], vName, env)
+
+	case "poly_lcm":
+		var vName string
+		if len(args) >= 3 {
+			if v, ok := args[2].(*VarNode); ok {
+				vName = v.Name
+			} else {
+				return nil, fmt.Errorf("poly_lcm error: third argument must be a variable name, got %s", args[2].String())
+			}
+		}
+		return EvalPolyLCM(args[0], args[1], vName, env)
+
 	case "cfrac":
+
 
 		return evalCFrac(args[0])
 
