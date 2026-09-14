@@ -8,9 +8,11 @@ import (
 	"io"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc"
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/updater"
 	"github.com/nyaosorg/go-readline-ny"
 	"github.com/nyaosorg/go-readline-ny/simplehistory"
 )
@@ -19,6 +21,24 @@ func runREPL(in io.Reader, out, errOut io.Writer, ro runOptions) int {
 	fmt.Fprintln(out, i18n.T("cli.repl_welcome"))
 	fmt.Fprintf(out, i18n.T("cli.repl_lang_label")+"\n", i18n.CurrentLocaleName(), i18n.CurrentLocale())
 	fmt.Fprintln(out, i18n.T("cli.repl_exit_hint"))
+
+	if !ro.noUpdateCheck && updater.IsUpdateCheckEnabled() {
+		checkCh := make(chan *updater.UpdateInfo, 1)
+		go func() {
+			info, _ := updater.CheckUpdate(false)
+			checkCh <- info
+		}()
+		select {
+		case info := <-checkCh:
+			if info != nil {
+				fmt.Fprintln(out)
+				fmt.Fprint(out, updater.FormatNotification(info))
+			}
+		case <-time.After(200 * time.Millisecond):
+			// Non-blocking fallback: continues in background and populates cache
+		}
+	}
+
 	env := calc.NewEnv()
 
 	// If in is not a terminal (e.g. test pipe or script), use standard scanner

@@ -8,7 +8,8 @@ import (
 
 // Config represents persistent user configuration for ihd.
 type Config struct {
-	Locale string `json:"locale,omitempty"`
+	Locale       string `json:"locale,omitempty"`
+	CheckUpdates *bool  `json:"check_updates,omitempty"`
 }
 
 // GetIhdDir returns the path to the ~/.ihd directory.

@@ -326,6 +326,8 @@ ihd "plot(sin(x), [-pi, pi])"
 | `--explain` | 代数的項書き換え（有理化・二重根号・微分則等）を途中式ツリーとして詳細表示。<br>`ihd --explain "1 / (sqrt(2) + 1)"` |
 | `--lang <code/auto>` | 表示言語（ロケール）を指定（`ja`, `en`, `auto`）。設定は `~/.ihd/config.json` に永続化され、カスタム辞書（`~/.ihd/locales/`）にも対応。<br>`ihd --lang en "1/2 + 1/3"` |
 | `-h`, `--help` | コマンドのヘルプメッセージを表示。 |
+| `-v`, `--version` | バージョン情報を表示（新リリースが存在する場合は更新案内を表示）。 |
+| `--no-update-check` | 新リリースの自動検知・更新チェックを無効化（環境変数 `IHD_NO_UPDATE_CHECK=1` でも設定可能）。 |
 
 ---
 
@@ -672,6 +674,8 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `--explain` | Step-by-step educational explanations of algebraic derivations in a 2D tree.<br>`ihd --explain "1 / (sqrt(2) + 1)"` |
 | `--lang <code/auto>` | Specify display language (`ja`, `en`, `auto`). Persisted to `~/.ihd/config.json`.<br>`ihd --lang en "1/2 + 1/3"` |
 | `-h`, `--help` | Display command help message. |
+| `-v`, `--version` | Display version information (checks for newer releases if available). |
+| `--no-update-check` | Disable checking for newer releases (can also be disabled via `IHD_NO_UPDATE_CHECK=1`). |
 
 ---
 
