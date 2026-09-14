@@ -10,7 +10,7 @@ import (
 
 func simplifyMul(factors []Node) (Node, error) {
 	// 1. Flatten nested MulNodes
-	var flatFactors []Node
+	flatFactors := make([]Node, 0, len(factors))
 	for _, f := range factors {
 		if mul, ok := f.(*MulNode); ok {
 			flatFactors = append(flatFactors, mul.Factors...)
