@@ -784,6 +784,13 @@ func simplifyFuncWithEnv(name string, args []Node, env *Env) (Node, error) {
 		}
 		return evalDefiniteIntegral(args[0], varName, args[2], args[3])
 
+	case "limit":
+		var dirNode Node = nil
+		if len(args) == 4 {
+			dirNode = args[3]
+		}
+		return EvalLimit(args[0], args[1], args[2], dirNode)
+
 	case "diff":
 		varName := "x"
 		if v, ok := args[1].(*VarNode); ok {
