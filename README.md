@@ -251,6 +251,7 @@ ihd "plot(sin(x), [-pi, pi])"
 | `asin`, `acos`, `atan` | `asin(1/2)` | 逆三角関数（特殊角を $\pi$ の有理数倍として代数簡約、主値管理） |
 | `trig_expand` | `trig_expand(sin(x+y))` / `trig_expand(sin(2*x))` | 加法定理・多倍角公式による展開（和積展開、2倍角・3倍角等） |
 | `trig_reduce` | `trig_reduce(sin(x)^2)` / `trig_reduce(sin(x)+cos(x))` | 三角関数の次数下げ（半角公式）、積和変換、および有名角調和合成 |
+| `exp` | `exp(x)` | 自然指数関数（$e^x$ の厳密表現、指数法則積合成 $e^A \cdot e^B = e^{A+B}$） |
 | `log` | `log(x)` / `log(base, x)` | 常用対数（底10）および任意底の対数 |
 | `ln` | `ln(x)` | 自然対数（底 $e$） |
 | `arg` | `arg(z)` | 複素数の厳密偏角（主値 $\theta \in (-\pi, \pi]$。代数的特殊角比率逆引き） |
@@ -258,12 +259,13 @@ ihd "plot(sin(x), [-pi, pi])"
 | `polar_exp` | `polar_exp(1 + i)` | オイラーの公式による指数形式変換 $r e^{i\theta}$（例: `√2*e^i*1/4*π`） |
 | `rect` | `rect(sqrt(2), pi/4)` | 極形式（動径 $r$, 偏角 $\theta$）から直交形式 $a + bi$ への厳密逆変換（例: `1 + i`） |
 
-##### 3. 微積分・離散数列
+##### 3. 微積分・常微分方程式・離散数列
 | 関数 | 書式・例 | 説明 |
 | :--- | :--- | :--- |
-| `diff` | `diff(sin(x)*x, x)` | 厳密記号微分（積の微分・商の微分・合成関数の連鎖律） |
+| `diff` | `diff(sin(x)*x, x)` / `diff(x^4, x, 2)` | 厳密記号微分（積の微分・商の微分・連鎖律、任意階数 $n$ 次微分対応） |
 | `integrate` | `integrate(x^2, x)` / `integrate(sin(x), x, 0, pi)` | 厳密不定積分（原始関数導出）および区間 $[a, b]$ による厳密定積分 |
 | `limit` | `limit(sin(x)/x, x, 0)` / `limit(1/x, x, 0, 1)` | 厳密記号極限（$0/0$, $\infty/\infty$ の不定形解消、因数約分、ロピタルの定理、最高次数比較、片側極限） |
+| `dsolve` | `dsolve(diff(y, x) == y, y, x)` / `dsolve(diff(y, x, 2) + 4*y == 0, y, x)` | 記号常微分方程式ソルバー（1階線形・変数分離形積分因子法、2階定数係数線形斉次・未定係数法特解による厳密求解） |
 | `taylor` | `taylor(f, x, a, n)` | テイラー展開・マクローリン展開（点 $x=a$ まわりで $n$ 次まで展開） |
 | `sum` | `sum(expr, k, start, end)` | 離散和（有限整数範囲の合算、または Faulhaber 公式による $n$ に関する多項式閉形式） |
 
@@ -593,6 +595,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `asin`, `acos`, `atan` | `asin(1/2)` | Inverse trigonometric functions (exact values for special angles, principal branch) |
 | `trig_expand` | `trig_expand(sin(x+y))` / `trig_expand(sin(2*x))` | Expands trigonometric functions using addition theorems and multiple-angle formulas |
 | `trig_reduce` | `trig_reduce(sin(x)^2)` / `trig_reduce(sin(x)+cos(x))` | Reduces powers (half-angle), products to sums, and harmonic linear combinations |
+| `exp` | `exp(x)` | Natural exponential function ($e^x$ exact symbolic representation with exponential multiplication rules) |
 | `log` | `log(x)` / `log(base, x)` | Common logarithm (base 10) and arbitrary base logarithm |
 | `ln` | `ln(x)` | Natural logarithm (base $e$) |
 | `arg` | `arg(z)` | Exact principal complex argument $\theta \in (-\pi, \pi]$ |
@@ -600,11 +603,13 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `polar_exp` | `polar_exp(1 + i)` | Exponential polar conversion $r e^{i\theta}$ via Euler's formula |
 | `rect` | `rect(sqrt(2), pi/4)` | Converts polar form $(r, \theta)$ to rectangular form $a + bi$ |
 
-##### 3. Calculus & Discrete Summation
+##### 3. Calculus, Differential Equations & Discrete Summation
 | Function | Syntax & Example | Description |
 | :--- | :--- | :--- |
-| `diff` | `diff(sin(x)*x, x)` | Exact symbolic differentiation (Product, Quotient, and Chain rules) |
+| `diff` | `diff(sin(x)*x, x)` / `diff(x^4, x, 2)` | Exact symbolic differentiation (Product, Quotient, Chain rules, and higher-order derivatives) |
 | `integrate` | `integrate(x^2, x)` / `integrate(sin(x), x, 0, pi)` | Exact symbolic indefinite integration and definite integration over $[a, b]$ |
+| `limit` | `limit(sin(x)/x, x, 0)` / `limit(1/x, x, 0, 1)` | Exact symbolic limit computation (indeterminate forms, factoring, L'Hopital's rule, one-sided limits) |
+| `dsolve` | `dsolve(diff(y, x) == y, y, x)` / `dsolve(diff(y, x, 2) + 4*y == 0, y, x)` | Symbolic ODE solver (1st-order linear via integrating factor, 2nd-order linear with constant coefficients and undetermined coefficients) |
 | `taylor` | `taylor(f, x, a, n)` | Taylor / Maclaurin series expansion around $x=a$ up to order $n$ |
 | `sum` | `sum(expr, k, start, end)` | Discrete summation (finite sum or exact polynomial closed form via Faulhaber formula) |
 

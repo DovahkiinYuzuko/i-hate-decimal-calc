@@ -19,6 +19,8 @@ const (
 )
 
 var precedences = map[TokenType]int{
+	TokenEQ:       PREC_RELATIONAL,
+	TokenAssign:   PREC_RELATIONAL,
 	TokenGT:       PREC_RELATIONAL,
 	TokenLT:       PREC_RELATIONAL,
 	TokenGTE:      PREC_RELATIONAL,
@@ -241,7 +243,7 @@ func (p *Parser) parsePrefix() (Node, error) {
 
 func (p *Parser) parseInfix(left Node) (Node, error) {
 	switch p.curTok.Type {
-	case TokenGT, TokenLT, TokenGTE, TokenLTE:
+	case TokenEQ, TokenAssign, TokenGT, TokenLT, TokenGTE, TokenLTE:
 		op := p.curTok.Literal
 		p.nextToken()
 		right, err := p.ParseExpression(PREC_RELATIONAL)

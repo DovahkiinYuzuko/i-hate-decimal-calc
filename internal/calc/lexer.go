@@ -32,6 +32,7 @@ const (
 	TokenLT
 	TokenGTE
 	TokenLTE
+	TokenEQ
 )
 
 // Token represents a single lexical token.
@@ -143,8 +144,15 @@ func (l *Lexer) NextToken() Token {
 			l.readChar()
 		}
 	case '=':
-		tok = Token{Type: TokenAssign, Literal: "=", Pos: startPos}
-		l.readChar()
+		if l.peekChar() == '=' {
+			ch := l.ch
+			l.readChar()
+			tok = Token{Type: TokenEQ, Literal: string(ch) + string(l.ch), Pos: startPos}
+			l.readChar()
+		} else {
+			tok = Token{Type: TokenAssign, Literal: "=", Pos: startPos}
+			l.readChar()
+		}
 	case '[':
 		tok = Token{Type: TokenLBracket, Literal: "[", Pos: startPos}
 		l.readChar()

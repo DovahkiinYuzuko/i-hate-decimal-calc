@@ -100,6 +100,13 @@ func init() {
 		MaxArgs: 1,
 	})
 
+	// Exponential & Logarithmic
+	RegisterFunction(FunctionSpec{
+		Name:    "exp",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+
 	// Trigonometric & Hyperbolic
 	RegisterFunction(FunctionSpec{
 		Name:    "sin",
@@ -305,7 +312,7 @@ func init() {
 	RegisterFunction(FunctionSpec{
 		Name:    "diff",
 		MinArgs: 2,
-		MaxArgs: 2,
+		MaxArgs: 3,
 	})
 	RegisterFunction(FunctionSpec{
 		Name:    "solve",
@@ -529,5 +536,12 @@ func init() {
 		Name:    "together",
 		MinArgs: 1,
 		MaxArgs: 1,
+	})
+
+	// Differential Equations Pack
+	RegisterFunction(FunctionSpec{
+		Name:    "dsolve",
+		MinArgs: 1,
+		MaxArgs: 3,
 	})
 }

@@ -92,6 +92,9 @@ func EvalWithEnv(n Node, env *Env) (Node, error) {
 		return simplifySqrtWithEnv(rad, env)
 
 	case *FuncNode:
+		if v.Name == "dsolve" {
+			return evalDSolveSpecial(v.Args, env)
+		}
 		evaledArgs := make([]Node, len(v.Args))
 		for i, a := range v.Args {
 			ea, err := EvalWithEnv(a, env)
@@ -523,6 +526,12 @@ func simplifyFuncWithEnv(name string, args []Node, env *Env) (Node, error) {
 		}
 		return NewFunc(name, args)
 
+	case "exp":
+		if isZero(args[0]) {
+			return mustRational(1, 1), nil
+		}
+		return NewFunc(name, args)
+
 	case "ln":
 		arg := args[0]
 		if c, ok := arg.(*ConstNode); ok && c.Name == "e" {
@@ -839,7 +848,26 @@ func simplifyFuncWithEnv(name string, args []Node, env *Env) (Node, error) {
 		} else {
 			return nil, fmt.Errorf("diff error: second argument must be a variable name, got %s", args[1].String())
 		}
+		if len(args) == 3 {
+			r, ok := args[2].(*RationalNode)
+			if !ok || !r.Val.IsInt() || r.Val.Sign() < 0 {
+				return nil, fmt.Errorf("diff error: third argument must be a non-negative integer, got %s", args[2].String())
+			}
+			order := r.Val.Num().Int64()
+			res := args[0]
+			for k := int64(0); k < order; k++ {
+				var err error
+				res, err = differentiate(res, varName)
+				if err != nil {
+					return nil, err
+				}
+			}
+			return res, nil
+		}
 		return differentiate(args[0], varName)
+
+	case "dsolve":
+		return evalDSolveSpecial(args, env)
 
 	case "solve":
 		varName := "x"
@@ -978,3 +1006,27 @@ func simplifyFuncWithEnv(name string, args []Node, env *Env) (Node, error) {
 		return nil, fmt.Errorf("unknown function: %s", name)
 	}
 }
+
+// evalDSolveSpecial extracts arguments for dsolve without evaluating the first argument eagerly.
+func evalDSolveSpecial(args []Node, env *Env) (Node, error) {
+	if len(args) < 1 || len(args) > 3 {
+		return nil, fmt.Errorf("dsolve requires 1 to 3 arguments, got %d", len(args))
+	}
+	var yName, xName string
+	if len(args) >= 2 {
+		if vy, ok := args[1].(*VarNode); ok {
+			yName = vy.Name
+		} else {
+			return nil, fmt.Errorf("dsolve error: second argument must be a variable name, got %s", args[1].String())
+		}
+	}
+	if len(args) >= 3 {
+		if vx, ok := args[2].(*VarNode); ok {
+			xName = vx.Name
+		} else {
+			return nil, fmt.Errorf("dsolve error: third argument must be a variable name, got %s", args[2].String())
+		}
+	}
+	return EvalDSolve(args[0], yName, xName, env)
+}
+

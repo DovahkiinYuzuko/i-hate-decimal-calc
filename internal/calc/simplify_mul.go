@@ -203,6 +203,30 @@ func simplifyMul(factors []Node) (Node, error) {
 		return simplifyMul(all)
 	}
 
+	// Merge exp(...) factors: exp(A) * exp(B) -> exp(A + B)
+	var nonExpFactors []Node
+	var expArgs []Node
+	for _, f := range finalFactors {
+		if fn, ok := f.(*FuncNode); ok && fn.Name == "exp" && len(fn.Args) == 1 {
+			expArgs = append(expArgs, fn.Args[0])
+		} else {
+			nonExpFactors = append(nonExpFactors, f)
+		}
+	}
+	if len(expArgs) > 1 {
+		sumArg, err := simplifyAdd(expArgs)
+		if err == nil {
+			if isZero(sumArg) {
+				finalFactors = nonExpFactors
+			} else {
+				mergedExp, err := simplifyFuncWithEnv("exp", []Node{sumArg}, nil)
+				if err == nil {
+					finalFactors = append(nonExpFactors, mergedExp)
+				}
+			}
+		}
+	}
+
 	// Merge powers of identical bases (e.g. pi * pi^-1 -> 1, x^2 * x^3 -> x^5)
 	var mergedFactors []Node
 	type baseEntry struct {
