@@ -561,4 +561,27 @@ func init() {
 		MinArgs: 1,
 		MaxArgs: 1,
 	})
+
+	// Eigenvalues, Eigenvectors & Trace Pack (issue-49)
+	RegisterFunction(FunctionSpec{
+		Name:    "eigenvals",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "eigenvects",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "trace",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "tr",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
 }
+
