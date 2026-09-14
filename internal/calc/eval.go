@@ -960,7 +960,41 @@ func simplifyFuncWithEnv(name string, args []Node, env *Env) (Node, error) {
 	case "solve_linear", "linsolve":
 		return evalSolveLinear(args[0], args[1])
 
+	case "trace", "tr":
+		evaled, err := Eval(args[0])
+		if err != nil {
+			return nil, err
+		}
+		mat, ok := evaled.(*MatrixNode)
+		if !ok {
+			return nil, fmt.Errorf("trace error: argument must be a matrix, got %s", args[0].String())
+		}
+		return EvalTrace(mat, env)
+
+	case "eigenvals":
+		evaled, err := Eval(args[0])
+		if err != nil {
+			return nil, err
+		}
+		mat, ok := evaled.(*MatrixNode)
+		if !ok {
+			return nil, fmt.Errorf("eigenvals error: argument must be a matrix, got %s", args[0].String())
+		}
+		return EvalEigenvals(mat, env)
+
+	case "eigenvects":
+		evaled, err := Eval(args[0])
+		if err != nil {
+			return nil, err
+		}
+		mat, ok := evaled.(*MatrixNode)
+		if !ok {
+			return nil, fmt.Errorf("eigenvects error: argument must be a matrix, got %s", args[0].String())
+		}
+		return EvalEigenvects(mat, env)
+
 	case "cfrac":
+
 		return evalCFrac(args[0])
 
 	case "from_cfrac":

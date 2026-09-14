@@ -279,6 +279,9 @@ ihd "plot(sin(x), [-pi, pi])"
 | `transpose` | `transpose(A)` | 行列の転置（行と列の反転） |
 | `rref` | `rref(A)` | 行簡約階段形（Reduced Row Echelon Form。Bareiss整数除算アルゴリズム） |
 | `rank` | `rank(A)` | 行列の厳密な階数（ピボット列数） |
+| `trace` / `tr` | `trace(A)`, `tr(A)` | 行列のトレース（主対角成分の総和 $\sum_{i=1}^n A_{i,i}$） |
+| `eigenvals` | `eigenvals(A)` | 厳密固有値解析（Faddeev-LeVerrier法による特性多項式導出と有理根・代数方程式ソルバーによる厳密解リスト） |
+| `eigenvects` | `eigenvects(A)` | 厳密固有ベクトル解析（各固有値に対する $(\lambda I - A)$ のRREF零空間基底ベクトル抽出、重複度・整数比正規化） |
 | `solve_linear` / `linsolve` | `solve_linear(A, b)` | 連立一次方程式 $Ax=b$ の厳密解（一意解、不能判定、自由変数 $x_i$ を含む一般解） |
 | `dot`, `cross` | `dot(u, v)`, `cross(u, v)` | ベクトルの内積・3次元ベクトルの外積 |
 | `norm` | `norm(v)` | ベクトルのユークリッドノルム（$\sqrt{\sum v_i^2}$、根号自動簡約） |
