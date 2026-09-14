@@ -496,4 +496,26 @@ func init() {
 		MinArgs: 0,
 		MaxArgs: 0,
 	})
+
+	// Number Theory & Modular Arithmetic Pack
+	RegisterFunction(FunctionSpec{
+		Name:    "inv_mod",
+		MinArgs: 2,
+		MaxArgs: 2,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "crt",
+		MinArgs: 2,
+		MaxArgs: -1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "totient",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "is_prime",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
 }

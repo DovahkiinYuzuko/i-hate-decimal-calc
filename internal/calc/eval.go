@@ -921,6 +921,18 @@ func simplifyFuncWithEnv(name string, args []Node, env *Env) (Node, error) {
 	case "plot":
 		return EvalPlot(args)
 
+	case "inv_mod":
+		return EvalInvMod(args[0], args[1])
+
+	case "crt":
+		return EvalCRT(args)
+
+	case "totient":
+		return EvalTotient(args[0])
+
+	case "is_prime":
+		return EvalIsPrime(args[0])
+
 	default:
 		return nil, fmt.Errorf("unknown function: %s", name)
 	}
