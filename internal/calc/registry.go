@@ -518,4 +518,16 @@ func init() {
 		MinArgs: 1,
 		MaxArgs: 1,
 	})
+
+	// Rational Functions Pack
+	RegisterFunction(FunctionSpec{
+		Name:    "apart",
+		MinArgs: 1,
+		MaxArgs: 2,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "together",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
 }

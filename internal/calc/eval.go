@@ -792,6 +792,21 @@ func simplifyFuncWithEnv(name string, args []Node, env *Env) (Node, error) {
 	case "expand":
 		return expandNode(args[0]), nil
 
+	case "apart":
+		if len(args) == 1 {
+			return EvalApart(args[0])
+		}
+		varName := ""
+		if v, ok := args[1].(*VarNode); ok {
+			varName = v.Name
+		} else {
+			return nil, fmt.Errorf("apart error: second argument must be a variable name, got %s", args[1].String())
+		}
+		return EvalApart(args[0], varName)
+
+	case "together":
+		return EvalTogether(args[0])
+
 	case "trig_expand":
 		return EvalTrigExpand(args[0], env)
 
