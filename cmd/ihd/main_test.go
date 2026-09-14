@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -297,5 +299,81 @@ func TestCLI_REPL_CaseInsensitiveCommands(t *testing.T) {
 		t.Errorf("expected Vars output to contain 'x = 10', got %q", output)
 	}
 }
+
+func TestCLI_RunScriptFile(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// 1. Basic script with variables and semicolon suppression
+	scriptContent := `# Sample script
+x = 1/2;
+y = sqrt(2); # inline comment
+x + 1
+y * 2
+`
+	scriptPath := filepath.Join(tmpDir, "sample.ihd")
+	if err := os.WriteFile(scriptPath, []byte(scriptContent), 0644); err != nil {
+		t.Fatalf("failed writing test script: %v", err)
+	}
+
+	// Test with "run" subcommand: ihd run sample.ihd
+	out := new(bytes.Buffer)
+	errOut := new(bytes.Buffer)
+	code := run([]string{"run", scriptPath}, strings.NewReader(""), out, errOut)
+	if code != 0 {
+		t.Fatalf("expected exit code 0, got %d. stderr: %s", code, errOut.String())
+	}
+	lines := strings.Split(strings.TrimSpace(out.String()), "\n")
+	expected := []string{"3/2", "2*√2"}
+	if len(lines) != len(expected) {
+		t.Fatalf("expected %d lines, got %d: %v", len(expected), len(lines), lines)
+	}
+	for i, exp := range expected {
+		if strings.TrimSpace(lines[i]) != exp {
+			t.Errorf("line %d: expected %q, got %q", i, exp, strings.TrimSpace(lines[i]))
+		}
+	}
+
+	// Test with direct invocation: ihd sample.ihd
+	outDirect := new(bytes.Buffer)
+	errOutDirect := new(bytes.Buffer)
+	codeDirect := run([]string{scriptPath}, strings.NewReader(""), outDirect, errOutDirect)
+	if codeDirect != 0 {
+		t.Fatalf("direct invocation expected exit code 0, got %d. stderr: %s", codeDirect, errOutDirect.String())
+	}
+	if strings.TrimSpace(outDirect.String()) != strings.TrimSpace(out.String()) {
+		t.Errorf("direct invocation output mismatch: expected %q, got %q", out.String(), outDirect.String())
+	}
+
+	// 2. Script with line number error reporting
+	errScriptContent := `# Line 1 comment
+a = 10;
+b = 0;
+a / b
+`
+	errScriptPath := filepath.Join(tmpDir, "error.ihd")
+	if err := os.WriteFile(errScriptPath, []byte(errScriptContent), 0644); err != nil {
+		t.Fatalf("failed writing test script: %v", err)
+	}
+
+	outErr := new(bytes.Buffer)
+	errOutErr := new(bytes.Buffer)
+	codeErr := run([]string{"run", errScriptPath}, strings.NewReader(""), outErr, errOutErr)
+	if codeErr == 0 {
+		t.Errorf("expected error exit code 1, got 0")
+	}
+	errStr := errOutErr.String()
+	if !strings.Contains(errStr, "error.ihd:4:") || !strings.Contains(errStr, "division by zero") {
+		t.Errorf("expected line number 4 and zero division in stderr, got %q", errStr)
+	}
+
+	// 3. Non-existent script file
+	outNotFound := new(bytes.Buffer)
+	errOutNotFound := new(bytes.Buffer)
+	codeNotFound := run([]string{"run", filepath.Join(tmpDir, "non_existent.ihd")}, strings.NewReader(""), outNotFound, errOutNotFound)
+	if codeNotFound == 0 {
+		t.Errorf("expected error exit code 1 for non-existent file, got 0")
+	}
+}
+
 
 
