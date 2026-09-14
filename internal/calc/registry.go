@@ -583,5 +583,18 @@ func init() {
 		MinArgs: 1,
 		MaxArgs: 1,
 	})
+
+	// Multivariate Polynomial GCD & LCM Pack (issue-50)
+	RegisterFunction(FunctionSpec{
+		Name:    "poly_gcd",
+		MinArgs: 2,
+		MaxArgs: 3,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "poly_lcm",
+		MinArgs: 2,
+		MaxArgs: 3,
+	})
 }
+
 
