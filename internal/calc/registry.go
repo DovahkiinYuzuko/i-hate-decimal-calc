@@ -322,6 +322,20 @@ func init() {
 		MinArgs: 4,
 		MaxArgs: 4,
 	})
+	RegisterFunction(FunctionSpec{
+		Name:    "limit",
+		MinArgs: 3,
+		MaxArgs: 4,
+		Validate: func(args []Node) error {
+			if len(args) != 3 && len(args) != 4 {
+				return fmt.Errorf("limit requires 3 arguments (expr, var, target) or 4 arguments (expr, var, target, direction), got %d", len(args))
+			}
+			if _, ok := args[1].(*VarNode); !ok {
+				return fmt.Errorf("limit error: second argument must be a variable name, got %s", args[1].String())
+			}
+			return nil
+		},
+	})
 
 	// Linear Algebra
 	RegisterFunction(FunctionSpec{

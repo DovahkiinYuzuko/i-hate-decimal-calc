@@ -74,5 +74,13 @@
     "asymptote": "* 漸近線 (Asymptote): x = %s (不連続分離)\n",
     "no_features": "* 特異点・極値なし（単調・滑らかな曲線）\n",
     "domain": "* 表示領域 (Domain):  x ∈ [%s, %s], y ∈ [%s, %s]\n"
+  },
+  "explain": {
+    "rule_limit": "極限値計算・不定形の代数解消",
+    "limit_inf": "無限大極限: lim_{%s->%s} %s = %s",
+    "limit_eval": "極限値計算: lim_{%s->%s} %s = %s",
+    "limit_cancel_factor": "因数分解による特異点 (%s - %s) の約分消去",
+    "limit_lhopital": "ロピタルの定理適用: (d/d%s [%s]) / (d/d%s [%s]) = (%s) / (%s)",
+    "limit_lhopital_inf": "無限大ロピタルの定理適用: (%s) / (%s)"
   }
 }

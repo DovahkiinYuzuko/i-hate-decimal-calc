@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
 // RuleID identifies a specific algebraic term-rewriting rule or algorithm.
@@ -25,6 +27,7 @@ const (
 	RuleIntegrate      RuleID = "Integrate"
 	RuleTrigExpand     RuleID = "TrigExpand"
 	RuleTrigReduce     RuleID = "TrigReduce"
+	RuleLimit          RuleID = "Limit"
 )
 
 // RewriteEvent records an atomic term-rewriting step.
@@ -133,6 +136,7 @@ var ruleTitles = map[RuleID]string{
 	RuleIntegrate:      "記号不定積分・定積分の計算",
 	RuleTrigExpand:     "三角関数の加法定理・多倍角展開",
 	RuleTrigReduce:     "積和公式・次数下げ・三角関数の合成",
+	RuleLimit:          "極限値計算・不定形の代数解消",
 }
 
 // CompressTrace converts low-level rewrite events into user-facing pedagogical steps.
@@ -141,9 +145,14 @@ func CompressTrace(events []RewriteEvent) []PedagogicalStep {
 	stepNum := 1
 
 	for _, ev := range events {
-		title, ok := ruleTitles[ev.Rule]
-		if !ok {
-			title = string(ev.Rule)
+		key := "explain.rule_" + strings.ToLower(string(ev.Rule))
+		title := i18n.T(key)
+		if title == key {
+			if t, ok := ruleTitles[ev.Rule]; ok {
+				title = t
+			} else {
+				title = string(ev.Rule)
+			}
 		}
 
 		steps = append(steps, PedagogicalStep{
