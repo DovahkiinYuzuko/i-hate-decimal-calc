@@ -12,8 +12,7 @@ func BenchmarkTaylorSeries(b *testing.B) {
 	}
 	node := expr.(Node)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := Eval(node)
 		if err != nil {
 			b.Fatalf("eval error: %v", err)
@@ -29,8 +28,7 @@ func BenchmarkBareissLinearSolver(b *testing.B) {
 	}
 	node := expr.(Node)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := Eval(node)
 		if err != nil {
 			b.Fatalf("eval error: %v", err)
@@ -52,8 +50,7 @@ func BenchmarkContinuedFractions(b *testing.B) {
 	}
 	node2 := expr2.(Node)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := Eval(node1)
 		if err != nil {
 			b.Fatalf("eval error: %v", err)
@@ -73,8 +70,7 @@ func BenchmarkRadicalDenesting(b *testing.B) {
 	}
 	node := expr.(Node)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := Eval(node)
 		if err != nil {
 			b.Fatalf("eval error: %v", err)
@@ -102,8 +98,7 @@ func BenchmarkNumberTheory(b *testing.B) {
 	}
 	nodeInv := exprInv.(Node)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, _ = Eval(nodeCRT)
 		_, _ = Eval(nodePrime)
 		_, _ = Eval(nodeInv)
@@ -118,8 +113,7 @@ func BenchmarkPolynomialExpansion(b *testing.B) {
 	}
 	node := expr.(Node)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := Eval(node)
 		if err != nil {
 			b.Fatalf("eval error: %v", err)
@@ -135,8 +129,7 @@ func BenchmarkPlotter(b *testing.B) {
 	}
 	node := expr.(Node)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := Eval(node)
 		if err != nil {
 			b.Fatalf("eval error: %v", err)

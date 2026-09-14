@@ -23,14 +23,16 @@ func init() {
 // mustRational creates a RationalNode directly for guaranteed non-zero denominators,
 // reusing cached singletons for common small integers and fractions.
 func mustRational(num, denom int64) *RationalNode {
-	if denom == 1 {
+	switch denom {
+	case 1:
 		if num >= -10 && num <= 10 {
 			return rationalIntCacheSmall[num+10]
 		}
-	} else if denom == 2 {
-		if num == 1 {
+	case 2:
+		switch num {
+		case 1:
 			return rationalHalfPositive
-		} else if num == -1 {
+		case -1:
 			return rationalHalfNegative
 		}
 	}
