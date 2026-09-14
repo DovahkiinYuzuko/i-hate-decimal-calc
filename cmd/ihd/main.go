@@ -91,7 +91,24 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 	}
 
 	if len(exprArgs) > 0 {
-		// One-shot mode: join all non-flag arguments as the expression
+		// 1. Explicit 'run' subcommand: ihd run <file.ihd> [flags]
+		if exprArgs[0] == "run" {
+			if len(exprArgs) < 2 {
+				fmt.Fprintf(errOut, "%srun requires a script file path: ihd run <file.ihd>\n", i18n.T("cli.error_prefix"))
+				return 1
+			}
+			return runScriptFile(exprArgs[1], ro, out, errOut)
+		}
+
+		// 2. Direct script file invocation: ihd <file.ihd> [flags]
+		if len(exprArgs) == 1 {
+			target := exprArgs[0]
+			if info, err := os.Stat(target); err == nil && !info.IsDir() && strings.HasSuffix(strings.ToLower(target), ".ihd") {
+				return runScriptFile(target, ro, out, errOut)
+			}
+		}
+
+		// 3. One-shot mode: join all non-flag arguments as the expression
 		expr := strings.Join(exprArgs, " ")
 		if err := evaluateLine(expr, ro, out, errOut); err != nil {
 			return 1
@@ -227,3 +244,138 @@ func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut 
 		return err
 	}
 }
+
+func runScriptFile(filePath string, ro runOptions, out, errOut io.Writer) int {
+	file, err := os.Open(filePath)
+	if err != nil {
+		fmt.Fprintf(errOut, "%sfailed to open script file '%s': %v\n", i18n.T("cli.error_prefix"), filePath, err)
+		return 1
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	env := calc.NewEnv()
+	lineNum := 0
+	hadError := false
+
+	for scanner.Scan() {
+		lineNum++
+		rawLine := scanner.Text()
+		line := strings.TrimSpace(rawLine)
+
+		// Skip empty lines
+		if line == "" {
+			continue
+		}
+
+		// Skip comment lines (#)
+		if strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		// Strip inline comment (e.g. "x = 1/2; # comment")
+		if idx := strings.Index(line, "#"); idx != -1 {
+			line = strings.TrimSpace(line[:idx])
+			if line == "" {
+				continue
+			}
+		}
+
+		// Check for output suppression via trailing semicolon ';'
+		suppressOutput := false
+		if strings.HasSuffix(line, ";") {
+			suppressOutput = true
+			line = strings.TrimSpace(strings.TrimSuffix(line, ";"))
+			if line == "" {
+				continue
+			}
+		}
+
+		if err := executeScriptLine(line, ro, env, suppressOutput, out, errOut, filePath, lineNum); err != nil {
+			hadError = true
+			break
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		fmt.Fprintf(errOut, "%sfailed reading script file '%s': %v\n", i18n.T("cli.error_prefix"), filePath, err)
+		return 1
+	}
+
+	if hadError {
+		return 1
+	}
+	return 0
+}
+
+func executeScriptLine(line string, ro runOptions, env *calc.Env, suppressOutput bool, out, errOut io.Writer, filePath string, lineNum int) error {
+	lowerLine := strings.ToLower(line)
+	if strings.HasPrefix(lowerLine, "explain ") || strings.HasPrefix(lowerLine, "steps ") {
+		parts := strings.SplitN(line, " ", 2)
+		ro.explain = true
+		line = strings.TrimSpace(parts[1])
+	}
+
+	parsed, err := calc.ParseStatement(line)
+	if err != nil {
+		fmt.Fprintf(errOut, "%s:%d: %v\n", filePath, lineNum, err)
+		return err
+	}
+
+	if ro.deg {
+		parsed = calc.ApplyDegreeModeToStatement(parsed)
+	}
+
+	switch v := parsed.(type) {
+	case *calc.AssignStmt:
+		var evaled calc.Node
+		var steps []calc.PedagogicalStep
+		if ro.explain {
+			evaled, steps, err = calc.EvalWithTraceAndEnv(v.Value, env)
+		} else {
+			evaled, err = calc.EvalWithEnv(v.Value, env)
+		}
+		if err != nil {
+			fmt.Fprintf(errOut, "%s:%d: %v\n", filePath, lineNum, err)
+			return err
+		}
+		env.Set(v.Name, evaled)
+		env.Set("ans", evaled)
+		if !suppressOutput {
+			if ro.explain {
+				fmt.Fprint(out, calc.FormatTrace(line, steps, evaled))
+			} else {
+				fmt.Fprintln(out, formatOutput(evaled, ro))
+			}
+		}
+		return nil
+
+	case calc.Node:
+		var evaled calc.Node
+		var steps []calc.PedagogicalStep
+		if ro.explain {
+			evaled, steps, err = calc.EvalWithTraceAndEnv(v, env)
+		} else {
+			evaled, err = calc.EvalWithEnv(v, env)
+		}
+		if err != nil {
+			fmt.Fprintf(errOut, "%s:%d: %v\n", filePath, lineNum, err)
+			return err
+		}
+		env.Set("ans", evaled)
+		if !suppressOutput {
+			if ro.explain {
+				fmt.Fprint(out, calc.FormatTrace(line, steps, evaled))
+			} else {
+				fmt.Fprintln(out, formatOutput(evaled, ro))
+			}
+		}
+		return nil
+
+	default:
+		err := fmt.Errorf("unknown statement type: %T", parsed)
+		fmt.Fprintf(errOut, "%s:%d: %v\n", filePath, lineNum, err)
+		return err
+	}
+}
+

@@ -106,7 +106,26 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
 # 1 + 2*√2
 ```
 
-#### 4. 日本語IMEの全角自動正規化
+#### 4. スクリプトファイルのバッチ実行（`ihd run <file.ihd>`）
+複数行の数式や変数定義を記述した `.ihd` テキストファイルを一括実行できます。末尾にセミコロン `;` を付与した行は評価・変数代入を行いつつ結果の出力を抑制します（MATLAB / Julia 等のCASスクリプト準拠）。エラー発生時はファイル名と行番号が表示されます。
+
+```bash
+# sample.ihd の内容:
+# a = 1/2;   # セミコロンで行末出力を抑制
+# b = sqrt(8);
+# a + 1
+# b * 3
+
+ihd run sample.ihd
+# または直接指定:
+ihd sample.ihd
+
+# 出力:
+# 3/2
+# 6*√2
+```
+
+#### 5. 日本語IMEの全角自動正規化
 日本語IMEがONのまま入力された全角文字（数字、英字、`＋` `−` `×` `÷` `＾` `！` `＝`、全角括弧、全角スペース等）は自動的に半角ASCIIへ透過変換されるため、入力モードを切り替えるストレスなく計算できます。
 
 ```bash
@@ -430,7 +449,26 @@ printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
 # 1 + 2*√2
 ```
 
-#### 4. Full-width (Zenkaku) Normalization
+#### 4. Script File Batch Execution (`ihd run <file.ihd>`)
+Execute `.ihd` text files containing multi-line variable definitions and calculations. Lines ending with a semicolon `;` suppress output display while still persisting variables (standard in CAS environments like MATLAB / Julia). Runtime and domain errors report exact file names and line numbers.
+
+```bash
+# Content of sample.ihd:
+# a = 1/2;   # Trailing semicolon suppresses line output
+# b = sqrt(8);
+# a + 1
+# b * 3
+
+ihd run sample.ihd
+# Or direct file invocation:
+ihd sample.ihd
+
+# Output:
+# 3/2
+# 6*√2
+```
+
+#### 5. Full-width (Zenkaku) Normalization
 Automatically normalizes full-width digits, letters, operators (`＋`, `−`, `×`, `÷`, `＾`, `！`, `＝`), parentheses, and spaces to half-width ASCII across all execution modes:
 
 ```bash
