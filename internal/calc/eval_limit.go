@@ -3,6 +3,8 @@ package calc
 import (
 	"fmt"
 	"math/big"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
 // -------------------------------------------------------------------------
@@ -48,7 +50,7 @@ func EvalLimit(expr Node, varNode Node, target Node, dirNode Node) (Node, error)
 		if err != nil {
 			return nil, err
 		}
-		RecordTraceRewrite(RuleLimit, expr, res, fmt.Sprintf("無限大極限: lim_{%s->%s} %s = %s", varName, target.String(), expr.String(), res.String()))
+		RecordTraceRewrite(RuleLimit, expr, res, i18n.T("explain.limit_inf", varName, target.String(), expr.String(), res.String()))
 		return res, nil
 	}
 
@@ -57,7 +59,7 @@ func EvalLimit(expr Node, varNode Node, target Node, dirNode Node) (Node, error)
 	if err != nil {
 		return nil, err
 	}
-	RecordTraceRewrite(RuleLimit, expr, res, fmt.Sprintf("極限値計算: lim_{%s->%s} %s = %s", varName, target.String(), expr.String(), res.String()))
+	RecordTraceRewrite(RuleLimit, expr, res, i18n.T("explain.limit_eval", varName, target.String(), expr.String(), res.String()))
 	return res, nil
 }
 
@@ -121,7 +123,7 @@ func evalFiniteLimit(expr Node, varName string, a Node, dir int, depth int) (Nod
 		// 3.1 Try polynomial division / factor cancellation by (x - a)
 		cancelledExpr, cancelled := tryCancelLinearFactor(num, den, varName, a)
 		if cancelled {
-			RecordTraceRewrite(RuleLimit, expr, cancelledExpr, fmt.Sprintf("因数分解による特異点 (%s - %s) の約分消去", varName, a.String()))
+			RecordTraceRewrite(RuleLimit, expr, cancelledExpr, i18n.T("explain.limit_cancel_factor", varName, a.String()))
 			return evalFiniteLimit(cancelledExpr, varName, a, dir, depth+1)
 		}
 
@@ -131,7 +133,7 @@ func evalFiniteLimit(expr Node, varName string, a Node, dir int, depth int) (Nod
 		if errD1 == nil && errD2 == nil && !isZero(dDen) {
 			invDDen, _ := simplifyPow(dDen, mustRational(-1, 1))
 			lhopitalExpr, _ := simplifyMul([]Node{dNum, invDDen})
-			RecordTraceRewrite(RuleLimit, expr, lhopitalExpr, fmt.Sprintf("ロピタルの定理適用: (d/d%s [%s]) / (d/d%s [%s]) = (%s) / (%s)", varName, num.String(), varName, den.String(), dNum.String(), dDen.String()))
+			RecordTraceRewrite(RuleLimit, expr, lhopitalExpr, i18n.T("explain.limit_lhopital", varName, num.String(), varName, den.String(), dNum.String(), dDen.String()))
 			return evalFiniteLimit(lhopitalExpr, varName, a, dir, depth+1)
 		}
 	}
@@ -215,7 +217,7 @@ func evalInfiniteLimit(expr Node, varName string, sign int, depth int) (Node, er
 	if errD1 == nil && errD2 == nil && !isZero(dDen) {
 		invDDen, _ := simplifyPow(dDen, mustRational(-1, 1))
 		lhopitalExpr, _ := simplifyMul([]Node{dNum, invDDen})
-		RecordTraceRewrite(RuleLimit, expr, lhopitalExpr, fmt.Sprintf("無限大ロピタルの定理適用: (%s) / (%s)", dNum.String(), dDen.String()))
+		RecordTraceRewrite(RuleLimit, expr, lhopitalExpr, i18n.T("explain.limit_lhopital_inf", dNum.String(), dDen.String()))
 		return evalInfiniteLimit(lhopitalExpr, varName, sign, depth+1)
 	}
 

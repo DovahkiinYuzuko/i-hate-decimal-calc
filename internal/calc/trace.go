@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
 // RuleID identifies a specific algebraic term-rewriting rule or algorithm.
@@ -143,9 +145,14 @@ func CompressTrace(events []RewriteEvent) []PedagogicalStep {
 	stepNum := 1
 
 	for _, ev := range events {
-		title, ok := ruleTitles[ev.Rule]
-		if !ok {
-			title = string(ev.Rule)
+		key := "explain.rule_" + strings.ToLower(string(ev.Rule))
+		title := i18n.T(key)
+		if title == key {
+			if t, ok := ruleTitles[ev.Rule]; ok {
+				title = t
+			} else {
+				title = string(ev.Rule)
+			}
 		}
 
 		steps = append(steps, PedagogicalStep{

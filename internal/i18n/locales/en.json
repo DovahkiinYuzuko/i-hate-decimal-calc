@@ -74,5 +74,13 @@
     "asymptote": "* Asymptote:         x = %s (discontinuous)\n",
     "no_features": "* No singularities or extrema (smooth monotonic curve)\n",
     "domain": "* Domain:            x ∈ [%s, %s], y ∈ [%s, %s]\n"
+  },
+  "explain": {
+    "rule_limit": "Limit Computation & Indeterminate Form Resolution",
+    "limit_inf": "Limit at infinity: lim_{%s->%s} %s = %s",
+    "limit_eval": "Limit computation: lim_{%s->%s} %s = %s",
+    "limit_cancel_factor": "Factor cancellation of singularity (%s - %s)",
+    "limit_lhopital": "L'Hopital's rule applied: (d/d%s [%s]) / (d/d%s [%s]) = (%s) / (%s)",
+    "limit_lhopital_inf": "L'Hopital's rule at infinity applied: (%s) / (%s)"
   }
 }
