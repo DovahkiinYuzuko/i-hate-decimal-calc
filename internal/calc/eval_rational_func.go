@@ -15,9 +15,7 @@ func polySub(A, B *univariatePoly) *univariatePoly {
 	for i := 0; i <= maxDeg; i++ {
 		coeffs[i] = mustRational(0, 1)
 	}
-	for i, c := range A.coeffs {
-		coeffs[i] = c
-	}
+	copy(coeffs, A.coeffs)
 	for i, c := range B.coeffs {
 		neg, _ := simplifyUnaryOp("-", c)
 		negVal, _ := Eval(neg)
