@@ -544,4 +544,21 @@ func init() {
 		MinArgs: 1,
 		MaxArgs: 3,
 	})
+
+	// Laplace & Operational Transforms Pack
+	RegisterFunction(FunctionSpec{
+		Name:    "laplace",
+		MinArgs: 1,
+		MaxArgs: 3,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "inv_laplace",
+		MinArgs: 1,
+		MaxArgs: 3,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "delta",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
 }

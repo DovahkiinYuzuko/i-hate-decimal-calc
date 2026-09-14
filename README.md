@@ -266,6 +266,8 @@ ihd "plot(sin(x), [-pi, pi])"
 | `integrate` | `integrate(x^2, x)` / `integrate(sin(x), x, 0, pi)` | 厳密不定積分（原始関数導出）および区間 $[a, b]$ による厳密定積分 |
 | `limit` | `limit(sin(x)/x, x, 0)` / `limit(1/x, x, 0, 1)` | 厳密記号極限（$0/0$, $\infty/\infty$ の不定形解消、因数約分、ロピタルの定理、最高次数比較、片側極限） |
 | `dsolve` | `dsolve(diff(y, x) == y, y, x)` / `dsolve(diff(y, x, 2) + 4*y == 0, y, x)` | 記号常微分方程式ソルバー（1階線形・変数分離形積分因子法、2階定数係数線形斉次・未定係数法特解による厳密求解） |
+| `laplace` | `laplace(sin(2*t), t, s)` / `laplace(exp(3*t)*t^2)` | 記号ラプラス変換 $\mathcal{L}\{f(t)\}$（線形性、多項式・指数・三角関数・減衰振動および周波数シフト則の厳密代数変換） |
+| `inv_laplace` | `inv_laplace(1/(s-3), s, t)` / `inv_laplace(1/(s^2+4))` | 記号逆ラプラス変換 $\mathcal{L}^{-1}\{F(s)\}$（部分分数分解 `apart` と留数極マッチングによる厳密時間領域復元） |
 | `taylor` | `taylor(f, x, a, n)` | テイラー展開・マクローリン展開（点 $x=a$ まわりで $n$ 次まで展開） |
 | `sum` | `sum(expr, k, start, end)` | 離散和（有限整数範囲の合算、または Faulhaber 公式による $n$ に関する多項式閉形式） |
 
@@ -610,6 +612,8 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `integrate` | `integrate(x^2, x)` / `integrate(sin(x), x, 0, pi)` | Exact symbolic indefinite integration and definite integration over $[a, b]$ |
 | `limit` | `limit(sin(x)/x, x, 0)` / `limit(1/x, x, 0, 1)` | Exact symbolic limit computation (indeterminate forms, factoring, L'Hopital's rule, one-sided limits) |
 | `dsolve` | `dsolve(diff(y, x) == y, y, x)` / `dsolve(diff(y, x, 2) + 4*y == 0, y, x)` | Symbolic ODE solver (1st-order linear via integrating factor, 2nd-order linear with constant coefficients and undetermined coefficients) |
+| `laplace` | `laplace(sin(2*t), t, s)` / `laplace(exp(3*t)*t^2)` | Exact symbolic Laplace transform $\mathcal{L}\{f(t)\}$ (linearity, polynomial, exponential, trigonometric, damped oscillation & frequency shifting) |
+| `inv_laplace` | `inv_laplace(1/(s-3), s, t)` / `inv_laplace(1/(s^2+4))` | Exact symbolic inverse Laplace transform $\mathcal{L}^{-1}\{F(s)\}$ (via partial fraction decomposition `apart` and pole matching) |
 | `taylor` | `taylor(f, x, a, n)` | Taylor / Maclaurin series expansion around $x=a$ up to order $n$ |
 | `sum` | `sum(expr, k, start, end)` | Discrete summation (finite sum or exact polynomial closed form via Faulhaber formula) |
 
