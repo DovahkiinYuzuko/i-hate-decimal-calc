@@ -35,9 +35,10 @@ func EvalLimit(expr Node, varNode Node, target Node, dirNode Node) (Node, error)
 				dir = -1
 			}
 		} else if v, ok := dirNode.(*VarNode); ok {
-			if v.Name == "+" || v.Name == "right" {
+			switch v.Name {
+			case "+", "right":
 				dir = 1
-			} else if v.Name == "-" || v.Name == "left" {
+			case "-", "left":
 				dir = -1
 			}
 		}
@@ -390,14 +391,15 @@ func evaluateSingularityLimit(numVal Node, den Node, varName string, a Node, dir
 	numSign := getNodeSign(numVal)
 
 	// Test sign of denominator approaching from right or left
-	if dir == 1 {
+	switch dir {
+	case 1:
 		denSign := probeDenSign(den, varName, a, 1)
 		totalSign := numSign * denSign
 		if totalSign > 0 {
 			return &VarNode{Name: "inf"}, nil
 		}
 		return simplifyUnaryOp("-", &VarNode{Name: "inf"})
-	} else if dir == -1 {
+	case -1:
 		denSign := probeDenSign(den, varName, a, -1)
 		totalSign := numSign * denSign
 		if totalSign > 0 {
@@ -516,12 +518,13 @@ func (p *univariatePoly) toNode() Node {
 		if isZero(c) {
 			continue
 		}
-		if i == 0 {
+		switch i {
+		case 0:
 			terms = append(terms, c)
-		} else if i == 1 {
+		case 1:
 			pNode, _ := simplifyMul([]Node{c, &VarNode{Name: p.varName}})
 			terms = append(terms, pNode)
-		} else {
+		default:
 			pNode, _ := simplifyMul([]Node{c, &PowNode{Base: &VarNode{Name: p.varName}, Exp: mustRational(int64(i), 1)}})
 			terms = append(terms, pNode)
 		}
