@@ -375,5 +375,34 @@ a / b
 	}
 }
 
+func TestCLI_VersionAndNoUpdateCheck(t *testing.T) {
+	t.Setenv("IHD_NO_UPDATE_CHECK", "1")
+
+	// 1. Test -v and --version
+	for _, flag := range []string{"-v", "--version"} {
+		out := new(bytes.Buffer)
+		errOut := new(bytes.Buffer)
+		code := run([]string{flag}, strings.NewReader(""), out, errOut)
+		if code != 0 {
+			t.Errorf("expected exit code 0 for %s, got %d. stderr: %s", flag, code, errOut.String())
+		}
+		if !strings.HasPrefix(strings.TrimSpace(out.String()), "ihd v") {
+			t.Errorf("expected output to start with 'ihd v', got %q", out.String())
+		}
+	}
+
+	// 2. Test --no-update-check flag
+	out := new(bytes.Buffer)
+	errOut := new(bytes.Buffer)
+	code := run([]string{"--no-update-check", "1 + 1"}, strings.NewReader(""), out, errOut)
+	if code != 0 {
+		t.Errorf("expected exit code 0, got %d", code)
+	}
+	if strings.TrimSpace(out.String()) != "2" {
+		t.Errorf("expected '2', got %q", out.String())
+	}
+}
+
+
 
 

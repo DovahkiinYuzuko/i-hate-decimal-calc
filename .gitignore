@@ -24,6 +24,8 @@
 !internal/i18n/*.go
 !internal/i18n/locales/
 !internal/i18n/locales/*.json
+!internal/updater/
+!internal/updater/*.go
 # .gitignores/root.gitignore
 !README.md
 !LICENSE.*

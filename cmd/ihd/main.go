@@ -10,6 +10,7 @@ import (
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc"
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/updater"
 )
 
 func main() {
@@ -18,12 +19,13 @@ func main() {
 }
 
 type runOptions struct {
-	opts       calc.FormatOptions
-	showApprox bool
-	latex      bool
-	pretty     bool
-	deg        bool
-	explain    bool
+	opts          calc.FormatOptions
+	showApprox    bool
+	latex         bool
+	pretty        bool
+	deg           bool
+	explain       bool
+	noUpdateCheck bool
 }
 
 func run(args []string, in io.Reader, out, errOut io.Writer) int {
@@ -46,7 +48,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 			continue
 		}
 		switch a {
-		case "-ascii", "--ascii", "-approx", "--approx", "-latex", "--latex", "-pretty", "--pretty", "-deg", "--deg", "-explain", "--explain", "-h", "--help":
+		case "-ascii", "--ascii", "-approx", "--approx", "-latex", "--latex", "-pretty", "--pretty", "-deg", "--deg", "-explain", "--explain", "-h", "--help", "-v", "--version", "-version", "--no-update-check", "-no-update-check":
 			flagArgs = append(flagArgs, a)
 		default:
 			exprArgs = append(exprArgs, a)
@@ -63,6 +65,9 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 	prettyFlag := fs.Bool("pretty", false, "Output expression using 2D pretty-printed formatting")
 	degFlag := fs.Bool("deg", false, "Use degree mode for trigonometric and inverse trigonometric functions")
 	explainFlag := fs.Bool("explain", false, "Show step-by-step algebraic rewriting explanations")
+	versionFlag := fs.Bool("version", false, "Show version")
+	fs.BoolVar(versionFlag, "v", false, "Show version")
+	noUpdateCheckFlag := fs.Bool("no-update-check", false, "Disable checking for newer releases")
 	helpFlag := fs.Bool("help", false, "Show help")
 	fs.BoolVar(helpFlag, "h", false, "Show help")
 
@@ -81,13 +86,29 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 		return 0
 	}
 
+	if *versionFlag {
+		fmt.Fprintf(out, "ihd %s\n", updater.CurrentVersion)
+		if !*noUpdateCheckFlag && updater.IsUpdateCheckEnabled() {
+			if info, _ := updater.CheckUpdate(false); info != nil {
+				fmt.Fprintln(out)
+				fmt.Fprint(out, updater.FormatNotification(info))
+			}
+		}
+		return 0
+	}
+
+	if *noUpdateCheckFlag {
+		_ = os.Setenv("IHD_NO_UPDATE_CHECK", "1")
+	}
+
 	ro := runOptions{
-		opts:       calc.FormatOptions{AsciiOnly: *asciiFlag},
-		showApprox: *approxFlag,
-		latex:      *latexFlag,
-		pretty:     *prettyFlag,
-		deg:        *degFlag,
-		explain:    *explainFlag,
+		opts:          calc.FormatOptions{AsciiOnly: *asciiFlag},
+		showApprox:    *approxFlag,
+		latex:         *latexFlag,
+		pretty:        *prettyFlag,
+		deg:           *degFlag,
+		explain:       *explainFlag,
+		noUpdateCheck: *noUpdateCheckFlag,
 	}
 
 	if len(exprArgs) > 0 {
