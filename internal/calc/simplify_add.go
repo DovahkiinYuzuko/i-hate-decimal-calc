@@ -17,7 +17,7 @@ type termEntry struct {
 
 func simplifyAdd(terms []Node) (Node, error) {
 	// 1. Flatten nested AddNodes
-	var flatTerms []Node
+	flatTerms := make([]Node, 0, len(terms))
 	for _, t := range terms {
 		if add, ok := t.(*AddNode); ok {
 			flatTerms = append(flatTerms, add.Terms...)

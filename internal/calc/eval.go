@@ -8,8 +8,32 @@ import (
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
-// mustRational creates a RationalNode directly for guaranteed non-zero denominators.
+var (
+	rationalIntCacheSmall [21]*RationalNode // -10 .. 10 (offset +10)
+	rationalHalfPositive  = &RationalNode{Val: big.NewRat(1, 2)}
+	rationalHalfNegative  = &RationalNode{Val: big.NewRat(-1, 2)}
+)
+
+func init() {
+	for i := -10; i <= 10; i++ {
+		rationalIntCacheSmall[i+10] = &RationalNode{Val: big.NewRat(int64(i), 1)}
+	}
+}
+
+// mustRational creates a RationalNode directly for guaranteed non-zero denominators,
+// reusing cached singletons for common small integers and fractions.
 func mustRational(num, denom int64) *RationalNode {
+	if denom == 1 {
+		if num >= -10 && num <= 10 {
+			return rationalIntCacheSmall[num+10]
+		}
+	} else if denom == 2 {
+		if num == 1 {
+			return rationalHalfPositive
+		} else if num == -1 {
+			return rationalHalfNegative
+		}
+	}
 	return &RationalNode{Val: big.NewRat(num, denom)}
 }
 
