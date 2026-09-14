@@ -277,7 +277,22 @@ func (n *MulNode) Type() NodeType { return NodeMul }
 func (n *MulNode) String() string {
 	if len(n.Factors) == 2 {
 		if r, ok := n.Factors[0].(*RationalNode); ok && !r.Val.IsInt() {
-			if r.Val.Num().Cmp(big.NewInt(1)) == 0 {
+			if pow, ok := n.Factors[1].(*PowNode); ok && isNegative(pow.Exp) {
+				expRat, isRat := pow.Exp.(*RationalNode)
+				if isRat && expRat.Val.Cmp(big.NewRat(-1, 1)) == 0 {
+					dStr := r.Val.Denom().String()
+					bStr := pow.Base.String()
+					switch pow.Base.(type) {
+					case *AddNode, *MulNode, *UnaryOpNode:
+						bStr = fmt.Sprintf("(%s)", bStr)
+					}
+					if r.Val.Num().Cmp(big.NewInt(1)) == 0 {
+						return fmt.Sprintf("1/(%s * %s)", dStr, bStr)
+					} else if r.Val.Num().Cmp(big.NewInt(-1)) == 0 {
+						return fmt.Sprintf("-1/(%s * %s)", dStr, bStr)
+					}
+				}
+			} else if r.Val.Num().Cmp(big.NewInt(1)) == 0 {
 				// 1/d * X -> X/d
 				return fmt.Sprintf("%s/%s", n.Factors[1].String(), r.Val.Denom().String())
 			} else if r.Val.Num().Cmp(big.NewInt(-1)) == 0 {
@@ -329,7 +344,12 @@ func NewPow(base, exp Node) (*PowNode, error) {
 func (n *PowNode) Type() NodeType { return NodePow }
 
 func (n *PowNode) String() string {
-	return fmt.Sprintf("%s^%s", n.Base.String(), n.Exp.String())
+	baseStr := n.Base.String()
+	switch n.Base.(type) {
+	case *AddNode, *MulNode, *UnaryOpNode, *ComplexNode:
+		baseStr = fmt.Sprintf("(%s)", baseStr)
+	}
+	return fmt.Sprintf("%s^%s", baseStr, n.Exp.String())
 }
 
 func (n *PowNode) Equal(other Node) bool {

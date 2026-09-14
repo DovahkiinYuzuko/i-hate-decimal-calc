@@ -197,15 +197,33 @@ func isNegative(n Node) bool {
 func formatMul(m *MulNode, opts FormatOptions) string {
 	if len(m.Factors) == 2 {
 		if r, ok := m.Factors[0].(*RationalNode); ok {
-			// Check for 1/d * Base -> Base/d
-			if !r.Val.IsInt() && r.Val.Num().Cmp(big.NewInt(1)) == 0 {
-				baseStr := formatNode(m.Factors[1], opts)
-				return fmt.Sprintf("%s/%s", baseStr, r.Val.Denom().String())
-			}
-			// Check for -1/d * Base -> -Base/d
-			if !r.Val.IsInt() && r.Val.Num().Cmp(big.NewInt(-1)) == 0 {
-				baseStr := formatNode(m.Factors[1], opts)
-				return fmt.Sprintf("-%s/%s", baseStr, r.Val.Denom().String())
+			if !r.Val.IsInt() {
+				if pow, ok := m.Factors[1].(*PowNode); ok && isNegative(pow.Exp) {
+					expRat, isRat := pow.Exp.(*RationalNode)
+					if isRat && expRat.Val.Cmp(big.NewRat(-1, 1)) == 0 {
+						dStr := r.Val.Denom().String()
+						bStr := formatNode(pow.Base, opts)
+						switch pow.Base.(type) {
+						case *AddNode, *MulNode, *UnaryOpNode:
+							bStr = fmt.Sprintf("(%s)", bStr)
+						}
+						if r.Val.Num().Cmp(big.NewInt(1)) == 0 {
+							return fmt.Sprintf("1/(%s*%s)", dStr, bStr)
+						} else if r.Val.Num().Cmp(big.NewInt(-1)) == 0 {
+							return fmt.Sprintf("-1/(%s*%s)", dStr, bStr)
+						}
+					}
+				}
+				// Check for 1/d * Base -> Base/d
+				if r.Val.Num().Cmp(big.NewInt(1)) == 0 {
+					baseStr := formatNode(m.Factors[1], opts)
+					return fmt.Sprintf("%s/%s", baseStr, r.Val.Denom().String())
+				}
+				// Check for -1/d * Base -> -Base/d
+				if r.Val.Num().Cmp(big.NewInt(-1)) == 0 {
+					baseStr := formatNode(m.Factors[1], opts)
+					return fmt.Sprintf("-%s/%s", baseStr, r.Val.Denom().String())
+				}
 			}
 			// Check for 1 * Base -> Base
 			one := big.NewRat(1, 1)
