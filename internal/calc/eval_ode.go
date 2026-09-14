@@ -364,7 +364,6 @@ func classifyODE(expr Node, yName, xName string) (odeType, *odeCoeffs, error) {
 // Integrating factor: mu(x) = exp(integrate(P, x))
 // Solution: y = (1/mu) * (integrate(mu * Q, x) + C_1)
 func solve1stLinearODE(pNode, qNode Node, xName string, env *Env) (Node, error) {
-	xVar := &VarNode{Name: xName}
 	c1 := &VarNode{Name: "C_1"}
 
 	// 1. Integrate P(x) dx
@@ -427,7 +426,6 @@ func solve1stLinearODE(pNode, qNode Node, xName string, env *Env) (Node, error) 
 	if err != nil {
 		return nil, err
 	}
-	_ = xVar
 	return sol, nil
 }
 
