@@ -240,6 +240,7 @@ ihd "plot(sin(x), [-pi, pi])"
 | `together` | `together(expr)` | 有理式の通分・統合（最小公倍多項式による共通分母化と単一有理式への統合） |
 | `poly_gcd` | `poly_gcd(p, q)` / `poly_gcd(p, q, var)` | 多変数多項式の厳密最大公約因子（Collins/BrownのSubresultant PRSアルゴリズムによる除算フリー・係数爆発防止型GCD） |
 | `poly_lcm` | `poly_lcm(p, q)` / `poly_lcm(p, q, var)` | 多変数多項式の厳密最小公倍多項式（$\frac{p \cdot q}{\mathrm{GCD}(p, q)}$ による厳密多項式除算） |
+| `resultant` | `resultant(p, q)` / `resultant(p, q, var)` | シルベスター終結式（Sylvester (1840) の Dialytic Method による行列式評価と多変数代数方程式消去法） |
 | `inv_mod` | `inv_mod(a, m)` | 拡張ユークリッド互除法によるモジュラ逆数（$a x \equiv 1 \pmod m$） |
 | `crt` | `crt([r1, r2], [m1, m2])` | 中国剰余定理（Garner法および非互いに素な合同式を解く一般化CRT拡張） |
 | `totient` | `totient(n)` | オイラーのトーシェント関数 $\phi(n) = n \prod_{p \mid n} (1 - 1/p)$ |
@@ -591,6 +592,11 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `from_cfrac` | `from_cfrac([3, 7, 16])` | Reconstruct exact rational fraction from continued fraction list (`355/113`) |
 | `expand` | `expand((x+1)^3)` | Polynomial expansion using distributive law and binomial expansion |
 | `factor` | `factor(expr)` / `factor(expr, var)` | Integer prime factorization and univariate polynomial factorization |
+| `apart` | `apart(expr)` / `apart(expr, var)` | Partial fraction decomposition via Kung-Tong and Henrici algorithms |
+| `together` | `together(expr)` | Rational fraction common denominator consolidation |
+| `poly_gcd` | `poly_gcd(p, q)` / `poly_gcd(p, q, var)` | Multivariate polynomial exact GCD via Collins/Brown Subresultant PRS algorithm |
+| `poly_lcm` | `poly_lcm(p, q)` / `poly_lcm(p, q, var)` | Multivariate polynomial exact LCM via $\frac{p \cdot q}{\mathrm{GCD}(p, q)}$ |
+| `resultant` | `resultant(p, q)` / `resultant(p, q, var)` | Sylvester resultant and algebraic elimination via Sylvester's Dialytic Method |
 | `inv_mod` | `inv_mod(a, m)` | Modular inverse via Extended Euclidean Algorithm ($a x \equiv 1 \pmod m$) |
 | `crt` | `crt([r1, r2], [m1, m2])` | Chinese Remainder Theorem (Garner's algorithm & generalized non-coprime CRT) |
 | `totient` | `totient(n)` | Euler's totient function $\phi(n) = n \prod_{p \mid n} (1 - 1/p)$ |
@@ -632,6 +638,9 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `transpose` | `transpose(A)` | Matrix transpose (swaps rows and columns) |
 | `rref` | `rref(A)` | Reduced Row Echelon Form via Bareiss fraction-free elimination |
 | `rank` | `rank(A)` | Exact matrix rank (number of pivot columns) |
+| `trace` / `tr` | `trace(A)`, `tr(A)` | Matrix trace (sum of main diagonal entries $\sum_{i=1}^n A_{i,i}$) |
+| `eigenvals` | `eigenvals(A)` | Exact eigenvalue analysis via Faddeev-LeVerrier characteristic polynomial and algebraic solver |
+| `eigenvects` | `eigenvects(A)` | Exact eigenvector analysis via RREF nullspace basis extraction |
 | `solve_linear` / `linsolve` | `solve_linear(A, b)` | Exact linear system solver $Ax=b$ (unique, inconsistent, or parametric solutions) |
 | `dot`, `cross` | `dot(u, v)`, `cross(u, v)` | Vector dot product and 3D vector cross product |
 | `norm` | `norm(v)` | Euclidean vector norm ($\sqrt{\sum v_i^2}$, with radical simplification) |
