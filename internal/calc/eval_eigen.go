@@ -17,8 +17,7 @@ func EvalTrace(mat *MatrixNode, env *Env) (Node, error) {
 		return nil, fmt.Errorf("trace: nil matrix")
 	}
 	if mat.Rows != mat.Cols {
-		return nil, fmt.Errorf("%s: trace requires square matrix, got %dx%d",
-			i18n.T("errors.matrix_dim_error"), mat.Rows, mat.Cols)
+		return nil, fmt.Errorf("%s", i18n.T("errors.matrix_non_square", mat.Rows, mat.Cols))
 	}
 
 	n := mat.Rows
@@ -44,8 +43,7 @@ func EvalTrace(mat *MatrixNode, env *Env) (Node, error) {
 func faddeevLeVerrier(mat *MatrixNode) ([]Node, error) {
 	n := mat.Rows
 	if n != mat.Cols {
-		return nil, fmt.Errorf("%s: faddeevLeVerrier requires square matrix, got %dx%d",
-			i18n.T("errors.matrix_dim_error"), mat.Rows, mat.Cols)
+		return nil, fmt.Errorf("%s", i18n.T("errors.matrix_non_square", mat.Rows, mat.Cols))
 	}
 
 	// Create identity matrix I_n
@@ -557,8 +555,7 @@ func EvalEigenvals(mat *MatrixNode, env *Env) (Node, error) {
 		return nil, fmt.Errorf("eigenvals: nil matrix")
 	}
 	if mat.Rows != mat.Cols {
-		return nil, fmt.Errorf("%s: eigenvals requires square matrix, got %dx%d",
-			i18n.T("errors.matrix_dim_error"), mat.Rows, mat.Cols)
+		return nil, fmt.Errorf("%s", i18n.T("errors.matrix_non_square", mat.Rows, mat.Cols))
 	}
 
 	n := mat.Rows
@@ -595,8 +592,7 @@ func EvalEigenvects(mat *MatrixNode, env *Env) (Node, error) {
 		return nil, fmt.Errorf("eigenvects: nil matrix")
 	}
 	if mat.Rows != mat.Cols {
-		return nil, fmt.Errorf("%s: eigenvects requires square matrix, got %dx%d",
-			i18n.T("errors.matrix_dim_error"), mat.Rows, mat.Cols)
+		return nil, fmt.Errorf("%s", i18n.T("errors.matrix_non_square", mat.Rows, mat.Cols))
 	}
 
 	n := mat.Rows

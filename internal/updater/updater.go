@@ -184,11 +184,11 @@ func FormatNotification(info *UpdateInfo) string {
 		return ""
 	}
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("💡 A new version of ihd is available: %s (current: %s)\n", info.LatestVersion, info.CurrentVersion))
+	sb.WriteString(i18n.T("updater.new_version", info.LatestVersion, info.CurrentVersion))
 	if info.ReleaseURL != "" {
-		sb.WriteString(fmt.Sprintf("   Release: %s\n", info.ReleaseURL))
+		sb.WriteString(i18n.T("updater.release", info.ReleaseURL))
 	}
-	sb.WriteString(fmt.Sprintf("   To update: %s\n", info.UpdateCommand))
+	sb.WriteString(i18n.T("updater.to_update", info.UpdateCommand))
 	return sb.String()
 }
 

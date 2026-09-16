@@ -11,7 +11,26 @@
     "no_vars": "No variables defined.",
     "prompt": "ihd> ",
     "error_prefix": "Error: ",
-    "help": "ihd - Exact Arithmetic Calculator\n\nUsage:\n  ihd [flags] [expression]\n  ihd [flags]                (Starts interactive REPL)\n  echo \"expr\" | ihd [flags]   (Evaluates piped input)\n\nFlags:\n  --lang      Set language locale (e.g., en, ja)\n  --ascii     Output using standard ASCII text (e.g., sqrt, pi) instead of Unicode\n  --approx    Display approximate decimal value alongside exact form\n  --latex     Output expression in LaTeX format ($$ ... $$)\n  --pretty    Output expression using 2D pretty-printed formatting\n  --deg       Use degree mode for trigonometric and inverse trigonometric functions\n  --explain   Show step-by-step algebraic rewriting explanations\n  -h, --help  Show this help message"
+    "help": "ihd - Exact Arithmetic Calculator\n\nUsage:\n  ihd [flags] [expression]\n  ihd [flags]                (Starts interactive REPL)\n  echo \"expr\" | ihd [flags]   (Evaluates piped input)\n\nFlags:\n  --lang      Set language locale (e.g., en, ja)\n  --ascii     Output using standard ASCII text (e.g., sqrt, pi) instead of Unicode\n  --approx    Display approximate decimal value alongside exact form\n  --latex     Output expression in LaTeX format ($$ ... $$)\n  --pretty    Output expression using 2D pretty-printed formatting\n  --deg       Use degree mode for trigonometric and inverse trigonometric functions\n  --explain   Show step-by-step algebraic rewriting explanations\n  -h, --help  Show this help message",
+    "flag_lang": "Set language locale (e.g., en, ja)",
+    "flag_ascii": "Output ASCII characters only",
+    "flag_approx": "Show approximate decimal value",
+    "flag_latex": "Output expression in LaTeX format ($$ ... $$)",
+    "flag_pretty": "Output expression using 2D pretty-printed formatting",
+    "flag_deg": "Use degree mode for trigonometric and inverse trigonometric functions",
+    "flag_explain": "Show step-by-step algebraic rewriting explanations",
+    "flag_version": "Show version",
+    "flag_no_update_check": "Disable checking for newer releases",
+    "flag_help": "Show help",
+    "err_run_script_required": "run requires a script file path: ihd run <file.ihd>",
+    "err_run_open_failed": "failed to open script file '%s': %v",
+    "err_run_read_failed": "failed reading script file '%s': %v",
+    "err_unknown_stmt": "unknown statement type: %T"
+  },
+  "updater": {
+    "new_version": "💡 A new version of ihd is available: %s (current: %s)\n",
+    "release": "   Release: %s\n",
+    "to_update": "   To update: %s\n"
   },
   "errors": {
     "reserved_word": "cannot assign to reserved identifier %q",
@@ -64,7 +83,10 @@
     "unknown_constant": "unknown constant: %s",
     "unknown_function": "unknown function: %s",
     "unknown_variable": "undefined variable: %s",
-    "invalid_args_count": "function %s requires %d arguments, got %d"
+    "invalid_args_count": "function %s requires %d arguments, got %d",
+    "vector_min_elements": "vector must contain at least 1 element",
+    "vector_dim_mismatch": "vector dimension mismatch",
+    "eigen_non_square": "eigenvalues and eigenvectors require a square matrix"
   },
   "plot": {
     "features_header": "[CAS Features Detected]\n",
