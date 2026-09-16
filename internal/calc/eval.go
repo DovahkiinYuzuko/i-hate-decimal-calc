@@ -1015,6 +1015,17 @@ func simplifyFuncWithEnv(name string, args []Node, env *Env) (Node, error) {
 		}
 		return EvalPolyLCM(args[0], args[1], vName, env)
 
+	case "resultant":
+		var vName string
+		if len(args) >= 3 {
+			if v, ok := args[2].(*VarNode); ok {
+				vName = v.Name
+			} else {
+				return nil, fmt.Errorf("resultant error: third argument must be a variable name, got %s", args[2].String())
+			}
+		}
+		return EvalResultant(args[0], args[1], vName, env)
+
 	case "cfrac":
 
 

@@ -595,6 +595,13 @@ func init() {
 		MinArgs: 2,
 		MaxArgs: 3,
 	})
+
+	// Sylvester Resultant & Elimination Pack (issue-51)
+	RegisterFunction(FunctionSpec{
+		Name:    "resultant",
+		MinArgs: 2,
+		MaxArgs: 3,
+	})
 }
 
 
