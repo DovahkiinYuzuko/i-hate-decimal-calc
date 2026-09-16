@@ -5,6 +5,8 @@ import (
 	"math/big"
 	"sort"
 	"strings"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
 // -------------------------------------------------------------------------
@@ -427,7 +429,7 @@ func buchberger(initial []*MPoly, order MonomialOrder) ([]*MPoly, error) {
 	for len(pairs) > 0 {
 		iter++
 		if iter > maxIter {
-			return nil, fmt.Errorf("groebner: computation limit exceeded (possible high degree expansion)")
+			return nil, fmt.Errorf("%s", i18n.T("errors.groebner_limit_exceeded"))
 		}
 
 		// Pick pair with smallest sugar (Sugar Strategy), break tie with LCM total degree
@@ -571,7 +573,7 @@ func nodeToMPoly(n Node, varMap map[string]int, numVars int, order MonomialOrder
 	case *VarNode:
 		idx, ok := varMap[v.Name]
 		if !ok {
-			return nil, fmt.Errorf("groebner: unknown variable %q", v.Name)
+			return nil, fmt.Errorf("%s", i18n.T("errors.groebner_unknown_var", v.Name))
 		}
 		exps := make([]int, numVars)
 		exps[idx] = 1
@@ -586,12 +588,14 @@ func nodeToMPoly(n Node, varMap map[string]int, numVars int, order MonomialOrder
 		if err != nil {
 			return nil, err
 		}
-		if v.Op == "-" {
+		switch v.Op {
+		case "-":
 			return NewZeroMPoly(numVars).Sub(sub, order), nil
-		} else if v.Op == "+" {
+		case "+":
 			return sub, nil
+		default:
+			return nil, fmt.Errorf("%s", i18n.T("errors.groebner_unsupported_unary", v.Op))
 		}
-		return nil, fmt.Errorf("groebner: unsupported unary operator %q", v.Op)
 
 	case *AddNode:
 		res := NewZeroMPoly(numVars)
@@ -625,11 +629,11 @@ func nodeToMPoly(n Node, varMap map[string]int, numVars int, order MonomialOrder
 		}
 		ratExp, ok := v.Exp.(*RationalNode)
 		if !ok || !ratExp.Val.IsInt() || ratExp.Val.Sign() < 0 {
-			return nil, fmt.Errorf("groebner: non-integer or negative exponent in %s", v.String())
+			return nil, fmt.Errorf("%s", i18n.T("errors.groebner_invalid_exponent", v.String()))
 		}
 		expVal := int(ratExp.Val.Num().Int64())
 		if expVal > 100 {
-			return nil, fmt.Errorf("groebner: exponent too large (%d)", expVal)
+			return nil, fmt.Errorf("%s", i18n.T("errors.groebner_exponent_too_large", expVal))
 		}
 		res := &MPoly{
 			Terms: []Term{{Coeff: big.NewRat(1, 1), Mon: zeroMonomial(numVars)}},
@@ -646,7 +650,7 @@ func nodeToMPoly(n Node, varMap map[string]int, numVars int, order MonomialOrder
 		if err == nil && evalN.String() != n.String() {
 			return nodeToMPoly(evalN, varMap, numVars, order)
 		}
-		return nil, fmt.Errorf("groebner: cannot convert node %s to polynomial", n.String())
+		return nil, fmt.Errorf("%s", i18n.T("errors.groebner_node_to_poly", n.String()))
 	}
 }
 
@@ -716,7 +720,7 @@ func mpolyToNode(p *MPoly, vars []string) Node {
 // Syntax: groebner([p1, p2, ...], [x, y, ...], [order])
 func EvalGroebner(polysNode, varsNode, orderOpt Node, env *Env) (Node, error) {
 	if polysNode == nil || varsNode == nil {
-		return nil, fmt.Errorf("groebner: missing required arguments")
+		return nil, fmt.Errorf("%s", i18n.T("errors.groebner_missing_args"))
 	}
 
 	// 1. Extract polynomials
@@ -733,24 +737,24 @@ func EvalGroebner(polysNode, varsNode, orderOpt Node, env *Env) (Node, error) {
 			if vn, ok := vElem.(*VarNode); ok {
 				varNames = append(varNames, vn.Name)
 			} else {
-				return nil, fmt.Errorf("groebner: variable list elements must be identifiers, got %s", vElem.String())
+				return nil, fmt.Errorf("%s", i18n.T("errors.groebner_var_list_identifiers", vElem.String()))
 			}
 		}
 	} else if vn, ok := varsNode.(*VarNode); ok {
 		varNames = []string{vn.Name}
 	} else {
-		return nil, fmt.Errorf("groebner: second argument must be a list of variables or a variable, got %s", varsNode.String())
+		return nil, fmt.Errorf("%s", i18n.T("errors.groebner_second_arg_var_list", varsNode.String()))
 	}
 
 	if len(varNames) == 0 {
-		return nil, fmt.Errorf("groebner: variable list cannot be empty")
+		return nil, fmt.Errorf("%s", i18n.T("errors.groebner_var_list_empty"))
 	}
 
 	// Check duplicates
 	varMap := make(map[string]int)
 	for i, name := range varNames {
 		if _, exists := varMap[name]; exists {
-			return nil, fmt.Errorf("groebner: duplicate variable %q in variable list", name)
+			return nil, fmt.Errorf("%s", i18n.T("errors.groebner_duplicate_var", name))
 		}
 		varMap[name] = i
 	}
@@ -766,7 +770,7 @@ func EvalGroebner(polysNode, varsNode, orderOpt Node, env *Env) (Node, error) {
 		case "grevlex", "degrevlex", "gradedreverselexicographic":
 			order = OrderGRevLex
 		default:
-			return nil, fmt.Errorf("groebner: unsupported monomial order %q (expected 'lex' or 'grevlex')", str)
+			return nil, fmt.Errorf("%s", i18n.T("errors.groebner_unsupported_order", str))
 		}
 	}
 
