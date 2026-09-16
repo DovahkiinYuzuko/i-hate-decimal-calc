@@ -1026,6 +1026,9 @@ func simplifyFuncWithEnv(name string, args []Node, env *Env) (Node, error) {
 		}
 		return EvalResultant(args[0], args[1], vName, env)
 
+	case "fourier_series":
+		return EvalFourierSeries(args, env)
+
 	case "cfrac":
 
 

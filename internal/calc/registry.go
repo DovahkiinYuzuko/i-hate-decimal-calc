@@ -602,6 +602,13 @@ func init() {
 		MinArgs: 2,
 		MaxArgs: 3,
 	})
+
+	// Symbolic Fourier Series Expansion Pack (issue-52)
+	RegisterFunction(FunctionSpec{
+		Name:    "fourier_series",
+		MinArgs: 1,
+		MaxArgs: 4,
+	})
 }
 
 
