@@ -10,6 +10,10 @@
 !cmd/
 !cmd/ihd/
 !cmd/ihd/*.go
+# .gitignores/docs.gitignore
+!docs/
+!docs/references/
+!docs/references/reference.*.md
 # .gitignores/exam.gitignore
 # exam folder
 !exam/
