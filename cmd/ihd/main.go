@@ -55,29 +55,45 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 		}
 	}
 
+	// Pre-detect language flag to ensure FlagSet usage text is localized
+	earlyLang := ""
+	for i := 0; i < len(flagArgs); i++ {
+		if (flagArgs[i] == "-lang" || flagArgs[i] == "--lang") && i+1 < len(flagArgs) {
+			earlyLang = flagArgs[i+1]
+			break
+		} else if strings.HasPrefix(flagArgs[i], "--lang=") {
+			earlyLang = strings.TrimPrefix(flagArgs[i], "--lang=")
+			break
+		} else if strings.HasPrefix(flagArgs[i], "-lang=") {
+			earlyLang = strings.TrimPrefix(flagArgs[i], "-lang=")
+			break
+		}
+	}
+	_ = i18n.Init(earlyLang)
+
 	fs := flag.NewFlagSet("ihd", flag.ContinueOnError)
 	fs.SetOutput(errOut)
 
-	langFlag := fs.String("lang", "", "Set language locale (e.g., en, ja)")
-	asciiFlag := fs.Bool("ascii", false, "Output ASCII characters only")
-	approxFlag := fs.Bool("approx", false, "Show approximate decimal value")
-	latexFlag := fs.Bool("latex", false, "Output expression in LaTeX format ($$ ... $$)")
-	prettyFlag := fs.Bool("pretty", false, "Output expression using 2D pretty-printed formatting")
-	degFlag := fs.Bool("deg", false, "Use degree mode for trigonometric and inverse trigonometric functions")
-	explainFlag := fs.Bool("explain", false, "Show step-by-step algebraic rewriting explanations")
-	versionFlag := fs.Bool("version", false, "Show version")
-	fs.BoolVar(versionFlag, "v", false, "Show version")
-	noUpdateCheckFlag := fs.Bool("no-update-check", false, "Disable checking for newer releases")
-	helpFlag := fs.Bool("help", false, "Show help")
-	fs.BoolVar(helpFlag, "h", false, "Show help")
+	langFlag := fs.String("lang", "", i18n.T("cli.flag_lang"))
+	asciiFlag := fs.Bool("ascii", false, i18n.T("cli.flag_ascii"))
+	approxFlag := fs.Bool("approx", false, i18n.T("cli.flag_approx"))
+	latexFlag := fs.Bool("latex", false, i18n.T("cli.flag_latex"))
+	prettyFlag := fs.Bool("pretty", false, i18n.T("cli.flag_pretty"))
+	degFlag := fs.Bool("deg", false, i18n.T("cli.flag_deg"))
+	explainFlag := fs.Bool("explain", false, i18n.T("cli.flag_explain"))
+	versionFlag := fs.Bool("version", false, i18n.T("cli.flag_version"))
+	fs.BoolVar(versionFlag, "v", false, i18n.T("cli.flag_version"))
+	noUpdateCheckFlag := fs.Bool("no-update-check", false, i18n.T("cli.flag_no_update_check"))
+	helpFlag := fs.Bool("help", false, i18n.T("cli.flag_help"))
+	fs.BoolVar(helpFlag, "h", false, i18n.T("cli.flag_help"))
 
 	if err := fs.Parse(flagArgs); err != nil {
 		return 1
 	}
 
-	// Initialize i18n engine with specified or persistent locale
-	_ = i18n.Init(*langFlag)
+	// Re-initialize i18n engine if parsed flag specifies or updates locale
 	if *langFlag != "" {
+		_ = i18n.Init(*langFlag)
 		_ = i18n.SaveConfigLocale(*langFlag)
 	}
 
@@ -115,7 +131,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 		// 1. Explicit 'run' subcommand: ihd run <file.ihd> [flags]
 		if exprArgs[0] == "run" {
 			if len(exprArgs) < 2 {
-				fmt.Fprintf(errOut, "%srun requires a script file path: ihd run <file.ihd>\n", i18n.T("cli.error_prefix"))
+				fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), i18n.T("cli.err_run_script_required"))
 				return 1
 			}
 			return runScriptFile(exprArgs[1], ro, out, errOut)
@@ -260,7 +276,7 @@ func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut 
 		return nil
 
 	default:
-		err := fmt.Errorf("unknown statement type: %T", parsed)
+		err := fmt.Errorf(i18n.T("cli.err_unknown_stmt"), parsed)
 		fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
 		return err
 	}
@@ -269,7 +285,7 @@ func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut 
 func runScriptFile(filePath string, ro runOptions, out, errOut io.Writer) int {
 	file, err := os.Open(filePath)
 	if err != nil {
-		fmt.Fprintf(errOut, "%sfailed to open script file '%s': %v\n", i18n.T("cli.error_prefix"), filePath, err)
+		fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), i18n.T("cli.err_run_open_failed", filePath, err))
 		return 1
 	}
 	defer file.Close()
@@ -319,7 +335,7 @@ func runScriptFile(filePath string, ro runOptions, out, errOut io.Writer) int {
 	}
 
 	if err := scanner.Err(); err != nil {
-		fmt.Fprintf(errOut, "%sfailed reading script file '%s': %v\n", i18n.T("cli.error_prefix"), filePath, err)
+		fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), i18n.T("cli.err_run_read_failed", filePath, err))
 		return 1
 	}
 
@@ -394,9 +410,8 @@ func executeScriptLine(line string, ro runOptions, env *calc.Env, suppressOutput
 		return nil
 
 	default:
-		err := fmt.Errorf("unknown statement type: %T", parsed)
+		err := fmt.Errorf(i18n.T("cli.err_unknown_stmt"), parsed)
 		fmt.Fprintf(errOut, "%s:%d: %v\n", filePath, lineNum, err)
 		return err
 	}
 }
-

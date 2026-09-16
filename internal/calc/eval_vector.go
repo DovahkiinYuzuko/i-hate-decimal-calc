@@ -2,6 +2,8 @@ package calc
 
 import (
 	"fmt"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
 // -------------------------------------------------------------------------
@@ -42,7 +44,7 @@ func evalDot(uNode, vNode Node) (Node, error) {
 		return nil, fmt.Errorf("dot error: %w", err)
 	}
 	if len(u) != len(v) {
-		return nil, fmt.Errorf("dot error: dimension mismatch: %d and %d", len(u), len(v))
+		return nil, fmt.Errorf("dot error: %s (%d != %d)", i18n.T("errors.vector_dim_mismatch"), len(u), len(v))
 	}
 	if len(u) == 0 {
 		return mustRational(0, 1), nil

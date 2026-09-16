@@ -11,7 +11,26 @@
     "no_vars": "No variables defined.",
     "prompt": "ihd> ",
     "error_prefix": "Error: ",
-    "help": "ihd - 厳密数式処理計算機 (Exact Arithmetic Calculator)\n\n使用法:\n  ihd [flags] [式]\n  ihd [flags]                (対話型REPLを起動)\n  echo \"式\" | ihd [flags]    (パイプ入力を評価)\n\nフラグ:\n  --lang      言語ロケールを設定 (例: en, ja)\n  --ascii     Unicode記号の代わりに標準ASCII文字列 (sqrt, pi等) で出力\n  --approx    厳密解の横に参考用の小数近似値を併記\n  --latex     数式をLaTeX形式 ($$ ... $$) で出力\n  --pretty    数式を2Dプリティプリント形式で整列表示\n  --deg       三角関数・逆三角関数を度数法 (Degree) として計算\n  --explain   代数的な項書き換えの過程を詳細表示\n  -h, --help  このヘルプメッセージを表示"
+    "help": "ihd - 厳密数式処理計算機 (Exact Arithmetic Calculator)\n\n使用法:\n  ihd [flags] [式]\n  ihd [flags]                (対話型REPLを起動)\n  echo \"式\" | ihd [flags]    (パイプ入力を評価)\n\nフラグ:\n  --lang      言語ロケールを設定 (例: en, ja)\n  --ascii     Unicode記号の代わりに標準ASCII文字列 (sqrt, pi等) で出力\n  --approx    厳密解の横に参考用の小数近似値を併記\n  --latex     数式をLaTeX形式 ($$ ... $$) で出力\n  --pretty    数式を2Dプリティプリント形式で整列表示\n  --deg       三角関数・逆三角関数を度数法 (Degree) として計算\n  --explain   代数的な項書き換えの過程を詳細表示\n  -h, --help  このヘルプメッセージを表示",
+    "flag_lang": "言語ロケールを設定 (例: en, ja)",
+    "flag_ascii": "Unicode記号の代わりに標準ASCII文字列 (sqrt, pi等) で出力",
+    "flag_approx": "厳密解の横に参考用の小数近似値を併記",
+    "flag_latex": "数式をLaTeX形式 ($$ ... $$) で出力",
+    "flag_pretty": "数式を2Dプリティプリント形式で整列表示",
+    "flag_deg": "三角関数・逆三角関数を度数法 (Degree) として計算",
+    "flag_explain": "代数的な項書き換えの過程を詳細表示",
+    "flag_version": "バージョン情報を表示",
+    "flag_no_update_check": "新バージョンの自動チェックを無効化",
+    "flag_help": "このヘルプメッセージを表示",
+    "err_run_script_required": "run サブコマンドにはスクリプトファイルのパスが必要です: ihd run <file.ihd>",
+    "err_run_open_failed": "スクリプトファイル '%s' を開けませんでした: %v",
+    "err_run_read_failed": "スクリプトファイル '%s' の読み込み中にエラーが発生しました: %v",
+    "err_unknown_stmt": "不明な構文タイプです: %T"
+  },
+  "updater": {
+    "new_version": "💡 ihd の新しいバージョンが利用可能です: %s (現在: %s)\n",
+    "release": "   リリース情報: %s\n",
+    "to_update": "   アップデート方法: %s\n"
   },
   "errors": {
     "reserved_word": "予約語 %q への代入はできません",
@@ -64,7 +83,10 @@
     "unknown_constant": "未知の定数です: %s",
     "unknown_function": "未知の関数です: %s",
     "unknown_variable": "未定義の変数です: %s",
-    "invalid_args_count": "関数 %s は %d 個の引数が必要ですが、%d 個渡されました"
+    "invalid_args_count": "関数 %s は %d 個の引数が必要ですが、%d 個渡されました",
+    "vector_min_elements": "ベクトルには少なくとも1つの要素が必要です",
+    "vector_dim_mismatch": "ベクトルの次元が一致しません",
+    "eigen_non_square": "固有値・固有ベクトルには正方行列が必要です"
   },
   "plot": {
     "features_header": "[CAS Features Detected]\n",
