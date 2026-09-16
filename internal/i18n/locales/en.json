@@ -86,7 +86,19 @@
     "invalid_args_count": "function %s requires %d arguments, got %d",
     "vector_min_elements": "vector must contain at least 1 element",
     "vector_dim_mismatch": "vector dimension mismatch",
-    "eigen_non_square": "eigenvalues and eigenvectors require a square matrix"
+    "eigen_non_square": "eigenvalues and eigenvectors require a square matrix",
+    "groebner_limit_exceeded": "groebner: computation limit exceeded (possible high degree expansion)",
+    "groebner_unknown_var": "groebner: unknown variable %q",
+    "groebner_unsupported_unary": "groebner: unsupported unary operator %q",
+    "groebner_invalid_exponent": "groebner: non-integer or negative exponent in %s",
+    "groebner_exponent_too_large": "groebner: exponent too large (%d)",
+    "groebner_node_to_poly": "groebner: cannot convert node %s to polynomial",
+    "groebner_missing_args": "groebner: missing required arguments",
+    "groebner_var_list_identifiers": "groebner: variable list elements must be identifiers, got %s",
+    "groebner_second_arg_var_list": "groebner: second argument must be a list of variables or a variable, got %s",
+    "groebner_var_list_empty": "groebner: variable list cannot be empty",
+    "groebner_duplicate_var": "groebner: duplicate variable %q in variable list",
+    "groebner_unsupported_order": "groebner: unsupported monomial order %q (expected 'lex' or 'grevlex')"
   },
   "plot": {
     "features_header": "[CAS Features Detected]\n",

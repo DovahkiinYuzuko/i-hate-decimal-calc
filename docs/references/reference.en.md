@@ -67,6 +67,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `poly_gcd` | `poly_gcd(p, q)` / `poly_gcd(p, q, var)` | Multivariate polynomial exact GCD via Collins/Brown Subresultant PRS algorithm |
 | `poly_lcm` | `poly_lcm(p, q)` / `poly_lcm(p, q, var)` | Multivariate polynomial exact LCM via $\frac{p \cdot q}{\mathrm{GCD}(p, q)}$ |
 | `resultant` | `resultant(p, q)` / `resultant(p, q, var)` | Sylvester resultant and algebraic elimination via Sylvester's Dialytic Method |
+| `groebner` | `groebner([p1, p2, ...], [x, y, ...])` / `groebner(..., [order])` | Reduced Gröbner basis for polynomial ideals (Buchberger 1965/1979/1985, Gebauer-Möller 1988 criteria, Giovini 1991 Sugar strategy. Orders: `lex`/`grevlex`) |
 | `inv_mod` | `inv_mod(a, m)` | Modular inverse via Extended Euclidean Algorithm ($a x \equiv 1 \pmod m$) |
 | `crt` | `crt([r1, r2], [m1, m2])` | Chinese Remainder Theorem (Garner's algorithm & generalized non-coprime CRT) |
 | `totient` | `totient(n)` | Euler's totient function $\phi(n) = n \prod_{p \mid n} (1 - 1/p)$ |

@@ -17,15 +17,15 @@
 
 `ihd`（i-hate-decimal-calc）は、**「小数の存在を一切許さない」** という強い思想のもと設計された、コマンドライン向けの完全厳密数式処理システム（CAS）電卓です。入力された小数は字句解析の段階で即座に任意精度有理数（`big.Rat`）へ変換され、平方根・三角関数・対数・超越数・虚数単位はシンボルノードとして保持され、代数的簡約ルールによって厳密な形式のまま計算されます。
 
-| 入力数式 | 一般的な電卓・言語（浮動小数点数） | `ihd`（完全厳密計算） | 簡約・処理内容 |
-| :--- | :--- | :--- | :--- |
-| `0.1 + 0.2` | `0.30000000000000004` | `3/10` | 誤差ゼロの完全有理数約分 |
-| `0.(3)` | `0.3333333333333333` | `1/3` | 循環小数をFSM字句解析により厳密分数化 |
-| `sqrt(8)` | `2.8284271247461903` | `2*√2` | 平方因子の自動くくり出し |
-| `sqrt(5 + 2*sqrt(6))` | `3.1462643699419726` | `√2 + √3` | Borodin (1985) 法による二重根号の自動分解 |
-| `1 / (sqrt(2) + 1)` | `0.4142135623730951` | `-1 + √2` | 2項無理数分母の共役有理化 |
-| `sin(pi/6)` | `0.49999999999999994` | `1/2` | 特殊角の代数的厳密値評価 |
-| `１＋２×３` | エラー（全角未対応） | `7` | 日本語IMEの全角文字を透過的に半角ASCII正規化 |
+| 入力数式              | 一般的な電卓・言語（浮動小数点数） | `ihd`（完全厳密計算） | 簡約・処理内容                               |
+| :-------------------- | :--------------------------------- | :-------------------- | :------------------------------------------- |
+| `0.1 + 0.2`           | `0.30000000000000004`              | `3/10`                | 誤差ゼロの完全有理数約分                     |
+| `0.(3)`               | `0.3333333333333333`               | `1/3`                 | 循環小数をFSM字句解析により厳密分数化        |
+| `sqrt(8)`             | `2.8284271247461903`               | `2*√2`                | 平方因子の自動くくり出し                     |
+| `sqrt(5 + 2*sqrt(6))` | `3.1462643699419726`               | `√2 + √3`             | Borodin (1985) 法による二重根号の自動分解    |
+| `1 / (sqrt(2) + 1)`   | `0.4142135623730951`               | `-1 + √2`             | 2項無理数分母の共役有理化                    |
+| `sin(pi/6)`           | `0.49999999999999994`              | `1/2`                 | 特殊角の代数的厳密値評価                     |
+| `１＋２×３`           | エラー（全角未対応）               | `7`                   | 日本語IMEの全角文字を透過的に半角ASCII正規化 |
 
 ---
 
@@ -202,11 +202,11 @@ ihd "plot(sin(x), [-pi, pi])"
 `ihd` は微積分・線形代数・常微分方程式・ラプラス変換・多変数代数消去法・離散確率など、大学理工系レベルを網羅する 50 種類以上の組み込み関数を搭載しています。
 
 > [!TIP]
-> 演算子と優先順位、予約定数、およびカテゴリ別全関数の詳細仕様・書式・使用例は専用リファレンスに網羅されています。
-> 👉 **[完全構文・演算子・関数リファレンス (Japanese Edition)](docs/references/reference.ja.md)**
+> 演算子と優先順位、予約定数、およびカテゴリ別全関数の詳細仕様・書式・使用例は専用リファレンスに網羅されています。  
+> **[完全構文・演算子・関数リファレンス (Japanese Edition)](docs/references/reference.ja.md)**
 
 #### 主なカテゴリと代表関数
-- **基本代数・数論・方程式**: `sqrt`, `cbrt`, `factor`, `apart`, `together`, `poly_gcd`, `poly_lcm`, `resultant`, `crt`, `solve`
+- **基本代数・数論・方程式**: `sqrt`, `cbrt`, `factor`, `apart`, `together`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `crt`, `solve`
 - **三角関数・対数・複素数**: `sin`, `cos`, `tan`, `trig_expand`, `trig_reduce`, `log`, `ln`, `polar`, `rect`
 - **微積分・常微分方程式・級数**: `diff`, `integrate`, `limit`, `dsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`
 - **線形代数・3次元ベクトル解析**: `det`, `inv`, `rref`, `rank`, `trace`, `eigenvals`, `eigenvects`, `solve_linear`, `dot`, `cross`, `norm`, `grad`, `div`, `curl`
@@ -220,18 +220,18 @@ ihd "plot(sin(x), [-pi, pi])"
 
 ### コマンドラインオプション
 
-| オプション | 説明・使用例 |
-| :--- | :--- |
-| `--ascii` | 数学記号（`√`, `π`）をASCII文字列（`sqrt`, `pi`）にフォールバックして出力。<br>`ihd --ascii "sqrt(2) + pi"` $\to$ `sqrt(2) + pi` |
-| `--approx` | 厳密解の横に参考用の浮動小数点小数近似値（float64、15〜17桁）を併記。<br>`ihd --approx "sqrt(2)"` $\to$ `√2 (≈ 1.4142135623730951)` |
-| `--latex` | MarkdownやTeX論文に貼り付け可能なLaTeX形式（`$$ ... $$`）で出力。<br>`ihd --latex "1/2 + sqrt(2)"` $\to$ `$$ \frac{1}{2} + \sqrt{2} $$` |
-| `--pretty` | 分数線や根号を複数行アスキーアートで組版表示する2Dプリティプリント。<br>`ihd --pretty "1/2 + sqrt(2)/2"` |
-| `--deg` | 三角関数および逆三角関数を度数法（Degree）として解釈・計算。<br>`ihd --deg "sin(30) + cos(60)"` $\to$ `1` |
-| `--explain` | 代数的項書き換え（有理化・二重根号・微分則等）を途中式ツリーとして詳細表示。<br>`ihd --explain "1 / (sqrt(2) + 1)"` |
+| オプション           | 説明・使用例                                                                                                                                                           |
+| :------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--ascii`            | 数学記号（`√`, `π`）をASCII文字列（`sqrt`, `pi`）にフォールバックして出力。<br>`ihd --ascii "sqrt(2) + pi"` $\to$ `sqrt(2) + pi`                                       |
+| `--approx`           | 厳密解の横に参考用の浮動小数点小数近似値（float64、15〜17桁）を併記。<br>`ihd --approx "sqrt(2)"` $\to$ `√2 (≈ 1.4142135623730951)`                                    |
+| `--latex`            | MarkdownやTeX論文に貼り付け可能なLaTeX形式（`$$ ... $$`）で出力。<br>`ihd --latex "1/2 + sqrt(2)"` $\to$ `$$ \frac{1}{2} + \sqrt{2} $$`                                |
+| `--pretty`           | 分数線や根号を複数行アスキーアートで組版表示する2Dプリティプリント。<br>`ihd --pretty "1/2 + sqrt(2)/2"`                                                               |
+| `--deg`              | 三角関数および逆三角関数を度数法（Degree）として解釈・計算。<br>`ihd --deg "sin(30) + cos(60)"` $\to$ `1`                                                              |
+| `--explain`          | 代数的項書き換え（有理化・二重根号・微分則等）を途中式ツリーとして詳細表示。<br>`ihd --explain "1 / (sqrt(2) + 1)"`                                                    |
 | `--lang <code/auto>` | 表示言語（ロケール）を指定（`ja`, `en`, `auto`）。設定は `~/.ihd/config.json` に永続化され、カスタム辞書（`~/.ihd/locales/`）にも対応。<br>`ihd --lang en "1/2 + 1/3"` |
-| `-h`, `--help` | コマンドのヘルプメッセージを表示。 |
-| `-v`, `--version` | バージョン情報を表示（新リリースが存在する場合は更新案内を表示）。 |
-| `--no-update-check` | 新リリースの自動検知・更新チェックを無効化（環境変数 `IHD_NO_UPDATE_CHECK=1` でも設定可能）。 |
+| `-h`, `--help`       | コマンドのヘルプメッセージを表示。                                                                                                                                     |
+| `-v`, `--version`    | バージョン情報を表示（新リリースが存在する場合は更新案内を表示）。                                                                                                     |
+| `--no-update-check`  | 新リリースの自動検知・更新チェックを無効化（環境変数 `IHD_NO_UPDATE_CHECK=1` でも設定可能）。                                                                          |
 
 ---
 
@@ -272,15 +272,15 @@ Standard calculators and programming languages rely on `float64` floating-point 
 
 `ihd` (i-hate-decimal-calc) is a command-line Computer Algebra System (CAS) calculator built on the strict philosophy of **"Never tolerate decimals."** All decimal inputs are immediately converted into exact arbitrary-precision rational fractions (`big.Rat`) during lexical analysis. Radicals, trigonometric values, logarithms, transcendental constants, and imaginary units are maintained as symbolic AST nodes and simplified algebraically without precision loss.
 
-| Input Expression | Typical Calculators / Languages (`float64`) | `ihd` (Exact Calculation) | Simplification Behavior |
-| :--- | :--- | :--- | :--- |
-| `0.1 + 0.2` | `0.30000000000000004` | `3/10` | Zero-error exact rational fraction |
-| `0.(3)` | `0.3333333333333333` | `1/3` | FSM lexical analysis converts repeating decimals to exact fractions |
-| `sqrt(8)` | `2.8284271247461903` | `2*√2` | Automatic extraction of perfect squares |
-| `sqrt(5 + 2*sqrt(6))` | `3.1462643699419726` | `√2 + √3` | Automatic radical denesting via Borodin (1985) algorithm |
-| `1 / (sqrt(2) + 1)` | `0.4142135623730951` | `-1 + √2` | Binomial conjugate radical rationalization |
-| `sin(pi/6)` | `0.49999999999999994` | `1/2` | Exact algebraic evaluation of special angles |
-| `１＋２×３` | Error (Unsupported) | `7` | Automatic normalization of Zenkaku characters to ASCII |
+| Input Expression      | Typical Calculators / Languages (`float64`) | `ihd` (Exact Calculation) | Simplification Behavior                                             |
+| :-------------------- | :------------------------------------------ | :------------------------ | :------------------------------------------------------------------ |
+| `0.1 + 0.2`           | `0.30000000000000004`                       | `3/10`                    | Zero-error exact rational fraction                                  |
+| `0.(3)`               | `0.3333333333333333`                        | `1/3`                     | FSM lexical analysis converts repeating decimals to exact fractions |
+| `sqrt(8)`             | `2.8284271247461903`                        | `2*√2`                    | Automatic extraction of perfect squares                             |
+| `sqrt(5 + 2*sqrt(6))` | `3.1462643699419726`                        | `√2 + √3`                 | Automatic radical denesting via Borodin (1985) algorithm            |
+| `1 / (sqrt(2) + 1)`   | `0.4142135623730951`                        | `-1 + √2`                 | Binomial conjugate radical rationalization                          |
+| `sin(pi/6)`           | `0.49999999999999994`                       | `1/2`                     | Exact algebraic evaluation of special angles                        |
+| `１＋２×３`           | Error (Unsupported)                         | `7`                       | Automatic normalization of Zenkaku characters to ASCII              |
 
 ---
 
@@ -457,11 +457,11 @@ ihd "plot(sin(x), [-pi, pi])"
 `ihd` is equipped with over 50 exact symbolic functions covering university-level STEM domains including calculus, linear algebra, ODEs, Laplace transforms, algebraic elimination, and discrete probability.
 
 > [!TIP]
-> For complete operator precedence, constants, and exhaustive function specifications with mathematical examples:
-> 👉 **[Complete Syntax, Operators & Functions Reference (English Edition)](docs/references/reference.en.md)**
+> For complete operator precedence, constants, and exhaustive function specifications with mathematical examples:  
+> **[Complete Syntax, Operators & Functions Reference (English Edition)](docs/references/reference.en.md)**
 
 #### Major Categories & Representative Functions
-- **Basic Algebra, Number Theory & Equations**: `sqrt`, `cbrt`, `factor`, `apart`, `together`, `poly_gcd`, `poly_lcm`, `resultant`, `crt`, `solve`
+- **Basic Algebra, Number Theory & Equations**: `sqrt`, `cbrt`, `factor`, `apart`, `together`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `crt`, `solve`
 - **Trigonometric, Logarithmic & Complex Functions**: `sin`, `cos`, `tan`, `trig_expand`, `trig_reduce`, `log`, `ln`, `polar`, `rect`
 - **Calculus, Differential Equations & Series**: `diff`, `integrate`, `limit`, `dsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`
 - **Linear Algebra & 3D Vector Calculus**: `det`, `inv`, `rref`, `rank`, `trace`, `eigenvals`, `eigenvects`, `solve_linear`, `dot`, `cross`, `norm`, `grad`, `div`, `curl`
@@ -473,18 +473,18 @@ ihd "plot(sin(x), [-pi, pi])"
 
 ### Command-Line Options
 
-| Option | Description & Examples |
-| :--- | :--- |
-| `--ascii` | Output using standard ASCII strings (`sqrt`, `pi`) instead of Unicode symbols.<br>`ihd --ascii "sqrt(2) + pi"` $\to$ `sqrt(2) + pi` |
-| `--approx` | Display approximate floating-point decimal value alongside the exact form.<br>`ihd --approx "sqrt(2)"` $\to$ `√2 (≈ 1.4142135623730951)` |
-| `--latex` | Output expression in LaTeX format (`$$ ... $$`) ready to paste into papers.<br>`ihd --latex "1/2 + sqrt(2)"` $\to$ `$$ \frac{1}{2} + \sqrt{2} $$` |
-| `--pretty` | Output expression in multi-line 2D pretty-printed Unicode formatting.<br>`ihd --pretty "1/2 + sqrt(2)/2"` |
-| `--deg` | Evaluate trigonometric and inverse trigonometric functions in degrees.<br>`ihd --deg "sin(30) + cos(60)"` $\to$ `1` |
-| `--explain` | Step-by-step educational explanations of algebraic derivations in a 2D tree.<br>`ihd --explain "1 / (sqrt(2) + 1)"` |
-| `--lang <code/auto>` | Specify display language (`ja`, `en`, `auto`). Persisted to `~/.ihd/config.json`.<br>`ihd --lang en "1/2 + 1/3"` |
-| `-h`, `--help` | Display command help message. |
-| `-v`, `--version` | Display version information (checks for newer releases if available). |
-| `--no-update-check` | Disable checking for newer releases (can also be disabled via `IHD_NO_UPDATE_CHECK=1`). |
+| Option               | Description & Examples                                                                                                                            |
+| :------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--ascii`            | Output using standard ASCII strings (`sqrt`, `pi`) instead of Unicode symbols.<br>`ihd --ascii "sqrt(2) + pi"` $\to$ `sqrt(2) + pi`               |
+| `--approx`           | Display approximate floating-point decimal value alongside the exact form.<br>`ihd --approx "sqrt(2)"` $\to$ `√2 (≈ 1.4142135623730951)`          |
+| `--latex`            | Output expression in LaTeX format (`$$ ... $$`) ready to paste into papers.<br>`ihd --latex "1/2 + sqrt(2)"` $\to$ `$$ \frac{1}{2} + \sqrt{2} $$` |
+| `--pretty`           | Output expression in multi-line 2D pretty-printed Unicode formatting.<br>`ihd --pretty "1/2 + sqrt(2)/2"`                                         |
+| `--deg`              | Evaluate trigonometric and inverse trigonometric functions in degrees.<br>`ihd --deg "sin(30) + cos(60)"` $\to$ `1`                               |
+| `--explain`          | Step-by-step educational explanations of algebraic derivations in a 2D tree.<br>`ihd --explain "1 / (sqrt(2) + 1)"`                               |
+| `--lang <code/auto>` | Specify display language (`ja`, `en`, `auto`). Persisted to `~/.ihd/config.json`.<br>`ihd --lang en "1/2 + 1/3"`                                  |
+| `-h`, `--help`       | Display command help message.                                                                                                                     |
+| `-v`, `--version`    | Display version information (checks for newer releases if available).                                                                             |
+| `--no-update-check`  | Disable checking for newer releases (can also be disabled via `IHD_NO_UPDATE_CHECK=1`).                                                           |
 
 ---
 

@@ -609,6 +609,13 @@ func init() {
 		MinArgs: 1,
 		MaxArgs: 4,
 	})
+
+	// Gröbner Bases & Polynomial Ideals Pack (issue-55)
+	RegisterFunction(FunctionSpec{
+		Name:    "groebner",
+		MinArgs: 2,
+		MaxArgs: 3,
+	})
 }
 
 

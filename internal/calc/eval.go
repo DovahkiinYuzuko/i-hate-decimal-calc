@@ -1029,6 +1029,13 @@ func simplifyFuncWithEnv(name string, args []Node, env *Env) (Node, error) {
 	case "fourier_series":
 		return EvalFourierSeries(args, env)
 
+	case "groebner":
+		var orderOpt Node
+		if len(args) >= 3 {
+			orderOpt = args[2]
+		}
+		return EvalGroebner(args[0], args[1], orderOpt, env)
+
 	case "cfrac":
 
 

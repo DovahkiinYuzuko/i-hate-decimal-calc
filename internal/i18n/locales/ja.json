@@ -86,7 +86,19 @@
     "invalid_args_count": "関数 %s は %d 個の引数が必要ですが、%d 個渡されました",
     "vector_min_elements": "ベクトルには少なくとも1つの要素が必要です",
     "vector_dim_mismatch": "ベクトルの次元が一致しません",
-    "eigen_non_square": "固有値・固有ベクトルには正方行列が必要です"
+    "eigen_non_square": "固有値・固有ベクトルには正方行列が必要です",
+    "groebner_limit_exceeded": "groebner: 計算上限を超過しました（高次展開の可能性があります）",
+    "groebner_unknown_var": "groebner: 未知の変数です: %q",
+    "groebner_unsupported_unary": "groebner: サポートされていない単項演算子です: %q",
+    "groebner_invalid_exponent": "groebner: 非整数または負の指数が含まれています: %s",
+    "groebner_exponent_too_large": "groebner: 指数が大きすぎます (%d)",
+    "groebner_node_to_poly": "groebner: 式 %s を多項式に変換できません",
+    "groebner_missing_args": "groebner: 必要な引数が不足しています",
+    "groebner_var_list_identifiers": "groebner: 変数リストの要素は識別子である必要があります: %s",
+    "groebner_second_arg_var_list": "groebner: 第2引数は変数のリストまたは変数である必要があります: %s",
+    "groebner_var_list_empty": "groebner: 変数リストを空にすることはできません",
+    "groebner_duplicate_var": "groebner: 変数リスト内に重複した変数があります: %q",
+    "groebner_unsupported_order": "groebner: サポートされていない単項式順序です: %q ('lex' または 'grevlex' を指定してください)"
   },
   "plot": {
     "features_header": "[CAS Features Detected]\n",
