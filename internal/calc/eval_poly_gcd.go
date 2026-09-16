@@ -156,11 +156,11 @@ func subresultantGCD(p, q Node, v string) (Node, error) {
 	}
 
 	// 1. Content and Primitive Part separation
-	contP, err := polyContent(polyP, v)
+	contP, err := polyContent(polyP)
 	if err != nil {
 		return nil, err
 	}
-	contQ, err := polyContent(polyQ, v)
+	contQ, err := polyContent(polyQ)
 	if err != nil {
 		return nil, err
 	}
@@ -250,7 +250,7 @@ func subresultantGCD(p, q Node, v string) (Node, error) {
 	}
 
 	// Final primitive part is pp(lastNonZero)
-	ppWCont, err := polyContent(lastNonZero, v)
+	ppWCont, err := polyContent(lastNonZero)
 	if err == nil && !isZero(ppWCont) && !isOne(ppWCont) {
 		lastNonZero, _ = polyExactDivideScalar(lastNonZero, ppWCont)
 	}
@@ -384,8 +384,8 @@ func polyExactDivideScalar(P *univariatePoly, scalarNode Node) (*univariatePoly,
 }
 
 
-// polyContent computes the GCD of all coefficients of P with respect to varName.
-func polyContent(P *univariatePoly, varName string) (Node, error) {
+// polyContent computes the GCD of all coefficients of P.
+func polyContent(P *univariatePoly) (Node, error) {
 	if isPolyZero(P) {
 		return mustRational(0, 1), nil
 	}
