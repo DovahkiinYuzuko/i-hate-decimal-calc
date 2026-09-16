@@ -1,0 +1,150 @@
+package calc
+
+import (
+	"fmt"
+)
+
+func init() {
+	RegisterHandler("diff", handleDiff)
+	RegisterHandler("integrate", handleIntegrate)
+	RegisterHandler("limit", handleLimit)
+	RegisterHandler("taylor", handleTaylor)
+	RegisterHandler("sum", handleSum)
+	RegisterHandler("expand", handleExpand)
+	RegisterHandler("factor", handleFactor)
+	RegisterHandler("solve", handleSolve)
+	RegisterHandler("apart", handleApart)
+	RegisterHandler("together", handleTogether)
+	RegisterHandler("trig_expand", handleTrigExpand)
+	RegisterHandler("trig_reduce", handleTrigReduce)
+	RegisterLazyHandler("dsolve", handleDSolve)
+}
+
+func handleDiff(args []Node, env *Env) (Node, error) {
+	varName := "x"
+	if v, ok := args[1].(*VarNode); ok {
+		varName = v.Name
+	} else {
+		return nil, fmt.Errorf("diff error: second argument must be a variable name, got %s", args[1].String())
+	}
+	if len(args) == 3 {
+		r, ok := args[2].(*RationalNode)
+		if !ok || !r.Val.IsInt() || r.Val.Sign() < 0 {
+			return nil, fmt.Errorf("diff error: third argument must be a non-negative integer, got %s", args[2].String())
+		}
+		order := r.Val.Num().Int64()
+		res := args[0]
+		for k := int64(0); k < order; k++ {
+			var err error
+			res, err = differentiate(res, varName)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return res, nil
+	}
+	return differentiate(args[0], varName)
+}
+
+func handleIntegrate(args []Node, env *Env) (Node, error) {
+	varName := "x"
+	if v, ok := args[1].(*VarNode); ok {
+		varName = v.Name
+	} else {
+		return nil, fmt.Errorf("integrate error: second argument must be a variable name, got %s", args[1].String())
+	}
+	if len(args) == 2 {
+		return evalIndefiniteIntegral(args[0], varName)
+	}
+	return evalDefiniteIntegral(args[0], varName, args[2], args[3])
+}
+
+func handleLimit(args []Node, env *Env) (Node, error) {
+	var dirNode Node
+	if len(args) == 4 {
+		dirNode = args[3]
+	}
+	return EvalLimit(args[0], args[1], args[2], dirNode)
+}
+
+func handleTaylor(args []Node, env *Env) (Node, error) {
+	return evalTaylor(args[0], args[1], args[2], args[3])
+}
+
+func handleSum(args []Node, env *Env) (Node, error) {
+	return evalSum(args[0], args[1], args[2], args[3])
+}
+
+func handleExpand(args []Node, env *Env) (Node, error) {
+	return expandNode(args[0]), nil
+}
+
+func handleFactor(args []Node, env *Env) (Node, error) {
+	if len(args) == 1 {
+		return Factor(args[0])
+	}
+	varName := "x"
+	if v, ok := args[1].(*VarNode); ok {
+		varName = v.Name
+	} else {
+		return nil, fmt.Errorf("factor error: second argument must be a variable name, got %s", args[1].String())
+	}
+	return Factor(args[0], varName)
+}
+
+func handleSolve(args []Node, env *Env) (Node, error) {
+	varName := "x"
+	if v, ok := args[1].(*VarNode); ok {
+		varName = v.Name
+	} else {
+		return nil, fmt.Errorf("solve error: second argument must be a variable name, got %s", args[1].String())
+	}
+	return solveEquation(args[0], varName)
+}
+
+func handleApart(args []Node, env *Env) (Node, error) {
+	if len(args) == 1 {
+		return EvalApart(args[0])
+	}
+	varName := ""
+	if v, ok := args[1].(*VarNode); ok {
+		varName = v.Name
+	} else {
+		return nil, fmt.Errorf("apart error: second argument must be a variable name, got %s", args[1].String())
+	}
+	return EvalApart(args[0], varName)
+}
+
+func handleTogether(args []Node, env *Env) (Node, error) {
+	return EvalTogether(args[0])
+}
+
+func handleTrigExpand(args []Node, env *Env) (Node, error) {
+	return EvalTrigExpand(args[0], env)
+}
+
+func handleTrigReduce(args []Node, env *Env) (Node, error) {
+	return EvalTrigReduce(args[0], env)
+}
+
+func handleDSolve(args []Node, env *Env) (Node, error) {
+	if len(args) < 1 || len(args) > 3 {
+		return nil, fmt.Errorf("dsolve requires 1 to 3 arguments, got %d", len(args))
+	}
+	var yName, xName string
+	if len(args) >= 2 {
+		if vy, ok := args[1].(*VarNode); ok {
+			yName = vy.Name
+		} else {
+			return nil, fmt.Errorf("dsolve error: second argument must be a variable name, got %s", args[1].String())
+		}
+	}
+	if len(args) >= 3 {
+		if vx, ok := args[2].(*VarNode); ok {
+			xName = vx.Name
+		} else {
+			return nil, fmt.Errorf("dsolve error: third argument must be a variable name, got %s", args[2].String())
+		}
+	}
+	return EvalDSolve(args[0], yName, xName, env)
+}

@@ -6,21 +6,62 @@ import (
 	"strings"
 )
 
+// FuncHandler defines the evaluation logic for a function with environment context.
+type FuncHandler func(args []Node, env *Env) (Node, error)
+
 // FunctionSpec defines the specification, validation rules, and evaluation hook for a built-in function.
 type FunctionSpec struct {
 	Name             string
 	MinArgs          int
 	MaxArgs          int
 	AllowBareSymbol  bool // If true, can appear without parens as a distribution symbol (e.g. expect(binom, ...))
+	LazyArgs         bool // If true, arguments are not evaluated eagerly before calling Handler (e.g. dsolve)
 	Validate         func(args []Node) error
 	Evaluate         func(args []Node) (Node, error)
+	Handler          FuncHandler
 }
 
 var builtInFunctions = map[string]FunctionSpec{}
 
 // RegisterFunction registers a built-in function specification.
 func RegisterFunction(spec FunctionSpec) {
+	if existing, ok := builtInFunctions[spec.Name]; ok {
+		if spec.Handler == nil && existing.Handler != nil {
+			spec.Handler = existing.Handler
+		}
+		if !spec.LazyArgs && existing.LazyArgs {
+			spec.LazyArgs = existing.LazyArgs
+		}
+	}
 	builtInFunctions[spec.Name] = spec
+}
+
+// RegisterHandler attaches an evaluation handler to an existing function or creates a minimal spec.
+func RegisterHandler(name string, handler FuncHandler) {
+	if spec, ok := builtInFunctions[name]; ok {
+		spec.Handler = handler
+		builtInFunctions[name] = spec
+	} else {
+		builtInFunctions[name] = FunctionSpec{
+			Name:    name,
+			Handler: handler,
+		}
+	}
+}
+
+// RegisterLazyHandler attaches an evaluation handler whose arguments are not eagerly evaluated.
+func RegisterLazyHandler(name string, handler FuncHandler) {
+	if spec, ok := builtInFunctions[name]; ok {
+		spec.Handler = handler
+		spec.LazyArgs = true
+		builtInFunctions[name] = spec
+	} else {
+		builtInFunctions[name] = FunctionSpec{
+			Name:     name,
+			LazyArgs: true,
+			Handler:  handler,
+		}
+	}
 }
 
 // LookupFunction retrieves a FunctionSpec by function name, supporting case-insensitive fallback.
