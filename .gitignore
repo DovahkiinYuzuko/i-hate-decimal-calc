@@ -24,6 +24,10 @@
 !internal/
 !internal/calc/
 !internal/calc/*.go
+!internal/calc/ast/
+!internal/calc/ast/*.go
+!internal/calc/parser/
+!internal/calc/parser/*.go
 !internal/i18n/
 !internal/i18n/*.go
 !internal/i18n/locales/

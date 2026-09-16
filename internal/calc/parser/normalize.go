@@ -1,4 +1,4 @@
-package calc
+package parser
 
 import "strings"
 

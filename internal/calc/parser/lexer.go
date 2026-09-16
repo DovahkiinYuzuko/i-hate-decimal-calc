@@ -1,4 +1,4 @@
-package calc
+package parser
 
 import (
 	"fmt"
@@ -6,42 +6,9 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc/ast"
 )
-
-// TokenType represents the type of a lexical token.
-type TokenType int
-
-const (
-	TokenEOF TokenType = iota
-	TokenIllegal
-	TokenNumber
-	TokenIdent
-	TokenPlus
-	TokenMinus
-	TokenAsterisk
-	TokenSlash
-	TokenCaret
-	TokenBang
-	TokenLParen
-	TokenRParen
-	TokenComma
-	TokenAssign
-	TokenLBracket
-	TokenRBracket
-	TokenGT
-	TokenLT
-	TokenGTE
-	TokenLTE
-	TokenEQ
-)
-
-// Token represents a single lexical token.
-type Token struct {
-	Type    TokenType
-	Literal string
-	RatVal  *RationalNode
-	Pos     int
-}
 
 // Lexer breaks a mathematical expression into tokens.
 type Lexer struct {
@@ -219,7 +186,7 @@ func (l *Lexer) readNumber(startPos int) Token {
 				return Token{
 					Type:    TokenNumber,
 					Literal: intStr,
-					RatVal:  &RationalNode{Val: rat},
+					RatVal:  &ast.RationalNode{Val: rat},
 					Pos:     startPos,
 				}
 			}
@@ -241,7 +208,7 @@ func (l *Lexer) readNumber(startPos int) Token {
 				return Token{
 					Type:    TokenNumber,
 					Literal: intStr + ".",
-					RatVal:  &RationalNode{Val: rat},
+					RatVal:  &ast.RationalNode{Val: rat},
 					Pos:     startPos,
 				}
 			}
@@ -264,7 +231,7 @@ func (l *Lexer) readNumber(startPos int) Token {
 				return Token{
 					Type:    TokenNumber,
 					Literal: intStr + "." + fracStr,
-					RatVal:  &RationalNode{Val: rat},
+					RatVal:  &ast.RationalNode{Val: rat},
 					Pos:     startPos,
 				}
 			}
@@ -316,7 +283,7 @@ func (l *Lexer) readNumber(startPos int) Token {
 			return Token{
 				Type:    TokenNumber,
 				Literal: lit,
-				RatVal:  &RationalNode{Val: rat},
+				RatVal:  &ast.RationalNode{Val: rat},
 				Pos:     startPos,
 			}
 		}

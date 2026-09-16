@@ -1,12 +1,11 @@
-package calc
+package ast
 
 import (
-	"math/big"
+	"fmt"
 	"strings"
 	"testing"
 )
 
-// TestRationalNode_Success validates creation and string representation of rational numbers.
 func TestRationalNode_Success(t *testing.T) {
 	r, err := NewRational(4, 6)
 	if err != nil {
@@ -15,13 +14,11 @@ func TestRationalNode_Success(t *testing.T) {
 	if r.Type() != NodeRational {
 		t.Errorf("expected NodeRational, got %v", r.Type())
 	}
-	// 4/6 should be automatically reduced to 2/3
 	expected := "2/3"
 	if r.String() != expected {
 		t.Errorf("expected %s, got %s", expected, r.String())
 	}
 
-	// Integer representation (denominator is 1)
 	rInt, err := NewRational(5, 1)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -31,7 +28,6 @@ func TestRationalNode_Success(t *testing.T) {
 	}
 }
 
-// TestRationalNode_ZeroDenominator_Error validates error handling when denominator is zero.
 func TestRationalNode_ZeroDenominator_Error(t *testing.T) {
 	_, err := NewRational(1, 0)
 	if err == nil {
@@ -39,7 +35,6 @@ func TestRationalNode_ZeroDenominator_Error(t *testing.T) {
 	}
 }
 
-// TestSqrtNode validates sqrt node creation and string representation.
 func TestSqrtNode(t *testing.T) {
 	rad, _ := NewRational(2, 1)
 	s := NewSqrt(rad)
@@ -51,7 +46,6 @@ func TestSqrtNode(t *testing.T) {
 	}
 }
 
-// TestConstNode_SuccessAndError validates pi and e constants, and rejects unknown ones.
 func TestConstNode_SuccessAndError(t *testing.T) {
 	pi, err := NewConst("pi")
 	if err != nil {
@@ -75,63 +69,47 @@ func TestConstNode_SuccessAndError(t *testing.T) {
 	}
 }
 
-// TestFuncNode_LogDomainErrors validates error detection on logarithmic domain violations.
-func TestFuncNode_LogDomainErrors(t *testing.T) {
-	zero, _ := NewRational(0, 1)
-	negative, _ := NewRational(-5, 1)
-	one, _ := NewRational(1, 1)
-	two, _ := NewRational(2, 1)
-
-	// log(0) -> Error
-	_, err := NewFunc("log", []Node{zero})
-	if err == nil {
-		t.Fatal("expected error for log(0), got nil")
+func TestFuncNode_ValidationHook(t *testing.T) {
+	// Without validator, NewFunc succeeds
+	FuncValidator = nil
+	f, err := NewFunc("custom", []Node{NewVar("x")})
+	if err != nil {
+		t.Fatalf("expected no error without validator, got %v", err)
+	}
+	if f.String() != "custom(x)" {
+		t.Errorf("expected 'custom(x)', got %s", f.String())
 	}
 
-	// log(-5) -> Error
-	_, err = NewFunc("log", []Node{negative})
-	if err == nil {
-		t.Fatal("expected error for log(-5), got nil")
+	// With validator hook returning error
+	FuncValidator = func(name string, args []Node) error {
+		if name == "invalid_func" {
+			return fmt.Errorf("rejected func: %s", name)
+		}
+		return nil
 	}
+	defer func() { FuncValidator = nil }()
 
-	// log_1(2) (base is 1) -> Error
-	_, err = NewFunc("log", []Node{one, two})
+	_, err = NewFunc("invalid_func", []Node{NewVar("x")})
 	if err == nil {
-		t.Fatal("expected error for log with base 1, got nil")
-	}
-
-	// log_(-2)(2) (base <= 0) -> Error
-	_, err = NewFunc("log", []Node{negative, two})
-	if err == nil {
-		t.Fatal("expected error for log with negative base, got nil")
-	}
-
-	// Unknown function -> Error
-	_, err = NewFunc("unknown_func", []Node{two})
-	if err == nil {
-		t.Fatal("expected error for unknown function name, got nil")
+		t.Fatal("expected error from validator hook, got nil")
 	}
 }
 
-// TestUnaryOp_FactorialErrors validates error detection on factorial with negative or non-integer numbers.
 func TestUnaryOp_FactorialErrors(t *testing.T) {
 	neg, _ := NewRational(-3, 1)
 	frac, _ := NewRational(3, 2)
 	pos, _ := NewRational(4, 1)
 
-	// -3! -> Error
 	_, err := NewUnaryOp("!", neg)
 	if err == nil {
 		t.Fatal("expected error for factorial of negative integer, got nil")
 	}
 
-	// (3/2)! -> Error
 	_, err = NewUnaryOp("!", frac)
 	if err == nil {
 		t.Fatal("expected error for factorial of non-integer rational, got nil")
 	}
 
-	// 4! -> Success
 	op, err := NewUnaryOp("!", pos)
 	if err != nil {
 		t.Fatalf("expected no error for 4!, got %v", err)
@@ -141,7 +119,6 @@ func TestUnaryOp_FactorialErrors(t *testing.T) {
 	}
 }
 
-// TestPow_ZeroToNegative_Error validates 0^(negative) division by zero error.
 func TestPow_ZeroToNegative_Error(t *testing.T) {
 	zero, _ := NewRational(0, 1)
 	neg, _ := NewRational(-2, 1)
@@ -152,34 +129,27 @@ func TestPow_ZeroToNegative_Error(t *testing.T) {
 	}
 }
 
-// TestNaryFlattening validates that AddNode and MulNode flatten nested additions/multiplications.
 func TestNaryFlattening(t *testing.T) {
 	n1, _ := NewRational(1, 1)
 	n2, _ := NewRational(2, 1)
 	n3, _ := NewRational(3, 1)
 
-	// Nested Add: (1 + 2) + 3 should be flattened to [1, 2, 3]
 	innerAdd := NewAdd([]Node{n1, n2})
 	outerAdd := NewAdd([]Node{innerAdd, n3})
-
 	if len(outerAdd.Terms) != 3 {
 		t.Fatalf("expected 3 flattened terms, got %d", len(outerAdd.Terms))
 	}
 
-	// Nested Mul: (1 * 2) * 3 should be flattened to [1, 2, 3]
 	innerMul := NewMul([]Node{n1, n2})
 	outerMul := NewMul([]Node{innerMul, n3})
-
 	if len(outerMul.Factors) != 3 {
 		t.Fatalf("expected 3 flattened factors, got %d", len(outerMul.Factors))
 	}
 }
 
-// TestComplexNode validates complex node representation.
 func TestComplexNode(t *testing.T) {
 	r, _ := NewRational(3, 1)
 	i, _ := NewRational(4, 1)
-
 	c := NewComplex(r, i)
 	if c.Type() != NodeComplex {
 		t.Errorf("expected NodeComplex, got %v", c.Type())
@@ -189,10 +159,9 @@ func TestComplexNode(t *testing.T) {
 	}
 }
 
-// TestNodeEqual validates deep structural equality comparison.
 func TestNodeEqual(t *testing.T) {
 	r1, _ := NewRational(2, 3)
-	r2, _ := NewRational(4, 6) // simplifies to 2/3
+	r2, _ := NewRational(4, 6)
 	r3, _ := NewRational(5, 6)
 
 	if !r1.Equal(r2) {
@@ -214,22 +183,21 @@ func TestNodeEqual(t *testing.T) {
 	}
 }
 
-// Suppress unused big.Rat import
-var _ = big.NewRat
-
-func TestAST_WalkAndInspect(t *testing.T) {
-	// Build expression: sin(x + 2*y) + sqrt(z)
-	expr, err := Parse("sin(x + 2*y) + sqrt(z)")
-	if err != nil {
-		t.Fatalf("Parse error: %v", err)
-	}
+func TestAST_WalkAndInspect_ManualTree(t *testing.T) {
+	// Build tree: sin(x + 2*y) + sqrt(z)
+	two, _ := NewRational(2, 1)
+	innerMul := NewMul([]Node{two, NewVar("y")})
+	innerAdd := NewAdd([]Node{NewVar("x"), innerMul})
+	sinFunc := &FuncNode{Name: "sin", Args: []Node{innerAdd}}
+	sqrtNode := NewSqrt(NewVar("z"))
+	rootAdd := NewAdd([]Node{sinFunc, sqrtNode})
 
 	visitedTypes := make(map[NodeType]int)
-	Inspect(expr, func(n Node) {
+	Inspect(rootAdd, func(n Node) {
 		visitedTypes[n.Type()]++
 	})
 
-	if visitedTypes[NodeAdd] != 2 { // root Add + inner Add
+	if visitedTypes[NodeAdd] != 2 {
 		t.Errorf("expected 2 Add nodes, got %d", visitedTypes[NodeAdd])
 	}
 	if visitedTypes[NodeFunc] != 1 {
@@ -238,15 +206,13 @@ func TestAST_WalkAndInspect(t *testing.T) {
 	if visitedTypes[NodeSqrt] != 1 {
 		t.Errorf("expected 1 Sqrt node, got %d", visitedTypes[NodeSqrt])
 	}
-	if visitedTypes[NodeVar] != 3 { // x, y, z
+	if visitedTypes[NodeVar] != 3 {
 		t.Errorf("expected 3 Var nodes, got %d", visitedTypes[NodeVar])
 	}
 
-	// Test early termination (pruning) with Walk
 	walkCount := 0
-	Walk(expr, func(n Node) bool {
+	Walk(rootAdd, func(n Node) bool {
 		walkCount++
-		// If func node, don't visit its children
 		if n.Type() == NodeFunc {
 			return false
 		}
@@ -257,59 +223,46 @@ func TestAST_WalkAndInspect(t *testing.T) {
 	}
 }
 
-func TestAST_TransformAndSubstitute(t *testing.T) {
-	expr, err := Parse("x^2 + 2*x + 1")
-	if err != nil {
-		t.Fatalf("Parse error: %v", err)
-	}
+func TestAST_TransformAndSubstitute_ManualTree(t *testing.T) {
+	// Build tree: x^2 + 2*x + 1
+	two, _ := NewRational(2, 1)
+	one, _ := NewRational(1, 1)
+	pow := &PowNode{Base: NewVar("x"), Exp: two}
+	mul := NewMul([]Node{two, NewVar("x")})
+	poly := NewAdd([]Node{pow, mul, one})
 
-	// Substitute x with 3
 	val, _ := NewRational(3, 1)
-	subbed := Substitute(expr, "x", val)
+	subbed := Substitute(poly, "x", val)
 
-	// Format subbed and check
 	str := subbed.String()
 	if strings.Contains(str, "x") {
 		t.Errorf("expected no 'x' in subbed expression, got: %s", str)
 	}
-
-	// Evaluate subbed: 3^2 + 2*3 + 1 = 16
-	evaled, err := Eval(subbed)
-	if err != nil {
-		t.Fatalf("Eval error: %v", err)
-	}
-	want, _ := NewRational(16, 1)
-	if !evaled.Equal(want) {
-		t.Errorf("Eval(Substitute) = %s, want %s", evaled.String(), want.String())
-	}
 }
 
-func TestAST_ContainsVarAndExtractFreeVariables(t *testing.T) {
-	expr, err := Parse("x^2 + 2*y + sin(z)")
-	if err != nil {
-		t.Fatalf("Parse error: %v", err)
+func TestAST_ContainsVarAndExtractFreeVariables_ManualTree(t *testing.T) {
+	// Build tree: x^2 + 2*y + sin(z)
+	two, _ := NewRational(2, 1)
+	pow := &PowNode{Base: NewVar("x"), Exp: two}
+	mul := NewMul([]Node{two, NewVar("y")})
+	sinFunc := &FuncNode{Name: "sin", Args: []Node{NewVar("z")}}
+	poly := NewAdd([]Node{pow, mul, sinFunc})
+
+	if !ContainsVar(poly, "x") || !ContainsVar(poly, "y") || !ContainsVar(poly, "z") {
+		t.Errorf("expected ContainsVar for x, y, z to be true")
+	}
+	if ContainsVar(poly, "w") {
+		t.Errorf("expected ContainsVar for w to be false")
 	}
 
-	if !ContainsVar(expr, "x") {
-		t.Errorf("expected ContainsVar(expr, 'x') to be true")
-	}
-	if !ContainsVar(expr, "y") {
-		t.Errorf("expected ContainsVar(expr, 'y') to be true")
-	}
-	if !ContainsVar(expr, "z") {
-		t.Errorf("expected ContainsVar(expr, 'z') to be true")
-	}
-	if ContainsVar(expr, "w") {
-		t.Errorf("expected ContainsVar(expr, 'w') to be false")
-	}
-
-	vars := ExtractFreeVariables(expr)
+	vars := ExtractFreeVariables(poly)
 	if len(vars) != 3 || vars[0] != "x" || vars[1] != "y" || vars[2] != "z" {
 		t.Errorf("ExtractFreeVariables = %v, want [x, y, z]", vars)
 	}
 
-	// Expression with no variables
-	constExpr, _ := Parse("1/2 + sqrt(2)")
+	rad, _ := NewRational(2, 1)
+	half, _ := NewRational(1, 2)
+	constExpr := NewAdd([]Node{half, NewSqrt(rad)})
 	if ContainsVar(constExpr, "x") {
 		t.Errorf("expected false for constExpr")
 	}

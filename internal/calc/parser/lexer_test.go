@@ -1,4 +1,4 @@
-package calc
+package parser
 
 import (
 	"testing"
@@ -30,7 +30,6 @@ func TestLexer_BasicTokens(t *testing.T) {
 }
 
 func TestLexer_DecimalToFraction(t *testing.T) {
-	// 6.441 must be converted to 6441/1000 without using float64
 	input := "6.441"
 	tokens, err := Tokenize(input)
 	if err != nil {
@@ -44,7 +43,6 @@ func TestLexer_DecimalToFraction(t *testing.T) {
 		t.Errorf("expected %s, got %s", expected, tokens[0].RatVal.String())
 	}
 
-	// 0.005 -> 5/1000 -> 1/200 (auto-reduced by big.Rat)
 	tokens2, err := Tokenize("0.005")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -105,14 +103,12 @@ func TestLexer_RepeatingDecimals(t *testing.T) {
 		}
 	}
 
-	// Syntax errors in repeating decimals
 	errorCases := []string{
 		"0.()",
 		"0.(3",
 	}
 	for _, ec := range errorCases {
 		tokens, err := Tokenize(ec)
-		// Either Tokenize returns an error, or the tokens contain TokenIllegal
 		hasIllegal := false
 		if err != nil {
 			hasIllegal = true
@@ -130,7 +126,6 @@ func TestLexer_RepeatingDecimals(t *testing.T) {
 	}
 }
 
-// TestLexer_NormalizeZenkaku validates full-width (Zenkaku) character normalization.
 func TestLexer_NormalizeZenkaku(t *testing.T) {
 	testCases := []struct {
 		input    string
@@ -157,4 +152,3 @@ func TestLexer_NormalizeZenkaku(t *testing.T) {
 		}
 	}
 }
-
