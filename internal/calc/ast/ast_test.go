@@ -319,3 +319,51 @@ func TestPolyNode_BasicOperations(t *testing.T) {
 	}
 }
 
+func TestAlgebraicNumberNode(t *testing.T) {
+	minP := &PolyNode{
+		Vars:  []string{"x"},
+		Order: OrderLex,
+		Terms: []Monomial{
+			{Coeff: big.NewRat(1, 1), Exponents: []int{2}},
+			{Coeff: big.NewRat(-2, 1), Exponents: []int{0}},
+		},
+	}
+	repP := &PolyNode{
+		Vars:  []string{"x"},
+		Order: OrderLex,
+		Terms: []Monomial{
+			{Coeff: big.NewRat(1, 1), Exponents: []int{1}},
+		},
+	}
+	alg := &AlgebraicNumberNode{
+		MinPoly: minP,
+		RepPoly: repP,
+		Symbol:  "alpha",
+	}
+
+	if alg.Type() != NodeAlgebraicNumber {
+		t.Errorf("expected NodeAlgebraicNumber, got %v", alg.Type())
+	}
+	if !ContainsVar(alg, "x") {
+		t.Errorf("expected ContainsVar(alg, x) to be true")
+	}
+	if !ContainsVar(alg, "alpha") {
+		t.Errorf("expected ContainsVar(alg, alpha) to be true")
+	}
+	if ContainsVar(alg, "z") {
+		t.Errorf("expected ContainsVar(alg, z) to be false")
+	}
+
+	cloned := alg.Clone()
+	if !alg.Equal(cloned) {
+		t.Errorf("expected cloned AlgebraicNumberNode to equal original")
+	}
+
+	transformed := Transform(alg, func(n Node) Node {
+		return n
+	})
+	if !alg.Equal(transformed) {
+		t.Errorf("expected identity transform to return equal node")
+	}
+}
+

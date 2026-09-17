@@ -79,6 +79,7 @@ const (
 	NodePlot
 	NodeRelOp
 	NodePoly
+	NodeAlgebraicNumber
 )
 
 // Node represents any node in the mathematical expression tree.
@@ -801,6 +802,73 @@ func (n *PolyNode) Clone() *PolyNode {
 }
 
 // -------------------------------------------------------------------------
+// AlgebraicNumberNode (Element of Algebraic Number Field Q(alpha))
+// -------------------------------------------------------------------------
+
+// AlgebraicNumberNode represents an algebraic number in Q(alpha), defined modulo
+// an irreducible monic polynomial MinPoly(alpha) = 0.
+// RepPoly represents the canonical element as a polynomial in alpha with deg(RepPoly) < deg(MinPoly).
+type AlgebraicNumberNode struct {
+	MinPoly *PolyNode // Minimal polynomial m(x) where m(alpha) = 0
+	RepPoly *PolyNode // Representative polynomial r(x) where element is r(alpha)
+	Symbol  string    // Generator symbol, default "alpha"
+}
+
+func (n *AlgebraicNumberNode) Type() NodeType { return NodeAlgebraicNumber }
+
+func (n *AlgebraicNumberNode) String() string {
+	sym := n.Symbol
+	if sym == "" {
+		sym = "alpha"
+	}
+	repStr := "0"
+	if n.RepPoly != nil {
+		repStr = n.RepPoly.String()
+	}
+	minStr := "?"
+	if n.MinPoly != nil {
+		minStr = n.MinPoly.String()
+	}
+	return fmt.Sprintf("AlgNum(%s mod %s=0)", repStr, minStr)
+}
+
+func (n *AlgebraicNumberNode) Equal(other Node) bool {
+	o, ok := other.(*AlgebraicNumberNode)
+	if !ok {
+		return false
+	}
+	if n.Symbol != o.Symbol {
+		return false
+	}
+	if (n.MinPoly == nil) != (o.MinPoly == nil) {
+		return false
+	}
+	if n.MinPoly != nil && !n.MinPoly.Equal(o.MinPoly) {
+		return false
+	}
+	if (n.RepPoly == nil) != (o.RepPoly == nil) {
+		return false
+	}
+	if n.RepPoly != nil && !n.RepPoly.Equal(o.RepPoly) {
+		return false
+	}
+	return true
+}
+
+func (n *AlgebraicNumberNode) Clone() *AlgebraicNumberNode {
+	cp := &AlgebraicNumberNode{
+		Symbol: n.Symbol,
+	}
+	if n.MinPoly != nil {
+		cp.MinPoly = n.MinPoly.Clone()
+	}
+	if n.RepPoly != nil {
+		cp.RepPoly = n.RepPoly.Clone()
+	}
+	return cp
+}
+
+// -------------------------------------------------------------------------
 // AST Traversal & Transformation (Walker Pattern)
 // -------------------------------------------------------------------------
 
@@ -850,7 +918,7 @@ func Walk(node Node, visitor func(Node) bool) {
 	case *RelOpNode:
 		Walk(v.LHS, visitor)
 		Walk(v.RHS, visitor)
-	case *RationalNode, *ConstNode, *VarNode, *PlotNode, *PolyNode:
+	case *RationalNode, *ConstNode, *VarNode, *PlotNode, *PolyNode, *AlgebraicNumberNode:
 		// Leaf nodes: no children
 	}
 }
@@ -943,7 +1011,7 @@ func Transform(node Node, transformer func(Node) Node) Node {
 			Op:  v.Op,
 			RHS: Transform(v.RHS, transformer),
 		}
-	case *RationalNode, *ConstNode, *VarNode, *PlotNode, *PolyNode:
+	case *RationalNode, *ConstNode, *VarNode, *PlotNode, *PolyNode, *AlgebraicNumberNode:
 		transformedChild = node
 	default:
 		transformedChild = node
@@ -981,6 +1049,28 @@ func ContainsVar(node Node, varName string) bool {
 				}
 			}
 		}
+		if a, ok := curr.(*AlgebraicNumberNode); ok {
+			if a.Symbol == varName {
+				found = true
+				return false
+			}
+			if a.MinPoly != nil {
+				for _, v := range a.MinPoly.Vars {
+					if v == varName {
+						found = true
+						return false
+					}
+				}
+			}
+			if a.RepPoly != nil {
+				for _, v := range a.RepPoly.Vars {
+					if v == varName {
+						found = true
+						return false
+					}
+				}
+			}
+		}
 		return true
 	})
 	return found
@@ -996,6 +1086,21 @@ func ExtractFreeVariables(node Node) []string {
 		if p, ok := curr.(*PolyNode); ok {
 			for _, v := range p.Vars {
 				varMap[v] = true
+			}
+		}
+		if a, ok := curr.(*AlgebraicNumberNode); ok {
+			if a.Symbol != "" {
+				varMap[a.Symbol] = true
+			}
+			if a.MinPoly != nil {
+				for _, v := range a.MinPoly.Vars {
+					varMap[v] = true
+				}
+			}
+			if a.RepPoly != nil {
+				for _, v := range a.RepPoly.Vars {
+					varMap[v] = true
+				}
 			}
 		}
 		return true

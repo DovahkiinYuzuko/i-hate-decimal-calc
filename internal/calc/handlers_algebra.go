@@ -17,6 +17,9 @@ func init() {
 	RegisterHandler("root_count", handleRootCount)
 	RegisterHandler("isolate_roots", handleIsolateRoots)
 	RegisterHandler("to_poly", handleToPoly)
+	RegisterHandler("to_alg", handleToAlg)
+	RegisterHandler("alg_inv", handleAlgInv)
+	RegisterHandler("min_poly", handleMinPoly)
 }
 
 func handlePolyGCD(args []Node, env *Env) (Node, error) {
@@ -164,6 +167,88 @@ func handleToPoly(args []Node, env *Env) (Node, error) {
 	}
 
 	return NodeToPoly(expr, vars, order)
+}
+
+func handleToAlg(args []Node, env *Env) (Node, error) {
+	if len(args) < 2 || len(args) > 3 {
+		return nil, fmt.Errorf("%s", i18n.T("errors.func_args_between", "to_alg", 2, 3, len(args)))
+	}
+	repExpr := args[0]
+	minPolyExpr := args[1]
+
+	// Extract variable from minPolyExpr
+	vars := ast.ExtractFreeVariables(minPolyExpr)
+	if len(vars) == 0 {
+		vars = []string{"x"}
+	}
+	mainVar := vars[0]
+
+	minPoly, err := NodeToPoly(minPolyExpr, []string{mainVar}, ast.OrderLex)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse minimal polynomial: %w", err)
+	}
+
+	repPoly, err := NodeToPoly(repExpr, []string{mainVar}, ast.OrderLex)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse representative polynomial: %w", err)
+	}
+
+	symbol := mainVar
+	if len(args) >= 3 {
+		if vn, ok := args[2].(*VarNode); ok {
+			symbol = vn.Name
+		} else {
+			symbol = strings.Trim(args[2].String(), "\"'`")
+		}
+	}
+
+	return NewAlgebraicNumber(minPoly, repPoly, symbol)
+}
+
+func handleAlgInv(args []Node, env *Env) (Node, error) {
+	if len(args) != 1 {
+		return nil, fmt.Errorf("%s", i18n.T("errors.invalid_args_count", "alg_inv", 1, len(args)))
+	}
+	algNode, ok := args[0].(*AlgebraicNumberNode)
+	if !ok {
+		return nil, fmt.Errorf("argument to alg_inv must be an AlgebraicNumberNode, got %T", args[0])
+	}
+	return InvAlg(algNode)
+}
+
+func handleMinPoly(args []Node, env *Env) (Node, error) {
+	if len(args) < 2 || len(args) > 3 {
+		return nil, fmt.Errorf("%s", i18n.T("errors.func_args_between", "min_poly", 2, 3, len(args)))
+	}
+
+	vars1 := ast.ExtractFreeVariables(args[0])
+	if len(vars1) == 0 {
+		vars1 = []string{"x"}
+	}
+	m1, err := NodeToPoly(args[0], []string{vars1[0]}, ast.OrderLex)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse first polynomial: %w", err)
+	}
+
+	vars2 := ast.ExtractFreeVariables(args[1])
+	if len(vars2) == 0 {
+		vars2 = []string{"x"}
+	}
+	m2, err := NodeToPoly(args[1], []string{vars2[0]}, ast.OrderLex)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse second polynomial: %w", err)
+	}
+
+	varName := "y"
+	if len(args) >= 3 {
+		if vn, ok := args[2].(*VarNode); ok {
+			varName = vn.Name
+		} else {
+			varName = strings.Trim(args[2].String(), "\"'`")
+		}
+	}
+
+	return MinPolySum(m1, m2, varName)
 }
 
 

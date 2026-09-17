@@ -739,6 +739,23 @@ func init() {
 		MinArgs: 1,
 		MaxArgs: 3,
 	})
+
+	// Algebraic Number Fields & Minimal Polynomials (issue-65)
+	RegisterFunction(FunctionSpec{
+		Name:    "to_alg",
+		MinArgs: 2,
+		MaxArgs: 3,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "alg_inv",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "min_poly",
+		MinArgs: 2,
+		MaxArgs: 3,
+	})
 }
 
 

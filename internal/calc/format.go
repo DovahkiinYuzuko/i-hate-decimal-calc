@@ -33,6 +33,9 @@ func formatNode(n Node, opts FormatOptions) string {
 	case *PolyNode:
 		return v.String()
 
+	case *AlgebraicNumberNode:
+		return v.String()
+
 	case *RationalNode:
 		if v.Val.IsInt() {
 			return v.Val.Num().String()

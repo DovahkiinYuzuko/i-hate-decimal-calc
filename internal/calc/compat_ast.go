@@ -52,26 +52,28 @@ const (
 	NodePlot     = ast.NodePlot
 	NodeRelOp    = ast.NodeRelOp
 	NodePoly     = ast.NodePoly
+	NodeAlgebraicNumber = ast.NodeAlgebraicNumber
 )
 
 type (
-	Node         = ast.Node
-	RationalNode = ast.RationalNode
-	SqrtNode     = ast.SqrtNode
-	ConstNode    = ast.ConstNode
-	FuncNode     = ast.FuncNode
-	ComplexNode  = ast.ComplexNode
-	AddNode      = ast.AddNode
-	MulNode      = ast.MulNode
-	PowNode      = ast.PowNode
-	UnaryOpNode  = ast.UnaryOpNode
-	VarNode      = ast.VarNode
-	AssignStmt   = ast.AssignStmt
-	ListNode     = ast.ListNode
-	MatrixNode   = ast.MatrixNode
-	PlotNode     = ast.PlotNode
-	RelOpNode    = ast.RelOpNode
-	PolyNode     = ast.PolyNode
+	Node                = ast.Node
+	RationalNode        = ast.RationalNode
+	SqrtNode            = ast.SqrtNode
+	ConstNode           = ast.ConstNode
+	FuncNode            = ast.FuncNode
+	ComplexNode         = ast.ComplexNode
+	AddNode             = ast.AddNode
+	MulNode             = ast.MulNode
+	PowNode             = ast.PowNode
+	UnaryOpNode         = ast.UnaryOpNode
+	VarNode             = ast.VarNode
+	AssignStmt          = ast.AssignStmt
+	ListNode            = ast.ListNode
+	MatrixNode          = ast.MatrixNode
+	PlotNode            = ast.PlotNode
+	RelOpNode           = ast.RelOpNode
+	PolyNode            = ast.PolyNode
+	AlgebraicNumberNode = ast.AlgebraicNumberNode
 )
 
 var (
