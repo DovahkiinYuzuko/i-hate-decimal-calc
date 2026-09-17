@@ -125,7 +125,11 @@
     "sturm_invalid_variable": "%s error: variable must be a symbol, got %s",
     "residue_var_required": "residue error: second argument must be a variable symbol, got %s",
     "residue_order_exceeded": "pole order exceeds 10 or essential singularity",
-    "residue_failed": "residue error: failed to determine residue at singularity %s: %v"
+    "residue_failed": "residue error: failed to determine residue at singularity %s: %v",
+    "gamma_pole": "gamma error: gamma function is undefined (has a pole) at non-positive integer (%s)",
+    "gamma_invalid_arg": "gamma error: argument must be an integer or half-integer (%s)",
+    "bernoulli_non_negative": "bernoulli error: argument must be a non-negative integer (%s)",
+    "zeta_domain_error": "zeta error: zeta function is undefined (has a pole) at s = 1"
   },
   "plot": {
     "features_header": "[CAS Features Detected]\n",

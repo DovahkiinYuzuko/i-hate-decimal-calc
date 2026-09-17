@@ -110,6 +110,10 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `taylor` | `taylor(f, x, a, n)` | Taylor / Maclaurin series expansion around $x=a$ up to order $n$ |
 | `fourier_series` | `fourier_series(f, [t, L, n])` | Symbolic Fourier series expansion (computes exact definite integrals via Euler-Fourier formulas up to order $n$) |
 | `residue` | `residue(1/(z^2*(z+1)), z, 0)` / `residue(exp(z)/z^3, z, 0)` | Exact algebraic residue $\mathrm{Res}(f, z_0)$ at isolated singularity $z_0$ in complex analysis (order determination, Taylor recurrence & Cauchy formula) |
+| `gamma` | `gamma(5)` / `gamma(1/2)` / `gamma(-1/2)` | Gamma function $\Gamma(z)$ (factorial $(n-1)!$ for positive integers, $\sqrt{\pi}$ expansion for half-integers, pole detection for non-positive integers) |
+| `beta` | `beta(2, 3)` / `beta(1/2, 1/2)` | Beta function $\mathrm{B}(p, q) = \frac{\Gamma(p)\Gamma(q)}{\Gamma(p+q)}$ (exact rational or algebraic expansion for integers/half-integers, e.g. $\mathrm{B}(1/2, 1/2) = \pi$) |
+| `bernoulli` | `bernoulli(4)` / `bernoulli(10)` | $n$-th Bernoulli number $B_n$ (exact arbitrary-precision rational via Akiyama-Tanigawa algorithm, e.g. $B_{10} = 5/66$) |
+| `zeta` | `zeta(2)` / `zeta(4)` / `zeta(6)` | Riemann zeta function $\zeta(s)$ (exact algebraic closed forms for positive even integers via Euler formula, e.g. $\zeta(4) = \pi^4/90$, pole detection at $s=1$) |
 | `sum` | `sum(expr, k, start, end)` | Discrete summation (finite sum or exact polynomial closed form via Faulhaber formula) |
 
 ---

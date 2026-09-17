@@ -710,6 +710,28 @@ func init() {
 		MinArgs: 3,
 		MaxArgs: 3,
 	})
+
+	// Elementary Special Functions & Combinatorics Pack (issue-62)
+	RegisterFunction(FunctionSpec{
+		Name:    "gamma",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "beta",
+		MinArgs: 2,
+		MaxArgs: 2,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "bernoulli",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "zeta",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
 }
 
 

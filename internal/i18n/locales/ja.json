@@ -125,7 +125,11 @@
     "sturm_invalid_variable": "%s エラー: 変数はシンボルである必要があります (%s)",
     "residue_var_required": "residue エラー: 第2引数は変数シンボルである必要があります (%s)",
     "residue_order_exceeded": "極の位数が10を超えているか真性特異点です",
-    "residue_failed": "residue エラー: 特異点 %s における留数の算出に失敗しました: %v"
+    "residue_failed": "residue エラー: 特異点 %s における留数の算出に失敗しました: %v",
+    "gamma_pole": "gamma エラー: ガンマ関数は非正の整数 (%s) で未定義（極）です",
+    "gamma_invalid_arg": "gamma エラー: 引数は整数または半整数である必要があります (%s)",
+    "bernoulli_non_negative": "bernoulli エラー: 引数は非負整数である必要があります (%s)",
+    "zeta_domain_error": "zeta エラー: ゼータ関数は s = 1 で未定義（極）です"
   },
   "plot": {
     "features_header": "[CAS Features Detected]\n",
