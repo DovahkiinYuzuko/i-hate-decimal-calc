@@ -69,6 +69,12 @@ ihd "0.(142857)"
 
 ihd "abs(3 + 4*i)"
 # 出力: 5（複素数の絶対値）
+
+ihd "root_count(x^3 - 3*x + 1, x)"
+# 出力: 3（スツルムの定理による実根の厳密個数算定）
+
+ihd "isolate_roots(x^2 - 2, x)"
+# 出力: [[-3/2, -3/4], [3/4, 3/2]]（実根の有理数区間完全分離）
 ```
 
 #### 2. 対話モード（REPL）
@@ -324,6 +330,12 @@ ihd "0.(142857)"
 
 ihd "abs(3 + 4*i)"
 # Output: 5 (Complex modulus)
+
+ihd "root_count(x^3 - 3*x + 1, x)"
+# Output: 3 (Exact real root count via Sturm's theorem)
+
+ihd "isolate_roots(x^2 - 2, x)"
+# Output: [[-3/2, -3/4], [3/4, 3/2]] (Real root isolation into disjoint rational intervals)
 ```
 
 #### 2. Interactive REPL

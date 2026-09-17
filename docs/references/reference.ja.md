@@ -68,6 +68,9 @@
 | `poly_lcm` | `poly_lcm(p, q)` / `poly_lcm(p, q, var)` | 多変数多項式の厳密最小公倍多項式（$\frac{p \cdot q}{\mathrm{GCD}(p, q)}$ による厳密多項式除算） |
 | `resultant` | `resultant(p, q)` / `resultant(p, q, var)` | シルベスター終結式（Sylvester (1840) の Dialytic Method による行列式評価と多変数代数方程式消去法） |
 | `groebner` | `groebner([p1, p2, ...], [x, y, ...])` / `groebner(..., [order])` | 多変数多項式イデアルの既約グレブナー基底（Buchberger (1965/1979/1985)、Gebauer-Möller (1988) 基準、Giovini (1991) Sugar 戦略による高速算出。順序 `lex`/`grevlex`） |
+| `sturm` | `sturm(p)` / `sturm(p, var)` | 厳密スツルム列（Sturm chain）の生成（$\mathbb{Q}[x]$ 上のPrimitive PRSによる係数爆発防止型スツルム多項式剰余列） |
+| `root_count` | `root_count(p)` / `root_count(p, var, [a, b])` | スツルムの定理による実根の厳密な個数算定（区間 $[a, b]$ または $(-\infty, \infty)$ 内の相異なる実根数を符号変化数から決定） |
+| `isolate_roots` | `isolate_roots(p)` / `isolate_roots(p, var, [a, b])` | 厳密代数的実根分離（無平方分解と有理二分法探索により、各実根をちょうど1個含む互いに素な有理数区間を確定） |
 | `inv_mod` | `inv_mod(a, m)` | 拡張ユークリッド互除法によるモジュラ逆数（$a x \equiv 1 \pmod m$） |
 | `crt` | `crt([r1, r2], [m1, m2])` | 中国剰余定理（Garner法および非互いに素な合同式を解く一般化CRT拡張） |
 | `totient` | `totient(n)` | オイラーのトーシェント関数 $\phi(n) = n \prod_{p \mid n} (1 - 1/p)$ |

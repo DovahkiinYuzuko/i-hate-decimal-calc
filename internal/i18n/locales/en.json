@@ -119,7 +119,10 @@
     "matrix_qr_rank_deficient": "%s error: matrix must have full column rank for QR decomposition (column %d is linearly dependent)",
     "func_args_at_least": "function %s requires at least %d arguments, got %d",
     "func_args_at_most": "function %s requires at most %d arguments, got %d",
-    "func_args_between": "function %s requires between %d and %d arguments, got %d"
+    "func_args_between": "function %s requires between %d and %d arguments, got %d",
+    "sturm_poly_required": "%s error: expression must be a univariate polynomial with rational coefficients",
+    "sturm_invalid_interval": "%s error: interval lower bound (%s) must be less than upper bound (%s)",
+    "sturm_invalid_variable": "%s error: variable must be a symbol, got %s"
   },
   "plot": {
     "features_header": "[CAS Features Detected]\n",
