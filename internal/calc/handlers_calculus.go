@@ -2,6 +2,8 @@ package calc
 
 import (
 	"fmt"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
 func init() {
@@ -25,12 +27,12 @@ func handleDiff(args []Node, env *Env) (Node, error) {
 	if v, ok := args[1].(*VarNode); ok {
 		varName = v.Name
 	} else {
-		return nil, fmt.Errorf("diff error: second argument must be a variable name, got %s", args[1].String())
+		return nil, fmt.Errorf("%s", i18n.T("errors.arg_must_be_var", "diff", "second", args[1].String()))
 	}
 	if len(args) == 3 {
 		r, ok := args[2].(*RationalNode)
 		if !ok || !r.Val.IsInt() || r.Val.Sign() < 0 {
-			return nil, fmt.Errorf("diff error: third argument must be a non-negative integer, got %s", args[2].String())
+			return nil, fmt.Errorf("%s", i18n.T("errors.diff_order_non_negative", args[2].String()))
 		}
 		order := r.Val.Num().Int64()
 		res := args[0]
@@ -51,7 +53,7 @@ func handleIntegrate(args []Node, env *Env) (Node, error) {
 	if v, ok := args[1].(*VarNode); ok {
 		varName = v.Name
 	} else {
-		return nil, fmt.Errorf("integrate error: second argument must be a variable name, got %s", args[1].String())
+		return nil, fmt.Errorf("%s", i18n.T("errors.arg_must_be_var", "integrate", "second", args[1].String()))
 	}
 	if len(args) == 2 {
 		return evalIndefiniteIntegral(args[0], varName)
@@ -87,7 +89,7 @@ func handleFactor(args []Node, env *Env) (Node, error) {
 	if v, ok := args[1].(*VarNode); ok {
 		varName = v.Name
 	} else {
-		return nil, fmt.Errorf("factor error: second argument must be a variable name, got %s", args[1].String())
+		return nil, fmt.Errorf("%s", i18n.T("errors.arg_must_be_var", "factor", "second", args[1].String()))
 	}
 	return Factor(args[0], varName)
 }
@@ -97,7 +99,7 @@ func handleSolve(args []Node, env *Env) (Node, error) {
 	if v, ok := args[1].(*VarNode); ok {
 		varName = v.Name
 	} else {
-		return nil, fmt.Errorf("solve error: second argument must be a variable name, got %s", args[1].String())
+		return nil, fmt.Errorf("%s", i18n.T("errors.arg_must_be_var", "solve", "second", args[1].String()))
 	}
 	return solveEquation(args[0], varName)
 }
@@ -110,7 +112,7 @@ func handleApart(args []Node, env *Env) (Node, error) {
 	if v, ok := args[1].(*VarNode); ok {
 		varName = v.Name
 	} else {
-		return nil, fmt.Errorf("apart error: second argument must be a variable name, got %s", args[1].String())
+		return nil, fmt.Errorf("%s", i18n.T("errors.arg_must_be_var", "apart", "second", args[1].String()))
 	}
 	return EvalApart(args[0], varName)
 }
@@ -129,21 +131,21 @@ func handleTrigReduce(args []Node, env *Env) (Node, error) {
 
 func handleDSolve(args []Node, env *Env) (Node, error) {
 	if len(args) < 1 || len(args) > 3 {
-		return nil, fmt.Errorf("dsolve requires 1 to 3 arguments, got %d", len(args))
+		return nil, fmt.Errorf("%s", i18n.T("errors.dsolve_args_count", len(args)))
 	}
 	var yName, xName string
 	if len(args) >= 2 {
 		if vy, ok := args[1].(*VarNode); ok {
 			yName = vy.Name
 		} else {
-			return nil, fmt.Errorf("dsolve error: second argument must be a variable name, got %s", args[1].String())
+			return nil, fmt.Errorf("%s", i18n.T("errors.arg_must_be_var", "dsolve", "second", args[1].String()))
 		}
 	}
 	if len(args) >= 3 {
 		if vx, ok := args[2].(*VarNode); ok {
 			xName = vx.Name
 		} else {
-			return nil, fmt.Errorf("dsolve error: third argument must be a variable name, got %s", args[2].String())
+			return nil, fmt.Errorf("%s", i18n.T("errors.arg_must_be_var", "dsolve", "third", args[2].String()))
 		}
 	}
 	return EvalDSolve(args[0], yName, xName, env)

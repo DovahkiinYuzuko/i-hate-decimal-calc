@@ -2,6 +2,8 @@ package calc
 
 import (
 	"fmt"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
 func init() {
@@ -17,7 +19,7 @@ func handlePolyGCD(args []Node, env *Env) (Node, error) {
 		if v, ok := args[2].(*VarNode); ok {
 			vName = v.Name
 		} else {
-			return nil, fmt.Errorf("poly_gcd error: third argument must be a variable name, got %s", args[2].String())
+			return nil, fmt.Errorf("%s", i18n.T("errors.arg_must_be_var", "poly_gcd", "third", args[2].String()))
 		}
 	}
 	return EvalPolyGCD(args[0], args[1], vName, env)
@@ -29,7 +31,7 @@ func handlePolyLCM(args []Node, env *Env) (Node, error) {
 		if v, ok := args[2].(*VarNode); ok {
 			vName = v.Name
 		} else {
-			return nil, fmt.Errorf("poly_lcm error: third argument must be a variable name, got %s", args[2].String())
+			return nil, fmt.Errorf("%s", i18n.T("errors.arg_must_be_var", "poly_lcm", "third", args[2].String()))
 		}
 	}
 	return EvalPolyLCM(args[0], args[1], vName, env)
@@ -41,7 +43,7 @@ func handleResultant(args []Node, env *Env) (Node, error) {
 		if v, ok := args[2].(*VarNode); ok {
 			vName = v.Name
 		} else {
-			return nil, fmt.Errorf("resultant error: third argument must be a variable name, got %s", args[2].String())
+			return nil, fmt.Errorf("%s", i18n.T("errors.arg_must_be_var", "resultant", "third", args[2].String()))
 		}
 	}
 	return EvalResultant(args[0], args[1], vName, env)

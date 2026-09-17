@@ -15,7 +15,7 @@ func init() {
 
 func handleAssume(args []Node, env *Env) (Node, error) {
 	if env == nil {
-		return nil, fmt.Errorf("no environment available for assumptions")
+		return nil, fmt.Errorf("%s", i18n.T("errors.assume_no_env"))
 	}
 	if len(args) == 1 {
 		// e.g. assume(x > 0), assume(x >= 0), assume(x < 0), assume(x <= 0)
@@ -65,7 +65,7 @@ func handleAssume(args []Node, env *Env) (Node, error) {
 		}
 		return &VarNode{Name: "ok"}, nil
 	}
-	return nil, fmt.Errorf("assume requires 1 or 2 arguments")
+	return nil, fmt.Errorf("%s", i18n.T("errors.assume_args_count"))
 }
 
 func handleUnassume(args []Node, env *Env) (Node, error) {
@@ -80,7 +80,7 @@ func handleUnassume(args []Node, env *Env) (Node, error) {
 		env.Assumptions().Unassume(v.Name)
 		return &VarNode{Name: "ok"}, nil
 	}
-	return nil, fmt.Errorf("unassume expects a variable name")
+	return nil, fmt.Errorf("%s", i18n.T("errors.unassume_expect_var"))
 }
 
 func handleAssumptions(args []Node, env *Env) (Node, error) {

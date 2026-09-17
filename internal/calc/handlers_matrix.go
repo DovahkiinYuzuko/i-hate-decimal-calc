@@ -2,6 +2,8 @@ package calc
 
 import (
 	"fmt"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
 func init() {
@@ -27,7 +29,7 @@ func init() {
 func handleDet(args []Node, env *Env) (Node, error) {
 	mat, ok := args[0].(*MatrixNode)
 	if !ok {
-		return nil, fmt.Errorf("det error: argument must be a matrix, got %s", args[0].String())
+		return nil, fmt.Errorf("%s", i18n.T("errors.matrix_arg_required", "det", args[0].String()))
 	}
 	return evalDet(mat)
 }
@@ -35,7 +37,7 @@ func handleDet(args []Node, env *Env) (Node, error) {
 func handleInv(args []Node, env *Env) (Node, error) {
 	mat, ok := args[0].(*MatrixNode)
 	if !ok {
-		return nil, fmt.Errorf("inv error: argument must be a matrix, got %s", args[0].String())
+		return nil, fmt.Errorf("%s", i18n.T("errors.matrix_arg_required", "inv", args[0].String()))
 	}
 	return evalInv(mat)
 }
@@ -43,7 +45,7 @@ func handleInv(args []Node, env *Env) (Node, error) {
 func handleTranspose(args []Node, env *Env) (Node, error) {
 	mat, ok := args[0].(*MatrixNode)
 	if !ok {
-		return nil, fmt.Errorf("transpose error: argument must be a matrix, got %s", args[0].String())
+		return nil, fmt.Errorf("%s", i18n.T("errors.matrix_arg_required", "transpose", args[0].String()))
 	}
 	return evalTranspose(mat), nil
 }
@@ -55,7 +57,7 @@ func handleRREF(args []Node, env *Env) (Node, error) {
 	}
 	mat, ok := evaled.(*MatrixNode)
 	if !ok {
-		return nil, fmt.Errorf("rref error: argument must be a matrix, got %s", args[0].String())
+		return nil, fmt.Errorf("%s", i18n.T("errors.matrix_arg_required", "rref", args[0].String()))
 	}
 	return evalRREF(mat)
 }
@@ -67,7 +69,7 @@ func handleRank(args []Node, env *Env) (Node, error) {
 	}
 	mat, ok := evaled.(*MatrixNode)
 	if !ok {
-		return nil, fmt.Errorf("rank error: argument must be a matrix, got %s", args[0].String())
+		return nil, fmt.Errorf("%s", i18n.T("errors.matrix_arg_required", "rank", args[0].String()))
 	}
 	return evalRank(mat)
 }
@@ -83,7 +85,7 @@ func handleTrace(args []Node, env *Env) (Node, error) {
 	}
 	mat, ok := evaled.(*MatrixNode)
 	if !ok {
-		return nil, fmt.Errorf("trace error: argument must be a matrix, got %s", args[0].String())
+		return nil, fmt.Errorf("%s", i18n.T("errors.matrix_arg_required", "trace", args[0].String()))
 	}
 	return EvalTrace(mat, env)
 }
@@ -95,7 +97,7 @@ func handleEigenvals(args []Node, env *Env) (Node, error) {
 	}
 	mat, ok := evaled.(*MatrixNode)
 	if !ok {
-		return nil, fmt.Errorf("eigenvals error: argument must be a matrix, got %s", args[0].String())
+		return nil, fmt.Errorf("%s", i18n.T("errors.matrix_arg_required", "eigenvals", args[0].String()))
 	}
 	return EvalEigenvals(mat, env)
 }
@@ -107,7 +109,7 @@ func handleEigenvects(args []Node, env *Env) (Node, error) {
 	}
 	mat, ok := evaled.(*MatrixNode)
 	if !ok {
-		return nil, fmt.Errorf("eigenvects error: argument must be a matrix, got %s", args[0].String())
+		return nil, fmt.Errorf("%s", i18n.T("errors.matrix_arg_required", "eigenvects", args[0].String()))
 	}
 	return EvalEigenvects(mat, env)
 }

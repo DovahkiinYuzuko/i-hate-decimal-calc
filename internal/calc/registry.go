@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
 // FuncHandler defines the evaluation logic for a function with environment context.
@@ -95,20 +97,20 @@ func IsBareSymbolAllowed(name string) bool {
 func ValidateFuncArgs(name string, args []Node) error {
 	spec, ok := LookupFunction(name)
 	if !ok {
-		return fmt.Errorf("unknown function: %s", name)
+		return fmt.Errorf("%s", i18n.T("errors.unknown_function", name))
 	}
 
 	argCount := len(args)
 	if spec.MinArgs == spec.MaxArgs {
 		if argCount != spec.MinArgs {
-			return fmt.Errorf("%s requires exactly %d argument(s), got %d", name, spec.MinArgs, argCount)
+			return fmt.Errorf("%s", i18n.T("errors.invalid_args_count", name, spec.MinArgs, argCount))
 		}
 	} else {
 		if argCount < spec.MinArgs || (spec.MaxArgs != -1 && argCount > spec.MaxArgs) {
 			if spec.MaxArgs == -1 {
-				return fmt.Errorf("%s requires at least %d argument(s), got %d", name, spec.MinArgs, argCount)
+				return fmt.Errorf("%s", i18n.T("errors.func_args_at_least", name, spec.MinArgs, argCount))
 			}
-			return fmt.Errorf("%s requires %d to %d arguments, got %d", name, spec.MinArgs, spec.MaxArgs, argCount)
+			return fmt.Errorf("%s", i18n.T("errors.func_args_between", name, spec.MinArgs, spec.MaxArgs, argCount))
 		}
 	}
 
@@ -125,7 +127,7 @@ func ValidateFuncArgs(name string, args []Node) error {
 func EvaluateFunction(name string, args []Node) (Node, error) {
 	spec, ok := LookupFunction(name)
 	if !ok {
-		return nil, fmt.Errorf("unknown function: %s", name)
+		return nil, fmt.Errorf("%s", i18n.T("errors.unknown_function", name))
 	}
 	if spec.Evaluate == nil {
 		return nil, fmt.Errorf("function %s has no evaluation handler registered", name)

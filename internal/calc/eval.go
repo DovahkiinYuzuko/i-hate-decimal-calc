@@ -3,6 +3,8 @@ package calc
 import (
 	"fmt"
 	"math/big"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
 var (
@@ -329,7 +331,7 @@ func simplifyFunc(name string, args []Node) (Node, error) {
 func simplifyFuncWithEnv(name string, args []Node, env *Env) (Node, error) {
 	spec, ok := LookupFunction(name)
 	if !ok {
-		return nil, fmt.Errorf("unknown function: %s", name)
+		return nil, fmt.Errorf("%s", i18n.T("errors.unknown_function", name))
 	}
 	if spec.Handler != nil {
 		return spec.Handler(args, env)
