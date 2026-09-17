@@ -756,6 +756,18 @@ func init() {
 		MinArgs: 2,
 		MaxArgs: 3,
 	})
+
+	// Hypergeometric Summation & WZ Theory (issue-68)
+	RegisterFunction(FunctionSpec{
+		Name:    "gosper_sum",
+		MinArgs: 2,
+		MaxArgs: 2,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "wz_cert",
+		MinArgs: 3,
+		MaxArgs: 3,
+	})
 }
 
 

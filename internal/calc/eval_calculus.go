@@ -806,31 +806,43 @@ func evalSum(expr Node, kVarNode Node, startNode Node, endNode Node) (Node, erro
 			terms = []Node{expanded}
 		}
 
+		allFaulhaber := true
 		var resultTerms []Node
 		for _, t := range terms {
 			coeff, pow, err := extractPowerOfK(t, kName)
 			if err != nil {
-				return nil, err
+				allFaulhaber = false
+				break
 			}
 			sNode, err := faulhaberSum(pow, endNode)
 			if err != nil {
-				return nil, err
+				allFaulhaber = false
+				break
 			}
 			termProd, err := simplifyMul([]Node{coeff, sNode})
 			if err != nil {
-				return nil, err
+				allFaulhaber = false
+				break
 			}
 			resultTerms = append(resultTerms, expandNode(termProd))
 		}
 
-		res, err := simplifyAdd(resultTerms)
-		if err != nil {
-			return nil, err
+		if allFaulhaber {
+			res, err := simplifyAdd(resultTerms)
+			if err != nil {
+				return nil, err
+			}
+			return expandNode(res), nil
 		}
-		return expandNode(res), nil
 	}
 
-	return nil, fmt.Errorf("sum error: unsupported bounds %s to %s", startNode.String(), endNode.String())
+	// Try Gosper's algorithm for hypergeometric summation
+	gosperRes, err := GosperDefiniteSum(expr, kName, startNode, endNode)
+	if err == nil {
+		return gosperRes, nil
+	}
+
+	return nil, fmt.Errorf("sum error: unsupported bounds %s to %s (and not Gosper-summable: %w)", startNode.String(), endNode.String(), err)
 }
 
 // -------------------------------------------------------------------------

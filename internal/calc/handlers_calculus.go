@@ -21,6 +21,8 @@ func init() {
 	RegisterHandler("trig_reduce", handleTrigReduce)
 	RegisterHandler("residue", handleResidue)
 	RegisterLazyHandler("dsolve", handleDSolve)
+	RegisterHandler("gosper_sum", handleGosperSum)
+	RegisterHandler("wz_cert", handleWZCert)
 }
 
 func handleDiff(args []Node, env *Env) (Node, error) {
@@ -154,5 +156,37 @@ func handleDSolve(args []Node, env *Env) (Node, error) {
 
 func handleResidue(args []Node, env *Env) (Node, error) {
 	return EvalResidue(args[0], args[1], args[2], env)
+}
+
+func handleGosperSum(args []Node, env *Env) (Node, error) {
+	if len(args) < 2 {
+		return nil, fmt.Errorf("gosper_sum requires at least 2 arguments (term, k)")
+	}
+	kVar := "k"
+	if v, ok := args[1].(*VarNode); ok {
+		kVar = v.Name
+	}
+	if len(args) == 2 {
+		return GosperIndefiniteSum(args[0], kVar)
+	}
+	if len(args) == 4 {
+		return GosperDefiniteSum(args[0], kVar, args[2], args[3])
+	}
+	return nil, fmt.Errorf("gosper_sum requires 2 arguments for indefinite, or 4 arguments for definite sum")
+}
+
+func handleWZCert(args []Node, env *Env) (Node, error) {
+	if len(args) < 3 {
+		return nil, fmt.Errorf("wz_cert requires 3 arguments (term, n, k)")
+	}
+	nVar := "n"
+	if vn, ok := args[1].(*VarNode); ok {
+		nVar = vn.Name
+	}
+	kVar := "k"
+	if vk, ok := args[2].(*VarNode); ok {
+		kVar = vk.Name
+	}
+	return GenerateWZCertificate(args[0], nVar, kVar)
 }
 

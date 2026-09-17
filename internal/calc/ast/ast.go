@@ -453,7 +453,12 @@ func (n *UnaryOpNode) Type() NodeType { return NodeUnaryOp }
 
 func (n *UnaryOpNode) String() string {
 	if n.Op == "!" {
-		return fmt.Sprintf("%s!", n.Expr.String())
+		switch n.Expr.(type) {
+		case *AddNode, *MulNode, *UnaryOpNode, *RelOpNode:
+			return fmt.Sprintf("(%s)!", n.Expr.String())
+		default:
+			return fmt.Sprintf("%s!", n.Expr.String())
+		}
 	}
 	return fmt.Sprintf("%s%s", n.Op, n.Expr.String())
 }
