@@ -274,18 +274,20 @@ func EvalIsolateRoots(p Node, varName string, a, b Node, env *Env) (Node, error)
 	maxIterations := 2000
 	iterCount := 0
 
-	for len(queue) > 0 && iterCount < maxIterations {
-		iterCount++
-		curr := queue[0]
-		queue = queue[1:]
+	type stepResult struct {
+		newIsolated []interval
+		newQueue    []interval
+	}
 
+	stepOne := func(curr interval) (stepResult, error) {
+		var res stepResult
 		l := curr.l
 		r := curr.r
 
 		// Check if endpoints are roots
 		valL, _ := evalPolyAtRat(polyP, l)
 		if valL.Sign() == 0 {
-			isolated = append(isolated, interval{l: new(big.Rat).Set(l), r: new(big.Rat).Set(l)})
+			res.newIsolated = append(res.newIsolated, interval{l: new(big.Rat).Set(l), r: new(big.Rat).Set(l)})
 			// Shift l slightly right: l' = l + (r - l) / 8
 			delta := new(big.Rat).Sub(r, l)
 			delta.Quo(delta, big.NewRat(8, 1))
@@ -294,7 +296,7 @@ func EvalIsolateRoots(p Node, varName string, a, b Node, env *Env) (Node, error)
 
 		valR, _ := evalPolyAtRat(polyP, r)
 		if valR.Sign() == 0 {
-			isolated = append(isolated, interval{l: new(big.Rat).Set(r), r: new(big.Rat).Set(r)})
+			res.newIsolated = append(res.newIsolated, interval{l: new(big.Rat).Set(r), r: new(big.Rat).Set(r)})
 			// Shift r slightly left: r' = r - (r - l) / 8
 			delta := new(big.Rat).Sub(r, l)
 			delta.Quo(delta, big.NewRat(8, 1))
@@ -302,18 +304,18 @@ func EvalIsolateRoots(p Node, varName string, a, b Node, env *Env) (Node, error)
 		}
 
 		if l.Cmp(r) >= 0 {
-			continue
+			return res, nil
 		}
 
 		k := countRootsInOpen(l, r)
 		if k == 0 {
-			continue
+			return res, nil
 		}
 		if k == 1 {
 			width := new(big.Rat).Sub(r, l)
 			if width.Cmp(big.NewRat(1, 1)) <= 0 {
-				isolated = append(isolated, interval{l: l, r: r})
-				continue
+				res.newIsolated = append(res.newIsolated, interval{l: l, r: r})
+				return res, nil
 			}
 		}
 
@@ -324,20 +326,31 @@ func EvalIsolateRoots(p Node, varName string, a, b Node, env *Env) (Node, error)
 		valMid, _ := evalPolyAtRat(polyP, mid)
 		if valMid.Sign() == 0 {
 			// Exact rational root at midpoint!
-			isolated = append(isolated, interval{l: new(big.Rat).Set(mid), r: new(big.Rat).Set(mid)})
+			res.newIsolated = append(res.newIsolated, interval{l: new(big.Rat).Set(mid), r: new(big.Rat).Set(mid)})
 			// Shift mid left and right for remaining intervals
 			delta := new(big.Rat).Sub(r, l)
 			delta.Quo(delta, big.NewRat(8, 1))
 			midLeft := new(big.Rat).Sub(mid, delta)
 			midRight := new(big.Rat).Add(mid, delta)
 			if l.Cmp(midLeft) < 0 {
-				queue = append(queue, interval{l: l, r: midLeft})
+				res.newQueue = append(res.newQueue, interval{l: l, r: midLeft})
 			}
 			if midRight.Cmp(r) < 0 {
-				queue = append(queue, interval{l: midRight, r: r})
+				res.newQueue = append(res.newQueue, interval{l: midRight, r: r})
 			}
 		} else {
-			queue = append(queue, interval{l: l, r: mid}, interval{l: mid, r: r})
+			res.newQueue = append(res.newQueue, interval{l: l, r: mid}, interval{l: mid, r: r})
+		}
+		return res, nil
+	}
+
+	for len(queue) > 0 && iterCount < maxIterations {
+		iterCount += len(queue)
+		batchResults, _ := ParallelBatchMap(queue, stepOne, 4)
+		queue = nil
+		for _, b := range batchResults {
+			isolated = append(isolated, b.newIsolated...)
+			queue = append(queue, b.newQueue...)
 		}
 	}
 

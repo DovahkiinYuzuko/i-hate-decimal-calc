@@ -523,7 +523,11 @@ func reduceGroebnerBasis(G []*MPoly, order MonomialOrder) []*MPoly {
 	}
 
 	// 2. Tail reduction
-	var reduced []*MPoly
+	type tailTask struct {
+		gi     *MPoly
+		others []*MPoly
+	}
+	tasks := make([]tailTask, len(minimal))
 	for i, gi := range minimal {
 		var others []*MPoly
 		for j, gj := range minimal {
@@ -531,9 +535,21 @@ func reduceGroebnerBasis(G []*MPoly, order MonomialOrder) []*MPoly {
 				others = append(others, gj)
 			}
 		}
-		red := polyReduce(gi, others, order)
+		tasks[i] = tailTask{gi: gi, others: others}
+	}
+
+	reducedRaw, _ := ParallelBatchMap(tasks, func(t tailTask) (*MPoly, error) {
+		red := polyReduce(t.gi, t.others, order)
 		if !red.IsZero() {
-			reduced = append(reduced, red.Monic())
+			return red.Monic(), nil
+		}
+		return nil, nil
+	}, 4)
+
+	var reduced []*MPoly
+	for _, r := range reducedRaw {
+		if r != nil {
+			reduced = append(reduced, r)
 		}
 	}
 

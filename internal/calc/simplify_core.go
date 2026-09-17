@@ -63,9 +63,18 @@ func simplifyUnaryOp(op string, expr Node) (Node, error) {
 			return nil, fmt.Errorf("factorial domain error: factorial is too large to compute, got %s", expr.String())
 		}
 		n := rat.Val.Num().Int64()
-		res := big.NewInt(1)
-		for i := int64(2); i <= n; i++ {
-			res.Mul(res, big.NewInt(i))
+		if n <= 1 {
+			res := big.NewInt(1)
+			return &RationalNode{Val: new(big.Rat).SetInt(res)}, nil
+		}
+		var res *big.Int
+		if n >= 128 {
+			res = ParallelProductTree(1, n, 64)
+		} else {
+			res = big.NewInt(1)
+			for i := int64(2); i <= n; i++ {
+				res.Mul(res, big.NewInt(i))
+			}
 		}
 		return &RationalNode{Val: new(big.Rat).SetInt(res)}, nil
 
