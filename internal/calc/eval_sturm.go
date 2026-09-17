@@ -605,7 +605,7 @@ func parseIntervalEndpoint(n Node, defaultInfSign int, env *Env) (isInf bool, si
 		return true, defaultInfSign, nil, nil
 	}
 
-	evaled, err := Eval(n)
+	evaled, err := EvalWithEnv(n, env)
 	if err != nil {
 		evaled = n
 	}
