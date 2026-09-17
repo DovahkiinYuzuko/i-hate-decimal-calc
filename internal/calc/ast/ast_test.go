@@ -2,6 +2,7 @@ package ast
 
 import (
 	"fmt"
+	"math/big"
 	"strings"
 	"testing"
 )
@@ -270,3 +271,51 @@ func TestAST_ContainsVarAndExtractFreeVariables_ManualTree(t *testing.T) {
 		t.Errorf("expected empty vars for constExpr")
 	}
 }
+
+func TestPolyNode_BasicOperations(t *testing.T) {
+	// Poly: 3*x^2*y - 2*y + 5
+	p := &PolyNode{
+		Vars:  []string{"x", "y"},
+		Order: OrderLex,
+		Terms: []Monomial{
+			{Coeff: big.NewRat(3, 1), Exponents: []int{2, 1}},
+			{Coeff: big.NewRat(-2, 1), Exponents: []int{0, 1}},
+			{Coeff: big.NewRat(5, 1), Exponents: []int{0, 0}},
+		},
+	}
+
+	if p.Type() != NodePoly {
+		t.Errorf("expected NodePoly, got %v", p.Type())
+	}
+
+	str := p.String()
+	expected := "3*x^2*y - 2*y + 5"
+	if str != expected {
+		t.Errorf("p.String() = %q, want %q", str, expected)
+	}
+
+	cloned := p.Clone()
+	if !p.Equal(cloned) {
+		t.Errorf("expected cloned PolyNode to equal original")
+	}
+
+	// ContainsVar & ExtractFreeVariables
+	if !ContainsVar(p, "x") || !ContainsVar(p, "y") {
+		t.Errorf("expected ContainsVar to find x and y")
+	}
+	if ContainsVar(p, "z") {
+		t.Errorf("expected ContainsVar not to find z")
+	}
+
+	vars := ExtractFreeVariables(p)
+	if len(vars) != 2 || vars[0] != "x" || vars[1] != "y" {
+		t.Errorf("ExtractFreeVariables(p) = %v, want [x, y]", vars)
+	}
+
+	// Zero poly
+	zeroP := &PolyNode{Vars: []string{"x"}, Order: OrderLex, Terms: nil}
+	if zeroP.String() != "0" {
+		t.Errorf("zeroP.String() = %q, want \"0\"", zeroP.String())
+	}
+}
+

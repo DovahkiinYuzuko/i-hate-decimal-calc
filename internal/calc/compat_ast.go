@@ -51,6 +51,7 @@ const (
 	NodeMatrix   = ast.NodeMatrix
 	NodePlot     = ast.NodePlot
 	NodeRelOp    = ast.NodeRelOp
+	NodePoly     = ast.NodePoly
 )
 
 type (
@@ -70,6 +71,7 @@ type (
 	MatrixNode   = ast.MatrixNode
 	PlotNode     = ast.PlotNode
 	RelOpNode    = ast.RelOpNode
+	PolyNode     = ast.PolyNode
 )
 
 var (

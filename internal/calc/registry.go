@@ -732,6 +732,13 @@ func init() {
 		MinArgs: 1,
 		MaxArgs: 1,
 	})
+
+	// Canonical Polynomial Representation & SDMP (issue-63)
+	RegisterFunction(FunctionSpec{
+		Name:    "to_poly",
+		MinArgs: 1,
+		MaxArgs: 3,
+	})
 }
 
 

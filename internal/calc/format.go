@@ -30,6 +30,9 @@ func formatNode(n Node, opts FormatOptions) string {
 	case *PlotNode:
 		return v.Content
 
+	case *PolyNode:
+		return v.String()
+
 	case *RationalNode:
 		if v.Val.IsInt() {
 			return v.Val.Num().String()
@@ -331,6 +334,9 @@ func FormatLaTeX(n Node) string {
 
 func formatLaTeXNode(n Node) string {
 	switch v := n.(type) {
+	case *PolyNode:
+		return formatLaTeXNode(PolyToNode(v))
+
 	case *RationalNode:
 		if v.Val.IsInt() {
 			return v.Val.Num().String()

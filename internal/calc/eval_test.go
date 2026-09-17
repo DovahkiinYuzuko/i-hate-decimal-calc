@@ -1075,6 +1075,30 @@ func TestGeometryBuiltins(t *testing.T) {
 	}
 }
 
+func TestEvalToPoly(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"to_poly((x + y)^3, [x, y])", "x^3 + 3*x^2*y + 3*x*y^2 + y^3"},
+		{"to_poly((x + y)*(x - y))", "x^2 - y^2"},
+		{"to_poly(x^2*y + 2*y*x^2 + 5, [x, y])", "3*x^2*y + 5"},
+		{"to_poly(3*x^2 - 3*x^2 + 0)", "0"},
+	}
+
+	for _, tc := range tests {
+		res, err := EvalString(tc.input)
+		if err != nil {
+			t.Fatalf("unexpected error for %q: %v", tc.input, err)
+		}
+		actual := Format(res)
+		if actual != tc.expected {
+			t.Errorf("input %q: got %q, want %q", tc.input, actual, tc.expected)
+		}
+	}
+}
+
+
 
 
 
