@@ -184,6 +184,8 @@ func differentiate(n Node, varName string) (Node, error) {
 					return nil, err2
 				}
 				dfDu, err = simplifyPow(cosU, mustRational(-2, 1))
+			case "exp":
+				dfDu = v
 			case "ln":
 				dfDu, err = simplifyPow(u, mustRational(-1, 1))
 			case "log":

@@ -122,7 +122,9 @@
     "func_args_between": "function %s requires between %d and %d arguments, got %d",
     "sturm_poly_required": "%s error: expression must be a univariate polynomial with rational coefficients",
     "sturm_invalid_interval": "%s error: interval lower bound (%s) must be less than upper bound (%s)",
-    "sturm_invalid_variable": "%s error: variable must be a symbol, got %s"
+    "sturm_invalid_variable": "%s error: variable must be a symbol, got %s",
+    "residue_var_required": "residue error: second argument must be a variable symbol, got %s",
+    "residue_failed": "residue error: failed to determine residue at singularity %s: %v"
   },
   "plot": {
     "features_header": "[CAS Features Detected]\n",
