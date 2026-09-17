@@ -42,12 +42,6 @@ func dotProductNodes(u, v []ast.Node) (ast.Node, error) {
 	return simplifyAdd(terms)
 }
 
-func isNodePositive(n ast.Node) bool {
-	if rn, ok := n.(*ast.RationalNode); ok {
-		return rn.Val.Sign() > 0
-	}
-	return false
-}
 
 func isNodeNonPositive(n ast.Node) bool {
 	if rn, ok := n.(*ast.RationalNode); ok {
