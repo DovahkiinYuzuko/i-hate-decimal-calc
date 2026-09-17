@@ -28,7 +28,7 @@
     "err_unknown_stmt": "不明な構文タイプです: %T"
   },
   "updater": {
-    "new_version": "💡 ihd の新しいバージョンが利用可能です: %s (現在: %s)\n",
+    "new_version": "[!] ihd の新しいバージョンが利用可能です: %s (現在: %s)\n",
     "release": "   リリース情報: %s\n",
     "to_update": "   アップデート方法: %s\n"
   },

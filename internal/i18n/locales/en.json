@@ -28,7 +28,7 @@
     "err_unknown_stmt": "unknown statement type: %T"
   },
   "updater": {
-    "new_version": "💡 A new version of ihd is available: %s (current: %s)\n",
+    "new_version": "[!] A new version of ihd is available: %s (current: %s)\n",
     "release": "   Release: %s\n",
     "to_update": "   To update: %s\n"
   },
