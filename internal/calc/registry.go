@@ -686,6 +686,23 @@ func init() {
 		MinArgs: 1,
 		MaxArgs: 1,
 	})
+
+	// Exact Real Root Isolation & Sturm's Theorem Pack (issue-61)
+	RegisterFunction(FunctionSpec{
+		Name:    "sturm",
+		MinArgs: 1,
+		MaxArgs: 2,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "root_count",
+		MinArgs: 1,
+		MaxArgs: 4,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "isolate_roots",
+		MinArgs: 1,
+		MaxArgs: 4,
+	})
 }
 
 
