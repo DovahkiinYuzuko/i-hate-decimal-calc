@@ -124,6 +124,7 @@
     "sturm_invalid_interval": "%s error: interval lower bound (%s) must be less than upper bound (%s)",
     "sturm_invalid_variable": "%s error: variable must be a symbol, got %s",
     "residue_var_required": "residue error: second argument must be a variable symbol, got %s",
+    "residue_order_exceeded": "pole order exceeds 10 or essential singularity",
     "residue_failed": "residue error: failed to determine residue at singularity %s: %v"
   },
   "plot": {

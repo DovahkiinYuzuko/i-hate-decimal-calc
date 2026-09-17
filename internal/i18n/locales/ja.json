@@ -124,6 +124,7 @@
     "sturm_invalid_interval": "%s エラー: 区間の下限 (%s) は上限 (%s) より小さい必要があります",
     "sturm_invalid_variable": "%s エラー: 変数はシンボルである必要があります (%s)",
     "residue_var_required": "residue エラー: 第2引数は変数シンボルである必要があります (%s)",
+    "residue_order_exceeded": "極の位数が10を超えているか真性特異点です",
     "residue_failed": "residue エラー: 特異点 %s における留数の算出に失敗しました: %v"
   },
   "plot": {

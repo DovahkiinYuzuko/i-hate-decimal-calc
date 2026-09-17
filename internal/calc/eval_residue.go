@@ -147,7 +147,7 @@ func EvalResidue(expr, zNode, z0Node Node, env *Env) (Node, error) {
 		return resFinal, nil
 	}
 
-	return nil, fmt.Errorf("%s", i18n.T("errors.residue_failed", z0Node.String(), "could not isolate pole of order <= 10 or essential singularity"))
+	return nil, fmt.Errorf("%s", i18n.T("errors.residue_failed", z0Node.String(), i18n.T("errors.residue_order_exceeded")))
 }
 
 // -------------------------------------------------------------------------
