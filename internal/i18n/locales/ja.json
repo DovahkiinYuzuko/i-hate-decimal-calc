@@ -122,7 +122,9 @@
     "func_args_between": "関数 %s には %d から %d 個の引数が必要です (%d 個指定されました)",
     "sturm_poly_required": "%s エラー: 式は有理数係数の1変数多項式である必要があります",
     "sturm_invalid_interval": "%s エラー: 区間の下限 (%s) は上限 (%s) より小さい必要があります",
-    "sturm_invalid_variable": "%s エラー: 変数はシンボルである必要があります (%s)"
+    "sturm_invalid_variable": "%s エラー: 変数はシンボルである必要があります (%s)",
+    "residue_var_required": "residue エラー: 第2引数は変数シンボルである必要があります (%s)",
+    "residue_failed": "residue エラー: 特異点 %s における留数の算出に失敗しました: %v"
   },
   "plot": {
     "features_header": "[CAS Features Detected]\n",

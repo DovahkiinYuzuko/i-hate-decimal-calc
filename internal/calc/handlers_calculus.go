@@ -19,6 +19,7 @@ func init() {
 	RegisterHandler("together", handleTogether)
 	RegisterHandler("trig_expand", handleTrigExpand)
 	RegisterHandler("trig_reduce", handleTrigReduce)
+	RegisterHandler("residue", handleResidue)
 	RegisterLazyHandler("dsolve", handleDSolve)
 }
 
@@ -150,3 +151,8 @@ func handleDSolve(args []Node, env *Env) (Node, error) {
 	}
 	return EvalDSolve(args[0], yName, xName, env)
 }
+
+func handleResidue(args []Node, env *Env) (Node, error) {
+	return EvalResidue(args[0], args[1], args[2], env)
+}
+

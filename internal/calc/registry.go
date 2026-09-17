@@ -703,6 +703,13 @@ func init() {
 		MinArgs: 1,
 		MaxArgs: 4,
 	})
+
+	// Complex Analysis & Symbolic Residue Calculus Pack (issue-60)
+	RegisterFunction(FunctionSpec{
+		Name:    "residue",
+		MinArgs: 3,
+		MaxArgs: 3,
+	})
 }
 
 
