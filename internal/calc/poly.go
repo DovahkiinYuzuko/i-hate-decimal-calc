@@ -546,16 +546,18 @@ func NodeToPoly(node ast.Node, vars []string, order ast.MonomialOrder) (*ast.Pol
 		return acc, nil
 
 	case *ast.UnaryOpNode:
-		if v.Op == "-" {
+		switch v.Op {
+		case "-":
 			childPoly, err := NodeToPoly(v.Expr, vars, order)
 			if err != nil {
 				return nil, err
 			}
 			return SubPoly(NewPolyNode(vars, order, nil), childPoly), nil
-		} else if v.Op == "+" {
+		case "+":
 			return NodeToPoly(v.Expr, vars, order)
+		default:
+			return nil, fmt.Errorf("unsupported unary operator %s in polynomial", v.Op)
 		}
-		return nil, fmt.Errorf("unsupported unary operator %s in polynomial", v.Op)
 
 	case *ast.PowNode:
 		basePoly, err := NodeToPoly(v.Base, vars, order)

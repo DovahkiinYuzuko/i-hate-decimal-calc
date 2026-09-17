@@ -205,8 +205,8 @@ func BenchmarkMulPoly_Heap(b *testing.B) {
 		p = MulPoly(p, base)
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = MulPoly(p, p)
 	}
 }
+
