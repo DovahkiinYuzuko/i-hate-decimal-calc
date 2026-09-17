@@ -113,6 +113,10 @@
     "domain_rand_min_gt_max": "rand 定義域エラー: 最小値は最大値より大きくできません (%d > %d)",
     "domain_rand_seed_min_max_int": "rand 定義域エラー: シード値、最小値、最大値は整数である必要があります",
     "matrix_arg_required": "%s エラー: 引数は行列である必要があります (%s)",
+    "matrix_must_be_square": "%s エラー: 正方行列である必要があります (%dx%d)",
+    "matrix_not_symmetric": "%s エラー: 実対称行列である必要があります",
+    "matrix_not_positive_definite": "%s エラー: 正定値行列である必要があります (インデックス %d で非正のピボットが検出されました)",
+    "matrix_qr_rank_deficient": "%s エラー: QR分解には列フルランクである必要があります (列 %d が線形従属です)",
     "func_args_at_least": "関数 %s には少なくとも %d 個の引数が必要です (%d 個指定されました)",
     "func_args_at_most": "関数 %s には最大 %d 個の引数が必要です (%d 個指定されました)",
     "func_args_between": "関数 %s には %d から %d 個の引数が必要です (%d 個指定されました)"

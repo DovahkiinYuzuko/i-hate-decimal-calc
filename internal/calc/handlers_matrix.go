@@ -24,6 +24,11 @@ func init() {
 	RegisterHandler("grad", handleGrad)
 	RegisterHandler("div", handleDiv)
 	RegisterHandler("curl", handleCurl)
+	RegisterHandler("lu", handleLU)
+	RegisterHandler("qr", handleQR)
+	RegisterHandler("cholesky", handleCholesky)
+	RegisterHandler("ldlt", handleLDLT)
+	RegisterHandler("pinv", handlePinv)
 }
 
 func handleDet(args []Node, env *Env) (Node, error) {
@@ -137,3 +142,64 @@ func handleDiv(args []Node, env *Env) (Node, error) {
 func handleCurl(args []Node, env *Env) (Node, error) {
 	return evalCurl(args[0], args[1])
 }
+
+func handleLU(args []Node, env *Env) (Node, error) {
+	evaled, err := Eval(args[0])
+	if err != nil {
+		return nil, err
+	}
+	mat, ok := evaled.(*MatrixNode)
+	if !ok {
+		return nil, fmt.Errorf("%s", i18n.T("errors.matrix_arg_required", "lu", args[0].String()))
+	}
+	return evalLU(mat)
+}
+
+func handleQR(args []Node, env *Env) (Node, error) {
+	evaled, err := Eval(args[0])
+	if err != nil {
+		return nil, err
+	}
+	mat, ok := evaled.(*MatrixNode)
+	if !ok {
+		return nil, fmt.Errorf("%s", i18n.T("errors.matrix_arg_required", "qr", args[0].String()))
+	}
+	return evalTwoStageQR(mat)
+}
+
+func handleCholesky(args []Node, env *Env) (Node, error) {
+	evaled, err := Eval(args[0])
+	if err != nil {
+		return nil, err
+	}
+	mat, ok := evaled.(*MatrixNode)
+	if !ok {
+		return nil, fmt.Errorf("%s", i18n.T("errors.matrix_arg_required", "cholesky", args[0].String()))
+	}
+	return evalCholesky(mat)
+}
+
+func handleLDLT(args []Node, env *Env) (Node, error) {
+	evaled, err := Eval(args[0])
+	if err != nil {
+		return nil, err
+	}
+	mat, ok := evaled.(*MatrixNode)
+	if !ok {
+		return nil, fmt.Errorf("%s", i18n.T("errors.matrix_arg_required", "ldlt", args[0].String()))
+	}
+	return evalLDLT(mat)
+}
+
+func handlePinv(args []Node, env *Env) (Node, error) {
+	evaled, err := Eval(args[0])
+	if err != nil {
+		return nil, err
+	}
+	mat, ok := evaled.(*MatrixNode)
+	if !ok {
+		return nil, fmt.Errorf("%s", i18n.T("errors.matrix_arg_required", "pinv", args[0].String()))
+	}
+	return evalPinv(mat)
+}
+

@@ -122,6 +122,11 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `trace` / `tr` | `trace(A)`, `tr(A)` | Matrix trace (sum of main diagonal entries $\sum_{i=1}^n A_{i,i}$) |
 | `eigenvals` | `eigenvals(A)` | Exact eigenvalue analysis via Faddeev-LeVerrier characteristic polynomial and algebraic solver |
 | `eigenvects` | `eigenvects(A)` | Exact eigenvector analysis via RREF nullspace basis extraction |
+| `lu` | `lu(A)` | Exact PLU decomposition $PA=LU$ with row pivoting ($P$ permutation, $L$ unit lower, $U$ upper) |
+| `qr` | `qr(A)` | Exact QR decomposition $A=QR$ via Two-Stage Gram-Schmidt with exact radicals ($Q^T Q = I$) |
+| `cholesky` | `cholesky(A)` | Exact Cholesky decomposition $A=LL^T$ for symmetric positive-definite matrices with exact radicals |
+| `ldlt` | `ldlt(A)` | Exact square-root-free $LDL^T$ decomposition ($L$ unit lower, $D$ positive diagonal rational matrix) |
+| `pinv` | `pinv(A)` | Exact Moore-Penrose pseudoinverse $A^+$ via RREF full-rank factorization |
 | `solve_linear` / `linsolve` | `solve_linear(A, b)` | Exact linear system solver $Ax=b$ (unique, inconsistent, or parametric solutions) |
 | `dot`, `cross` | `dot(u, v)`, `cross(u, v)` | Vector dot product and 3D vector cross product |
 | `norm` | `norm(v)` | Euclidean vector norm ($\sqrt{\sum v_i^2}$, with radical simplification) |

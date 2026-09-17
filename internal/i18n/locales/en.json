@@ -113,6 +113,10 @@
     "domain_rand_min_gt_max": "rand domain error: min cannot be greater than max, got %d > %d",
     "domain_rand_seed_min_max_int": "rand domain error: seed, min, and max must be integers",
     "matrix_arg_required": "%s error: argument must be a matrix, got %s",
+    "matrix_must_be_square": "%s error: matrix must be square (%dx%d)",
+    "matrix_not_symmetric": "%s error: matrix must be symmetric",
+    "matrix_not_positive_definite": "%s error: matrix must be positive-definite (encountered non-positive pivot at index %d)",
+    "matrix_qr_rank_deficient": "%s error: matrix must have full column rank for QR decomposition (column %d is linearly dependent)",
     "func_args_at_least": "function %s requires at least %d arguments, got %d",
     "func_args_at_most": "function %s requires at most %d arguments, got %d",
     "func_args_between": "function %s requires between %d and %d arguments, got %d"

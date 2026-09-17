@@ -659,6 +659,33 @@ func init() {
 		MinArgs: 2,
 		MaxArgs: 3,
 	})
+
+	// Exact Matrix Decompositions Pack (issue-59)
+	RegisterFunction(FunctionSpec{
+		Name:    "lu",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "qr",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "cholesky",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "ldlt",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "pinv",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
 }
 
 

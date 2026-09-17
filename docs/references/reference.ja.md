@@ -121,9 +121,14 @@
 | `rank` | `rank(A)` | 行列の厳密な階数（ピボット列数） |
 | `trace` / `tr` | `trace(A)`, `tr(A)` | 行列のトレース（主対角成分の総和 $\sum_{i=1}^n A_{i,i}$） |
 | `eigenvals` | `eigenvals(A)` | 厳密固有値解析（Faddeev-LeVerrier法による特性多項式導出と有理根・代数方程式ソルバーによる厳密解リスト） |
-| `eigenvects` | `eigenvects(A)` | 厳密固有ベクトル解析（各固有値に対する $(\lambda I - A)$ のRREF零空間基底ベクトル抽出、重複度・整数比正規化） |
-| `solve_linear` / `linsolve` | `solve_linear(A, b)` | 連立一次方程式 $Ax=b$ の厳密解（一意解、不能判定、自由変数 $x_i$ を含む一般解） |
-| `dot`, `cross` | `dot(u, v)`, `cross(u, v)` | ベクトルの内積・3次元ベクトルの外積 |
+| `eigenvects` | `eigenvects(A)` | 厳密固有ベクトル解析（RREF零空間Null Space基底の厳密抽出による固有空間正規直交系リスト） |
+| `lu` | `lu(A)` | 行ピボット付き厳密PLU分解 $PA=LU$（$P$ 置換行列、$L$ 単位下三角、$U$ 上三角） |
+| `qr` | `qr(A)` | 2段階グラム・シュミット法による厳密QR分解 $A=QR$（$Q$ 正規直交、$R$ 上三角、$Q^T Q = I$） |
+| `cholesky` | `cholesky(A)` | 実対称正定値行列に対する厳密コレスキー分解 $A=LL^T$（厳密根号代数表現） |
+| `ldlt` | `ldlt(A)` | 平方根フリー厳密 $LDL^T$ 分解（$L$ 単位下三角、$D$ 正の有理数対角行列） |
+| `pinv` | `pinv(A)` | RREFフルランク分解によるムーア・ペンローズ擬似逆行列 $A^+$（小数を一切使わない有理厳密解） |
+| `solve_linear` / `linsolve` | `solve_linear(A, b)` | 厳密連立一次方程式系ソルバー $Ax=b$（唯一解、不能、不定パラメータ解の厳密判別） |
+| `dot`, `cross` | `dot(u, v)`, `cross(u, v)` | ベクトル内積および3次元外積（クロス積） |
 | `norm` | `norm(v)` | ベクトルのユークリッドノルム（$\sqrt{\sum v_i^2}$、根号自動簡約） |
 | `grad` | `grad(f, [x, y, z])` | スカラー場の勾配ベクトル（$\nabla f$） |
 | `div`, `curl` | `div(F, [x, y, z])`, `curl(F, ...)` | ベクトル場の発散（$\nabla \cdot F$）・3次元ベクトル場の回転（$\nabla \times F$） |
