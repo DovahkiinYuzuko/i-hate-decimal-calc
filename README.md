@@ -212,7 +212,7 @@ ihd "plot(sin(x), [-pi, pi])"
 > **[完全構文・演算子・関数リファレンス (Japanese Edition)](docs/references/reference.ja.md)**
 
 #### 主なカテゴリと代表関数
-- **基本代数・数論・方程式**: `sqrt`, `cbrt`, `factor`, `apart`, `together`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `crt`, `solve`
+- **基本代数・数論・方程式**: `sqrt`, `cbrt`, `factor`, `apart`, `together`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `crt`, `solve`
 - **三角関数・対数・複素数**: `sin`, `cos`, `tan`, `trig_expand`, `trig_reduce`, `log`, `ln`, `polar`, `rect`
 - **微積分・常微分方程式・特殊関数・級数**: `diff`, `integrate`, `limit`, `residue`, `gamma`, `beta`, `bernoulli`, `zeta`, `dsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`
 - **線形代数・3次元ベクトル解析**: `det`, `inv`, `rref`, `rank`, `trace`, `eigenvals`, `eigenvects`, `lu`, `qr`, `cholesky`, `ldlt`, `pinv`, `solve_linear`, `dot`, `cross`, `norm`, `grad`, `div`, `curl`
@@ -473,7 +473,7 @@ ihd "plot(sin(x), [-pi, pi])"
 > **[Complete Syntax, Operators & Functions Reference (English Edition)](docs/references/reference.en.md)**
 
 #### Major Categories & Representative Functions
-- **Basic Algebra, Number Theory & Equations**: `sqrt`, `cbrt`, `factor`, `apart`, `together`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `crt`, `solve`
+- **Basic Algebra, Number Theory & Equations**: `sqrt`, `cbrt`, `factor`, `apart`, `together`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `crt`, `solve`
 - **Trigonometric, Logarithmic & Complex Functions**: `sin`, `cos`, `tan`, `trig_expand`, `trig_reduce`, `log`, `ln`, `polar`, `rect`
 - **Calculus, ODEs, Special Functions & Series**: `diff`, `integrate`, `limit`, `residue`, `gamma`, `beta`, `bernoulli`, `zeta`, `dsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`
 - **Linear Algebra & 3D Vector Calculus**: `det`, `inv`, `rref`, `rank`, `trace`, `eigenvals`, `eigenvects`, `lu`, `qr`, `cholesky`, `ldlt`, `pinv`, `solve_linear`, `dot`, `cross`, `norm`, `grad`, `div`, `curl`
