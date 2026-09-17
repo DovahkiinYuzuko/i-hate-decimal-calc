@@ -109,6 +109,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `inv_laplace` | `inv_laplace(1/(s-3), s, t)` / `inv_laplace(1/(s^2+4))` | Exact symbolic inverse Laplace transform $\mathcal{L}^{-1}\{F(s)\}$ (via partial fraction decomposition `apart` and pole matching) |
 | `taylor` | `taylor(f, x, a, n)` | Taylor / Maclaurin series expansion around $x=a$ up to order $n$ |
 | `fourier_series` | `fourier_series(f, [t, L, n])` | Symbolic Fourier series expansion (computes exact definite integrals via Euler-Fourier formulas up to order $n$) |
+| `residue` | `residue(1/(z^2*(z+1)), z, 0)` / `residue(exp(z)/z^3, z, 0)` | Exact algebraic residue $\mathrm{Res}(f, z_0)$ at isolated singularity $z_0$ in complex analysis (order determination, Taylor recurrence & Cauchy formula) |
 | `sum` | `sum(expr, k, start, end)` | Discrete summation (finite sum or exact polynomial closed form via Faulhaber formula) |
 
 ---

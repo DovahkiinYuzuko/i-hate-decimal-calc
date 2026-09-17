@@ -214,7 +214,7 @@ ihd "plot(sin(x), [-pi, pi])"
 #### 主なカテゴリと代表関数
 - **基本代数・数論・方程式**: `sqrt`, `cbrt`, `factor`, `apart`, `together`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `crt`, `solve`
 - **三角関数・対数・複素数**: `sin`, `cos`, `tan`, `trig_expand`, `trig_reduce`, `log`, `ln`, `polar`, `rect`
-- **微積分・常微分方程式・級数**: `diff`, `integrate`, `limit`, `dsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`
+- **微積分・常微分方程式・級数**: `diff`, `integrate`, `limit`, `residue`, `dsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`
 - **線形代数・3次元ベクトル解析**: `det`, `inv`, `rref`, `rank`, `trace`, `eigenvals`, `eigenvects`, `lu`, `qr`, `cholesky`, `ldlt`, `pinv`, `solve_linear`, `dot`, `cross`, `norm`, `grad`, `div`, `curl`
 - **幾何学解析**: `line_intersect`, `circle_intersect`, `triangle_area`, `triangle_centers`
 - **厳密離散確率・統計**: `binom`, `hyper`, `geom`, `bayes`, `expect`, `variance`, `stddev`
