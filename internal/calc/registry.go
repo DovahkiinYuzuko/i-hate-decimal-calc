@@ -818,6 +818,25 @@ func init() {
 		MaxArgs:  2,
 		LazyArgs: true,
 	})
+
+	// Elliptic Curves over Rationals & Nagell-Lutz (issue-76)
+	RegisterFunction(FunctionSpec{
+		Name:            "ec_add",
+		MinArgs:         4,
+		MaxArgs:         6,
+		AllowBareSymbol: true,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:            "ec_mul",
+		MinArgs:         4,
+		MaxArgs:         5,
+		AllowBareSymbol: true,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "ec_torsion",
+		MinArgs: 2,
+		MaxArgs: 2,
+	})
 }
 
 

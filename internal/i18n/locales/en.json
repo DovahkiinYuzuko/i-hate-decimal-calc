@@ -194,5 +194,12 @@
     "err_no_variables": "quantifier elimination error: no bound variables specified",
     "err_expected_var_list": "quantifier syntax error: first argument must be variable or list of variables",
     "err_unsupported_body": "quantifier elimination error: unsupported formula structure"
+  },
+  "elliptic": {
+    "err_singular_curve": "singular elliptic curve error: discriminant is zero (4A^3 + 27B^2 = 0)",
+    "err_invalid_point": "elliptic curve error: specified point does not lie on curve y^2 = x^3 + Ax + B: %s",
+    "err_invalid_args": "elliptic curve error: invalid argument format",
+    "err_scalar_int_required": "elliptic scalar mul error: scalar must be an integer",
+    "err_point_format": "elliptic point syntax error: point must be [x, y] or point at infinity O"
   }
 }

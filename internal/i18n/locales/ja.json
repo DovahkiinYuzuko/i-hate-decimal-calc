@@ -194,5 +194,12 @@
     "err_no_variables": "量化子消去エラー: 消去対象の束縛変数が指定されていません",
     "err_expected_var_list": "量化子構文エラー: 第1引数は変数または変数リストである必要があります",
     "err_unsupported_body": "量化子消去エラー: 未対応の論理式形式です"
+  },
+  "elliptic": {
+    "err_singular_curve": "特異楕円曲線エラー: 判別式が 0 のため非特異曲線ではありません (4A^3 + 27B^2 = 0)",
+    "err_invalid_point": "楕円曲線エラー: 指定された点は曲線 y^2 = x^3 + Ax + B 上に存在しません: %s",
+    "err_invalid_args": "楕円曲線エラー: 引数の形式が不正です",
+    "err_scalar_int_required": "楕円曲線スカラー倍エラー: スカラー倍数は整数である必要があります",
+    "err_point_format": "楕円曲線点構文エラー: 点は [x, y] または無限遠点 O である必要があります"
   }
 }
