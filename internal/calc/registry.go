@@ -798,6 +798,26 @@ func init() {
 		AllowBareSymbol: true,
 		LazyArgs:        true,
 	})
+
+	// Quantifier Elimination & First-Order Logic (issue-74)
+	RegisterFunction(FunctionSpec{
+		Name:     "qe",
+		MinArgs:  1,
+		MaxArgs:  1,
+		LazyArgs: true,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:     "forall",
+		MinArgs:  2,
+		MaxArgs:  2,
+		LazyArgs: true,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:     "exists",
+		MinArgs:  2,
+		MaxArgs:  2,
+		LazyArgs: true,
+	})
 }
 
 

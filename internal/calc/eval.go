@@ -194,6 +194,9 @@ func EvalWithEnv(n Node, env *Env) (Node, error) {
 
 		return evaluatedRel, nil
 
+	case *QuantifierNode:
+		return v, nil
+
 	default:
 		return nil, fmt.Errorf("unknown node type for evaluation: %T", n)
 	}

@@ -80,6 +80,7 @@ const (
 	NodeRelOp
 	NodePoly
 	NodeAlgebraicNumber
+	NodeQuantifier
 )
 
 // Node represents any node in the mathematical expression tree.
@@ -874,6 +875,83 @@ func (n *AlgebraicNumberNode) Clone() *AlgebraicNumberNode {
 }
 
 // -------------------------------------------------------------------------
+// QuantifierNode (First-Order Logic Quantifiers: forall, exists)
+// -------------------------------------------------------------------------
+
+// QuantifierKind defines the type of logical quantifier (forall or exists).
+type QuantifierKind int
+
+const (
+	// QuantifierForall represents universal quantification (forall / ∀).
+	QuantifierForall QuantifierKind = iota
+	// QuantifierExists represents existential quantification (exists / ∃).
+	QuantifierExists
+)
+
+func (k QuantifierKind) String() string {
+	switch k {
+	case QuantifierForall:
+		return "forall"
+	case QuantifierExists:
+		return "exists"
+	default:
+		return "unknown_quantifier"
+	}
+}
+
+// QuantifierNode represents a first-order logic quantified formula such as forall([x], phi) or exists([x, y], phi).
+type QuantifierNode struct {
+	Kind QuantifierKind
+	Vars []string
+	Body Node
+}
+
+// NewQuantifier constructs a new QuantifierNode.
+func NewQuantifier(kind QuantifierKind, vars []string, body Node) *QuantifierNode {
+	vCopy := make([]string, len(vars))
+	copy(vCopy, vars)
+	return &QuantifierNode{
+		Kind: kind,
+		Vars: vCopy,
+		Body: body,
+	}
+}
+
+func (n *QuantifierNode) Type() NodeType { return NodeQuantifier }
+
+func (n *QuantifierNode) String() string {
+	var sb strings.Builder
+	sb.WriteString(n.Kind.String())
+	sb.WriteString("([")
+	sb.WriteString(strings.Join(n.Vars, ", "))
+	sb.WriteString("], ")
+	if n.Body != nil {
+		sb.WriteString(n.Body.String())
+	}
+	sb.WriteString(")")
+	return sb.String()
+}
+
+func (n *QuantifierNode) Equal(other Node) bool {
+	o, ok := other.(*QuantifierNode)
+	if !ok || n.Kind != o.Kind || len(n.Vars) != len(o.Vars) {
+		return false
+	}
+	for i, v := range n.Vars {
+		if v != o.Vars[i] {
+			return false
+		}
+	}
+	if n.Body == nil && o.Body == nil {
+		return true
+	}
+	if n.Body == nil || o.Body == nil {
+		return false
+	}
+	return n.Body.Equal(o.Body)
+}
+
+// -------------------------------------------------------------------------
 // AST Traversal & Transformation (Walker Pattern)
 // -------------------------------------------------------------------------
 
@@ -923,6 +1001,8 @@ func Walk(node Node, visitor func(Node) bool) {
 	case *RelOpNode:
 		Walk(v.LHS, visitor)
 		Walk(v.RHS, visitor)
+	case *QuantifierNode:
+		Walk(v.Body, visitor)
 	case *RationalNode, *ConstNode, *VarNode, *PlotNode, *PolyNode, *AlgebraicNumberNode:
 		// Leaf nodes: no children
 	}
@@ -1016,6 +1096,12 @@ func Transform(node Node, transformer func(Node) Node) Node {
 			Op:  v.Op,
 			RHS: Transform(v.RHS, transformer),
 		}
+	case *QuantifierNode:
+		transformedChild = &QuantifierNode{
+			Kind: v.Kind,
+			Vars: append([]string(nil), v.Vars...),
+			Body: Transform(v.Body, transformer),
+		}
 	case *RationalNode, *ConstNode, *VarNode, *PlotNode, *PolyNode, *AlgebraicNumberNode:
 		transformedChild = node
 	default:
@@ -1081,35 +1167,106 @@ func ContainsVar(node Node, varName string) bool {
 	return found
 }
 
-// ExtractFreeVariables collects all distinct variable names occurring in the node, sorted alphabetically.
+// ExtractFreeVariables collects all distinct free variable names occurring in the node, sorted alphabetically.
+// Variables bound by QuantifierNodes are excluded.
 func ExtractFreeVariables(node Node) []string {
 	varMap := make(map[string]bool)
-	Walk(node, func(curr Node) bool {
-		if v, ok := curr.(*VarNode); ok {
-			varMap[v.Name] = true
+	boundVars := make(map[string]int)
+
+	var walkScoped func(n Node)
+	walkScoped = func(n Node) {
+		if n == nil {
+			return
 		}
-		if p, ok := curr.(*PolyNode); ok {
-			for _, v := range p.Vars {
-				varMap[v] = true
+		if q, ok := n.(*QuantifierNode); ok {
+			for _, v := range q.Vars {
+				boundVars[v]++
 			}
+			walkScoped(q.Body)
+			for _, v := range q.Vars {
+				boundVars[v]--
+				if boundVars[v] <= 0 {
+					delete(boundVars, v)
+				}
+			}
+			return
 		}
-		if a, ok := curr.(*AlgebraicNumberNode); ok {
-			if a.Symbol != "" {
+		if v, ok := n.(*VarNode); ok {
+			if boundVars[v.Name] == 0 {
+				varMap[v.Name] = true
+			}
+			return
+		}
+		if p, ok := n.(*PolyNode); ok {
+			for _, v := range p.Vars {
+				if boundVars[v] == 0 {
+					varMap[v] = true
+				}
+			}
+			return
+		}
+		if a, ok := n.(*AlgebraicNumberNode); ok {
+			if a.Symbol != "" && boundVars[a.Symbol] == 0 {
 				varMap[a.Symbol] = true
 			}
 			if a.MinPoly != nil {
 				for _, v := range a.MinPoly.Vars {
-					varMap[v] = true
+					if boundVars[v] == 0 {
+						varMap[v] = true
+					}
 				}
 			}
 			if a.RepPoly != nil {
 				for _, v := range a.RepPoly.Vars {
-					varMap[v] = true
+					if boundVars[v] == 0 {
+						varMap[v] = true
+					}
 				}
 			}
+			return
 		}
-		return true
-	})
+
+		switch v := n.(type) {
+		case *SqrtNode:
+			walkScoped(v.Radicand)
+		case *FuncNode:
+			for _, arg := range v.Args {
+				walkScoped(arg)
+			}
+		case *ComplexNode:
+			walkScoped(v.Real)
+			walkScoped(v.Imag)
+		case *AddNode:
+			for _, t := range v.Terms {
+				walkScoped(t)
+			}
+		case *MulNode:
+			for _, f := range v.Factors {
+				walkScoped(f)
+			}
+		case *PowNode:
+			walkScoped(v.Base)
+			walkScoped(v.Exp)
+		case *UnaryOpNode:
+			walkScoped(v.Expr)
+		case *ListNode:
+			for _, e := range v.Elements {
+				walkScoped(e)
+			}
+		case *MatrixNode:
+			for _, row := range v.Data {
+				for _, cell := range row {
+					walkScoped(cell)
+				}
+			}
+		case *RelOpNode:
+			walkScoped(v.LHS)
+			walkScoped(v.RHS)
+		}
+	}
+
+	walkScoped(node)
+
 	if len(varMap) == 0 {
 		return nil
 	}

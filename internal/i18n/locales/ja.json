@@ -187,5 +187,12 @@
     "err_var_required": "CADエラー: 変数リストの指定が必要です",
     "unsat": "解なし (UNSAT / 空集合)",
     "tautology": "常に成立 (恒等式 / 全空間)"
+  },
+  "qe": {
+    "err_nil_formula": "量化子消去エラー: 式が指定されていません",
+    "err_invalid_args": "量化子消去エラー: 引数の数が不正です",
+    "err_no_variables": "量化子消去エラー: 消去対象の束縛変数が指定されていません",
+    "err_expected_var_list": "量化子構文エラー: 第1引数は変数または変数リストである必要があります",
+    "err_unsupported_body": "量化子消去エラー: 未対応の論理式形式です"
   }
 }

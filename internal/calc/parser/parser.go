@@ -392,6 +392,31 @@ func (p *Parser) parseFuncCall(name string) (ast.Node, error) {
 		return ast.NewSqrt(args[0]), nil
 	}
 
+	if name == "forall" || name == "exists" {
+		if len(args) != 2 {
+			return nil, fmt.Errorf("%s requires exactly 2 arguments (variables, formula), got %d", name, len(args))
+		}
+		var vars []string
+		if list, ok := args[0].(*ast.ListNode); ok {
+			for _, elem := range list.Elements {
+				if v, ok := elem.(*ast.VarNode); ok {
+					vars = append(vars, v.Name)
+				} else {
+					return nil, fmt.Errorf("%s: first argument must be a list of variables, got %s", name, elem)
+				}
+			}
+		} else if v, ok := args[0].(*ast.VarNode); ok {
+			vars = append(vars, v.Name)
+		} else {
+			return nil, fmt.Errorf("%s: first argument must be a variable or list of variables, got %s", name, args[0])
+		}
+		kind := ast.QuantifierForall
+		if name == "exists" {
+			kind = ast.QuantifierExists
+		}
+		return ast.NewQuantifier(kind, vars, args[1]), nil
+	}
+
 	return ast.NewFunc(name, args)
 }
 

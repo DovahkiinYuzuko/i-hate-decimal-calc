@@ -178,3 +178,14 @@
 | `assume` | `assume(x > 0)`, `assume(n, integer)` | ドメイン制約を設定（`sqrt(x^2)` → `x`, `sin(n*pi)` → `0` 等の簡約が活性化） |
 | `unassume` | `unassume(x)` | 指定した変数の仮定制約を解除 |
 | `assumptions` | `assumptions()` | 現在設定されている前提条件の一覧を表示 |
+
+---
+
+### 8. 実代数幾何・数理論理・量化子消去
+
+| 関数 | 書式・例 | 説明 |
+| :--- | :--- | :--- |
+| `qe` | `qe(forall([x], x^2 + a*x + b > 0))` | 円筒代数分解（CAD）基盤の決定論的完全量化子消去（Hong (1992) 境界多項式による同値な量化子なしパラメータ条件式の導出） |
+| `forall` | `forall([x], formula)` | 全称量化子式 $\forall x \, \Phi(x)$ の構築 |
+| `exists` | `exists([x], formula)` | 存在量化子式 $\exists x \, \Phi(x)$ の構築 |
+

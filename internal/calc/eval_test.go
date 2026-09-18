@@ -1098,6 +1098,36 @@ func TestEvalToPoly(t *testing.T) {
 	}
 }
 
+func TestEvalQuantifierElimination(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"qe(forall([x], x^2 + 1 > 0))", "true"},
+		{"qe(forall([x], x^2 - 1 > 0))", "false"},
+		{"qe(exists([x], x^2 - 3 == 0))", "true"},
+		{"qe(exists([x], x^2 + 4 == 0))", "false"},
+		{"qe(forall([x], x^2 + a*x + b > 0))", "-4*b + a^2 < 0"},
+		{"qe(exists([x], x^2 - 4*b == 0))", "16*b >= 0"},
+		{"qe(forall([x], x^2 >= 0))", "true"},
+		{"qe(forall([x], x^2 + 2*x + 1 >= 0))", "true"},
+		{"qe(exists([x], 2*x + 3 == 0))", "true"},
+		{"qe(forall([x], 2*x + 3 > 0))", "false"},
+	}
+
+	for _, tc := range tests {
+		res, err := EvalString(tc.input)
+		if err != nil {
+			t.Fatalf("unexpected error for %q: %v", tc.input, err)
+		}
+		actual := Format(res)
+		if actual != tc.expected {
+			t.Errorf("input %q: got %q, want %q", tc.input, actual, tc.expected)
+		}
+	}
+}
+
+
 
 
 

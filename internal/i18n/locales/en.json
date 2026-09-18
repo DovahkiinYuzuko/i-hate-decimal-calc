@@ -187,5 +187,12 @@
     "err_var_required": "CAD error: variable list is required",
     "unsat": "No solution (UNSAT / Empty set)",
     "tautology": "Always true (Tautology / Entire space)"
+  },
+  "qe": {
+    "err_nil_formula": "quantifier elimination error: nil formula provided",
+    "err_invalid_args": "quantifier elimination error: invalid argument count",
+    "err_no_variables": "quantifier elimination error: no bound variables specified",
+    "err_expected_var_list": "quantifier syntax error: first argument must be variable or list of variables",
+    "err_unsupported_body": "quantifier elimination error: unsupported formula structure"
   }
 }

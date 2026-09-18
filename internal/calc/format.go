@@ -159,6 +159,12 @@ func formatNode(n Node, opts FormatOptions) string {
 		}
 		return fmt.Sprintf("[%s]", strings.Join(rowStrs, ", "))
 
+	case *RelOpNode:
+		return fmt.Sprintf("%s %s %s", formatNode(v.LHS, opts), v.Op, formatNode(v.RHS, opts))
+
+	case *QuantifierNode:
+		return v.String()
+
 	default:
 		return n.String()
 	}

@@ -51,8 +51,16 @@ const (
 	NodeMatrix   = ast.NodeMatrix
 	NodePlot     = ast.NodePlot
 	NodeRelOp    = ast.NodeRelOp
-	NodePoly     = ast.NodePoly
+	NodePoly            = ast.NodePoly
 	NodeAlgebraicNumber = ast.NodeAlgebraicNumber
+	NodeQuantifier      = ast.NodeQuantifier
+)
+
+type QuantifierKind = ast.QuantifierKind
+
+const (
+	QuantifierForall = ast.QuantifierForall
+	QuantifierExists = ast.QuantifierExists
 )
 
 type (
@@ -74,6 +82,7 @@ type (
 	RelOpNode           = ast.RelOpNode
 	PolyNode            = ast.PolyNode
 	AlgebraicNumberNode = ast.AlgebraicNumberNode
+	QuantifierNode      = ast.QuantifierNode
 )
 
 var (
@@ -92,6 +101,7 @@ var (
 	NewMatrix               = ast.NewMatrix
 	NewPlotNode             = ast.NewPlotNode
 	NewRelOp                = ast.NewRelOp
+	NewQuantifier           = ast.NewQuantifier
 	Walk                    = ast.Walk
 	Inspect                 = ast.Inspect
 	Transform               = ast.Transform

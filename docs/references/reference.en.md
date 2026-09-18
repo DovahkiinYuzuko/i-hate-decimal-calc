@@ -178,3 +178,14 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `assume` | `assume(x > 0)`, `assume(n, integer)` | Sets domain constraints (`sqrt(x^2)` → `x`, `sin(n*pi)` → `0`, etc.) |
 | `unassume` | `unassume(x)` | Clears assumptions for the specified variable |
 | `assumptions` | `assumptions()` | Displays all active domain constraints |
+
+---
+
+### 8. Real Algebraic Geometry, Mathematical Logic & Quantifier Elimination
+
+| Function | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `qe` | `qe(forall([x], x^2 + a*x + b > 0))` | Full Quantifier Elimination via Cylindrical Algebraic Decomposition (CAD) (constructs equivalent quantifier-free conditions via Hong (1992) boundary polynomials) |
+| `forall` | `forall([x], formula)` | Universal quantifier formula constructor $\forall x \, \Phi(x)$ |
+| `exists` | `exists([x], formula)` | Existential quantifier formula constructor $\exists x \, \Phi(x)$ |
+
