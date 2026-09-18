@@ -23,6 +23,7 @@ func init() {
 	RegisterLazyHandler("dsolve", handleDSolve)
 	RegisterHandler("gosper_sum", handleGosperSum)
 	RegisterHandler("wz_cert", handleWZCert)
+	RegisterHandler("risch_integrate", handleRischIntegrate)
 }
 
 func handleDiff(args []Node, env *Env) (Node, error) {
@@ -188,5 +189,20 @@ func handleWZCert(args []Node, env *Env) (Node, error) {
 		kVar = vk.Name
 	}
 	return GenerateWZCertificate(args[0], nVar, kVar)
+}
+
+func handleRischIntegrate(args []Node, env *Env) (Node, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("risch_integrate requires at least 1 argument (expr, [var])")
+	}
+	varName := "x"
+	if len(args) >= 2 {
+		if v, ok := args[1].(*VarNode); ok {
+			varName = v.Name
+		} else {
+			return nil, fmt.Errorf("%s", i18n.T("errors.arg_must_be_var", "risch_integrate", "second", args[1].String()))
+		}
+	}
+	return RischIntegrate(args[0], varName)
 }
 
