@@ -212,7 +212,7 @@ ihd "plot(sin(x), [-pi, pi])"
 > **[完全構文・演算子・関数リファレンス (Japanese Edition)](docs/references/reference.ja.md)**
 
 #### 主なカテゴリと代表関数
-- **基本代数・数論・方程式**: `sqrt`, `cbrt`, `factor`, `apart`, `together`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `crt`, `solve`
+- **基本代数・数論・方程式**: `sqrt`, `cbrt`, `factor`, `apart`, `together`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `crt`, `solve`, `verify`
 - **三角関数・対数・複素数**: `sin`, `cos`, `tan`, `trig_expand`, `trig_reduce`, `log`, `ln`, `polar`, `rect`
 - **微積分・常微分方程式・特殊関数・級数**: `diff`, `integrate`, `risch_integrate`, `limit`, `residue`, `gamma`, `beta`, `bernoulli`, `zeta`, `dsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`, `gosper_sum`, `wz_cert`
 - **線形代数・3次元ベクトル解析**: `det`, `inv`, `rref`, `rank`, `trace`, `eigenvals`, `eigenvects`, `lu`, `qr`, `cholesky`, `ldlt`, `pinv`, `solve_linear`, `dot`, `cross`, `norm`, `grad`, `div`, `curl`
@@ -233,7 +233,8 @@ ihd "plot(sin(x), [-pi, pi])"
 | `--latex`            | MarkdownやTeX論文に貼り付け可能なLaTeX形式（`$$ ... $$`）で出力。<br>`ihd --latex "1/2 + sqrt(2)"` $\to$ `$$ \frac{1}{2} + \sqrt{2} $$`                                |
 | `--pretty`           | 分数線や根号を複数行アスキーアートで組版表示する2Dプリティプリント。<br>`ihd --pretty "1/2 + sqrt(2)/2"`                                                               |
 | `--deg`              | 三角関数および逆三角関数を度数法（Degree）として解釈・計算。<br>`ihd --deg "sin(30) + cos(60)"` $\to$ `1`                                                              |
-| `--explain`          | 代数的項書き換え（有理化・二重根号・微分則等）を途中式ツリーとして詳細表示。<br>`ihd --explain "1 / (sqrt(2) + 1)"`                                                    |
+| --explain          | 代数的項書き換え（有理化・二重根号・微分則等）を途中式ツリーとして詳細表示。<br>ihd --explain "1 / (sqrt(2) + 1)"                                                    |
+| --verify           | 導出した計算結果に対し独立した逆算・双対検証を行い、代数的証明書を発行・出力。<br>ihd --verify "integrate(1/(x^2 + 1), x)" $\to$ tan(x)<br>[VERIFIED: diff(F, x) - f == 0] |
 | `--lang <code/auto>` | 表示言語（ロケール）を指定（`ja`, `en`, `auto`）。設定は `~/.ihd/config.json` に永続化され、カスタム辞書（`~/.ihd/locales/`）にも対応。<br>`ihd --lang en "1/2 + 1/3"` |
 | `-h`, `--help`       | コマンドのヘルプメッセージを表示。                                                                                                                                     |
 | `-v`, `--version`    | バージョン情報を表示（新リリースが存在する場合は更新案内を表示）。                                                                                                     |
@@ -473,7 +474,7 @@ ihd "plot(sin(x), [-pi, pi])"
 > **[Complete Syntax, Operators & Functions Reference (English Edition)](docs/references/reference.en.md)**
 
 #### Major Categories & Representative Functions
-- **Basic Algebra, Number Theory & Equations**: `sqrt`, `cbrt`, `factor`, `apart`, `together`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `crt`, `solve`
+- **Basic Algebra, Number Theory & Equations**: `sqrt`, `cbrt`, `factor`, `apart`, `together`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `crt`, `solve`, `verify`
 - **Trigonometric, Logarithmic & Complex Functions**: `sin`, `cos`, `tan`, `trig_expand`, `trig_reduce`, `log`, `ln`, `polar`, `rect`
 - **Calculus, ODEs, Special Functions & Series**: `diff`, `integrate`, `risch_integrate`, `limit`, `residue`, `gamma`, `beta`, `bernoulli`, `zeta`, `dsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`, `gosper_sum`, `wz_cert`
 - **Linear Algebra & 3D Vector Calculus**: `det`, `inv`, `rref`, `rank`, `trace`, `eigenvals`, `eigenvects`, `lu`, `qr`, `cholesky`, `ldlt`, `pinv`, `solve_linear`, `dot`, `cross`, `norm`, `grad`, `div`, `curl`

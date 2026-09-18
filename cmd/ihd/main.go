@@ -25,6 +25,7 @@ type runOptions struct {
 	pretty        bool
 	deg           bool
 	explain       bool
+	verify        bool
 	noUpdateCheck bool
 }
 
@@ -48,7 +49,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 			continue
 		}
 		switch a {
-		case "-ascii", "--ascii", "-approx", "--approx", "-latex", "--latex", "-pretty", "--pretty", "-deg", "--deg", "-explain", "--explain", "-h", "--help", "-v", "--version", "-version", "--no-update-check", "-no-update-check":
+		case "-ascii", "--ascii", "-approx", "--approx", "-latex", "--latex", "-pretty", "--pretty", "-deg", "--deg", "-explain", "--explain", "-verify", "--verify", "-h", "--help", "-v", "--version", "-version", "--no-update-check", "-no-update-check":
 			flagArgs = append(flagArgs, a)
 		default:
 			exprArgs = append(exprArgs, a)
@@ -81,6 +82,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 	prettyFlag := fs.Bool("pretty", false, i18n.T("cli.flag_pretty"))
 	degFlag := fs.Bool("deg", false, i18n.T("cli.flag_deg"))
 	explainFlag := fs.Bool("explain", false, i18n.T("cli.flag_explain"))
+	verifyFlag := fs.Bool("verify", false, i18n.T("cli.flag_verify"))
 	versionFlag := fs.Bool("version", false, i18n.T("cli.flag_version"))
 	fs.BoolVar(versionFlag, "v", false, i18n.T("cli.flag_version"))
 	noUpdateCheckFlag := fs.Bool("no-update-check", false, i18n.T("cli.flag_no_update_check"))
@@ -124,6 +126,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 		pretty:        *prettyFlag,
 		deg:           *degFlag,
 		explain:       *explainFlag,
+		verify:        *verifyFlag,
 		noUpdateCheck: *noUpdateCheckFlag,
 	}
 
@@ -221,6 +224,10 @@ func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut 
 		parts := strings.SplitN(line, " ", 2)
 		ro.explain = true
 		line = strings.TrimSpace(parts[1])
+	} else if strings.HasPrefix(lowerLine, "verify ") {
+		parts := strings.SplitN(line, " ", 2)
+		ro.verify = true
+		line = strings.TrimSpace(parts[1])
 	}
 
 	parsed, err := calc.ParseStatement(line)
@@ -253,6 +260,10 @@ func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut 
 		} else {
 			fmt.Fprintln(out, formatOutput(evaled, ro))
 		}
+		if ro.verify {
+			cert, _ := calc.VerifyComputation(v.Value, evaled, env)
+			fmt.Fprintln(out, cert.String())
+		}
 		return nil
 
 	case calc.Node:
@@ -272,6 +283,10 @@ func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut 
 			fmt.Fprint(out, calc.FormatTrace(line, steps, evaled))
 		} else {
 			fmt.Fprintln(out, formatOutput(evaled, ro))
+		}
+		if ro.verify {
+			cert, _ := calc.VerifyComputation(v, evaled, env)
+			fmt.Fprintln(out, cert.String())
 		}
 		return nil
 
@@ -350,6 +365,10 @@ func executeScriptLine(line string, ro runOptions, env *calc.Env, suppressOutput
 	if strings.HasPrefix(lowerLine, "explain ") || strings.HasPrefix(lowerLine, "steps ") {
 		parts := strings.SplitN(line, " ", 2)
 		ro.explain = true
+		line = strings.TrimSpace(parts[1])
+	} else if strings.HasPrefix(lowerLine, "verify ") {
+		parts := strings.SplitN(line, " ", 2)
+		ro.verify = true
 		line = strings.TrimSpace(parts[1])
 	}
 
