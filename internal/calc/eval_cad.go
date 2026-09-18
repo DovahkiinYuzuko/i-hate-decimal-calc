@@ -18,6 +18,8 @@ type CadCell struct {
 	Satisfied   bool
 }
 
+// CadState refers to the CAD lifecycle phase defined in eval_cad_fsm.go.
+
 // SolveInequality parses a relational inequality (relOp: <, <=, >, >=),
 // executes the CAD/1D Fast-Path pipeline, and returns exact solution intervals.
 func SolveInequality(relOp *RelOpNode, varName string, env *Env) (Node, error) {

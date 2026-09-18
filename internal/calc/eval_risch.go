@@ -8,6 +8,8 @@ import (
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc/ast"
 )
 
+// RischState refers to the Risch lifecycle states defined in eval_risch_fsm.go.
+
 // ExtensionKind represents the kind of transcendental differential extension.
 type ExtensionKind int
 

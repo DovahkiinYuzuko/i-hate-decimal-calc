@@ -10,6 +10,8 @@ import (
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc/ast"
 )
 
+// TokenType represents lexical token types defined in token.go.
+
 // Lexer breaks a mathematical expression into tokens.
 type Lexer struct {
 	input   string

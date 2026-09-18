@@ -15,6 +15,8 @@ import (
 // - P. Lisonek, P. Paule, V. Strehl (1993) J. Symbolic Computation 16, 243-258
 // -------------------------------------------------------------------------
 
+// GosperState refers to the Gosper lifecycle states defined in eval_gosper_fsm.go.
+
 // GosperResult contains the algebraic result of Gosper indefinite summation.
 type GosperResult struct {
 	FSM            *GosperLifecycleFSM
