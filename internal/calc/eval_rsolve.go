@@ -49,7 +49,7 @@ func EvalRSolve(eqNode, fnNode, initsNode Node, env *Env) (Node, error) {
 	}
 
 	// 2. Parse equation into homogeneous coefficients and inhomogeneous term f(n)
-	coeffs, fNode, order, err := parseRecurrenceEquation(eqNode, seqName, idxVar, env)
+	coeffs, fNode, order, err := parseRecurrenceEquation(eqNode, seqName, idxVar)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func EvalRSolve(eqNode, fnNode, initsNode Node, env *Env) (Node, error) {
 	}
 
 	// 6. Fit initial conditions or keep symbolic constants (C1, C2, ...)
-	res, err := fitInitialConditions(homogBases, partSol, idxVar, inits, env)
+	res, err := fitInitialConditions(homogBases, partSol, idxVar, inits)
 	if err != nil {
 		return nil, fmt.Errorf("%s", i18n.T("calc.rsolve_failed", err))
 	}
@@ -98,14 +98,8 @@ func extractSequenceTarget(target Node) (string, string, error) {
 	return "", "", fmt.Errorf("expected sequence function like a(n), got: %s", target.String())
 }
 
-// recurrenceShiftTerm represents a shift term like c * a(n+k).
-type recurrenceShiftTerm struct {
-	shift int
-	coeff *big.Rat
-}
-
 // parseRecurrenceEquation converts eq into homogeneous shift coefficients and non-homogeneous f(n).
-func parseRecurrenceEquation(eqNode Node, seqName, idxVar string, env *Env) (map[int]*big.Rat, Node, int, error) {
+func parseRecurrenceEquation(eqNode Node, seqName, idxVar string) (map[int]*big.Rat, Node, int, error) {
 	// Normalize equation LHS == RHS into LHS - RHS == 0
 	var diffExpr Node
 	if rel, ok := eqNode.(*RelOpNode); ok && (rel.Op == "==" || rel.Op == "=") {
@@ -609,7 +603,7 @@ func parseInitialConditions(initsNode Node, seqName string) ([]initialCondition,
 }
 
 // fitInitialConditions fits arbitrary constants C_1, ..., C_K using initial conditions.
-func fitInitialConditions(homogBases []Node, partSol Node, idxVar string, inits []initialCondition, env *Env) (Node, error) {
+func fitInitialConditions(homogBases []Node, partSol Node, idxVar string, inits []initialCondition) (Node, error) {
 	order := len(homogBases)
 	if len(inits) < order {
 		// Not enough initial conditions -> return general solution with symbolic C1, C2...
