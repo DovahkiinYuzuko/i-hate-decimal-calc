@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 )
@@ -110,8 +111,9 @@ func integrateCore(expr Node, varName string) (Node, error) {
 	} else if rischErr != nil {
 		// If Risch algorithm definitively proved that the integral is non-elementary,
 		// short-circuit immediately without falling back to heuristics.
-		if _, isNonElem := rischErr.(*NonelementaryIntegralError); isNonElem {
-			return nil, rischErr
+		var nonElemErr *NonelementaryIntegralError
+		if errors.As(rischErr, &nonElemErr) {
+			return nil, nonElemErr
 		}
 	}
 

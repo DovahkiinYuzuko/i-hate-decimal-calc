@@ -567,7 +567,7 @@ func solveExponentialRisch(expr ast.Node, ext DifferentialExtension, varName str
 }
 
 // solveLogarithmicRisch solves integrals involving a logarithmic extension t = ln(u(x)).
-func solveLogarithmicRisch(expr ast.Node, ext DifferentialExtension, varName string, fsm *RischLifecycleFSM) (ast.Node, error) {
+func solveLogarithmicRisch(expr ast.Node, _ DifferentialExtension, varName string, fsm *RischLifecycleFSM) (ast.Node, error) {
 	// Case 1: Pure ln(x) -> x*ln(x) - x
 	if fn, ok := expr.(*ast.FuncNode); ok && (fn.Name == "ln" || fn.Name == "log") && len(fn.Args) == 1 {
 		arg := fn.Args[0]

@@ -126,7 +126,7 @@ func solve1D(expr Node, op string, varName string, env *Env, fsm *CadLifecycleFS
 		rootVal := new(big.Rat).Quo(negB, aRat)
 		rootNode := NewRationalFromBigRat(rootVal)
 
-		return formatLinearInterval(op, aRat.Sign(), varName, rootNode), nil
+		return formatLinearInterval(op, aRat.Sign(), rootNode), nil
 	}
 
 	// Degree >= 2: Exact roots or Sturm real root isolation
@@ -136,7 +136,7 @@ func solve1D(expr Node, op string, varName string, env *Env, fsm *CadLifecycleFS
 	exactRootsList, err := solveExactRoots(expanded, varName)
 	if err == nil {
 		_ = fsm.TransitionTo(CadStateDecided)
-		return buildIntervalsFromRoots(exactRootsList, p, op, varName, env)
+		return buildIntervalsFromRoots(exactRootsList, p, op)
 	}
 
 	// Fallback to Sturm isolation intervals
@@ -147,7 +147,7 @@ func solve1D(expr Node, op string, varName string, env *Env, fsm *CadLifecycleFS
 	}
 
 	_ = fsm.TransitionTo(CadStateDecided)
-	return buildIntervalsFromSturm(isolations.(*ListNode), p, op, varName, env)
+	return buildIntervalsFromSturm(isolations.(*ListNode), p, op)
 }
 
 // evalRelationalSign tests if signVal satisfies op relative to 0.
@@ -168,7 +168,7 @@ func evalRelationalSign(signVal int, op string) bool {
 	}
 }
 
-func formatLinearInterval(op string, aSign int, varName string, root Node) Node {
+func formatLinearInterval(op string, aSign int, root Node) Node {
 	effectiveOp := op
 	if aSign < 0 {
 		switch op {
@@ -240,7 +240,7 @@ func evalPolyConditionAtRat(p *univariatePoly, r *big.Rat, op string) bool {
 }
 
 // buildIntervalsFromRoots constructs satisfying intervals from exact symbolic roots.
-func buildIntervalsFromRoots(roots []Node, p *univariatePoly, op string, varName string, env *Env) (Node, error) {
+func buildIntervalsFromRoots(roots []Node, p *univariatePoly, op string) (Node, error) {
 	if len(roots) == 0 {
 		// No real roots -> sign is constant everywhere!
 		sampleZero := big.NewRat(0, 1)
@@ -317,7 +317,7 @@ func buildIntervalsFromRoots(roots []Node, p *univariatePoly, op string, varName
 }
 
 // buildIntervalsFromSturm uses rational isolating intervals to produce solutions.
-func buildIntervalsFromSturm(intervals *ListNode, p *univariatePoly, op string, varName string, env *Env) (Node, error) {
+func buildIntervalsFromSturm(intervals *ListNode, p *univariatePoly, op string) (Node, error) {
 	if len(intervals.Elements) == 0 {
 		// No real roots -> sign is constant everywhere!
 		sampleZero := big.NewRat(0, 1)
