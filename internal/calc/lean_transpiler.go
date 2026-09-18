@@ -329,19 +329,30 @@ func TranspileCertificateToLean(cert *VerificationCertificate, inputExpr, result
 
 	case DomainIntegral:
 		// e.g. integrate(2*x, x) => x^2
-		// Verifies that deriv (result) = integrand or algebraic identity
-		lhs, err := ToLeanSyntax(inputExpr)
-		if err != nil {
-			lhs = cert.Equation
+		var integrand Node
+		var intVar string = "x"
+		if fn, ok := inputExpr.(*FuncNode); ok && len(fn.Args) > 0 {
+			integrand = fn.Args[0]
+			if len(fn.Args) > 1 {
+				if v, ok := fn.Args[1].(*VarNode); ok {
+					intVar = v.Name
+				}
+			}
 		}
-		rhs, err := ToLeanSyntax(resultExpr)
+		fStr, err := ToLeanSyntax(integrand)
 		if err != nil {
-			rhs = "result"
+			fStr = "f"
 		}
-		if cert.Equation != "" {
+		resStr, err := ToLeanSyntax(resultExpr)
+		if err != nil {
+			resStr = "F"
+		}
+		if fStr != "" && resStr != "" {
+			equalityStr = fmt.Sprintf("deriv (fun %s => %s) %s = %s", intVar, resStr, intVar, fStr)
+		} else if cert.Equation != "" {
 			equalityStr = cert.Equation
 		} else {
-			equalityStr = fmt.Sprintf("%s = %s", lhs, rhs)
+			equalityStr = fmt.Sprintf("%s = %s", fStr, resStr)
 		}
 		tactic = "by ring"
 
@@ -381,21 +392,47 @@ func TranspileCertificateToLean(cert *VerificationCertificate, inputExpr, result
 
 	default:
 		// General algebraic equality verification
-		if cert.Equation != "" {
-			equalityStr = cert.Equation
-		} else {
-			lhs, err := ToLeanSyntax(inputExpr)
+		// If input is verify(A == B) or verify(A, B), extract inner nodes
+		actualInput := inputExpr
+		actualResult := resultExpr
+		if fn, ok := inputExpr.(*FuncNode); ok && fn.Name == "verify" {
+			if len(fn.Args) == 1 {
+				actualInput = fn.Args[0]
+				actualResult = nil
+			} else if len(fn.Args) >= 2 {
+				actualInput = fn.Args[0]
+				actualResult = fn.Args[1]
+			}
+		}
+
+		if rel, ok := actualInput.(*RelOpNode); ok {
+			s, err := ToLeanSyntax(rel)
 			if err != nil {
 				return "", err
 			}
-			rhs, err := ToLeanSyntax(resultExpr)
+			equalityStr = s
+		} else if actualResult != nil {
+			lhs, err := ToLeanSyntax(actualInput)
+			if err != nil {
+				return "", err
+			}
+			rhs, err := ToLeanSyntax(actualResult)
 			if err != nil {
 				return "", err
 			}
 			equalityStr = fmt.Sprintf("%s = %s", lhs, rhs)
+		} else {
+			s, err := ToLeanSyntax(actualInput)
+			if err != nil {
+				return "", err
+			}
+			equalityStr = s
 		}
 		tactic = "by ring"
 	}
+
+	// Normalize any leftover == to = for Lean 4 syntax
+	equalityStr = strings.ReplaceAll(equalityStr, "==", "=")
 
 	return fmt.Sprintf("theorem ihd_verified_proof : %s := %s", equalityStr, tactic), nil
 }
