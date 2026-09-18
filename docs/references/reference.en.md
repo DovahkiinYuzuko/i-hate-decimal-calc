@@ -105,6 +105,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `integrate` | `integrate(x^2, x)` / `integrate(sin(x), x, 0, pi)` | Exact symbolic indefinite integration and definite integration over $[a, b]$ |
 | `limit` | `limit(sin(x)/x, x, 0)` / `limit(1/x, x, 0, 1)` | Exact symbolic limit computation (indeterminate forms, factoring, L'Hopital's rule, one-sided limits) |
 | `dsolve` | `dsolve(diff(y, x) == y, y, x)` / `dsolve(diff(y, x, 2) + 4*y == 0, y, x)` | Symbolic ODE solver (1st-order linear via integrating factor, 2nd-order linear with constant coefficients and undetermined coefficients) |
+| `rsolve` | `rsolve(a(n+1) == 2*a(n) + 1, a(n), [a(1) == 1])` / `rsolve(a(n+2) == a(n+1) + a(n), a(n), [a(0) == 0, a(1) == 1])` | Linear recurrence relation solver (1st and 2nd order linear recurrences with constant coefficients, characteristic roots analysis, undetermined coefficients, and linear initial condition fitting) |
 | `laplace` | `laplace(sin(2*t), t, s)` / `laplace(exp(3*t)*t^2)` | Exact symbolic Laplace transform $\mathcal{L}\{f(t)\}$ (linearity, polynomial, exponential, trigonometric, damped oscillation & frequency shifting) |
 | `inv_laplace` | `inv_laplace(1/(s-3), s, t)` / `inv_laplace(1/(s^2+4))` | Exact symbolic inverse Laplace transform $\mathcal{L}^{-1}\{F(s)\}$ (via partial fraction decomposition `apart` and pole matching) |
 | `taylor` | `taylor(f, x, a, n)` | Taylor / Maclaurin series expansion around $x=a$ up to order $n$ |

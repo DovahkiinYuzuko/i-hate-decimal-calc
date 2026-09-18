@@ -156,7 +156,11 @@
     "gamma_pole": "gamma エラー: ガンマ関数は非正の整数 (%s) で未定義（極）です",
     "gamma_invalid_arg": "gamma エラー: 引数は整数または半整数である必要があります (%s)",
     "bernoulli_non_negative": "bernoulli エラー: 引数は非負整数である必要があります (%s)",
-    "zeta_domain_error": "zeta エラー: ゼータ関数は s = 1 で未定義（極）です"
+    "zeta_domain_error": "zeta エラー: ゼータ関数は s = 1 で未定義（極）です",
+    "rsolve_equation_required": "rsolve エラー: 第1引数は関係式 (==) である必要があります (%s)",
+    "rsolve_func_required": "rsolve エラー: 第2引数は数列関数記号 a(n) である必要があります (%s)",
+    "rsolve_linear_constant_coeff": "rsolve エラー: 定数係数の線形漸化式のみ対応しています (%s)",
+    "rsolve_failed": "rsolve エラー: 漸化式の解法に失敗しました: %v"
   },
   "plot": {
     "features_header": "[CAS Features Detected]\n",

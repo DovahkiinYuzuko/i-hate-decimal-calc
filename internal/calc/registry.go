@@ -97,8 +97,10 @@ func IsBareSymbolAllowed(name string) bool {
 func ValidateFuncArgs(name string, args []Node) error {
 	spec, ok := LookupFunction(name)
 	if !ok {
-		return fmt.Errorf("%s", i18n.T("errors.unknown_function", name))
+		// Allow unreserved identifier to act as a free symbolic function (e.g. sequence a(n) in rsolve)
+		return nil
 	}
+
 
 	argCount := len(args)
 	if spec.MinArgs == spec.MaxArgs {
@@ -787,6 +789,16 @@ func init() {
 		MinArgs: 1,
 		MaxArgs: 2,
 	})
+
+	// Recurrence Relation Solver (issue-77)
+	RegisterFunction(FunctionSpec{
+		Name:            "rsolve",
+		MinArgs:         2,
+		MaxArgs:         3,
+		AllowBareSymbol: true,
+		LazyArgs:        true,
+	})
 }
+
 
 

@@ -78,6 +78,9 @@ ihd "isolate_roots(x^2 - 2, x)"
 
 ihd "solve(x^2 - 4 < 0)"
 # 出力: [[-2, 2]]（CAD/Sturm根分離による実代数不等式の厳密解区間）
+
+ihd "rsolve(a(n+1) == 2*a(n) + 1, a(n), [a(1) == 1])"
+# 出力: -1 + 2^n（線形漸化式・差分方程式の厳密一般項求解）
 ```
 
 #### 2. 対話モード（REPL）
@@ -217,7 +220,7 @@ ihd "plot(sin(x), [-pi, pi])"
 #### 主なカテゴリと代表関数
 - **基本代数・数論・方程式**: `sqrt`, `cbrt`, `factor`, `apart`, `together`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `crt`, `solve`, `verify`
 - **三角関数・対数・複素数**: `sin`, `cos`, `tan`, `trig_expand`, `trig_reduce`, `log`, `ln`, `polar`, `rect`
-- **微積分・常微分方程式・特殊関数・級数**: `diff`, `integrate`, `risch_integrate`, `limit`, `residue`, `gamma`, `beta`, `bernoulli`, `zeta`, `dsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`, `gosper_sum`, `wz_cert`
+- **微積分・常微分方程式・漸化式・特殊関数・級数**: `diff`, `integrate`, `risch_integrate`, `limit`, `residue`, `gamma`, `beta`, `bernoulli`, `zeta`, `dsolve`, `rsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`, `gosper_sum`, `wz_cert`
 - **線形代数・3次元ベクトル解析**: `det`, `inv`, `rref`, `rank`, `trace`, `eigenvals`, `eigenvects`, `lu`, `qr`, `cholesky`, `ldlt`, `pinv`, `solve_linear`, `dot`, `cross`, `norm`, `grad`, `div`, `curl`
 - **幾何学解析**: `line_intersect`, `circle_intersect`, `triangle_area`, `triangle_centers`
 - **厳密離散確率・統計**: `binom`, `hyper`, `geom`, `bayes`, `expect`, `variance`, `stddev`
@@ -345,6 +348,9 @@ ihd "isolate_roots(x^2 - 2, x)"
 
 ihd "solve(x^2 - 4 < 0)"
 # Output: [[-2, 2]] (Exact real algebraic inequality solving via CAD/Sturm)
+
+ihd "rsolve(a(n+1) == 2*a(n) + 1, a(n), [a(1) == 1])"
+# Output: -1 + 2^n (Exact linear recurrence relation and difference equation solving)
 ```
 
 #### 2. Interactive REPL
@@ -484,7 +490,7 @@ ihd "plot(sin(x), [-pi, pi])"
 #### Major Categories & Representative Functions
 - **Basic Algebra, Number Theory & Equations**: `sqrt`, `cbrt`, `factor`, `apart`, `together`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `crt`, `solve`, `verify`
 - **Trigonometric, Logarithmic & Complex Functions**: `sin`, `cos`, `tan`, `trig_expand`, `trig_reduce`, `log`, `ln`, `polar`, `rect`
-- **Calculus, ODEs, Special Functions & Series**: `diff`, `integrate`, `risch_integrate`, `limit`, `residue`, `gamma`, `beta`, `bernoulli`, `zeta`, `dsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`, `gosper_sum`, `wz_cert`
+- **Calculus, ODEs, Recurrences, Special Functions & Series**: `diff`, `integrate`, `risch_integrate`, `limit`, `residue`, `gamma`, `beta`, `bernoulli`, `zeta`, `dsolve`, `rsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`, `gosper_sum`, `wz_cert`
 - **Linear Algebra & 3D Vector Calculus**: `det`, `inv`, `rref`, `rank`, `trace`, `eigenvals`, `eigenvects`, `lu`, `qr`, `cholesky`, `ldlt`, `pinv`, `solve_linear`, `dot`, `cross`, `norm`, `grad`, `div`, `curl`
 - **Computational Geometry**: `line_intersect`, `circle_intersect`, `triangle_area`, `triangle_centers`
 - **Exact Discrete Probability & Statistics**: `binom`, `hyper`, `geom`, `bayes`, `expect`, `variance`, `stddev`

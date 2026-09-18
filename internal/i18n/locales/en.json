@@ -156,7 +156,11 @@
     "gamma_pole": "gamma error: gamma function is undefined (has a pole) at non-positive integer (%s)",
     "gamma_invalid_arg": "gamma error: argument must be an integer or half-integer (%s)",
     "bernoulli_non_negative": "bernoulli error: argument must be a non-negative integer (%s)",
-    "zeta_domain_error": "zeta error: zeta function is undefined (has a pole) at s = 1"
+    "zeta_domain_error": "zeta error: zeta function is undefined (has a pole) at s = 1",
+    "rsolve_equation_required": "rsolve error: first argument must be a relational equation (==) (%s)",
+    "rsolve_func_required": "rsolve error: second argument must be sequence function symbol a(n) (%s)",
+    "rsolve_linear_constant_coeff": "rsolve error: only linear recurrence with constant coefficients is currently supported (%s)",
+    "rsolve_failed": "rsolve error: failed to solve recurrence relation: %v"
   },
   "plot": {
     "features_header": "[CAS Features Detected]\n",
