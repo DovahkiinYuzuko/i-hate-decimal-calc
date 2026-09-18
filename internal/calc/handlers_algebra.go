@@ -20,6 +20,7 @@ func init() {
 	RegisterHandler("to_alg", handleToAlg)
 	RegisterHandler("alg_inv", handleAlgInv)
 	RegisterHandler("min_poly", handleMinPoly)
+	RegisterHandler("cad", handleCAD)
 }
 
 func handlePolyGCD(args []Node, env *Env) (Node, error) {
@@ -250,5 +251,44 @@ func handleMinPoly(args []Node, env *Env) (Node, error) {
 
 	return MinPolySum(m1, m2, varName)
 }
+func handleCAD(args []Node, env *Env) (Node, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("%s", i18n.T("cad.err_poly_required"))
+	}
+	var polys []Node
+	if list, ok := args[0].(*ListNode); ok {
+		polys = list.Elements
+	} else {
+		polys = []Node{args[0]}
+	}
 
-
+	var vars []string
+	if len(args) >= 2 {
+		if vList, ok := args[1].(*ListNode); ok {
+			for _, elem := range vList.Elements {
+				if vn, ok := elem.(*VarNode); ok {
+					vars = append(vars, vn.Name)
+				}
+			}
+		} else if vn, ok := args[1].(*VarNode); ok {
+			vars = []string{vn.Name}
+		}
+	}
+	if len(vars) == 0 {
+		for _, p := range polys {
+			for _, v := range ExtractFreeVariables(p) {
+				found := false
+				for _, ev := range vars {
+					if ev == v {
+						found = true
+						break
+					}
+				}
+				if !found {
+					vars = append(vars, v)
+				}
+			}
+		}
+	}
+	return CADDecompose(polys, vars, env)
+}

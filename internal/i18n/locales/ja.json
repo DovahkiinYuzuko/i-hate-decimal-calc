@@ -170,5 +170,12 @@
     "limit_cancel_factor": "因数分解による特異点 (%s - %s) の約分消去",
     "limit_lhopital": "ロピタルの定理適用: (d/d%s [%s]) / (d/d%s [%s]) = (%s) / (%s)",
     "limit_lhopital_inf": "無限大ロピタルの定理適用: (%s) / (%s)"
+ },
+  "cad": {
+    "err_unsupported_inequality": "不等式エラー: CADまたは不等式求解に対応していない式です: %s",
+    "err_poly_required": "CADエラー: 多変数多項式系である必要があります",
+    "err_var_required": "CADエラー: 変数リストの指定が必要です",
+    "unsat": "解なし (UNSAT / 空集合)",
+    "tautology": "常に成立 (恒等式 / 全空間)"
   }
 }

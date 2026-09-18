@@ -359,7 +359,12 @@ func init() {
 	})
 	RegisterFunction(FunctionSpec{
 		Name:    "solve",
-		MinArgs: 2,
+		MinArgs: 1,
+		MaxArgs: 2,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "cad",
+		MinArgs: 1,
 		MaxArgs: 2,
 	})
 	RegisterFunction(FunctionSpec{

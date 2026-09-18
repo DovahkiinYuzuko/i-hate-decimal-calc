@@ -170,5 +170,12 @@
     "limit_cancel_factor": "Factor cancellation of singularity (%s - %s)",
     "limit_lhopital": "L'Hopital's rule applied: (d/d%s [%s]) / (d/d%s [%s]) = (%s) / (%s)",
     "limit_lhopital_inf": "L'Hopital's rule at infinity applied: (%s) / (%s)"
+ },
+  "cad": {
+    "err_unsupported_inequality": "inequality error: expression unsupported by CAD or inequality solver: %s",
+    "err_poly_required": "CAD error: input must be a multivariate polynomial system",
+    "err_var_required": "CAD error: variable list is required",
+    "unsat": "No solution (UNSAT / Empty set)",
+    "tautology": "Always true (Tautology / Entire space)"
   }
 }

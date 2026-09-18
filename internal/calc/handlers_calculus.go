@@ -101,11 +101,25 @@ func handleFactor(args []Node, env *Env) (Node, error) {
 
 func handleSolve(args []Node, env *Env) (Node, error) {
 	varName := "x"
-	if v, ok := args[1].(*VarNode); ok {
-		varName = v.Name
+	if len(args) >= 2 {
+		if v, ok := args[1].(*VarNode); ok {
+			varName = v.Name
+		} else {
+			return nil, fmt.Errorf("%s", i18n.T("errors.arg_must_be_var", "solve", "second", args[1].String()))
+		}
 	} else {
-		return nil, fmt.Errorf("%s", i18n.T("errors.arg_must_be_var", "solve", "second", args[1].String()))
+		// Auto-extract free variable
+		vars := ExtractFreeVariables(args[0])
+		if len(vars) > 0 {
+			varName = vars[0]
+		}
 	}
+
+	// Check if relational inequality (<, <=, >, >=)
+	if rel, ok := args[0].(*RelOpNode); ok && (rel.Op == "<" || rel.Op == "<=" || rel.Op == ">" || rel.Op == ">=") {
+		return SolveInequality(rel, varName, env)
+	}
+
 	return solveEquation(args[0], varName)
 }
 

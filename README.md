@@ -75,6 +75,9 @@ ihd "root_count(x^3 - 3*x + 1, x)"
 
 ihd "isolate_roots(x^2 - 2, x)"
 # 出力: [[-3/2, -3/4], [3/4, 3/2]]（実根の有理数区間完全分離）
+
+ihd "solve(x^2 - 4 < 0)"
+# 出力: [[-2, 2]]（CAD/Sturm根分離による実代数不等式の厳密解区間）
 ```
 
 #### 2. 対話モード（REPL）
@@ -337,6 +340,9 @@ ihd "root_count(x^3 - 3*x + 1, x)"
 
 ihd "isolate_roots(x^2 - 2, x)"
 # Output: [[-3/2, -3/4], [3/4, 3/2]] (Real root isolation into disjoint rational intervals)
+
+ihd "solve(x^2 - 4 < 0)"
+# Output: [[-2, 2]] (Exact real algebraic inequality solving via CAD/Sturm)
 ```
 
 #### 2. Interactive REPL
