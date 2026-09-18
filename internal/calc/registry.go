@@ -768,6 +768,13 @@ func init() {
 		MinArgs: 3,
 		MaxArgs: 3,
 	})
+
+	// Deterministic Risch Algorithm (issue-66)
+	RegisterFunction(FunctionSpec{
+		Name:    "risch_integrate",
+		MinArgs: 1,
+		MaxArgs: 2,
+	})
 }
 
 

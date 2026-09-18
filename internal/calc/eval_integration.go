@@ -104,7 +104,18 @@ func integrateCore(expr Node, varName string) (Node, error) {
 		return simplifyMul([]Node{expr, &VarNode{Name: varName}})
 	}
 
-	// 2. Check if expression is a pure polynomial in varName
+	// 2. Deterministic Risch algorithm (transcendental & rational field)
+	if rischRes, rischErr := RischIntegrate(expr, varName); rischErr == nil && rischRes != nil {
+		return rischRes, nil
+	} else if rischErr != nil {
+		// If Risch algorithm definitively proved that the integral is non-elementary,
+		// short-circuit immediately without falling back to heuristics.
+		if _, isNonElem := rischErr.(*NonelementaryIntegralError); isNonElem {
+			return nil, rischErr
+		}
+	}
+
+	// 3. Check if expression is a pure polynomial in varName
 	expanded := expandNode(expr)
 	if coeffs, err := extractPolyCoeffs(expanded, varName); err == nil {
 		var integratedTerms []Node
