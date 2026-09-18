@@ -1,0 +1,162 @@
+package calc
+
+import (
+	"math/big"
+	"strings"
+	"testing"
+)
+
+func TestToLeanSyntax_Rational(t *testing.T) {
+	// Integer
+	r1, _ := NewRational(42, 1)
+	s1, err := ToLeanSyntax(r1)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if s1 != "42" {
+		t.Errorf("expected 42, got %s", s1)
+	}
+
+	// Negative integer
+	r2, _ := NewRational(-7, 1)
+	s2, err := ToLeanSyntax(r2)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if s2 != "(-7)" {
+		t.Errorf("expected (-7), got %s", s2)
+	}
+
+	// Fraction
+	r3, _ := NewRational(3, 5)
+	s3, err := ToLeanSyntax(r3)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if s3 != "((3 : ℚ) / 5)" {
+		t.Errorf("expected ((3 : ℚ) / 5), got %s", s3)
+	}
+}
+
+func TestToLeanSyntax_Polynomial(t *testing.T) {
+	// x^2 - 1
+	x := NewVar("x")
+	two := &RationalNode{Val: big.NewRat(2, 1)}
+	pow := &PowNode{Base: x, Exp: two}
+	minusOne := &RationalNode{Val: big.NewRat(-1, 1)}
+	add := &AddNode{Terms: []Node{pow, minusOne}}
+
+	s, err := ToLeanSyntax(add)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	expected := "x ^ 2 - 1"
+	if s != expected {
+		t.Errorf("expected %q, got %q", expected, s)
+	}
+}
+
+func TestToLeanSyntax_ReservedKeywords(t *testing.T) {
+	v := NewVar("theorem")
+	s, err := ToLeanSyntax(v)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if s != "«theorem»" {
+		t.Errorf("expected «theorem», got %s", s)
+	}
+}
+
+func TestCollectFreeVariables(t *testing.T) {
+	x := NewVar("x")
+	y := NewVar("y")
+	add := &AddNode{Terms: []Node{x, y, x}}
+
+	vars := CollectFreeVariables(add)
+	if len(vars) != 2 || vars[0] != "x" || vars[1] != "y" {
+		t.Errorf("expected [x y], got %v", vars)
+	}
+}
+
+func TestTranspileCertificateToLean_Factor(t *testing.T) {
+	x := NewVar("x")
+	two := &RationalNode{Val: big.NewRat(2, 1)}
+	pow := &PowNode{Base: x, Exp: two}
+	minusOne := &RationalNode{Val: big.NewRat(-1, 1)}
+	lhs := &AddNode{Terms: []Node{pow, minusOne}} // x^2 - 1
+
+	factorCall := &FuncNode{Name: "factor", Args: []Node{lhs}}
+
+	plusOne := &RationalNode{Val: big.NewRat(1, 1)}
+	term1 := &AddNode{Terms: []Node{x, minusOne}} // x - 1
+	term2 := &AddNode{Terms: []Node{x, plusOne}}  // x + 1
+	rhs := &MulNode{Factors: []Node{term1, term2}}
+
+	cert := &VerificationCertificate{
+		Domain:     DomainFactor,
+		Equation:   "x^2 - 1 = (x - 1)*(x + 1)",
+		IsVerified: true,
+	}
+
+	code, err := TranspileCertificateToLean(cert, factorCall, rhs)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !strings.Contains(code, "theorem ihd_verified_proof :") {
+		t.Errorf("missing theorem declaration: %s", code)
+	}
+	if !strings.Contains(code, "by ring") {
+		t.Errorf("missing 'by ring' tactic: %s", code)
+	}
+}
+
+func TestGenerateLeanSource(t *testing.T) {
+	x := NewVar("x")
+	two := &RationalNode{Val: big.NewRat(2, 1)}
+	pow := &PowNode{Base: x, Exp: two}
+	minusOne := &RationalNode{Val: big.NewRat(-1, 1)}
+	lhs := &AddNode{Terms: []Node{pow, minusOne}}
+
+	plusOne := &RationalNode{Val: big.NewRat(1, 1)}
+	term1 := &AddNode{Terms: []Node{x, minusOne}}
+	term2 := &AddNode{Terms: []Node{x, plusOne}}
+	rhs := &MulNode{Factors: []Node{term1, term2}}
+
+	cert := &VerificationCertificate{
+		Domain:     DomainFactor,
+		Equation:   "x^2 - 1 = (x - 1)*(x + 1)",
+		IsVerified: true,
+	}
+
+	src, err := GenerateLeanSource("factor_identity", cert, lhs, rhs)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !strings.Contains(src, "import Mathlib.Tactic.Ring") {
+		t.Errorf("missing Mathlib import: %s", src)
+	}
+	if !strings.Contains(src, "variable (x : ℚ)") {
+		t.Errorf("missing variable declaration: %s", src)
+	}
+	if !strings.Contains(src, "theorem factor_identity :") {
+		t.Errorf("missing custom theorem name: %s", src)
+	}
+	if !strings.Contains(src, "by ring") {
+		t.Errorf("missing tactic: %s", src)
+	}
+}
+
+func TestTranspileCertificateToLean_UnverifiedError(t *testing.T) {
+	cert := &VerificationCertificate{
+		Domain:     DomainGeneral,
+		IsVerified: false,
+		Details:    "residual is non-zero",
+	}
+
+	_, err := TranspileCertificateToLean(cert, NewVar("x"), NewVar("y"))
+	if err == nil {
+		t.Fatal("expected error for unverified certificate, got nil")
+	}
+}

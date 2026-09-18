@@ -403,6 +403,56 @@ func TestCLI_VersionAndNoUpdateCheck(t *testing.T) {
 	}
 }
 
+func TestCLI_LeanAndLeanFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	leanFilePath := filepath.Join(tmpDir, "proof.lean")
+
+	// 1. Test --lean flag
+	outLean := new(bytes.Buffer)
+	errOutLean := new(bytes.Buffer)
+	codeLean := run([]string{"--lean", "factor(x^2 - 1)"}, strings.NewReader(""), outLean, errOutLean)
+	if codeLean != 0 {
+		t.Fatalf("expected exit code 0, got %d. stderr: %s", codeLean, errOutLean.String())
+	}
+	leanOutStr := outLean.String()
+	if !strings.Contains(leanOutStr, "import Mathlib.Tactic.Ring") {
+		t.Errorf("expected Mathlib import in output, got %q", leanOutStr)
+	}
+	if !strings.Contains(leanOutStr, "by ring") {
+		t.Errorf("expected 'by ring' in output, got %q", leanOutStr)
+	}
+
+	// 2. Test --lean-file flag
+	outLeanFile := new(bytes.Buffer)
+	errOutLeanFile := new(bytes.Buffer)
+	codeLeanFile := run([]string{"--lean-file", leanFilePath, "factor(x^2 - 1)"}, strings.NewReader(""), outLeanFile, errOutLeanFile)
+	if codeLeanFile != 0 {
+		t.Fatalf("expected exit code 0, got %d. stderr: %s", codeLeanFile, errOutLeanFile.String())
+	}
+	content, err := os.ReadFile(leanFilePath)
+	if err != nil {
+		t.Fatalf("failed reading generated lean file: %v", err)
+	}
+	fileStr := string(content)
+	if !strings.Contains(fileStr, "theorem ihd_certified_proof") {
+		t.Errorf("expected theorem in saved file, got %q", fileStr)
+	}
+	if !strings.Contains(fileStr, "variable (x : ℚ)") {
+		t.Errorf("expected variable declaration in saved file, got %q", fileStr)
+	}
+
+	// 3. Test 'lean <expr>' prefix
+	outPrefix := new(bytes.Buffer)
+	errOutPrefix := new(bytes.Buffer)
+	codePrefix := run([]string{"lean factor(x^2 - 1)"}, strings.NewReader(""), outPrefix, errOutPrefix)
+	if codePrefix != 0 {
+		t.Fatalf("expected exit code 0, got %d. stderr: %s", codePrefix, errOutPrefix.String())
+	}
+	if !strings.Contains(outPrefix.String(), "by ring") {
+		t.Errorf("expected 'by ring' for prefix command, got %q", outPrefix.String())
+	}
+}
+
 
 
 

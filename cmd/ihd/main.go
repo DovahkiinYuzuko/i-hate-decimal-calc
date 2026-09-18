@@ -26,6 +26,8 @@ type runOptions struct {
 	deg           bool
 	explain       bool
 	verify        bool
+	lean          bool
+	leanFile      string
 	noUpdateCheck bool
 }
 
@@ -48,8 +50,20 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 			flagArgs = append(flagArgs, a)
 			continue
 		}
+		if a == "-lean-file" || a == "--lean-file" {
+			flagArgs = append(flagArgs, a)
+			if i+1 < len(args) {
+				i++
+				flagArgs = append(flagArgs, args[i])
+			}
+			continue
+		}
+		if strings.HasPrefix(a, "-lean-file=") || strings.HasPrefix(a, "--lean-file=") {
+			flagArgs = append(flagArgs, a)
+			continue
+		}
 		switch a {
-		case "-ascii", "--ascii", "-approx", "--approx", "-latex", "--latex", "-pretty", "--pretty", "-deg", "--deg", "-explain", "--explain", "-verify", "--verify", "-h", "--help", "-v", "--version", "-version", "--no-update-check", "-no-update-check":
+		case "-ascii", "--ascii", "-approx", "--approx", "-latex", "--latex", "-pretty", "--pretty", "-deg", "--deg", "-explain", "--explain", "-verify", "--verify", "-lean", "--lean", "-h", "--help", "-v", "--version", "-version", "--no-update-check", "-no-update-check":
 			flagArgs = append(flagArgs, a)
 		default:
 			exprArgs = append(exprArgs, a)
@@ -83,6 +97,8 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 	degFlag := fs.Bool("deg", false, i18n.T("cli.flag_deg"))
 	explainFlag := fs.Bool("explain", false, i18n.T("cli.flag_explain"))
 	verifyFlag := fs.Bool("verify", false, i18n.T("cli.flag_verify"))
+	leanFlag := fs.Bool("lean", false, i18n.T("cli.flag_lean"))
+	leanFileFlag := fs.String("lean-file", "", i18n.T("cli.flag_lean_file"))
 	versionFlag := fs.Bool("version", false, i18n.T("cli.flag_version"))
 	fs.BoolVar(versionFlag, "v", false, i18n.T("cli.flag_version"))
 	noUpdateCheckFlag := fs.Bool("no-update-check", false, i18n.T("cli.flag_no_update_check"))
@@ -127,6 +143,8 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 		deg:           *degFlag,
 		explain:       *explainFlag,
 		verify:        *verifyFlag,
+		lean:          *leanFlag,
+		leanFile:      *leanFileFlag,
 		noUpdateCheck: *noUpdateCheckFlag,
 	}
 
@@ -228,6 +246,10 @@ func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut 
 		parts := strings.SplitN(line, " ", 2)
 		ro.verify = true
 		line = strings.TrimSpace(parts[1])
+	} else if strings.HasPrefix(lowerLine, "lean ") {
+		parts := strings.SplitN(line, " ", 2)
+		ro.lean = true
+		line = strings.TrimSpace(parts[1])
 	}
 
 	parsed, err := calc.ParseStatement(line)
@@ -264,6 +286,24 @@ func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut 
 			cert, _ := calc.VerifyComputation(v.Value, evaled, env)
 			fmt.Fprintln(out, cert.String())
 		}
+		if ro.lean || ro.leanFile != "" {
+			cert, _ := calc.VerifyComputation(v.Value, evaled, env)
+			if cert != nil && cert.IsVerified {
+				leanCode, err := calc.GenerateLeanSource("ihd_certified_proof", cert, v.Value, evaled)
+				if err == nil {
+					if ro.lean {
+						fmt.Fprintln(out, leanCode)
+					}
+					if ro.leanFile != "" {
+						if err := os.WriteFile(ro.leanFile, []byte(leanCode), 0644); err != nil {
+							fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), fmt.Sprintf(i18n.T("cli.err_write_file"), ro.leanFile, err))
+						} else {
+							fmt.Fprintln(out, fmt.Sprintf(i18n.T("cli.lean_file_saved"), ro.leanFile))
+						}
+					}
+				}
+			}
+		}
 		return nil
 
 	case calc.Node:
@@ -287,6 +327,24 @@ func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut 
 		if ro.verify {
 			cert, _ := calc.VerifyComputation(v, evaled, env)
 			fmt.Fprintln(out, cert.String())
+		}
+		if ro.lean || ro.leanFile != "" {
+			cert, _ := calc.VerifyComputation(v, evaled, env)
+			if cert != nil && cert.IsVerified {
+				leanCode, err := calc.GenerateLeanSource("ihd_certified_proof", cert, v, evaled)
+				if err == nil {
+					if ro.lean {
+						fmt.Fprintln(out, leanCode)
+					}
+					if ro.leanFile != "" {
+						if err := os.WriteFile(ro.leanFile, []byte(leanCode), 0644); err != nil {
+							fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), fmt.Sprintf(i18n.T("cli.err_write_file"), ro.leanFile, err))
+						} else {
+							fmt.Fprintln(out, fmt.Sprintf(i18n.T("cli.lean_file_saved"), ro.leanFile))
+						}
+					}
+				}
+			}
 		}
 		return nil
 
@@ -370,6 +428,10 @@ func executeScriptLine(line string, ro runOptions, env *calc.Env, suppressOutput
 		parts := strings.SplitN(line, " ", 2)
 		ro.verify = true
 		line = strings.TrimSpace(parts[1])
+	} else if strings.HasPrefix(lowerLine, "lean ") {
+		parts := strings.SplitN(line, " ", 2)
+		ro.lean = true
+		line = strings.TrimSpace(parts[1])
 	}
 
 	parsed, err := calc.ParseStatement(line)
@@ -403,6 +465,24 @@ func executeScriptLine(line string, ro runOptions, env *calc.Env, suppressOutput
 			} else {
 				fmt.Fprintln(out, formatOutput(evaled, ro))
 			}
+			if ro.verify {
+				cert, _ := calc.VerifyComputation(v.Value, evaled, env)
+				fmt.Fprintln(out, cert.String())
+			}
+			if ro.lean || ro.leanFile != "" {
+				cert, _ := calc.VerifyComputation(v.Value, evaled, env)
+				if cert != nil && cert.IsVerified {
+					leanCode, err := calc.GenerateLeanSource("ihd_certified_proof", cert, v.Value, evaled)
+					if err == nil {
+						if ro.lean {
+							fmt.Fprintln(out, leanCode)
+						}
+						if ro.leanFile != "" {
+							_ = os.WriteFile(ro.leanFile, []byte(leanCode), 0644)
+						}
+					}
+				}
+			}
 		}
 		return nil
 
@@ -424,6 +504,24 @@ func executeScriptLine(line string, ro runOptions, env *calc.Env, suppressOutput
 				fmt.Fprint(out, calc.FormatTrace(line, steps, evaled))
 			} else {
 				fmt.Fprintln(out, formatOutput(evaled, ro))
+			}
+			if ro.verify {
+				cert, _ := calc.VerifyComputation(v, evaled, env)
+				fmt.Fprintln(out, cert.String())
+			}
+			if ro.lean || ro.leanFile != "" {
+				cert, _ := calc.VerifyComputation(v, evaled, env)
+				if cert != nil && cert.IsVerified {
+					leanCode, err := calc.GenerateLeanSource("ihd_certified_proof", cert, v, evaled)
+					if err == nil {
+						if ro.lean {
+							fmt.Fprintln(out, leanCode)
+						}
+						if ro.leanFile != "" {
+							_ = os.WriteFile(ro.leanFile, []byte(leanCode), 0644)
+						}
+					}
+				}
 			}
 		}
 		return nil
