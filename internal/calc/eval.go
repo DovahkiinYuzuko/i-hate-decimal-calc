@@ -180,7 +180,19 @@ func EvalWithEnv(n Node, env *Env) (Node, error) {
 		if err != nil {
 			return nil, err
 		}
-		return NewRelOp(lhs, v.Op, rhs), nil
+		evaluatedRel := NewRelOp(lhs, v.Op, rhs)
+
+		// For inequalities (<, <=, >, >=), attempt rigorous rational interval evaluation for constant relations:
+		if v.Op == "<" || v.Op == "<=" || v.Op == ">" || v.Op == ">=" {
+			if res, decided := EvaluateRelOpWithInterval(evaluatedRel); decided {
+				if res {
+					return &VarNode{Name: "true"}, nil
+				}
+				return &VarNode{Name: "false"}, nil
+			}
+		}
+
+		return evaluatedRel, nil
 
 	default:
 		return nil, fmt.Errorf("unknown node type for evaluation: %T", n)

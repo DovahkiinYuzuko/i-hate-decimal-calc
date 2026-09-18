@@ -39,25 +39,31 @@ func SolveInequality(relOp *RelOpNode, varName string, env *Env) (Node, error) {
 		return nil, err
 	}
 
-	// 2. Extract free variables if varName is empty
+	// 2. Extract free variables
 	vars := ExtractFreeVariables(zeroExpr)
-	if varName == "" {
-		if len(vars) == 0 {
-			// Constant inequality: e.g. 1 < 2 or 5 >= 10
-			c, err := EvalWithEnv(zeroExpr, env)
-			if err != nil {
-				return nil, err
-			}
-			r, ok := c.(*RationalNode)
-			if !ok {
-				return nil, fmt.Errorf("constant expression did not evaluate to rational: %s", c)
-			}
-			satisfied := evalRelationalSign(r.Val.Sign(), relOp.Op)
-			if satisfied {
+	if len(vars) == 0 {
+		// Constant inequality: e.g. 1 < 2, pi < 22/7, sin(1) > 1/2
+		if res, decided := EvaluateRelOpWithInterval(relOp); decided {
+			if res {
 				return &VarNode{Name: "true"}, nil
 			}
 			return &VarNode{Name: "false"}, nil
 		}
+		c, err := EvalWithEnv(zeroExpr, env)
+		if err != nil {
+			return nil, err
+		}
+		r, ok := c.(*RationalNode)
+		if !ok {
+			return nil, fmt.Errorf("constant expression did not evaluate to rational: %s", c)
+		}
+		satisfied := evalRelationalSign(r.Val.Sign(), relOp.Op)
+		if satisfied {
+			return &VarNode{Name: "true"}, nil
+		}
+		return &VarNode{Name: "false"}, nil
+	}
+	if varName == "" {
 		varName = vars[0]
 	}
 

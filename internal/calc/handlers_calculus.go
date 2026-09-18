@@ -100,6 +100,10 @@ func handleFactor(args []Node, env *Env) (Node, error) {
 }
 
 func handleSolve(args []Node, env *Env) (Node, error) {
+	if v, ok := args[0].(*VarNode); ok && (v.Name == "true" || v.Name == "false") {
+		return v, nil
+	}
+
 	varName := "x"
 	if len(args) >= 2 {
 		if v, ok := args[1].(*VarNode); ok {

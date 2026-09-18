@@ -81,6 +81,9 @@ ihd "solve(x^2 - 4 < 0)"
 
 ihd "rsolve(a(n+1) == 2*a(n) + 1, a(n), [a(1) == 1])"
 # 出力: -1 + 2^n（線形漸化式・差分方程式の厳密一般項求解）
+
+ihd "pi < 22/7"
+# 出力: true（有理区間論理とテイラー剰余項による超越数不等式の決定論的判定）
 ```
 
 #### 2. 対話モード（REPL）
@@ -351,6 +354,9 @@ ihd "solve(x^2 - 4 < 0)"
 
 ihd "rsolve(a(n+1) == 2*a(n) + 1, a(n), [a(1) == 1])"
 # Output: -1 + 2^n (Exact linear recurrence relation and difference equation solving)
+
+ihd "pi < 22/7"
+# Output: true (Deterministic transcendental inequality evaluation via rational interval arithmetic)
 ```
 
 #### 2. Interactive REPL

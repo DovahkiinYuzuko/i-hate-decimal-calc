@@ -30,6 +30,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | 4 | `-` | Prefix Unary | Unary negation (Lower precedence than `^`: `-3^2 = -(3^2) = -9`) |
 | 5 | `*`, `/` | Left-associative | Multiplication and division (Explicit `*` required) |
 | 6 | `+`, `-` | Left-associative | Addition and subtraction |
+| 7 | `<`, `<=`, `>`, `>=`, `==`, `!=` | None | Relational operations & inequalities (Rigorous evaluation via rational interval arithmetic) |
 
 ---
 

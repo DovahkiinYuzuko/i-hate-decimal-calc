@@ -160,7 +160,9 @@
     "rsolve_equation_required": "rsolve エラー: 第1引数は関係式 (==) である必要があります (%s)",
     "rsolve_func_required": "rsolve エラー: 第2引数は数列関数記号 a(n) である必要があります (%s)",
     "rsolve_linear_constant_coeff": "rsolve エラー: 定数係数の線形漸化式のみ対応しています (%s)",
-    "rsolve_failed": "rsolve エラー: 漸化式の解法に失敗しました: %v"
+    "rsolve_failed": "rsolve エラー: 漸化式の解法に失敗しました: %v",
+    "interval_zero_division": "有理区間演算エラー: 区間がゼロを含んでいるため逆数を除算できません (%s)",
+    "interval_ln_domain": "有理区間演算エラー: 対数関数 ln の引数は正である必要があります (%s)"
   },
   "plot": {
     "features_header": "[CAS Features Detected]\n",

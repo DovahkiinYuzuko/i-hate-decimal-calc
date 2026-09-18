@@ -160,7 +160,9 @@
     "rsolve_equation_required": "rsolve error: first argument must be a relational equation (==) (%s)",
     "rsolve_func_required": "rsolve error: second argument must be sequence function symbol a(n) (%s)",
     "rsolve_linear_constant_coeff": "rsolve error: only linear recurrence with constant coefficients is currently supported (%s)",
-    "rsolve_failed": "rsolve error: failed to solve recurrence relation: %v"
+    "rsolve_failed": "rsolve error: failed to solve recurrence relation: %v",
+    "interval_zero_division": "rational interval error: division by interval containing zero (%s)",
+    "interval_ln_domain": "rational interval error: argument of ln must be strictly positive (%s)"
   },
   "plot": {
     "features_header": "[CAS Features Detected]\n",
