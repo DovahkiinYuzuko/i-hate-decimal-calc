@@ -24,6 +24,7 @@ func init() {
 	RegisterHandler("gosper_sum", handleGosperSum)
 	RegisterHandler("wz_cert", handleWZCert)
 	RegisterHandler("risch_integrate", handleRischIntegrate)
+	RegisterHandler("verify", handleVerify)
 }
 
 func handleDiff(args []Node, env *Env) (Node, error) {
@@ -204,5 +205,29 @@ func handleRischIntegrate(args []Node, env *Env) (Node, error) {
 		}
 	}
 	return RischIntegrate(args[0], varName)
+}
+
+func handleVerify(args []Node, env *Env) (Node, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("verify requires at least 1 argument (expr, [expected])")
+	}
+	if len(args) == 2 {
+		cert, err := VerifyAlgebraicEquivalence(args[0], args[1], env)
+		if err != nil {
+			return nil, err
+		}
+		return &VarNode{Name: cert.String()}, nil
+	}
+
+	// 1 argument: evaluate expression first, then verify
+	evalRes, err := Eval(args[0])
+	if err != nil {
+		return nil, fmt.Errorf("verify: failed to evaluate expression: %w", err)
+	}
+	cert, err := VerifyComputation(args[0], evalRes, env)
+	if err != nil {
+		return nil, err
+	}
+	return &VarNode{Name: cert.String()}, nil
 }
 

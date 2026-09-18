@@ -775,6 +775,13 @@ func init() {
 		MinArgs: 1,
 		MaxArgs: 2,
 	})
+
+	// Self-Verifying CAS (issue-67)
+	RegisterFunction(FunctionSpec{
+		Name:    "verify",
+		MinArgs: 1,
+		MaxArgs: 2,
+	})
 }
 
 
