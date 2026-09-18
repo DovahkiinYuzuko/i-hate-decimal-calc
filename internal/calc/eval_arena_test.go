@@ -194,7 +194,7 @@ func TestArenaRecyclePool(t *testing.T) {
 
 func BenchmarkStandardAlloc(b *testing.B) {
 	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		// Build 100 expressions using standard new
 		var root ast.Node
 		for j := 0; j < 100; j++ {
@@ -209,7 +209,7 @@ func BenchmarkStandardAlloc(b *testing.B) {
 
 func BenchmarkArenaAlloc(b *testing.B) {
 	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		arena := GetNodeArena()
 		var root ast.Node
 		for j := 0; j < 100; j++ {
@@ -224,7 +224,7 @@ func BenchmarkArenaAlloc(b *testing.B) {
 
 func BenchmarkPureArenaLifecycle(b *testing.B) {
 	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		arena := GetNodeArena()
 		var root ast.Node
 		for j := 0; j < 100; j++ {

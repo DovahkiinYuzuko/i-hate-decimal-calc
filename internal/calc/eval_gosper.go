@@ -843,39 +843,6 @@ func polyGCD1D(p1, p2 *univariatePoly) (*univariatePoly, error) {
 	return monicPoly1D(polyGCD), nil
 }
 
-func simplifyTermRatio(next, curr ast.Node, kVar string) (ast.Node, error) {
-	// Evaluate ratio next / curr algebraically
-	invCurr, _ := simplifyPow(curr, mustRational(-1, 1))
-	ratio, err := simplifyMul([]ast.Node{next, invCurr})
-	if err != nil {
-		return nil, err
-	}
-	return Eval(expandNode(ratio))
-}
-
-func extractFractionParts(n ast.Node) (ast.Node, ast.Node) {
-	if mul, ok := n.(*ast.MulNode); ok {
-		var numFactors []ast.Node
-		var denomFactors []ast.Node
-		for _, f := range mul.Factors {
-			if pow, ok := f.(*ast.PowNode); ok {
-				if r, ok := pow.Exp.(*ast.RationalNode); ok && r.Val.Sign() < 0 {
-					negExp, _ := simplifyMul([]ast.Node{mustRational(-1, 1), r})
-					denomFactors = append(denomFactors, &ast.PowNode{Base: pow.Base, Exp: negExp})
-					continue
-				}
-			}
-			numFactors = append(numFactors, f)
-		}
-		if len(denomFactors) > 0 {
-			numNode, _ := simplifyMul(numFactors)
-			denomNode, _ := simplifyMul(denomFactors)
-			return numNode, denomNode
-		}
-	}
-	return n, mustRational(1, 1)
-}
-
 func solveRationalLinearSystem(M [][]*big.Rat, C []*big.Rat, m, n int) ([]*big.Rat, error) {
 	// Gaussian elimination on augmented matrix [M | C]
 	A := make([][]*big.Rat, m)
