@@ -642,7 +642,7 @@ func factorIntPrimes(n *big.Int) []primeExp {
 	d2 := new(big.Int).Mul(d, d)
 
 	for d2.Cmp(val) <= 0 {
-		if val.ProbablyPrime(20) {
+		if IsDeterministicPrime(val) {
 			break
 		}
 		count := 0

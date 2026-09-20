@@ -2,7 +2,6 @@ package calc
 
 import (
 	"math/big"
-	"math/bits"
 )
 
 // extGCD computes the Extended Euclidean Algorithm on a and b,
@@ -268,7 +267,7 @@ func getDistinctPrimeFactors(n *big.Int) []*big.Int {
 		}
 	}
 
-	if val.Cmp(big.NewInt(1)) > 0 && val.ProbablyPrime(20) {
+	if val.Cmp(big.NewInt(1)) > 0 && IsDeterministicPrime(val) {
 		primes = append(primes, new(big.Int).Set(val))
 		return primes
 	}
@@ -278,7 +277,7 @@ func getDistinctPrimeFactors(n *big.Int) []*big.Int {
 	d2 := new(big.Int).Mul(d, d)
 
 	for d2.Cmp(val) <= 0 {
-		if val.ProbablyPrime(20) {
+		if IsDeterministicPrime(val) {
 			break
 		}
 		if rem.Mod(val, d).Sign() == 0 {
@@ -333,76 +332,9 @@ func EvalTotient(nNode Node) (Node, error) {
 	return &RationalNode{Val: new(big.Rat).SetInt(phi)}, nil
 }
 
-// mulMod64 computes (a * b) % m without 64-bit overflow using math/bits.
-func mulMod64(a, b, m uint64) uint64 {
-	hi, lo := bits.Mul64(a, b)
-	_, rem := bits.Div64(hi, lo, m)
-	return rem
-}
-
-// powMod64 computes (base^exp) % mod using binary exponentiation.
-func powMod64(base, exp, mod uint64) uint64 {
-	res := uint64(1)
-	base %= mod
-	for exp > 0 {
-		if exp&1 == 1 {
-			res = mulMod64(res, base, mod)
-		}
-		base = mulMod64(base, base, mod)
-		exp >>= 1
-	}
-	return res
-}
-
-// isDeterministicPrime64 implements deterministic Miller-Rabin test for all n < 2^64
-// using the 12 prime bases proved by Sorenson & Webster (2015, Math. Comp. 2017).
-func isDeterministicPrime64(n uint64) bool {
-	if n < 2 {
-		return false
-	}
-	if n == 2 || n == 3 {
-		return true
-	}
-	if n%2 == 0 || n%3 == 0 {
-		return false
-	}
-
-	// Write n - 1 as 2^s * d
-	d := n - 1
-	s := 0
-	for d%2 == 0 {
-		d /= 2
-		s++
-	}
-
-	// The 12 prime bases of Sorenson & Webster (2015)
-	bases := []uint64{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37}
-	for _, a := range bases {
-		if n <= a {
-			break
-		}
-		x := powMod64(a, d, n)
-		if x == 1 || x == n-1 {
-			continue
-		}
-		composite := true
-		for r := 1; r < s; r++ {
-			x = mulMod64(x, x, n)
-			if x == n-1 {
-				composite = false
-				break
-			}
-		}
-		if composite {
-			return false
-		}
-	}
-	return true
-}
-
-// EvalIsPrime determines whether n is prime.
-// For n < 2^64, uses Sorenson & Webster (2015) deterministic 12-base Miller-Rabin test.
-// For n >= 2^64, uses big.Int.ProbablyPrime(20) (Baillie-PSW).
+// EvalIsPrime determines whether n is prime using deterministic primality tests.
+// For n < 2^64: uses Jim Sinclair's minimal 7-base Miller-Rabin test (unconditionally deterministic).
+// For n >= 2^64: uses deterministic Baillie-PSW test without any pseudorandom rounds.
 func EvalIsPrime(nNode Node) (Node, error) {
 	rat, ok := nNode.(*RationalNode)
 	if !ok || !rat.Val.IsInt() {
@@ -410,30 +342,7 @@ func EvalIsPrime(nNode Node) (Node, error) {
 	}
 
 	n := rat.Val.Num()
-	if n.Cmp(big.NewInt(2)) < 0 {
-		return mustRational(0, 1), nil
-	}
-	if n.Cmp(big.NewInt(2)) == 0 || n.Cmp(big.NewInt(3)) == 0 {
-		return mustRational(1, 1), nil
-	}
-
-	// Quick check for multiples of 2 and 3
-	two := big.NewInt(2)
-	three := big.NewInt(3)
-	rem := new(big.Int)
-	if rem.Mod(n, two).Sign() == 0 || rem.Mod(n, three).Sign() == 0 {
-		return mustRational(0, 1), nil
-	}
-
-	if n.IsUint64() {
-		if isDeterministicPrime64(n.Uint64()) {
-			return mustRational(1, 1), nil
-		}
-		return mustRational(0, 1), nil
-	}
-
-	// Arbitrary precision prime test (Baillie-PSW + Miller-Rabin)
-	if n.ProbablyPrime(20) {
+	if IsDeterministicPrime(n) {
 		return mustRational(1, 1), nil
 	}
 	return mustRational(0, 1), nil

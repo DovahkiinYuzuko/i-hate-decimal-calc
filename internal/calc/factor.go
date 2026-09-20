@@ -116,7 +116,7 @@ func factorInteger(n *big.Int) (Node, error) {
 	}
 
 	// If val is already prime, stop trial division early!
-	if val.Cmp(big.NewInt(1)) > 0 && val.ProbablyPrime(20) {
+	if val.Cmp(big.NewInt(1)) > 0 && IsDeterministicPrime(val) {
 		factors = append(factors, primeFactor{prime: new(big.Int).Set(val), exp: 1})
 		val.SetInt64(1)
 	}
@@ -127,7 +127,7 @@ func factorInteger(n *big.Int) (Node, error) {
 	d2 := new(big.Int).Mul(d, d)
 
 	for d2.Cmp(val) <= 0 {
-		if val.ProbablyPrime(20) {
+		if IsDeterministicPrime(val) {
 			break
 		}
 
