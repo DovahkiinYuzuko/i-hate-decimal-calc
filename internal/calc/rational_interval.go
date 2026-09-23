@@ -425,7 +425,7 @@ func RationalBoundLn(x *big.Rat, steps int) (RationalInterval, error) {
 }
 
 // RationalBoundSqrt computes rigorous rational enclosure for sqrt(x) with x in Q, x >= 0
-// using integer square root and Heron iterations.
+// using integer square root (big.Int.Sqrt) with dyadic scaling, guaranteeing O(k) bit complexity without bit explosion.
 func RationalBoundSqrt(x *big.Rat, steps int) (RationalInterval, error) {
 	if x.Sign() < 0 {
 		return RationalInterval{}, fmt.Errorf("sqrt of negative rational")
@@ -434,23 +434,26 @@ func RationalBoundSqrt(x *big.Rat, steps int) (RationalInterval, error) {
 		return NewExactRationalInterval(big.NewRat(0, 1)), nil
 	}
 
-	// Heron's method:
-	// If a_0 is an overestimate, a_{k+1} = (a_k + x/a_k)/2 is strictly decreasing upper bound.
-	// The corresponding lower bound is x / a_{k+1}.
-	// Initial upper bound: max(1, x)
-	cur := big.NewRat(1, 1)
-	if x.Cmp(cur) > 0 {
-		cur.Set(x)
+	// Precision scale: k bits of precision (clamped to [16, 128] for guaranteed linear bit complexity)
+	k := steps * 4
+	if k < 16 {
+		k = 16
+	}
+	if k > 128 {
+		k = 128
 	}
 
-	two := big.NewRat(2, 1)
-	for i := 0; i < steps+4; i++ {
-		xOverCur := new(big.Rat).Quo(x, cur)
-		cur = new(big.Rat).Quo(new(big.Rat).Add(cur, xOverCur), two)
-	}
+	p := x.Num()
+	q := x.Denom()
+	scaledNum := new(big.Int).Lsh(p, uint(2*k))
+	div := new(big.Int).Quo(scaledNum, q)
 
-	high := cur
-	low := new(big.Rat).Quo(x, cur)
+	m := new(big.Int).Sqrt(div)
+	mPlusOne := new(big.Int).Add(m, big.NewInt(1))
+	denom := new(big.Int).Lsh(big.NewInt(1), uint(k))
+
+	low := new(big.Rat).SetFrac(m, denom)
+	high := new(big.Rat).SetFrac(mPlusOne, denom)
 
 	return NewRationalInterval(low, high), nil
 }
@@ -464,6 +467,24 @@ func EvalNodeInterval(n Node, steps int) (RationalInterval, error) {
 	switch node := n.(type) {
 	case *RationalNode:
 		return NewExactRationalInterval(node.Val), nil
+
+	case *SqrtNode:
+		sub, err := EvalNodeInterval(node.Radicand, steps)
+		if err != nil {
+			return RationalInterval{}, err
+		}
+		if sub.Low.Sign() < 0 {
+			return RationalInterval{}, fmt.Errorf("sqrt of negative interval")
+		}
+		lowBound, err := RationalBoundSqrt(sub.Low, steps)
+		if err != nil {
+			return RationalInterval{}, err
+		}
+		highBound, err := RationalBoundSqrt(sub.High, steps)
+		if err != nil {
+			return RationalInterval{}, err
+		}
+		return NewRationalInterval(lowBound.Low, highBound.High), nil
 
 	case *ConstNode:
 		if node.Name == "pi" || node.Name == "π" {

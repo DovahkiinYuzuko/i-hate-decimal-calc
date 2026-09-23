@@ -206,3 +206,103 @@ func TestCad_CADDecompose_Builtin(t *testing.T) {
 		t.Fatalf("expected non-empty list of samples, got %v", evaled)
 	}
 }
+
+func TestDecompose1DCAD_Structure(t *testing.T) {
+	env := NewEnv()
+
+	// Polynomial with 2 real roots: x^2 - 4 = (x - 2)(x + 2)
+	pNode, _ := Parse("x^2 - 4")
+	p, ok := extractPoly(pNode, "x")
+	if !ok {
+		t.Fatalf("failed to extract poly")
+	}
+
+	cells, err := Decompose1DCAD([]*univariatePoly{p}, "x", env)
+	if err != nil {
+		t.Fatalf("Decompose1DCAD failed: %v", err)
+	}
+
+	// 2 roots => 2*2 + 1 = 5 cells
+	if len(cells) != 5 {
+		t.Fatalf("expected 5 cells (2m + 1), got %d", len(cells))
+	}
+
+	// Check alternating Sector (Dim 1, IsSection false) and Section (Dim 0, IsSection true)
+	expectedTypes := []struct {
+		dim       int
+		isSection bool
+	}{
+		{dim: 1, isSection: false}, // (-inf, -2)
+		{dim: 0, isSection: true},  // {-2}
+		{dim: 1, isSection: false}, // (-2, 2)
+		{dim: 0, isSection: true},  // {2}
+		{dim: 1, isSection: false}, // (2, +inf)
+	}
+
+	for i, exp := range expectedTypes {
+		if cells[i].Dimension != exp.dim {
+			t.Errorf("cell %d: expected dim %d, got %d", i, exp.dim, cells[i].Dimension)
+		}
+		if cells[i].IsSection != exp.isSection {
+			t.Errorf("cell %d: expected isSection %v, got %v", i, exp.isSection, cells[i].IsSection)
+		}
+		if len(cells[i].SamplePoint) != 1 {
+			t.Errorf("cell %d: expected 1 sample point, got %d", i, len(cells[i].SamplePoint))
+		}
+	}
+}
+
+func TestDecompose1DCAD_CloseRoots(t *testing.T) {
+	env := NewEnv()
+
+	// Inequality with extremely close roots: (x - 1)*(x - 10001/10000) < 0
+	// Distance between roots is 1/10000 = 0.0001, which broke old floatToRatSample (f * 1000).
+	expr, err := Parse("(x - 1) * (x - 10001/10000) < 0")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	sol, err := SolveInequality(expr.(*RelOpNode), "x", env)
+	if err != nil {
+		t.Fatalf("SolveInequality failed: %v", err)
+	}
+
+	str := sol.String()
+	if !strings.Contains(str, "1") || !strings.Contains(str, "10001/10000") {
+		t.Fatalf("expected interval between 1 and 10001/10000, got: %s", str)
+	}
+}
+
+func TestDecompose1DCAD_DegenerateAndEqualities(t *testing.T) {
+	env := NewEnv()
+
+	// 1. Double root isolated point: (x - 5)^2 <= 0 => [5, 5]
+	exprDouble, _ := Parse("(x - 5)^2 <= 0")
+	solDouble, err := SolveInequality(exprDouble.(*RelOpNode), "x", env)
+	if err != nil {
+		t.Fatalf("solve failed: %v", err)
+	}
+	if !strings.Contains(solDouble.String(), "5") {
+		t.Fatalf("expected singleton with 5, got %s", solDouble.String())
+	}
+
+	// 2. Strict inequality with double root: (x - 5)^2 < 0 => false
+	exprStrict, _ := Parse("(x - 5)^2 < 0")
+	solStrict, err := SolveInequality(exprStrict.(*RelOpNode), "x", env)
+	if err != nil {
+		t.Fatalf("solve failed: %v", err)
+	}
+	if solStrict.String() != "false" {
+		t.Fatalf("expected false, got %s", solStrict.String())
+	}
+
+	// 3. No real roots tautology: x^2 + 4 >= 0 => true
+	exprTautology, _ := Parse("x^2 + 4 >= 0")
+	solTautology, err := SolveInequality(exprTautology.(*RelOpNode), "x", env)
+	if err != nil {
+		t.Fatalf("solve failed: %v", err)
+	}
+	if solTautology.String() != "true" {
+		t.Fatalf("expected true, got %s", solTautology.String())
+	}
+}

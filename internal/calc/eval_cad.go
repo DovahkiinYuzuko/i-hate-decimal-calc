@@ -137,25 +137,23 @@ func solve1D(expr Node, op string, varName string, env *Env, fsm *CadLifecycleFS
 		return formatLinearInterval(op, aRat.Sign(), rootNode), nil
 	}
 
-	// Degree >= 2: Exact roots or Sturm real root isolation
+	// Degree >= 2: True 1D CAD Cell Decomposition
 	_ = fsm.TransitionTo(CadStateSampled)
 
-	// Try finding exact symbolic roots first via solve equation
-	exactRootsList, err := solveExactRoots(expanded, varName)
-	if err == nil {
-		_ = fsm.TransitionTo(CadStateDecided)
-		return buildIntervalsFromRoots(exactRootsList, p, op)
-	}
-
-	// Fallback to Sturm isolation intervals
-	isolations, err := EvalIsolateRoots(p.toNode(), varName, nil, nil, env)
+	cells, roots, err := decompose1DCADInternal([]*univariatePoly{p}, varName, env)
 	if err != nil {
 		_ = fsm.TransitionTo(CadStateUnsupported)
 		return nil, err
 	}
 
 	_ = fsm.TransitionTo(CadStateDecided)
-	return buildIntervalsFromSturm(isolations.(*ListNode), p, op)
+	return reconstruct1DIntervalsFromCells(cells, roots, p, op)
+}
+
+// Decompose1DCAD decomposes R^1 into 2m + 1 sign-invariant CAD cells for the given univariate polynomials.
+func Decompose1DCAD(polys []*univariatePoly, varName string, env *Env) ([]CadCell, error) {
+	cells, _, err := decompose1DCADInternal(polys, varName, env)
+	return cells, err
 }
 
 // evalRelationalSign tests if signVal satisfies op relative to 0.
@@ -239,163 +237,347 @@ func isRealNode(n Node) bool {
 	return true
 }
 
-func evalPolyConditionAtRat(p *univariatePoly, r *big.Rat, op string) bool {
-	v, err := evalPolyAtRat(p, r)
-	if err != nil {
-		return false
-	}
-	return evalRelationalSign(v.Sign(), op)
+// cad1DRoot represents an exact algebraic root on R^1 with rational isolating intervals.
+type cad1DRoot struct {
+	node Node
+	low  *big.Rat
+	high *big.Rat
+	poly *univariatePoly
 }
 
-// buildIntervalsFromRoots constructs satisfying intervals from exact symbolic roots.
-func buildIntervalsFromRoots(roots []Node, p *univariatePoly, op string) (Node, error) {
-	if len(roots) == 0 {
-		// No real roots -> sign is constant everywhere!
-		sampleZero := big.NewRat(0, 1)
-		if evalPolyConditionAtRat(p, sampleZero, op) {
-			return &VarNode{Name: "true"}, nil
+// decompose1DCADInternal decomposes R^1 into 2m + 1 sign-invariant CAD cells.
+func decompose1DCADInternal(polys []*univariatePoly, varName string, env *Env) ([]CadCell, []cad1DRoot, error) {
+	var allRoots []cad1DRoot
+
+	for _, p := range polys {
+		if p == nil || p.degree() <= 0 {
+			continue
 		}
-		return &VarNode{Name: "false"}, nil
+		pTrimmed := trimPoly(p)
+		if pTrimmed.degree() <= 0 {
+			continue
+		}
+
+		// 1. Try finding exact symbolic roots first
+		exactRoots, err := solveExactRoots(pTrimmed.toNode(), varName)
+		if err == nil && len(exactRoots) > 0 {
+			for _, r := range exactRoots {
+				low, high, ok := getExactRootBounds(r, pTrimmed)
+				if ok {
+					allRoots = append(allRoots, cad1DRoot{
+						node: r,
+						low:  low,
+						high: high,
+						poly: pTrimmed,
+					})
+				}
+			}
+		} else {
+			// 2. Fallback to Sturm real root isolation
+			isolations, err := EvalIsolateRoots(pTrimmed.toNode(), varName, nil, nil, env)
+			if err == nil {
+				if list, ok := isolations.(*ListNode); ok {
+					for _, elem := range list.Elements {
+						if pair, ok := elem.(*ListNode); ok && len(pair.Elements) == 2 {
+							rLow, okL := pair.Elements[0].(*RationalNode)
+							rHigh, okH := pair.Elements[1].(*RationalNode)
+							if okL && okH {
+								var rootNode Node
+								if rLow.Val.Cmp(rHigh.Val) == 0 {
+									rootNode = rLow
+								} else {
+									rootNode = pair
+								}
+								allRoots = append(allRoots, cad1DRoot{
+									node: rootNode,
+									low:  new(big.Rat).Set(rLow.Val),
+									high: new(big.Rat).Set(rHigh.Val),
+									poly: pTrimmed,
+								})
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 
-	type rootItem struct {
-		node   Node
-		approx float64
-	}
-	var items []rootItem
-	for _, r := range roots {
-		val, err := Approx(r)
-		f := 0.0
-		if err == nil {
-			fmt.Sscanf(val, "%f", &f)
+	// Strictly sort roots without any floating-point numbers
+	sortCadRoots(allRoots)
+
+	// Deduplicate identical roots
+	dedupRoots := deduplicateCadRoots(allRoots)
+
+	// Ensure adjacent isolating intervals are strictly disjoint: R_i < L_{i+1}
+	refineRootIntervals(dedupRoots)
+
+	m := len(dedupRoots)
+	if m == 0 {
+		zeroRat := big.NewRat(0, 1)
+		cell := CadCell{
+			Dimension:   1,
+			SamplePoint: []Node{NewRationalFromBigRat(zeroRat)},
+			IsSection:   false,
+			SignVector:  make(map[string]int),
 		}
-		items = append(items, rootItem{node: r, approx: f})
+		for _, p := range polys {
+			if val, err := evalPolyAtRat(p, zeroRat); err == nil {
+				cell.SignVector[polyKey(p)] = val.Sign()
+			}
+		}
+		return []CadCell{cell}, dedupRoots, nil
 	}
-	sort.Slice(items, func(i, j int) bool {
-		return items[i].approx < items[j].approx
+
+	numCells := 2*m + 1
+	cells := make([]CadCell, numCells)
+
+	// Sector 0: (-inf, alpha_1)
+	firstLow := dedupRoots[0].low
+	sample0 := floorSubOne(firstLow)
+	cells[0] = makeCadSectorCell([]Node{NewRationalFromBigRat(sample0)}, sample0, polys)
+
+	for i := 0; i < m; i++ {
+		root := dedupRoots[i]
+		// Section i+1: {alpha_{i+1}}
+		cells[2*i+1] = makeCadSectionCell([]Node{root.node}, root, polys)
+
+		// Sector i+1: (alpha_{i+1}, alpha_{i+2}) or (alpha_m, +inf)
+		if i+1 < m {
+			nextLow := dedupRoots[i+1].low
+			currHigh := dedupRoots[i].high
+			mid := new(big.Rat).Add(currHigh, nextLow)
+			mid.Quo(mid, big.NewRat(2, 1))
+			cells[2*i+2] = makeCadSectorCell([]Node{NewRationalFromBigRat(mid)}, mid, polys)
+		} else {
+			lastHigh := dedupRoots[m-1].high
+			sampleLast := ceilAddOne(lastHigh)
+			cells[2*m] = makeCadSectorCell([]Node{NewRationalFromBigRat(sampleLast)}, sampleLast, polys)
+		}
+	}
+
+	return cells, dedupRoots, nil
+}
+
+func getExactRootBounds(r Node, p *univariatePoly) (*big.Rat, *big.Rat, bool) {
+	if rat, ok := r.(*RationalNode); ok {
+		return new(big.Rat).Set(rat.Val), new(big.Rat).Set(rat.Val), true
+	}
+	iv, err := EvalNodeInterval(r, 6)
+	if err == nil && iv.Low != nil && iv.High != nil {
+		return new(big.Rat).Set(iv.Low), new(big.Rat).Set(iv.High), true
+	}
+	return nil, nil, false
+}
+
+func sortCadRoots(roots []cad1DRoot) {
+	sort.SliceStable(roots, func(i, j int) bool {
+		return compareCadRoots(roots[i], roots[j]) < 0
 	})
+}
+
+func compareCadRoots(a, b cad1DRoot) int {
+	if a.high.Cmp(b.low) < 0 {
+		return -1
+	}
+	if b.high.Cmp(a.low) < 0 {
+		return 1
+	}
+	if a.node != nil && b.node != nil && a.node.Equal(b.node) {
+		return 0
+	}
+	if a.node != nil && b.node != nil {
+		if res, decided := EvaluateRelOpWithInterval(&RelOpNode{LHS: a.node, Op: "<", RHS: b.node}); decided {
+			if res {
+				return -1
+			}
+			return 1
+		}
+	}
+	// Midpoint comparison as fallback
+	midA := new(big.Rat).Add(a.low, a.high)
+	midA.Quo(midA, big.NewRat(2, 1))
+	midB := new(big.Rat).Add(b.low, b.high)
+	midB.Quo(midB, big.NewRat(2, 1))
+	return midA.Cmp(midB)
+}
+
+func deduplicateCadRoots(roots []cad1DRoot) []cad1DRoot {
+	if len(roots) == 0 {
+		return nil
+	}
+	dedup := []cad1DRoot{roots[0]}
+	for i := 1; i < len(roots); i++ {
+		prev := dedup[len(dedup)-1]
+		curr := roots[i]
+		if compareCadRoots(prev, curr) == 0 {
+			continue
+		}
+		dedup = append(dedup, curr)
+	}
+	return dedup
+}
+
+func refineRootIntervals(roots []cad1DRoot) {
+	for i := 0; i+1 < len(roots); i++ {
+		// If high[i] >= low[i+1], shrink them
+		if roots[i].high.Cmp(roots[i+1].low) >= 0 {
+			mid := new(big.Rat).Add(roots[i].high, roots[i+1].low)
+			mid.Quo(mid, big.NewRat(2, 1))
+			delta := new(big.Rat).Sub(roots[i+1].high, roots[i].low)
+			if delta.Sign() > 0 {
+				delta.Quo(delta, big.NewRat(16, 1))
+				roots[i].high = new(big.Rat).Sub(mid, delta)
+				roots[i+1].low = new(big.Rat).Add(mid, delta)
+			}
+		}
+	}
+}
+
+func floorSubOne(r *big.Rat) *big.Rat {
+	intNum := new(big.Int).Quo(r.Num(), r.Denom())
+	if r.Sign() < 0 && new(big.Int).Rem(r.Num(), r.Denom()).Sign() != 0 {
+		intNum.Sub(intNum, big.NewInt(1))
+	}
+	intNum.Sub(intNum, big.NewInt(1))
+	return new(big.Rat).SetInt(intNum)
+}
+
+func ceilAddOne(r *big.Rat) *big.Rat {
+	intNum := new(big.Int).Quo(r.Num(), r.Denom())
+	if r.Sign() > 0 && new(big.Int).Rem(r.Num(), r.Denom()).Sign() != 0 {
+		intNum.Add(intNum, big.NewInt(1))
+	}
+	intNum.Add(intNum, big.NewInt(1))
+	return new(big.Rat).SetInt(intNum)
+}
+
+func polyKey(p *univariatePoly) string {
+	if p == nil {
+		return ""
+	}
+	return p.toNode().String()
+}
+
+func makeCadSectorCell(samplePoint []Node, sampleRat *big.Rat, polys []*univariatePoly) CadCell {
+	cell := CadCell{
+		Dimension:   1,
+		SamplePoint: samplePoint,
+		IsSection:   false,
+		SignVector:  make(map[string]int),
+	}
+	for _, p := range polys {
+		if p != nil {
+			if val, err := evalPolyAtRat(p, sampleRat); err == nil {
+				cell.SignVector[polyKey(p)] = val.Sign()
+			}
+		}
+	}
+	return cell
+}
+
+func makeCadSectionCell(samplePoint []Node, root cad1DRoot, polys []*univariatePoly) CadCell {
+	cell := CadCell{
+		Dimension:   0,
+		SamplePoint: samplePoint,
+		IsSection:   true,
+		SignVector:  make(map[string]int),
+	}
+	for _, p := range polys {
+		if p == nil {
+			continue
+		}
+		if root.poly == p {
+			cell.SignVector[polyKey(p)] = 0
+		} else {
+			// Evaluate at mid of isolating interval
+			mid := new(big.Rat).Add(root.low, root.high)
+			mid.Quo(mid, big.NewRat(2, 1))
+			if val, err := evalPolyAtRat(p, mid); err == nil {
+				cell.SignVector[polyKey(p)] = val.Sign()
+			}
+		}
+	}
+	return cell
+}
+
+func reconstruct1DIntervalsFromCells(cells []CadCell, roots []cad1DRoot, p *univariatePoly, op string) (Node, error) {
+	pKey := polyKey(p)
+
+	allSatisfied := true
+	noneSatisfied := true
+
+	for i := range cells {
+		sign := cells[i].SignVector[pKey]
+		satisfied := evalRelationalSign(sign, op)
+		cells[i].Satisfied = satisfied
+		if satisfied {
+			noneSatisfied = false
+		} else {
+			allSatisfied = false
+		}
+	}
+
+	if allSatisfied {
+		return &VarNode{Name: "true"}, nil
+	}
+	if noneSatisfied {
+		return &VarNode{Name: "false"}, nil
+	}
 
 	negInf := &VarNode{Name: "-inf"}
 	posInf := &VarNode{Name: "inf"}
 
 	var satisfyingIntervals []Node
 
-	// Check point before first root
-	firstApprox := items[0].approx
-	sampleBefore := big.NewRat(int64(firstApprox-2), 1)
-	if evalPolyConditionAtRat(p, sampleBefore, op) {
-		satisfyingIntervals = append(satisfyingIntervals, &ListNode{Elements: []Node{negInf, items[0].node}})
-	}
-
-	for i := 0; i < len(items); i++ {
-		// Check the root boundary itself if non-strict op (<=, >=)
-		if op == "<=" || op == ">=" {
-			// At root itself, polynomial is 0, which satisfies <= and >=
-			// If neither adjacent interval is included, root is an isolated point
+	m := len(roots)
+	i := 0
+	for i < len(cells) {
+		if !cells[i].Satisfied {
+			i++
+			continue
 		}
 
-		// Check interval between items[i] and items[i+1]
-		if i+1 < len(items) {
-			midApprox := (items[i].approx + items[i+1].approx) / 2.0
-			sampleMid := floatToRatSample(midApprox)
-			if evalPolyConditionAtRat(p, sampleMid, op) {
-				satisfyingIntervals = append(satisfyingIntervals, &ListNode{Elements: []Node{items[i].node, items[i+1].node}})
-			}
+		start := i
+		for i < len(cells) && cells[i].Satisfied {
+			i++
 		}
-	}
+		end := i - 1
 
-	// Check point after last root
-	lastApprox := items[len(items)-1].approx
-	sampleAfter := big.NewRat(int64(lastApprox+2), 1)
-	if evalPolyConditionAtRat(p, sampleAfter, op) {
-		satisfyingIntervals = append(satisfyingIntervals, &ListNode{Elements: []Node{items[len(items)-1].node, posInf}})
-	}
-
-	// Handle degenerate case: equality on roots only (e.g. (x - 1)^2 <= 0 -> x = 1)
-	if len(satisfyingIntervals) == 0 && (op == "<=" || op == ">=") {
-		for _, item := range items {
-			satisfyingIntervals = append(satisfyingIntervals, &ListNode{Elements: []Node{item.node, item.node}})
+		// Determine left endpoint
+		var leftNode Node
+		if start == 0 {
+			leftNode = negInf
+		} else if start%2 == 1 {
+			// Section (start - 1)/2
+			rootIdx := (start - 1) / 2
+			leftNode = roots[rootIdx].node
+		} else {
+			// Sector start/2 - 1 -> starts from rootIdx = start/2 - 1
+			rootIdx := start/2 - 1
+			leftNode = roots[rootIdx].node
 		}
+
+		// Determine right endpoint
+		var rightNode Node
+		if end == 2*m {
+			rightNode = posInf
+		} else if end%2 == 1 {
+			// Section (end - 1)/2
+			rootIdx := (end - 1) / 2
+			rightNode = roots[rootIdx].node
+		} else {
+			// Sector end/2 -> ends at rootIdx = end/2
+			rootIdx := end / 2
+			rightNode = roots[rootIdx].node
+		}
+
+		satisfyingIntervals = append(satisfyingIntervals, &ListNode{Elements: []Node{leftNode, rightNode}})
 	}
 
 	if len(satisfyingIntervals) == 0 {
 		return &VarNode{Name: "false"}, nil
 	}
 	return &ListNode{Elements: satisfyingIntervals}, nil
-}
-
-// buildIntervalsFromSturm uses rational isolating intervals to produce solutions.
-func buildIntervalsFromSturm(intervals *ListNode, p *univariatePoly, op string) (Node, error) {
-	if len(intervals.Elements) == 0 {
-		// No real roots -> sign is constant everywhere!
-		sampleZero := big.NewRat(0, 1)
-		if evalPolyConditionAtRat(p, sampleZero, op) {
-			return &VarNode{Name: "true"}, nil
-		}
-		return &VarNode{Name: "false"}, nil
-	}
-
-	negInf := &VarNode{Name: "-inf"}
-	posInf := &VarNode{Name: "inf"}
-
-	var satisfyingIntervals []Node
-
-	type sturmBound struct {
-		low  *big.Rat
-		high *big.Rat
-		node Node
-	}
-	var bounds []sturmBound
-	for _, elem := range intervals.Elements {
-		if pair, ok := elem.(*ListNode); ok && len(pair.Elements) == 2 {
-			rLow, okL := pair.Elements[0].(*RationalNode)
-			rHigh, okH := pair.Elements[1].(*RationalNode)
-			if okL && okH {
-				bounds = append(bounds, sturmBound{
-					low:  rLow.Val,
-					high: rHigh.Val,
-					node: elem,
-				})
-			}
-		}
-	}
-
-	if len(bounds) == 0 {
-		return &VarNode{Name: "false"}, nil
-	}
-
-	// Sample before first root
-	firstLow := bounds[0].low
-	sampleBefore := new(big.Rat).Sub(firstLow, big.NewRat(1, 1))
-	if evalPolyConditionAtRat(p, sampleBefore, op) {
-		satisfyingIntervals = append(satisfyingIntervals, &ListNode{Elements: []Node{negInf, bounds[0].node}})
-	}
-
-	// Between roots
-	for i := 0; i < len(bounds)-1; i++ {
-		mid := new(big.Rat).Add(bounds[i].high, bounds[i+1].low)
-		mid.Quo(mid, big.NewRat(2, 1))
-		if evalPolyConditionAtRat(p, mid, op) {
-			satisfyingIntervals = append(satisfyingIntervals, &ListNode{Elements: []Node{bounds[i].node, bounds[i+1].node}})
-		}
-	}
-
-	// After last root
-	lastHigh := bounds[len(bounds)-1].high
-	sampleAfter := new(big.Rat).Add(lastHigh, big.NewRat(1, 1))
-	if evalPolyConditionAtRat(p, sampleAfter, op) {
-		satisfyingIntervals = append(satisfyingIntervals, &ListNode{Elements: []Node{bounds[len(bounds)-1].node, posInf}})
-	}
-
-	if len(satisfyingIntervals) == 0 {
-		return &VarNode{Name: "false"}, nil
-	}
-	return &ListNode{Elements: satisfyingIntervals}, nil
-}
-
-func floatToRatSample(f float64) *big.Rat {
-	intPart := int64(f * 1000)
-	return big.NewRat(intPart, 1000)
 }
 
 // solveMultivariateCAD executes Brown-McCallum projection and lifting for multi-variable formulas.
