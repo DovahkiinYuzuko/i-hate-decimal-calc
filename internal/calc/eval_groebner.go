@@ -60,6 +60,19 @@ func (m Monomial) Divides(other Monomial) bool {
 	return true
 }
 
+// Equal returns true if m and other have the exact same exponents.
+func (m Monomial) Equal(other Monomial) bool {
+	if m.TotalDeg != other.TotalDeg || len(m.Exps) != len(other.Exps) {
+		return false
+	}
+	for i := range m.Exps {
+		if m.Exps[i] != other.Exps[i] {
+			return false
+		}
+	}
+	return true
+}
+
 // Mul returns the product of two monomials.
 func (m Monomial) Mul(other Monomial) Monomial {
 	res := make([]int, len(m.Exps))
@@ -390,6 +403,131 @@ type critPair struct {
 	sugar int
 }
 
+func critPairKey(i, j int) uint64 {
+	if i > j {
+		i, j = j, i
+	}
+	return (uint64(i) << 32) | uint64(j)
+}
+
+// updatePairsGebauerMoller implements the Gebauer & Möller (1988) Update algorithm.
+// When newElem (at newIdx) is added to G, it prunes existing pairs in pairs and adds minimal new pairs.
+func updatePairsGebauerMoller(G []*MPoly, pairs []critPair, newElem *MPoly, newIdx int, processed map[uint64]bool) []critPair {
+	lmNew := newElem.LeadingMonomial()
+
+	// 1. Form candidate pairs with newElem:
+	// (i, newIdx) for i in 0..newIdx-1
+	var candidates []critPair
+	for i := 0; i < newIdx; i++ {
+		lmI := G[i].LeadingMonomial()
+		key := critPairKey(i, newIdx)
+		// Criterion 1: relatively prime leading monomials always reduce to 0
+		if lmI.AreRelativelyPrime(lmNew) {
+			processed[key] = true
+			continue
+		}
+		lcm := lmI.LCM(lmNew)
+		sugar := G[i].Sugar - lmI.TotalDeg
+		sNew := newElem.Sugar - lmNew.TotalDeg
+		if sNew > sugar {
+			sugar = sNew
+		}
+		sugar += lcm.TotalDeg
+		candidates = append(candidates, critPair{i: i, j: newIdx, lcm: lcm, sugar: sugar})
+	}
+
+	// 2. Apply Criterion 2 on new pairs (Gebauer-Möller M-Criterion):
+	// A candidate (i, newIdx) is superfluous if there exists another candidate (j, newIdx) (j != i)
+	// such that LCM(LM(Gj), LM(newElem)) divides LCM(LM(Gi), LM(newElem))
+	// and LCM(LM(Gj), LM(newElem)) != LCM(LM(Gi), LM(newElem))
+	// AND the pair (i, j) has already been processed!
+	var newPairs []critPair
+	for a := 0; a < len(candidates); a++ {
+		keep := true
+		for b := 0; b < len(candidates); b++ {
+			if a == b {
+				continue
+			}
+			idxI := candidates[a].i
+			idxJ := candidates[b].i
+			// Only valid if (idxI, idxJ) has already been processed!
+			if !processed[critPairKey(idxI, idxJ)] {
+				continue
+			}
+			lcmA := candidates[a].lcm
+			lcmB := candidates[b].lcm
+			if lcmB.Divides(lcmA) {
+				if !lcmB.Equal(lcmA) {
+					keep = false
+					processed[critPairKey(idxI, newIdx)] = true
+					break
+				}
+				if b < a {
+					keep = false
+					processed[critPairKey(idxI, newIdx)] = true
+					break
+				}
+			}
+		}
+		if keep {
+			newPairs = append(newPairs, candidates[a])
+		}
+	}
+
+	// 3. Prune existing pairs in B (Gebauer-Möller F-Criterion):
+	// For each pair (i, j) in pairs, if LM(newElem) divides LCM(LM(Gi), LM(Gj))
+	// and LCM(LM(Gi), LM(newElem)) != LCM(LM(Gi), LM(Gj))
+	// and LCM(LM(Gj), LM(newElem)) != LCM(LM(Gi), LM(Gj))
+	// AND both (i, newIdx) and (j, newIdx) are covered (in newPairs or processed),
+	// then the pair (i, j) can be pruned.
+	covered := make(map[int]bool)
+	for _, np := range newPairs {
+		covered[np.i] = true
+	}
+	for i := 0; i < newIdx; i++ {
+		if processed[critPairKey(i, newIdx)] {
+			covered[i] = true
+		}
+	}
+
+	var prunedPairs []critPair
+	for _, cp := range pairs {
+		if lmNew.Divides(cp.lcm) && covered[cp.i] && covered[cp.j] {
+			lcm1 := G[cp.i].LeadingMonomial().LCM(lmNew)
+			lcm2 := G[cp.j].LeadingMonomial().LCM(lmNew)
+			if !lcm1.Equal(cp.lcm) && !lcm2.Equal(cp.lcm) {
+				// Redundant by chain through newElem: mark processed and prune!
+				processed[critPairKey(cp.i, cp.j)] = true
+				continue
+			}
+		}
+		prunedPairs = append(prunedPairs, cp)
+	}
+
+	return append(prunedPairs, newPairs...)
+}
+
+// canApplyChainCriterion checks Cox-Little-O'Shea dynamic Criterion 2:
+// There exists some k in 0..len(G)-1 (k != i, k != j) such that:
+// 1. LM(G[k]) divides LCM(LM(p1), LM(p2))
+// 2. Both pairs (i, k) and (j, k) have already been processed (in processed map).
+func canApplyChainCriterion(p1, p2 *MPoly, i, j int, G []*MPoly, processed map[uint64]bool) bool {
+	lcm := p1.LeadingMonomial().LCM(p2.LeadingMonomial())
+
+	for k := 0; k < len(G); k++ {
+		if k == i || k == j {
+			continue
+		}
+		lmK := G[k].LeadingMonomial()
+		if lmK.Divides(lcm) {
+			if processed[critPairKey(i, k)] && processed[critPairKey(j, k)] {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func buchberger(initial []*MPoly, order MonomialOrder) ([]*MPoly, error) {
 	// Filter zero polynomials and make monic
 	var G []*MPoly
@@ -402,26 +540,16 @@ func buchberger(initial []*MPoly, order MonomialOrder) ([]*MPoly, error) {
 		return G, nil
 	}
 
-	// Pair queue
+	processed := make(map[uint64]bool)
 	var pairs []critPair
-	for i := 0; i < len(G); i++ {
-		for j := i + 1; j < len(G); j++ {
-			p1 := G[i]
-			p2 := G[j]
-			// Buchberger Criterion 1: relatively prime leading monomials always reduce to 0
-			if p1.LeadingMonomial().AreRelativelyPrime(p2.LeadingMonomial()) {
-				continue
-			}
-			lcm := p1.LeadingMonomial().LCM(p2.LeadingMonomial())
-			sugar := p1.Sugar - p1.LeadingMonomial().TotalDeg
-			s2 := p2.Sugar - p2.LeadingMonomial().TotalDeg
-			if s2 > sugar {
-				sugar = s2
-			}
-			sugar += lcm.TotalDeg
-			pairs = append(pairs, critPair{i: i, j: j, lcm: lcm, sugar: sugar})
+	var currentG []*MPoly
+	for i, p := range G {
+		if i > 0 {
+			pairs = updatePairsGebauerMoller(currentG, pairs, p, i, processed)
 		}
+		currentG = append(currentG, p)
 	}
+	G = currentG
 
 	maxIter := 500
 	iter := 0
@@ -447,13 +575,18 @@ func buchberger(initial []*MPoly, order MonomialOrder) ([]*MPoly, error) {
 		p1 := G[cp.i]
 		p2 := G[cp.j]
 
-		// Check Buchberger Criterion 2 (Chain Criterion):
+		// Dynamic check of Buchberger Criterion 2 (Chain Criterion):
 		// If there exists some k such that LM(G[k]) divides lcm(LM(p1), LM(p2))
 		// and both pairs (p1, G[k]) and (p2, G[k]) have already been processed
-		// (handled implicitly if S-poly reduces to 0)
+		// (in processed map), S-poly is guaranteed to reduce to 0.
+		if canApplyChainCriterion(p1, p2, cp.i, cp.j, G, processed) {
+			processed[critPairKey(cp.i, cp.j)] = true
+			continue
+		}
 
 		sPoly := sPolynomial(p1, p2, order)
 		rem := polyReduce(sPoly, G, order)
+		processed[critPairKey(cp.i, cp.j)] = true
 
 		if !rem.IsZero() {
 			// Found new basis element
@@ -465,20 +598,7 @@ func buchberger(initial []*MPoly, order MonomialOrder) ([]*MPoly, error) {
 			}
 
 			newIdx := len(G)
-			for i := 0; i < len(G); i++ {
-				// Buchberger Criterion 1
-				if G[i].LeadingMonomial().AreRelativelyPrime(newElem.LeadingMonomial()) {
-					continue
-				}
-				lcm := G[i].LeadingMonomial().LCM(newElem.LeadingMonomial())
-				sugar := G[i].Sugar - G[i].LeadingMonomial().TotalDeg
-				s2 := newElem.Sugar - newElem.LeadingMonomial().TotalDeg
-				if s2 > sugar {
-					sugar = s2
-				}
-				sugar += lcm.TotalDeg
-				pairs = append(pairs, critPair{i: i, j: newIdx, lcm: lcm, sugar: sugar})
-			}
+			pairs = updatePairsGebauerMoller(G, pairs, newElem, newIdx, processed)
 			G = append(G, newElem)
 		}
 	}

@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"math/big"
 	"testing"
 )
 
@@ -177,3 +178,95 @@ func TestEvalGroebner_ViaEval(t *testing.T) {
 		})
 	}
 }
+
+func TestGebauerMoller_PruningLogic(t *testing.T) {
+	// Monomial tests for Gebauer-Möller
+	// p1 = x^2, p2 = x*y, p3 = y^2
+	// LCM(p1, p3) = x^2 * y^2.
+	// LM(p2) = x*y divides LCM(p1, p3).
+	// If (p1, p2) and (p2, p3) are processed, (p1, p3) must be pruned by Criterion 2.
+	m1 := newMonomial([]int{2, 0}) // x^2
+	m2 := newMonomial([]int{1, 1}) // x*y
+	m3 := newMonomial([]int{0, 2}) // y^2
+
+	p1 := &MPoly{Terms: []Term{{Coeff: big.NewRat(1, 1), Mon: m1}}}
+	p2 := &MPoly{Terms: []Term{{Coeff: big.NewRat(1, 1), Mon: m2}}}
+	p3 := &MPoly{Terms: []Term{{Coeff: big.NewRat(1, 1), Mon: m3}}}
+
+	G := []*MPoly{p1, p2, p3}
+
+	// When both (0, 1) and (1, 2) are processed, (0, 2) must be pruned by Criterion 2 through p2.
+	processed := map[uint64]bool{
+		critPairKey(0, 1): true,
+		critPairKey(1, 2): true,
+	}
+	if !canApplyChainCriterion(p1, p3, 0, 2, G, processed) {
+		t.Errorf("expected canApplyChainCriterion(p1, p3) to return true through p2")
+	}
+
+	// If (0, 1) is NOT processed, canApplyChainCriterion should return false
+	delete(processed, critPairKey(0, 1))
+	if canApplyChainCriterion(p1, p3, 0, 2, G, processed) {
+		t.Errorf("expected canApplyChainCriterion to return false when (0, 1) is not processed")
+	}
+}
+
+func TestEvalGroebner_GebauerMollerCriterion2(t *testing.T) {
+	// Classical example from Cox, Little, O'Shea Chapter 2 §9:
+	// f1 = x^3 - 2*x*y, f2 = x^2*y - 2*y^2 + x
+	// In grevlex order, this computation generates critical pairs where Criterion 2 prunes redundant S-pairs.
+	expr := "groebner([x^3 - 2*x*y, x^2*y - 2*y^2 + x], [x, y], grevlex)"
+	node, err := Parse(expr)
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+	res, err := Eval(node)
+	if err != nil {
+		t.Fatalf("Eval failed: %v", err)
+	}
+	list, ok := res.(*ListNode)
+	if !ok {
+		t.Fatalf("expected ListNode, got %T", res)
+	}
+	// Reduced Groebner basis contains 3 elements: x^2, x*y, and y^2 - 1/2*x
+	if len(list.Elements) != 3 {
+		t.Fatalf("expected 3 elements in reduced basis, got %d: %s", len(list.Elements), list.String())
+	}
+	t.Logf("CLO Example Groebner basis: %s", list.String())
+
+	// Another non-trivial 3-variable system:
+	// x + y + z = 1, x^2 + y^2 + z^2 = 2, x^3 + y^3 + z^3 = 3
+	expr3 := "groebner([x + y + z - 1, x^2 + y^2 + z^2 - 2, x^3 + y^3 + z^3 - 3], [x, y, z], lex)"
+	node3, err := Parse(expr3)
+	if err != nil {
+		t.Fatalf("Parse 3-var failed: %v", err)
+	}
+	res3, err := Eval(node3)
+	if err != nil {
+		t.Fatalf("Eval 3-var failed: %v", err)
+	}
+	list3, ok := res3.(*ListNode)
+	if !ok {
+		t.Fatalf("expected ListNode, got %T", res3)
+	}
+	t.Logf("Symmetric 3-var Groebner basis: %s", list3.String())
+	if len(list3.Elements) < 3 {
+		t.Fatalf("expected at least 3 elements in 3-var Groebner basis, got %d", len(list3.Elements))
+	}
+}
+
+func BenchmarkGroebner_ChainCriterion(b *testing.B) {
+	node, err := Parse("groebner([x^2 + y^2 + z^2 - 1, x^2 + z^2 - y, x - z], [x, y, z], grevlex)")
+	if err != nil {
+		b.Fatalf("Parse error: %v", err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := Eval(node)
+		if err != nil {
+			b.Fatalf("Eval error: %v", err)
+		}
+	}
+}
+
