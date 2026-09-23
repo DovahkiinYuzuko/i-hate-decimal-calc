@@ -108,12 +108,16 @@ func EliminateQuantifiers(q *QuantifierNode, env *Env, fsm *QeLifecycleFSM) (Nod
 	// Case A: Closed formula (no free variables / parameters)
 	if len(freeVars) == 0 {
 		res, err := eliminateClosedQuantifier(q, env)
-		if err != nil {
-			_ = fsm.TransitionTo(QeStateFailed)
-			return nil, err
+		if err == nil {
+			if fsm.CurrentState() == QeStateVariableOrdered {
+				_ = fsm.TransitionTo(QeStateCadDecomposed)
+				_ = fsm.TransitionTo(QeStateTruthEvaluated)
+				_ = fsm.TransitionTo(QeStateFormulaConstructed)
+			}
+			return res, nil
 		}
-		_ = fsm.TransitionTo(QeStateFormulaConstructed)
-		return res, nil
+		// Fallback to general CAD QE for closed formulas (handles multi-var, compound, nested)
+		return eliminateQuantifiersCAD(q, freeVars, env, fsm)
 	}
 
 	// Case B: Parametric formula (1 or more free variables)
@@ -122,7 +126,9 @@ func EliminateQuantifiers(q *QuantifierNode, env *Env, fsm *QeLifecycleFSM) (Nod
 		_ = fsm.TransitionTo(QeStateFailed)
 		return nil, err
 	}
-	_ = fsm.TransitionTo(QeStateFormulaConstructed)
+	if fsm.CurrentState() == QeStateTruthEvaluated {
+		_ = fsm.TransitionTo(QeStateFormulaConstructed)
+	}
 	return res, nil
 }
 
@@ -281,6 +287,10 @@ func makeRelOp(lhs Node, op string, rhs Node, env *Env) Node {
 
 // eliminateParametricQuantifier derives quantifier-free conditions on free variables.
 func eliminateParametricQuantifier(q *QuantifierNode, freeVars []string, env *Env, fsm *QeLifecycleFSM) (Node, error) {
+	if len(q.Vars) > 1 {
+		return eliminateQuantifiersCAD(q, freeVars, env, fsm)
+	}
+
 	relOp, ok := q.Body.(*RelOpNode)
 	if !ok {
 		evaled, err := EvalWithEnv(q.Body, env)
@@ -291,7 +301,7 @@ func eliminateParametricQuantifier(q *QuantifierNode, freeVars []string, env *En
 		}
 	}
 	if relOp == nil {
-		return nil, fmt.Errorf("%s: %s", i18n.T("qe.err_unsupported_body"), q.Body)
+		return eliminateQuantifiersCAD(q, freeVars, env, fsm)
 	}
 
 	// Move everything to LHS: f(x, params) op 0
@@ -310,7 +320,7 @@ func eliminateParametricQuantifier(q *QuantifierNode, freeVars []string, env *En
 	// 1. Polynomial check in boundVar
 	p, ok := extractPoly(zeroExpr, boundVar)
 	if !ok {
-		return nil, fmt.Errorf("%s: %s in %s", i18n.T("cad.err_unsupported_inequality"), zeroExpr, boundVar)
+		return eliminateQuantifiersCAD(q, freeVars, env, fsm)
 	}
 
 	_ = fsm.TransitionTo(QeStateCadDecomposed)
@@ -434,25 +444,306 @@ func eliminateParametricQuantifier(q *QuantifierNode, freeVars []string, env *En
 		}
 	}
 
-	// Higher degree general CAD Projection fallback
-	projSets, err := computeBrownMcCallumProjection([]Node{zeroExpr}, append([]string{boundVar}, freeVars...), env)
+	// Higher degree or general CAD fallback
+	return eliminateQuantifiersCAD(q, freeVars, env, fsm)
+}
+
+type quantifierBlock struct {
+	kind QuantifierKind
+	vars []string
+}
+
+// flattenQuantifierBlocks decomposes nested and multi-variable quantifiers into an ordered list of blocks.
+func flattenQuantifierBlocks(q *QuantifierNode) ([]quantifierBlock, Node) {
+	var blocks []quantifierBlock
+	curr := q
+	for {
+		blocks = append(blocks, quantifierBlock{
+			kind: curr.Kind,
+			vars: curr.Vars,
+		})
+		if nextQ, ok := curr.Body.(*QuantifierNode); ok {
+			curr = nextQ
+			continue
+		}
+		if fn, ok := curr.Body.(*FuncNode); ok && (fn.Name == "forall" || fn.Name == "exists") {
+			if parsedQ, err := parseQuantifierFromFunc(fn); err == nil {
+				curr = parsedQ
+				continue
+			}
+		}
+		return blocks, curr.Body
+	}
+}
+
+// eliminateQuantifiersCAD performs general Quantifier Elimination via Cylindrical Algebraic Decomposition
+// (Collins 1975, Hong 1992, Brown 2001).
+func eliminateQuantifiersCAD(q *QuantifierNode, freeVars []string, env *Env, fsm *QeLifecycleFSM) (Node, error) {
+	blocks, body := flattenQuantifierBlocks(q)
+
+	var allBoundVars []string
+	varQuantifier := make(map[string]QuantifierKind)
+	for _, b := range blocks {
+		for _, v := range b.vars {
+			allBoundVars = append(allBoundVars, v)
+			varQuantifier[v] = b.kind
+		}
+	}
+
+	cadVars := append(append([]string{}, freeVars...), allBoundVars...)
+	m := len(freeVars)
+	n := len(cadVars)
+
+	// Extract atomic polynomials
+	_, polys, err := extractAtomicRelationsAndPolys(body, env)
 	if err != nil {
 		return nil, err
 	}
 
-	_ = fsm.TransitionTo(QeStateTruthEvaluated)
-
-	// Pick the first non-constant boundary polynomial from projection
-	for _, pSet := range projSets {
-		for _, poly := range pSet {
-			fVars := ExtractFreeVariables(poly)
-			if len(fVars) > 0 && !isConstantNode(poly) {
-				return NewRelOp(poly, "<", mustRational(0, 1)), nil
+	if len(polys) == 0 {
+		evaled, err := EvalWithEnv(body, env)
+		if err == nil {
+			if b, ok := evaled.(*VarNode); ok && (b.Name == "true" || b.Name == "false") {
+				if fsm.CurrentState() == QeStateVariableOrdered {
+					_ = fsm.TransitionTo(QeStateCadDecomposed)
+					_ = fsm.TransitionTo(QeStateTruthEvaluated)
+					_ = fsm.TransitionTo(QeStateFormulaConstructed)
+				}
+				return b, nil
 			}
 		}
 	}
 
-	return nil, fmt.Errorf("%s", i18n.T("qe.err_unsupported_body"))
+	if fsm.CurrentState() == QeStateVariableOrdered {
+		_ = fsm.TransitionTo(QeStateCadDecomposed)
+	}
+
+	cells, err := CADDecomposeCells(polys, cadVars, env)
+	if err != nil {
+		return nil, err
+	}
+
+	if fsm.CurrentState() == QeStateCadDecomposed {
+		_ = fsm.TransitionTo(QeStateTruthEvaluated)
+	}
+
+	// Evaluate formula truth on leaf cells
+	for i := range cells {
+		sat, err := evaluateFormulaOnCell(body, &cells[i], cadVars, env)
+		if err != nil {
+			return nil, err
+		}
+		cells[i].Satisfied = sat
+	}
+
+	// Cylinder Truth Reduction from level n down to level m
+	currentCells := make([]*CadCell, len(cells))
+	for i := range cells {
+		currentCells[i] = &cells[i]
+	}
+
+	for level := n; level > m; level-- {
+		boundVar := cadVars[level-1]
+		qKind := varQuantifier[boundVar]
+
+		if level == 1 {
+			// Closed sentence with 1 bound variable (Parent == nil)
+			if qKind == QuantifierExists {
+				for _, c := range currentCells {
+					if c.Satisfied {
+						if fsm.CurrentState() == QeStateTruthEvaluated {
+							_ = fsm.TransitionTo(QeStateFormulaConstructed)
+						}
+						return &VarNode{Name: "true"}, nil
+					}
+				}
+				if fsm.CurrentState() == QeStateTruthEvaluated {
+					_ = fsm.TransitionTo(QeStateFormulaConstructed)
+				}
+				return &VarNode{Name: "false"}, nil
+			}
+			// QuantifierForall
+			for _, c := range currentCells {
+				if !c.Satisfied {
+					if fsm.CurrentState() == QeStateTruthEvaluated {
+						_ = fsm.TransitionTo(QeStateFormulaConstructed)
+					}
+					return &VarNode{Name: "false"}, nil
+				}
+			}
+			if fsm.CurrentState() == QeStateTruthEvaluated {
+				_ = fsm.TransitionTo(QeStateFormulaConstructed)
+			}
+			return &VarNode{Name: "true"}, nil
+		}
+
+		var parentList []*CadCell
+		childrenMap := make(map[*CadCell][]*CadCell)
+		for _, c := range currentCells {
+			p := c.Parent
+			if _, exists := childrenMap[p]; !exists {
+				parentList = append(parentList, p)
+			}
+			childrenMap[p] = append(childrenMap[p], c)
+		}
+
+		for _, p := range parentList {
+			children := childrenMap[p]
+			if qKind == QuantifierExists {
+				p.Satisfied = false
+				for _, child := range children {
+					if child.Satisfied {
+						p.Satisfied = true
+						break
+					}
+				}
+			} else {
+				p.Satisfied = true
+				for _, child := range children {
+					if !child.Satisfied {
+						p.Satisfied = false
+						break
+					}
+				}
+			}
+		}
+
+		currentCells = parentList
+	}
+
+	if m == 0 {
+		return &VarNode{Name: "true"}, nil
+	}
+
+	if m == 1 {
+		res, err := reconstruct1DQuantifierFreeFormula(cadVars[0], currentCells, env)
+		if err != nil {
+			return nil, err
+		}
+		if fsm.CurrentState() == QeStateTruthEvaluated {
+			_ = fsm.TransitionTo(QeStateFormulaConstructed)
+		}
+		return res, nil
+	}
+
+	allSat := true
+	noneSat := true
+	var samples []Node
+	for _, c := range currentCells {
+		if c.Satisfied {
+			noneSat = false
+			samples = append(samples, &ListNode{Elements: c.SamplePoint})
+		} else {
+			allSat = false
+		}
+	}
+
+	if fsm.CurrentState() == QeStateTruthEvaluated {
+		_ = fsm.TransitionTo(QeStateFormulaConstructed)
+	}
+
+	if allSat {
+		return &VarNode{Name: "true"}, nil
+	}
+	if noneSat {
+		return &VarNode{Name: "false"}, nil
+	}
+	return &ListNode{Elements: samples}, nil
+}
+
+// reconstruct1DQuantifierFreeFormula constructs a quantifier-free formula for a single parameter
+// from the truth values of the base cylindrical cells.
+func reconstruct1DQuantifierFreeFormula(varName string, baseCells []*CadCell, env *Env) (Node, error) {
+	if len(baseCells) == 0 {
+		return &VarNode{Name: "false"}, nil
+	}
+
+	allSatisfied := true
+	noneSatisfied := true
+	for _, c := range baseCells {
+		if c.Satisfied {
+			noneSatisfied = false
+		} else {
+			allSatisfied = false
+		}
+	}
+
+	if allSatisfied {
+		return &VarNode{Name: "true"}, nil
+	}
+	if noneSatisfied {
+		return &VarNode{Name: "false"}, nil
+	}
+
+	var intervals [][]int
+	i := 0
+	for i < len(baseCells) {
+		if !baseCells[i].Satisfied {
+			i++
+			continue
+		}
+		start := i
+		for i < len(baseCells) && baseCells[i].Satisfied {
+			i++
+		}
+		end := i - 1
+		intervals = append(intervals, []int{start, end})
+	}
+
+	mCells := len(baseCells)
+	var intervalConds []Node
+	yVar := &VarNode{Name: varName}
+
+	for _, interval := range intervals {
+		start := interval[0]
+		end := interval[1]
+
+		var leftCond Node
+		if start > 0 {
+			if baseCells[start].IsSection {
+				leftBound := baseCells[start].SamplePoint[0]
+				leftCond = NewRelOp(yVar, ">=", leftBound)
+			} else {
+				leftBound := baseCells[start-1].SamplePoint[0]
+				leftCond = NewRelOp(yVar, ">", leftBound)
+			}
+		}
+
+		var rightCond Node
+		if end < mCells-1 {
+			if baseCells[end].IsSection {
+				rightBound := baseCells[end].SamplePoint[0]
+				rightCond = NewRelOp(yVar, "<=", rightBound)
+			} else {
+				rightBound := baseCells[end+1].SamplePoint[0]
+				rightCond = NewRelOp(yVar, "<", rightBound)
+			}
+		}
+
+		var cond Node
+		if leftCond == nil && rightCond == nil {
+			cond = &VarNode{Name: "true"}
+		} else if leftCond == nil {
+			cond = rightCond
+		} else if rightCond == nil {
+			cond = leftCond
+		} else {
+			if start == end && baseCells[start].IsSection {
+				cond = NewRelOp(yVar, "==", baseCells[start].SamplePoint[0])
+			} else {
+				cond = mustFunc("and", leftCond, rightCond)
+			}
+		}
+		intervalConds = append(intervalConds, cond)
+	}
+
+	if len(intervalConds) == 0 {
+		return &VarNode{Name: "false"}, nil
+	}
+	if len(intervalConds) == 1 {
+		return intervalConds[0], nil
+	}
+	return mustFunc("or", intervalConds...), nil
 }
 
 func isPositiveConst(n Node) bool {

@@ -130,3 +130,66 @@ func TestQEParametric(t *testing.T) {
 		})
 	}
 }
+
+func TestQEGeneralCAD(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "cubic real root exists for all a",
+			input:    "qe(exists([x], x^3 - a == 0))",
+			expected: "true",
+		},
+		{
+			name:     "cubic not zero for all x",
+			input:    "qe(forall([x], x^3 - a == 0))",
+			expected: "false",
+		},
+		{
+			name:     "alternating forall x exists y (x + y == 0)",
+			input:    "qe(forall([x], exists([y], x + y == 0)))",
+			expected: "true",
+		},
+		{
+			name:     "alternating exists x forall y (x + y == 0)",
+			input:    "qe(exists([x], forall([y], x + y == 0)))",
+			expected: "false",
+		},
+		{
+			name:     "compound inequality exists in open interval",
+			input:    "qe(exists([x], and(x > 0, x < 2)))",
+			expected: "true",
+		},
+		{
+			name:     "compound inequality forall in open interval",
+			input:    "qe(forall([x], and(x > 0, x < 2)))",
+			expected: "false",
+		},
+		{
+			name:     "parametric strict inequality exists x^2 - a < 0",
+			input:    "qe(exists([x], x^2 - a < 0))",
+			expected: "a > 0",
+		},
+		{
+			name:     "parametric non-strict inequality exists x^2 - a <= 0",
+			input:    "qe(exists([x], x^2 - a <= 0))",
+			expected: "a >= 0",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res, err := EvalString(tt.input)
+			if err != nil {
+				t.Fatalf("EvalString(%q) returned error: %v", tt.input, err)
+			}
+			got := Format(res)
+			if got != tt.expected {
+				t.Errorf("EvalString(%q) = %q, expected %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
