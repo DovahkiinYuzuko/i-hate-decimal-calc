@@ -849,7 +849,25 @@ func init() {
 		MinArgs: 2,
 		MaxArgs: 2,
 	})
+
+	// p-adic Arithmetic & Hensel Lifting (issue-83)
+	RegisterFunction(FunctionSpec{
+		Name:    "padic_val",
+		MinArgs: 2,
+		MaxArgs: 2,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "padic_norm",
+		MinArgs: 2,
+		MaxArgs: 2,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "padic_expand",
+		MinArgs: 3,
+		MaxArgs: 3,
+	})
 }
+
 
 
 

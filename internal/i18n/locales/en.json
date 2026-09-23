@@ -625,5 +625,26 @@
     "err_monic_required": "leading coefficient must be 1 (monic polynomial required)",
     "err_poly_zero_division": "polynomial division by zero",
     "err_variable_mismatch": "cannot operate on polynomials with different variables or ordering"
+  },
+  "padic": {
+    "err_prime_less_than_2": "prime must be greater than or equal to 2",
+    "err_prime_must_be_prime": "modulus or base must be a prime number: %s",
+    "err_zero_valuation": "p-adic valuation of zero is undefined (infinity)",
+    "err_zero_division": "p-adic division by zero",
+    "err_prime_mismatch": "cannot operate on p-adic numbers with different prime bases: %s and %s",
+    "err_non_invertible": "p-adic unit has no inverse",
+    "err_padic_val_args": "padic_val requires 2 arguments: (x, p)",
+    "err_padic_norm_args": "padic_norm requires 2 arguments: (x, p)",
+    "err_padic_expand_args": "padic_expand requires 3 arguments: (x, p, prec)",
+    "err_prec_positive": "precision must be a positive integer",
+    "err_arg_must_be_rational": "%s: argument must be a rational number, got %s",
+    "err_arg_must_be_integer": "%s: argument must be an integer, got %s"
+  },
+  "hensel": {
+    "err_leading_coeff_divisible": "leading coefficient must not be divisible by prime p: lc=%s, p=%s",
+    "err_derivative_zero": "derivative f'(r0) is zero modulo p (not a simple root): %s",
+    "err_not_coprime": "initial factors g0 and h0 must be coprime modulo p",
+    "err_lift_target_precision": "target precision k must be >= 1"
   }
 }
+

@@ -1,11 +1,15 @@
 package calc
 
 import (
-	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"math/big"
 	"sort"
+
+	henselPoly "github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc/poly"
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
+
+
 
 // Factor decomposes an integer into prime factors or a univariate rational polynomial
 // into irreducible factors over the rationals.
@@ -323,6 +327,17 @@ func factorPolynomial(expr Node, varName string) (Node, error) {
 		if !rootFound {
 			break
 		}
+	}
+
+	// 4b. If remaining polynomial has degree >= 4, attempt Hensel lifting factorization
+	for len(currentPoly) >= 5 {
+		gZ, hZ, ok := henselPoly.FactorHenselDegree2(currentPoly)
+		if !ok {
+			break
+		}
+		nodeG := polyToNode(gZ, varName)
+		addFactorEntry(&factors, nodeG)
+		currentPoly = hZ
 	}
 
 	// If remaining polynomial has degree >= 2, check if quadratic can be factored

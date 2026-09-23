@@ -625,5 +625,26 @@
     "err_monic_required": "入力エラー: 最高次係数は1でなければなりません（モニック多項式が必要です）",
     "err_poly_zero_division": "数理計算エラー: 多項式のゼロ除算です",
     "err_variable_mismatch": "代数エラー: 変数または項順序が異なる多項式同士の演算はできません"
+  },
+  "padic": {
+    "err_prime_less_than_2": "入力エラー: 素数は2以上である必要があります",
+    "err_prime_must_be_prime": "入力エラー: 法または底は素数である必要があります: %s",
+    "err_zero_valuation": "数理計算エラー: 0のp進付値は未定義（無限大）です",
+    "err_zero_division": "数理計算エラー: 0によるp進除算です",
+    "err_prime_mismatch": "代数エラー: 異なる素数底をもつp進数同士の演算はできません: %s と %s",
+    "err_non_invertible": "数理計算エラー: p進数の単位元に逆元が存在しません",
+    "err_padic_val_args": "引数エラー: padic_val は2つの引数 (x, p) が必要です",
+    "err_padic_norm_args": "引数エラー: padic_norm は2つの引数 (x, p) が必要です",
+    "err_padic_expand_args": "引数エラー: padic_expand は3つの引数 (x, p, prec) が必要です",
+    "err_prec_positive": "入力エラー: 精度は正の整数である必要があります",
+    "err_arg_must_be_rational": "入力エラー: %s: 引数は有理数である必要があります (取得値: %s)",
+    "err_arg_must_be_integer": "入力エラー: %s: 引数は整数である必要があります (取得値: %s)"
+  },
+  "hensel": {
+    "err_leading_coeff_divisible": "代数エラー: 最高次係数は素数pで割り切れてはなりません: lc=%s, p=%s",
+    "err_derivative_zero": "代数エラー: 導関数 f'(r0) が p を法として0です（単根ではありません）: %s",
+    "err_not_coprime": "代数エラー: 初期因子 g0 と h0 は p を法として互いに素である必要があります",
+    "err_lift_target_precision": "入力エラー: 目標精度 k は 1 以上である必要があります"
   }
 }
+

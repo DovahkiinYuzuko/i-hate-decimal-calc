@@ -34,6 +34,8 @@
 !internal/calc/domain/*.go
 !internal/calc/poly/
 !internal/calc/poly/*.go
+!internal/calc/padic/
+!internal/calc/padic/*.go
 !internal/i18n/
 !internal/i18n/*.go
 !internal/i18n/locales/

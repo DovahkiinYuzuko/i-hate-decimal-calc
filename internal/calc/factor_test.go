@@ -173,5 +173,28 @@ func TestFactor_BigInt(t *testing.T) {
 	}
 }
 
+func TestFactor_Polynomial_Hensel(t *testing.T) {
+	// (x^2 + 1) * (x^2 + 2) = x^4 + 3*x^2 + 2
+	res, err := EvalString("factor(x^4 + 3*x^2 + 2)")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	resStr := Format(res)
+	if !(resStr == "(1 + x^2)*(2 + x^2)" || resStr == "(2 + x^2)*(1 + x^2)") {
+		t.Errorf("expected (1 + x^2)*(2 + x^2), got %q", resStr)
+	}
+
+	// (x^2 - 2) * (x^2 + 2) = x^4 - 4
+	res2, err := EvalString("factor(x^4 - 4)")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	resStr2 := Format(res2)
+	if !(resStr2 == "(-2 + x^2)*(2 + x^2)" || resStr2 == "(2 + x^2)*(-2 + x^2)") {
+		t.Errorf("expected (-2 + x^2)*(2 + x^2), got %q", resStr2)
+	}
+}
+
+
 
 
