@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -15,9 +16,32 @@ import (
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
-// CurrentVersion represents the active application version.
-// It can be overridden at build time via -ldflags="-X github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/updater.CurrentVersion=v...".
-var CurrentVersion = "v1.4.0"
+// BuildVersion can be overridden at build time via -ldflags:
+// -ldflags="-X github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/updater.BuildVersion=v...".
+var BuildVersion string
+
+// CurrentVersion represents the active application version resolved dynamically.
+var CurrentVersion = resolveVersion()
+
+func resolveVersion() string {
+	if BuildVersion != "" {
+		return normalizeVersion(BuildVersion)
+	}
+	if info, ok := debug.ReadBuildInfo(); ok {
+		if info.Main.Version != "" && info.Main.Version != "(devel)" {
+			return normalizeVersion(info.Main.Version)
+		}
+	}
+	return "v0.4.0-dev"
+}
+
+func normalizeVersion(v string) string {
+	v = strings.TrimSpace(v)
+	if !strings.HasPrefix(v, "v") && !strings.HasPrefix(v, "V") {
+		v = "v" + v
+	}
+	return v
+}
 
 const (
 	RepoOwner      = "DovahkiinYuzuko"
