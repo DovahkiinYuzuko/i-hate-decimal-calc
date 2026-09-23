@@ -306,3 +306,125 @@ func TestDecompose1DCAD_DegenerateAndEqualities(t *testing.T) {
 		t.Fatalf("expected true, got %s", solTautology.String())
 	}
 }
+
+func TestCAD_RecursiveLifting_2D_Circle(t *testing.T) {
+	env := NewEnv()
+	circleNode, err := Parse("x^2 + y^2 - 1")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	cells, err := CADDecomposeCells([]Node{circleNode}, []string{"x", "y"}, env)
+	if err != nil {
+		t.Fatalf("CADDecomposeCells failed: %v", err)
+	}
+
+	// For circle x^2 + y^2 - 1:
+	// Base x has 2 roots (-1, 1) -> 5 cells.
+	// Over x < -1: y^2 + positive -> no real roots -> 1 sector
+	// Over x = -1: y^2 = 0 -> 1 root (0) -> 3 cells (sector, section, sector)
+	// Over -1 < x < 1 (e.g. x=0): y^2 - 1 = 0 -> 2 roots (-1, 1) -> 5 cells
+	// Over x = 1: y^2 = 0 -> 1 root (0) -> 3 cells
+	// Over x > 1: y^2 + positive -> no real roots -> 1 sector
+	// Total cells: 1 + 3 + 5 + 3 + 1 = 13 cells!
+	if len(cells) != 13 {
+		t.Fatalf("expected 13 cells for circle decomposition, got %d", len(cells))
+	}
+
+	foundInside := false
+	foundBoundary := false
+	foundOutside := false
+
+	key := circleNode.String()
+	for _, c := range cells {
+		if len(c.SamplePoint) != 2 {
+			t.Fatalf("expected 2D sample point, got %v", c.SamplePoint)
+		}
+		sign := c.SignVector[key]
+		if sign < 0 {
+			foundInside = true
+			if c.Dimension != 2 {
+				t.Errorf("interior cell should have dimension 2, got %d", c.Dimension)
+			}
+		} else if sign == 0 {
+			foundBoundary = true
+			if c.Dimension > 1 {
+				t.Errorf("boundary cell should have dimension <= 1, got %d", c.Dimension)
+			}
+		} else if sign > 0 {
+			foundOutside = true
+		}
+	}
+
+	if !foundInside {
+		t.Errorf("expected to find at least one cell strictly inside the circle (sign < 0)")
+	}
+	if !foundBoundary {
+		t.Errorf("expected to find at least one cell on the circle boundary (sign == 0)")
+	}
+	if !foundOutside {
+		t.Errorf("expected to find at least one cell strictly outside the circle (sign > 0)")
+	}
+}
+
+func TestCAD_RecursiveLifting_CylindricalAncestry(t *testing.T) {
+	env := NewEnv()
+	circleNode, _ := Parse("x^2 + y^2 - 1")
+
+	cells, err := CADDecomposeCells([]Node{circleNode}, []string{"x", "y"}, env)
+	if err != nil {
+		t.Fatalf("CADDecomposeCells failed: %v", err)
+	}
+
+	for i, c := range cells {
+		if c.Parent == nil {
+			t.Fatalf("cell %d has nil Parent; cylindrical ancestry broken", i)
+		}
+		// Parent should be in R^1
+		if len(c.Parent.SamplePoint) != 1 {
+			t.Errorf("cell %d: expected parent sample in R^1, got %d coordinates", i, len(c.Parent.SamplePoint))
+		}
+		// First coordinate of child must match parent coordinate
+		if !c.SamplePoint[0].Equal(c.Parent.SamplePoint[0]) {
+			t.Errorf("cell %d: child x-coord %v does not match parent x-coord %v", i, c.SamplePoint[0], c.Parent.SamplePoint[0])
+		}
+		// Dimension relation: dim(Child) = dim(Parent) + (isSection ? 0 : 1)
+		expectedDim := c.Parent.Dimension
+		if !c.IsSection {
+			expectedDim++
+		}
+		if c.Dimension != expectedDim {
+			t.Errorf("cell %d: expected dim %d, got %d", i, expectedDim, c.Dimension)
+		}
+	}
+}
+
+func TestCAD_RecursiveLifting_2D_Intersection(t *testing.T) {
+	env := NewEnv()
+	// Line and parabola: y - x and y - x^2
+	p1, _ := Parse("y - x")
+	p2, _ := Parse("y - x^2")
+
+	cells, err := CADDecomposeCells([]Node{p1, p2}, []string{"x", "y"}, env)
+	if err != nil {
+		t.Fatalf("CADDecomposeCells failed: %v", err)
+	}
+
+	if len(cells) == 0 {
+		t.Fatalf("expected non-empty decomposition for line and parabola")
+	}
+
+	// Verify that each cell has valid 2D coordinates and sign vectors for both polynomials
+	for _, c := range cells {
+		if len(c.SamplePoint) != 2 {
+			t.Fatalf("expected 2D sample point, got %v", c.SamplePoint)
+		}
+		if _, ok := c.SignVector[p1.String()]; !ok {
+			t.Fatalf("missing sign for %s", p1.String())
+		}
+		if _, ok := c.SignVector[p2.String()]; !ok {
+			t.Fatalf("missing sign for %s", p2.String())
+		}
+	}
+}
+

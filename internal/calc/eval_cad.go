@@ -16,6 +16,7 @@ type CadCell struct {
 	IsSection   bool
 	SignVector  map[string]int // string of poly -> sign (-1, 0, 1)
 	Satisfied   bool
+	Parent      *CadCell // Pointer to parent cell in R^{k-1} (Cylindrical Ancestry)
 }
 
 // CadState refers to the CAD lifecycle phase defined in eval_cad_fsm.go.
@@ -582,74 +583,21 @@ func reconstruct1DIntervalsFromCells(cells []CadCell, roots []cad1DRoot, p *univ
 
 // solveMultivariateCAD executes Brown-McCallum projection and lifting for multi-variable formulas.
 func solveMultivariateCAD(expr Node, op string, vars []string, env *Env, fsm *CadLifecycleFSM) (Node, error) {
-	// 1. Projection Phase
-	_ = fsm.TransitionTo(CadStateProjected)
-	projSets, err := computeBrownMcCallumProjection([]Node{expr}, vars, env)
+	cells, err := CADDecomposeCells([]Node{expr}, vars, env)
 	if err != nil {
-		_ = fsm.TransitionTo(CadStateUnsupported)
 		return nil, err
 	}
 
-	_ = fsm.TransitionTo(CadStateValidated)
-
-	// 2. Base Partitioning (1D Sturm isolation on bottom variable)
-	_ = fsm.TransitionTo(CadStateSampled)
-	bottomVar := vars[len(vars)-1]
-	bottomPolys := projSets[len(projSets)-1]
-
-	var bottomSamplePoints []*big.Rat
-	for _, bp := range bottomPolys {
-		if polyObj, ok := extractPoly(bp, bottomVar); ok && polyObj.degree() > 0 {
-			roots, err := EvalIsolateRoots(bp, bottomVar, nil, nil, env)
-			if err == nil {
-				if rList, ok := roots.(*ListNode); ok {
-					for _, elem := range rList.Elements {
-						if pair, ok := elem.(*ListNode); ok && len(pair.Elements) == 2 {
-							r1 := pair.Elements[0].(*RationalNode).Val
-							r2 := pair.Elements[1].(*RationalNode).Val
-							mid := new(big.Rat).Add(r1, r2)
-							mid.Quo(mid, big.NewRat(2, 1))
-							bottomSamplePoints = append(bottomSamplePoints, mid)
-						}
-					}
-				}
-			}
-		}
-	}
-
-	if len(bottomSamplePoints) == 0 {
-		bottomSamplePoints = append(bottomSamplePoints, big.NewRat(0, 1), big.NewRat(1, 1), big.NewRat(-1, 1))
-	}
-
-	_ = fsm.TransitionTo(CadStateLifted)
-
-	// 3. Evaluate formula on sample points (Testing satisfiability)
 	isSatisfied := false
 	var witness []Node
 
-	for _, s1 := range bottomSamplePoints {
-		subEnv := env.Clone()
-		subEnv.Set(bottomVar, NewRationalFromBigRat(s1))
-		specExpr := Substitute(expr, bottomVar, NewRationalFromBigRat(s1))
-		otherVars := ExtractFreeVariables(specExpr)
-		if len(otherVars) == 1 {
-			sol1D, err := solve1D(specExpr, op, otherVars[0], subEnv, NewCadLifecycleFSM())
-			if err == nil {
-				if v, ok := sol1D.(*VarNode); ok && v.Name == "false" {
-					continue
-				}
-				isSatisfied = true
-				witness = []Node{NewRationalFromBigRat(s1), sol1D}
-				break
-			}
-		} else if len(otherVars) == 0 {
-			val, err := EvalWithEnv(specExpr, subEnv)
-			if err == nil {
-				if r, ok := val.(*RationalNode); ok && evalRelationalSign(r.Val.Sign(), op) {
-					isSatisfied = true
-					witness = []Node{NewRationalFromBigRat(s1)}
-					break
-				}
+	for i := range cells {
+		signVal := cells[i].SignVector[expr.String()]
+		if evalRelationalSign(signVal, op) {
+			cells[i].Satisfied = true
+			isSatisfied = true
+			if len(witness) == 0 {
+				witness = cells[i].SamplePoint
 			}
 		}
 	}
@@ -662,37 +610,80 @@ func solveMultivariateCAD(expr Node, op string, vars []string, env *Env, fsm *Ca
 	return &VarNode{Name: "false"}, nil
 }
 
-// computeBrownMcCallumProjection constructs projection factor sets A_{k-1} from A_k.
+// specializePolyForCAD substitutes sample coordinates into polynomial p,
+// simplifies it, and extracts a univariate polynomial in targetVar.
+// If the polynomial vanishes identically (isZero), a nullification error is returned.
+func specializePolyForCAD(p Node, vars []string, samplePoint []Node, targetVar string, env *Env) (*univariatePoly, bool, error) {
+	curr := p
+	for i := 0; i < len(samplePoint); i++ {
+		curr = Substitute(curr, vars[i], samplePoint[i])
+	}
+	simplified, err := EvalWithEnv(curr, env)
+	if err == nil {
+		curr = simplified
+	}
+
+	// Nullification Check:
+	if isZero(curr) {
+		return nil, false, fmt.Errorf("nullification detected: %s vanished identically over cell with sample %v", p.String(), samplePoint)
+	}
+
+	uPoly, ok := extractPoly(curr, targetVar)
+	if !ok {
+		return nil, false, fmt.Errorf("failed to extract univariate polynomial in %s from %s", targetVar, curr.String())
+	}
+	uPoly = trimPoly(uPoly)
+
+	if uPoly.degree() <= 0 {
+		return uPoly, true, nil // constant
+	}
+	return uPoly, false, nil
+}
+
+// computeBrownMcCallumProjection constructs projection factor sets P_1, P_2, ..., P_n
+// where P_k contains polynomials in vars[0..k-1].
+// vars is ordered [x1, x2, ..., xn].
+// Elimination proceeds in reverse: xn, x_{n-1}, ..., x2.
+// Returned slice projSets has length len(vars), where projSets[k-1] corresponds to Level k (in vars[0..k-1]).
 func computeBrownMcCallumProjection(polys []Node, vars []string, env *Env) ([][]Node, error) {
-	var projSets [][]Node
+	n := len(vars)
+	projSets := make([][]Node, n)
+	projSets[n-1] = polys
+
 	currentSet := polys
-
-	for level := 0; level < len(vars)-1; level++ {
-		v := vars[level]
-		projSets = append(projSets, currentSet)
-
+	for k := n - 1; k >= 1; k-- {
+		elimVar := vars[k]
 		var nextSet []Node
 		seen := make(map[string]bool)
 
 		for i, p := range currentSet {
-			polyObj, ok := extractPoly(p, v)
+			polyObj, ok := extractPoly(p, elimVar)
 			if !ok || polyObj.degree() <= 0 {
+				if !isConstantNode(p) {
+					sP := p.String()
+					if !seen[sP] {
+						seen[sP] = true
+						nextSet = append(nextSet, p)
+					}
+				}
 				continue
 			}
 
 			// 1. Leading coefficient lc(p)
 			lcNode := polyObj.leadCoeff()
-			sLC := lcNode.String()
-			if !seen[sLC] && !isConstantNode(lcNode) {
-				seen[sLC] = true
-				nextSet = append(nextSet, lcNode)
+			if !isConstantNode(lcNode) {
+				sLC := lcNode.String()
+				if !seen[sLC] {
+					seen[sLC] = true
+					nextSet = append(nextSet, lcNode)
+				}
 			}
 
 			// 2. Discriminant via resultant with derivative
 			if polyObj.degree() > 1 {
-				dp, err := differentiate(p, v)
+				dp, err := differentiate(p, elimVar)
 				if err == nil {
-					res, err := EvalResultant(p, dp, v, env)
+					res, err := EvalResultant(p, dp, elimVar, env)
 					if err == nil && !isConstantNode(res) {
 						sRes := res.String()
 						if !seen[sRes] {
@@ -706,10 +697,10 @@ func computeBrownMcCallumProjection(polys []Node, vars []string, env *Env) ([][]
 			// 3. Pairwise resultants res(p, q)
 			for j := i + 1; j < len(currentSet); j++ {
 				q := currentSet[j]
-				res, err := EvalResultant(p, q, v, env)
+				res, err := EvalResultant(p, q, elimVar, env)
 				if err == nil && !isConstantNode(res) {
 					if isZero(res) {
-						g, err := EvalPolyGCD(p, q, v, env)
+						g, err := EvalPolyGCD(p, q, elimVar, env)
 						if err == nil && !isConstantNode(g) {
 							sG := g.String()
 							if !seen[sG] {
@@ -731,10 +722,10 @@ func computeBrownMcCallumProjection(polys []Node, vars []string, env *Env) ([][]
 		if len(nextSet) == 0 {
 			nextSet = append(nextSet, mustRational(1, 1))
 		}
+		projSets[k-1] = nextSet
 		currentSet = nextSet
 	}
 
-	projSets = append(projSets, currentSet)
 	return projSets, nil
 }
 
@@ -745,8 +736,154 @@ func isConstantNode(n Node) bool {
 	return len(ExtractFreeVariables(n)) == 0
 }
 
-// CADDecompose performs full Cylindrical Algebraic Decomposition and returns cell sample points.
-func CADDecompose(polys []Node, vars []string, env *Env) (*ListNode, error) {
+// liftCADCells recursively lifts cells from R^1 up to R^n over projection factor sets.
+func liftCADCells(projSets [][]Node, vars []string, env *Env, fsm *CadLifecycleFSM) ([]CadCell, error) {
+	n := len(vars)
+	if n == 0 {
+		return nil, fmt.Errorf("no variables specified")
+	}
+
+	// 1. Base decomposition at Level 1 (vars[0])
+	baseVar := vars[0]
+	basePolys := projSets[0]
+	var nonConstBase []*univariatePoly
+	for _, bp := range basePolys {
+		if uPoly, ok := extractPoly(bp, baseVar); ok {
+			uPoly = trimPoly(uPoly)
+			if uPoly.degree() > 0 {
+				nonConstBase = append(nonConstBase, uPoly)
+			}
+		}
+	}
+
+	var currentLevelCells []*CadCell
+	if len(nonConstBase) > 0 {
+		base1DCells, _, err := decompose1DCADInternal(nonConstBase, baseVar, env)
+		if err != nil {
+			return nil, err
+		}
+		for _, bc := range base1DCells {
+			c := bc
+			currentLevelCells = append(currentLevelCells, &c)
+		}
+	} else {
+		// Entire R^1 is a single sector
+		currentLevelCells = append(currentLevelCells, &CadCell{
+			Dimension:   1,
+			SamplePoint: []Node{mustRational(0, 1)},
+			IsSection:   false,
+			SignVector:  make(map[string]int),
+		})
+	}
+
+	_ = fsm.TransitionTo(CadStateSampled)
+
+	// 2. Recursive Lifting for levels 2..n
+	for level := 2; level <= n; level++ {
+		targetVar := vars[level-1]
+		levelPolys := projSets[level-1]
+		var nextLevelCells []*CadCell
+
+		for _, parent := range currentLevelCells {
+			var specializedPolys []*univariatePoly
+			hasNullification := false
+
+			for _, p := range levelPolys {
+				uPoly, isConst, err := specializePolyForCAD(p, vars[:level-1], parent.SamplePoint, targetVar, env)
+				if err != nil {
+					if strings.Contains(err.Error(), "nullification") {
+						hasNullification = true
+						break
+					}
+					return nil, err
+				}
+				if !isConst && uPoly.degree() > 0 {
+					specializedPolys = append(specializedPolys, uPoly)
+				}
+			}
+
+			if hasNullification {
+				_ = fsm.TransitionTo(CadStateUnsupported)
+				return nil, fmt.Errorf("CAD lifting failed due to nullification on cell %v", parent.SamplePoint)
+			}
+
+			if len(specializedPolys) == 0 {
+				// No roots in this cylinder: entire line is a single sector over parent
+				liftedSample := make([]Node, len(parent.SamplePoint)+1)
+				copy(liftedSample, parent.SamplePoint)
+				liftedSample[len(parent.SamplePoint)] = mustRational(0, 1)
+
+				nextLevelCells = append(nextLevelCells, &CadCell{
+					Dimension:   parent.Dimension + 1,
+					SamplePoint: liftedSample,
+					IsSection:   false,
+					SignVector:  make(map[string]int),
+					Parent:      parent,
+				})
+			} else {
+				stack1D, _, err := decompose1DCADInternal(specializedPolys, targetVar, env)
+				if err != nil {
+					return nil, err
+				}
+				for _, c1D := range stack1D {
+					liftedSample := make([]Node, len(parent.SamplePoint)+len(c1D.SamplePoint))
+					copy(liftedSample, parent.SamplePoint)
+					copy(liftedSample[len(parent.SamplePoint):], c1D.SamplePoint)
+
+					dim := parent.Dimension
+					if !c1D.IsSection {
+						dim++
+					}
+
+					nextLevelCells = append(nextLevelCells, &CadCell{
+						Dimension:   dim,
+						SamplePoint: liftedSample,
+						IsSection:   c1D.IsSection,
+						SignVector:  make(map[string]int),
+						Parent:      parent,
+					})
+				}
+			}
+		}
+
+		currentLevelCells = nextLevelCells
+	}
+
+	_ = fsm.TransitionTo(CadStateLifted)
+
+	// 3. Evaluate SignVector for original polynomials on all cells
+	originalPolys := projSets[n-1]
+	for _, cell := range currentLevelCells {
+		cell.SignVector = make(map[string]int)
+		for _, p := range originalPolys {
+			curr := p
+			for i, v := range vars {
+				if i < len(cell.SamplePoint) {
+					curr = Substitute(curr, v, cell.SamplePoint[i])
+				}
+			}
+			val, err := EvalWithEnv(curr, env)
+			if err != nil {
+				val = curr
+			}
+			if r, ok := val.(*RationalNode); ok {
+				cell.SignVector[p.String()] = r.Val.Sign()
+			} else {
+				sign := exactSignEval(val, 0)
+				cell.SignVector[p.String()] = int(sign)
+			}
+		}
+	}
+
+	res := make([]CadCell, len(currentLevelCells))
+	for i, c := range currentLevelCells {
+		res[i] = *c
+	}
+	return res, nil
+}
+
+// CADDecomposeCells decomposes R^n into sign-invariant CAD cells for the given polynomials.
+func CADDecomposeCells(polys []Node, vars []string, env *Env) ([]CadCell, error) {
 	if len(polys) == 0 {
 		return nil, fmt.Errorf("%s", i18n.T("cad.err_poly_required"))
 	}
@@ -765,23 +902,26 @@ func CADDecompose(polys []Node, vars []string, env *Env) (*ListNode, error) {
 
 	_ = fsm.TransitionTo(CadStateProjected)
 	_ = fsm.TransitionTo(CadStateValidated)
-	_ = fsm.TransitionTo(CadStateSampled)
 
-	var sampleNodes []Node
-	for _, p := range projSets[len(projSets)-1] {
-		varName := vars[len(vars)-1]
-		if roots, err := EvalIsolateRoots(p, varName, nil, nil, env); err == nil {
-			if rList, ok := roots.(*ListNode); ok {
-				sampleNodes = append(sampleNodes, rList.Elements...)
-			}
-		}
+	cells, err := liftCADCells(projSets, vars, env, fsm)
+	if err != nil {
+		return nil, err
 	}
 
-	_ = fsm.TransitionTo(CadStateLifted)
 	_ = fsm.TransitionTo(CadStateDecided)
+	return cells, nil
+}
 
-	if len(sampleNodes) == 0 {
-		sampleNodes = append(sampleNodes, &ListNode{Elements: []Node{mustRational(0, 1)}})
+// CADDecompose performs full Cylindrical Algebraic Decomposition and returns cell sample points.
+func CADDecompose(polys []Node, vars []string, env *Env) (*ListNode, error) {
+	cells, err := CADDecomposeCells(polys, vars, env)
+	if err != nil {
+		return nil, err
+	}
+
+	var sampleNodes []Node
+	for _, cell := range cells {
+		sampleNodes = append(sampleNodes, &ListNode{Elements: cell.SamplePoint})
 	}
 	return &ListNode{Elements: sampleNodes}, nil
 }
