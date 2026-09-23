@@ -224,4 +224,24 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `verify` | `verify(integrate(1/(x^2+1), x), atan(x))` | Independently verifies algebraic equivalence of two expressions and issues an algebraic verification certificate |
 | `plot` | `plot(sin(x), [-pi, pi])` | High-resolution terminal curve plotter using Unicode 2×4 Braille characters (automatic root/extrema detection, singularity discontinuity handling) |
 
+---
+
+### 11. Lattice Basis Reduction & Integer Relations (LLL)
+
+| Function | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `lll` | `lll([[1, -1, 3], [1, 0, 5], [1, 2, 6]])` | Lenstra–Lenstra–Lovász (1982) lattice basis reduction algorithm over exact rationals |
+| `find_min_poly` | `find_min_poly(sqrt(2) + sqrt(3), 4)` | Exact minimal polynomial reconstruction for algebraic numbers using LLL lattice reduction |
+
+---
+
+### 12. p-adic Arithmetic, Local Algebra & Hensel Lifting
+
+| Function | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `padic_val` | `padic_val(50, 5)` | Exact p-adic valuation $v_p(x) \in \mathbb{Z}$ for rational $x$ and prime base $p$ ($x=0$ yields infinity) |
+| `padic_norm` | `padic_norm(3/20, 2)` | Exact ultrametric norm $|x|_p = p^{-v_p(x)}$ as an exact rational (`big.Rat`) |
+| `padic_expand` | `padic_expand(2/3, 5, 4)` | Truncated p-adic power series expansion string $a_0 + a_1 p + a_2 p^2 + \dots + O(p^k)$ |
+
+
 

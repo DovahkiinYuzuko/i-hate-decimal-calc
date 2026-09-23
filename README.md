@@ -90,7 +90,17 @@ ihd "qe(forall([x], x^2 + a*x + b > 0))"
 
 ihd "find_min_poly(sqrt(2) + sqrt(3), 4)"
 # 出力: 1 - 10*x^2 + x^4（LLL格子基底縮小による代数的数の最小多項式完全逆算）
+
+ihd "padic_val(50, 5)"
+# 出力: 2（小数を介さない完全厳密な5進付値）
+
+ihd "padic_expand(2/3, 5, 4)"
+# 出力: 4 + 5 + 3*5^2 + 5^3 + O(5^4)（有理数の5進切断級数展開）
+
+ihd "factor(x^4 + 3*x^2 + 2)"
+# 出力: (1 + x^2)*(2 + x^2)（ヘンゼル・リフティングによる有理根を持たない高次多項式の既約分解）
 ```
+
 
 #### 2. 対話モード（REPL）
 引数なしで起動すると、履歴機能・カーソル移動・日本語IME対応を備えた対話型REPLが起動します。
@@ -372,7 +382,17 @@ ihd "qe(forall([x], x^2 + a*x + b > 0))"
 
 ihd "find_min_poly(sqrt(2) + sqrt(3), 4)"
 # Output: 1 - 10*x^2 + x^4 (Exact minimal polynomial reconstruction via LLL lattice reduction)
+
+ihd "padic_val(50, 5)"
+# Output: 2 (Exact p-adic valuation without floating-point decimals)
+
+ihd "padic_expand(2/3, 5, 4)"
+# Output: 4 + 5 + 3*5^2 + 5^3 + O(5^4) (Truncated p-adic power series expansion of rationals)
+
+ihd "factor(x^4 + 3*x^2 + 2)"
+# Output: (1 + x^2)*(2 + x^2) (Higher-degree polynomial factorization via Hensel lifting)
 ```
+
 
 #### 2. Interactive REPL
 Running without arguments launches the interactive REPL with history navigation, cursor movement, and full IME support:
