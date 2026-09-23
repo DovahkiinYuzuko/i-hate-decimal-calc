@@ -15,6 +15,9 @@
   - [5. 幾何学解析](#5-幾何学解析)
   - [6. 厳密離散確率・統計](#6-厳密離散確率統計)
   - [7. 前提条件システム（仮定）](#7-前提条件システム仮定)
+  - [8. 実代数幾何・数理論理・量化子消去](#8-実代数幾何数理論理量化子消去)
+  - [9. 楕円曲線代数・数論幾何](#9-楕円曲線代数数論幾何)
+  - [10. ビジュアル・検証ツール](#10-ビジュアル検証ツール)
 
 ---
 
@@ -41,8 +44,12 @@
 | `pi`, `π` | $\pi$ | 円周率（約 3.14159...。シンボルノードとして完全保持） |
 | `e` | $e$ | 自然対数の底（ネイピア数 約 2.71828...） |
 | `i` | $i$ | 虚数単位（$i^2 = -1$） |
-| `inf`, `infinity` | $\infty$ | 無限大（極限計算 `limit` 等で使用） |
+| `inf`, `infinity` | $\infty$ | 正の無限大（極限計算 `limit`、実根分離区間等で使用） |
+| `-inf` | $-\infty$ | 負の無限大 |
+| `O` | $\mathcal{O}$ | 楕円曲線の群演算における単位元（無限遠点） |
 | `deg` | - | 度数法変換定数（$\pi/180$。`sin(30*deg)` などの記述が可能） |
+| `delta` | $\delta$ | ディラックのデルタ（ラプラス変換等の超関数） |
+| `true`, `false` | - | ブール論理定数（関係演算やQE判定結果） |
 
 ---
 
@@ -76,7 +83,11 @@
 | `crt` | `crt([r1, r2], [m1, m2])` | 中国剰余定理（Garner法および非互いに素な合同式を解く一般化CRT拡張） |
 | `totient` | `totient(n)` | オイラーのトーシェント関数 $\phi(n) = n \prod_{p \mid n} (1 - 1/p)$ |
 | `is_prime` | `is_prime(n)` | 決定論的素数判定（64bitはSorenson-Websterの12基底完全決定論的判定、巨大数はBaillie-PSW） |
-| `solve` | `solve(expr, var)` | 厳密代数方程式ソルバー（1次・2次方程式の根の公式求解、重解・複素数解対応） |
+| `solve` | `solve(expr, var)` | 厳密代数方程式ソルバー（1次・2次・3次方程式の代数的解の公式求解、重解・複素数解対応） |
+| `to_poly` | `to_poly(expr, [x, y], "lex")` | 式を指定変数・単項式順序（`lex`, `grevlex`）の正規形多項式ノード `PolyNode` へ明示変換 |
+| `to_alg` | `to_alg(rep, min_poly, [var])` | 代数拡大体 $\mathbb{Q}(\alpha) \cong \mathbb{Q}[x]/\langle m(x) \rangle$ の代数数ノード `AlgNode` を構築 |
+| `alg_inv` | `alg_inv(rep, min_poly)` | 拡大ユークリッド互除法による代数数 $\beta \in \mathbb{Q}(\alpha)$ の乗法逆元 $\beta^{-1}$ 算出 |
+| `min_poly` | `min_poly(rep, min_poly)` | 代数数の既約モニック最小多項式 $m(x) \in \mathbb{Q}[x]$ の導出 |
 
 ---
 
@@ -104,6 +115,7 @@
 | :--- | :--- | :--- |
 | `diff` | `diff(sin(x)*x, x)` / `diff(x^4, x, 2)` | 厳密記号微分（積の微分・商の微分・連鎖律、任意階数 $n$ 次微分対応） |
 | `integrate` | `integrate(x^2, x)` / `integrate(sin(x), x, 0, pi)` | 厳密不定積分（原始関数導出）および区間 $[a, b]$ による厳密定積分 |
+| `risch_integrate` | `risch_integrate(x*exp(x^2), x)` | 決定論的 Risch アルゴリズム（超越拡大体・Rothstein-Trager 法）による厳密不定積分 |
 | `limit` | `limit(sin(x)/x, x, 0)` / `limit(1/x, x, 0, 1)` | 厳密記号極限（$0/0$, $\infty/\infty$ の不定形解消、因数約分、ロピタルの定理、最高次数比較、片側極限） |
 | `dsolve` | `dsolve(diff(y, x) == y, y, x)` / `dsolve(diff(y, x, 2) + 4*y == 0, y, x)` | 記号常微分方程式ソルバー（1階線形・変数分離形積分因子法、2階定数係数線形斉次・未定係数法特解による厳密求解） |
 | `rsolve` | `rsolve(a(n+1) == 2*a(n) + 1, a(n), [a(1) == 1])` / `rsolve(a(n+2) == a(n+1) + a(n), a(n), [a(0) == 0, a(1) == 1])` | 線形漸化式ソルバー（1階・2階定数係数線形斉次・非同次漸化式、特性根解析・未定係数法・初期条件線形連立解決による一般項閉形式導出） |
@@ -117,6 +129,8 @@
 | `bernoulli` | `bernoulli(4)` / `bernoulli(10)` | 第 $n$ ベルヌーイ数 $B_n$（秋山・谷川アルゴリズムによる多倍長有理数厳密出力、例: $B_{10} = 5/66$） |
 | `zeta` | `zeta(2)` / `zeta(4)` / `zeta(6)` | リーマンゼータ関数 $\zeta(s)$（オイラーの公式による正の偶数値の完全厳密代数解、例: $\zeta(4) = \pi^4/90$、極 $s=1$ 検出） |
 | `sum` | `sum(expr, k, start, end)` | 離散和（有限整数範囲の合算、または Faulhaber 公式による $n$ に関する多項式閉形式） |
+| `gosper_sum` | `gosper_sum(t_k, k)` | 超幾何級数に対する Gosper 不定和法による閉形式原始関数 $z_k$ 導出（$z_{k+1}-z_k=t_k$） |
+| `wz_cert` | `wz_cert(F, n, k)` | Wilf-Zeilberger (WZ) 対による超幾何恒等式の有理関数証明書 $R(n, k)$ 生成 |
 
 ---
 
@@ -178,6 +192,7 @@
 | `assume` | `assume(x > 0)`, `assume(n, integer)` | ドメイン制約を設定（`sqrt(x^2)` → `x`, `sin(n*pi)` → `0` 等の簡約が活性化） |
 | `unassume` | `unassume(x)` | 指定した変数の仮定制約を解除 |
 | `assumptions` | `assumptions()` | 現在設定されている前提条件の一覧を表示 |
+| `clear_assumptions` | `clear_assumptions()` | 設定されているすべての前提条件（仮定）を一括クリア |
 
 ---
 
@@ -188,4 +203,25 @@
 | `qe` | `qe(forall([x], x^2 + a*x + b > 0))` | 円筒代数分解（CAD）基盤の決定論的完全量化子消去（Hong (1992) 境界多項式による同値な量化子なしパラメータ条件式の導出） |
 | `forall` | `forall([x], formula)` | 全称量化子式 $\forall x \, \Phi(x)$ の構築 |
 | `exists` | `exists([x], formula)` | 存在量化子式 $\exists x \, \Phi(x)$ の構築 |
+| `cad` | `cad([x^2 - 2], [x])` | 円筒代数分解（CAD: Cylindrical Algebraic Decomposition）の直接実行（1次元セル分割・多変数射影と実根分離による半代数的集合表現） |
+
+---
+
+### 9. 楕円曲線代数・数論幾何
+
+| 関数 | 書式・例 | 説明 |
+| :--- | :--- | :--- |
+| `ec_add` | `ec_add([A, B], P1, P2)` | ワイエルシュトラス標準形 $y^2 = x^3 + Ax + B$ 上の有理点加算（Chord and Tangent 法、単位元・無限遠点 `O` 対応） |
+| `ec_mul` | `ec_mul([A, B], n, P)` | 楕円曲線上の有理点のスカラー倍算 $n P$（バイナリ Double-and-Add アルゴリズム） |
+| `ec_torsion` | `ec_torsion(A, B)` | Nagell-Lutz の定理および Mazur の定理に基づく有限位数有理点群（捩れ群 $E(\mathbb{Q})_{\text{tors}}$）の完全決定アルゴリズム |
+
+---
+
+### 10. ビジュアル・検証ツール
+
+| 関数 | 書式・例 | 説明 |
+| :--- | :--- | :--- |
+| `verify` | `verify(integrate(1/(x^2+1), x), atan(x))` | 2つの式の代数的同値性を独立検証し、代数的証明書（Certificate）を発行 |
+| `plot` | `plot(sin(x), [-pi, pi])` | Braille 2×4 サブピクセル高解像度ターミナルプロット（零点・極値自動検出・特異点漸近線偽結合防止） |
+
 

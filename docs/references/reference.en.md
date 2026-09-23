@@ -15,6 +15,9 @@ Complete language specification and built-in function reference for `ihd` (i-hat
   - [5. Computational Geometry](#5-computational-geometry)
   - [6. Exact Discrete Probability & Statistics](#6-exact-discrete-probability--statistics)
   - [7. Symbolic Assumptions System](#7-symbolic-assumptions-system)
+  - [8. Real Algebraic Geometry, Mathematical Logic & Quantifier Elimination](#8-real-algebraic-geometry-mathematical-logic--quantifier-elimination)
+  - [9. Elliptic Curves & Arithmetic Geometry](#9-elliptic-curves--arithmetic-geometry)
+  - [10. Visualization & Verification Tools](#10-visualization--verification-tools)
 
 ---
 
@@ -41,8 +44,12 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `pi`, `π` | $\pi$ | Archimedes' constant (Ratio of circumference to diameter) |
 | `e` | $e$ | Euler's number (Base of natural logarithm) |
 | `i` | $i$ | Imaginary unit ($i^2 = -1$) |
-| `inf`, `infinity` | $\infty$ | Infinity (Used in limits `limit`, etc.) |
+| `inf`, `infinity` | $\infty$ | Positive infinity (Used in limits `limit`, root isolation bounds, etc.) |
+| `-inf` | $-\infty$ | Negative infinity |
+| `O` | $\mathcal{O}$ | Group identity / point at infinity for elliptic curve operations |
 | `deg` | - | Degree conversion constant ($\pi/180$. Allows `sin(30*deg)`) |
+| `delta` | $\delta$ | Dirac delta generalized function (Laplace transforms) |
+| `true`, `false` | - | Boolean logical constants (Relational operations, QE outcomes) |
 
 ---
 
@@ -76,7 +83,11 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `crt` | `crt([r1, r2], [m1, m2])` | Chinese Remainder Theorem (Garner's algorithm & generalized non-coprime CRT) |
 | `totient` | `totient(n)` | Euler's totient function $\phi(n) = n \prod_{p \mid n} (1 - 1/p)$ |
 | `is_prime` | `is_prime(n)` | Deterministic primality test (Sorenson & Webster 12 bases for 64-bit, Baillie-PSW for big ints) |
-| `solve` | `solve(expr, var)` | Exact algebraic equation solver for linear and quadratic equations |
+| `solve` | `solve(expr, var)` | Exact algebraic equation solver for linear, quadratic, and cubic equations |
+| `to_poly` | `to_poly(expr, [x, y], "lex")` | Explicitly converts an expression to a canonical `PolyNode` under specified variables and monomial order (`lex`, `grevlex`) |
+| `to_alg` | `to_alg(rep, min_poly, [var])` | Constructs an algebraic number node `AlgNode` in field extension $\mathbb{Q}(\alpha) \cong \mathbb{Q}[x]/\langle m(x) \rangle$ |
+| `alg_inv` | `alg_inv(rep, min_poly)` | Computes multiplicative inverse $\beta^{-1} \in \mathbb{Q}(\alpha)$ via Extended Euclidean Algorithm |
+| `min_poly` | `min_poly(rep, min_poly)` | Derives the irreducible monic minimal polynomial $m(x) \in \mathbb{Q}[x]$ of an algebraic element |
 
 ---
 
@@ -104,6 +115,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | :--- | :--- | :--- |
 | `diff` | `diff(sin(x)*x, x)` / `diff(x^4, x, 2)` | Exact symbolic differentiation (Product, Quotient, Chain rules, and higher-order derivatives) |
 | `integrate` | `integrate(x^2, x)` / `integrate(sin(x), x, 0, pi)` | Exact symbolic indefinite integration and definite integration over $[a, b]$ |
+| `risch_integrate` | `risch_integrate(x*exp(x^2), x)` | Deterministic Risch algorithm (transcendental extension & Rothstein-Trager method) for exact indefinite integration |
 | `limit` | `limit(sin(x)/x, x, 0)` / `limit(1/x, x, 0, 1)` | Exact symbolic limit computation (indeterminate forms, factoring, L'Hopital's rule, one-sided limits) |
 | `dsolve` | `dsolve(diff(y, x) == y, y, x)` / `dsolve(diff(y, x, 2) + 4*y == 0, y, x)` | Symbolic ODE solver (1st-order linear via integrating factor, 2nd-order linear with constant coefficients and undetermined coefficients) |
 | `rsolve` | `rsolve(a(n+1) == 2*a(n) + 1, a(n), [a(1) == 1])` / `rsolve(a(n+2) == a(n+1) + a(n), a(n), [a(0) == 0, a(1) == 1])` | Linear recurrence relation solver (1st and 2nd order linear recurrences with constant coefficients, characteristic roots analysis, undetermined coefficients, and linear initial condition fitting) |
@@ -117,6 +129,8 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `bernoulli` | `bernoulli(4)` / `bernoulli(10)` | $n$-th Bernoulli number $B_n$ (exact arbitrary-precision rational via Akiyama-Tanigawa algorithm, e.g. $B_{10} = 5/66$) |
 | `zeta` | `zeta(2)` / `zeta(4)` / `zeta(6)` | Riemann zeta function $\zeta(s)$ (exact algebraic closed forms for positive even integers via Euler formula, e.g. $\zeta(4) = \pi^4/90$, pole detection at $s=1$) |
 | `sum` | `sum(expr, k, start, end)` | Discrete summation (finite sum or exact polynomial closed form via Faulhaber formula) |
+| `gosper_sum` | `gosper_sum(t_k, k)` | Gosper's algorithm for hypergeometric summation: finds closed-form antiderivative $z_k$ such that $z_{k+1}-z_k=t_k$ |
+| `wz_cert` | `wz_cert(F, n, k)` | Generates rational function certificate $R(n, k)$ for hypergeometric identity verification via Wilf-Zeilberger (WZ) theory |
 
 ---
 
@@ -178,6 +192,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `assume` | `assume(x > 0)`, `assume(n, integer)` | Sets domain constraints (`sqrt(x^2)` → `x`, `sin(n*pi)` → `0`, etc.) |
 | `unassume` | `unassume(x)` | Clears assumptions for the specified variable |
 | `assumptions` | `assumptions()` | Displays all active domain constraints |
+| `clear_assumptions` | `clear_assumptions()` | Clears all active domain constraints simultaneously |
 
 ---
 
@@ -188,4 +203,25 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `qe` | `qe(forall([x], x^2 + a*x + b > 0))` | Full Quantifier Elimination via Cylindrical Algebraic Decomposition (CAD) (constructs equivalent quantifier-free conditions via Hong (1992) boundary polynomials) |
 | `forall` | `forall([x], formula)` | Universal quantifier formula constructor $\forall x \, \Phi(x)$ |
 | `exists` | `exists([x], formula)` | Existential quantifier formula constructor $\exists x \, \Phi(x)$ |
+| `cad` | `cad([x^2 - 2], [x])` | Direct execution of Cylindrical Algebraic Decomposition (1D cell decomposition and sample point derivation for semi-algebraic sets) |
+
+---
+
+### 9. Elliptic Curves & Arithmetic Geometry
+
+| Function | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `ec_add` | `ec_add([A, B], P1, P2)` | Rational point addition on Weierstrass elliptic curve $y^2 = x^3 + Ax + B$ via Chord and Tangent method (handles point at infinity `O`) |
+| `ec_mul` | `ec_mul([A, B], n, P)` | Scalar multiplication $n P$ of rational points on elliptic curves via binary Double-and-Add algorithm |
+| `ec_torsion` | `ec_torsion(A, B)` | Full determination of the rational torsion subgroup $E(\mathbb{Q})_{\text{tors}}$ based on the Nagell-Lutz and Mazur theorems |
+
+---
+
+### 10. Visualization & Verification Tools
+
+| Function | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `verify` | `verify(integrate(1/(x^2+1), x), atan(x))` | Independently verifies algebraic equivalence of two expressions and issues an algebraic verification certificate |
+| `plot` | `plot(sin(x), [-pi, pi])` | High-resolution terminal curve plotter using Unicode 2×4 Braille characters (automatic root/extrema detection, singularity discontinuity handling) |
+
 

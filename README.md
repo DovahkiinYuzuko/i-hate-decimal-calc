@@ -224,13 +224,16 @@ ihd "plot(sin(x), [-pi, pi])"
 > **[完全構文・演算子・関数リファレンス (Japanese Edition)](docs/references/reference.ja.md)**
 
 #### 主なカテゴリと代表関数
-- **基本代数・数論・方程式**: `sqrt`, `cbrt`, `factor`, `apart`, `together`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `crt`, `solve`, `verify`
-- **三角関数・対数・複素数**: `sin`, `cos`, `tan`, `trig_expand`, `trig_reduce`, `log`, `ln`, `polar`, `rect`
+- **基本代数・数論・方程式**: `sqrt`, `cbrt`, `expand`, `factor`, `apart`, `together`, `abs`, `gcd`, `lcm`, `mod`, `inv_mod`, `crt`, `totient`, `is_prime`, `cfrac`, `from_cfrac`, `rand`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `sturm`, `root_count`, `isolate_roots`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `solve`
+- **三角関数・対数・複素数**: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `trig_expand`, `trig_reduce`, `exp`, `log`, `ln`, `arg`, `polar`, `polar_exp`, `rect`
 - **微積分・常微分方程式・漸化式・特殊関数・級数**: `diff`, `integrate`, `risch_integrate`, `limit`, `residue`, `gamma`, `beta`, `bernoulli`, `zeta`, `dsolve`, `rsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`, `gosper_sum`, `wz_cert`
-- **線形代数・3次元ベクトル解析**: `det`, `inv`, `rref`, `rank`, `trace`, `eigenvals`, `eigenvects`, `lu`, `qr`, `cholesky`, `ldlt`, `pinv`, `solve_linear`, `dot`, `cross`, `norm`, `grad`, `div`, `curl`
+- **線形代数・3次元ベクトル解析**: `det`, `inv`, `transpose`, `rref`, `rank`, `trace`, `eigenvals`, `eigenvects`, `lu`, `qr`, `cholesky`, `ldlt`, `pinv`, `solve_linear`, `dot`, `cross`, `norm`, `grad`, `div`, `curl`
 - **幾何学解析**: `line_intersect`, `circle_intersect`, `triangle_area`, `triangle_centers`
 - **厳密離散確率・統計**: `binom`, `hyper`, `geom`, `bayes`, `expect`, `variance`, `stddev`
-- **前提条件システム（仮定）**: `assume`, `unassume`, `assumptions`
+- **実代数幾何・数理論理・量化子消去**: `qe`, `forall`, `exists`, `cad`
+- **楕円曲線代数・数論幾何**: `ec_add`, `ec_mul`, `ec_torsion`
+- **前提条件システム（仮定）**: `assume`, `unassume`, `assumptions`, `clear_assumptions`
+- **ビジュアル・自己検証**: `plot`, `verify`
 
 ---
 
@@ -500,13 +503,16 @@ ihd "plot(sin(x), [-pi, pi])"
 > **[Complete Syntax, Operators & Functions Reference (English Edition)](docs/references/reference.en.md)**
 
 #### Major Categories & Representative Functions
-- **Basic Algebra, Number Theory & Equations**: `sqrt`, `cbrt`, `factor`, `apart`, `together`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `crt`, `solve`, `verify`
-- **Trigonometric, Logarithmic & Complex Functions**: `sin`, `cos`, `tan`, `trig_expand`, `trig_reduce`, `log`, `ln`, `polar`, `rect`
+- **Basic Algebra, Number Theory & Equations**: `sqrt`, `cbrt`, `expand`, `factor`, `apart`, `together`, `abs`, `gcd`, `lcm`, `mod`, `inv_mod`, `crt`, `totient`, `is_prime`, `cfrac`, `from_cfrac`, `rand`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `sturm`, `root_count`, `isolate_roots`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `solve`
+- **Trigonometric, Logarithmic & Complex Functions**: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `trig_expand`, `trig_reduce`, `exp`, `log`, `ln`, `arg`, `polar`, `polar_exp`, `rect`
 - **Calculus, ODEs, Recurrences, Special Functions & Series**: `diff`, `integrate`, `risch_integrate`, `limit`, `residue`, `gamma`, `beta`, `bernoulli`, `zeta`, `dsolve`, `rsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`, `gosper_sum`, `wz_cert`
-- **Linear Algebra & 3D Vector Calculus**: `det`, `inv`, `rref`, `rank`, `trace`, `eigenvals`, `eigenvects`, `lu`, `qr`, `cholesky`, `ldlt`, `pinv`, `solve_linear`, `dot`, `cross`, `norm`, `grad`, `div`, `curl`
+- **Linear Algebra & 3D Vector Calculus**: `det`, `inv`, `transpose`, `rref`, `rank`, `trace`, `eigenvals`, `eigenvects`, `lu`, `qr`, `cholesky`, `ldlt`, `pinv`, `solve_linear`, `dot`, `cross`, `norm`, `grad`, `div`, `curl`
 - **Computational Geometry**: `line_intersect`, `circle_intersect`, `triangle_area`, `triangle_centers`
 - **Exact Discrete Probability & Statistics**: `binom`, `hyper`, `geom`, `bayes`, `expect`, `variance`, `stddev`
-- **Symbolic Assumptions System**: `assume`, `unassume`, `assumptions`
+- **Real Algebraic Geometry & Quantifier Elimination**: `qe`, `forall`, `exists`, `cad`
+- **Elliptic Curves & Arithmetic Geometry**: `ec_add`, `ec_mul`, `ec_torsion`
+- **Symbolic Assumptions System**: `assume`, `unassume`, `assumptions`, `clear_assumptions`
+- **Visualization & Verification Tools**: `plot`, `verify`
 
 ---
 
