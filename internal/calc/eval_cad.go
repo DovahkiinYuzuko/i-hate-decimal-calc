@@ -583,36 +583,213 @@ func reconstruct1DIntervalsFromCells(cells []CadCell, roots []cad1DRoot, p *univ
 
 // solveMultivariateCAD executes Brown-McCallum projection and lifting for multi-variable formulas.
 func solveMultivariateCAD(expr Node, op string, vars []string, env *Env, fsm *CadLifecycleFSM) (Node, error) {
-	cells, err := CADDecomposeCells([]Node{expr}, vars, env)
+	relOp := &RelOpNode{LHS: expr, Op: op, RHS: mustRational(0, 1)}
+	sol, err := CADSolveFormula(relOp, vars, env)
 	if err != nil {
+		_ = fsm.TransitionTo(CadStateUnsupported)
 		return nil, err
 	}
+	_ = fsm.TransitionTo(CadStateDecided)
+	return sol, nil
+}
 
-	isSatisfied := false
-	var witness []Node
+// extractAtomicRelationsAndPolys traverses formula to collect all zero-equated polynomials (LHS - RHS).
+func extractAtomicRelationsAndPolys(formula Node, env *Env) ([]*RelOpNode, []Node, error) {
+	var relOps []*RelOpNode
+	var polys []Node
+	seen := make(map[string]bool)
 
-	for i := range cells {
-		signVal := cells[i].SignVector[expr.String()]
-		if evalRelationalSign(signVal, op) {
-			cells[i].Satisfied = true
-			isSatisfied = true
-			if len(witness) == 0 {
-				witness = cells[i].SamplePoint
+	var walkErr error
+	var traverse func(curr Node)
+	traverse = func(curr Node) {
+		if curr == nil || walkErr != nil {
+			return
+		}
+		switch node := curr.(type) {
+		case *RelOpNode:
+			negR, err := simplifyUnaryOp("-", node.RHS)
+			if err != nil {
+				walkErr = err
+				return
+			}
+			zeroExpr, err := simplifyAdd([]Node{node.LHS, negR})
+			if err != nil {
+				walkErr = err
+				return
+			}
+			evaled, err := EvalWithEnv(zeroExpr, env)
+			if err == nil {
+				zeroExpr = evaled
+			}
+			relOps = append(relOps, node)
+			factors := extractFactors(zeroExpr)
+			if len(factors) == 0 {
+				factors = []Node{zeroExpr}
+			}
+			for _, factor := range factors {
+				sFactor := factor.String()
+				if !seen[sFactor] && !isConstantNode(factor) {
+					seen[sFactor] = true
+					polys = append(polys, factor)
+				}
+			}
+			sExpr := zeroExpr.String()
+			if !seen[sExpr] && !isConstantNode(zeroExpr) {
+				seen[sExpr] = true
+				polys = append(polys, zeroExpr)
+			}
+		case *ListNode:
+			for _, elem := range node.Elements {
+				traverse(elem)
+			}
+		case *FuncNode:
+			name := strings.ToLower(node.Name)
+			if name == "and" || name == "or" || name == "not" {
+				for _, arg := range node.Args {
+					traverse(arg)
+				}
+			}
+		case *UnaryOpNode:
+			if node.Op == "!" || node.Op == "not" {
+				traverse(node.Expr)
 			}
 		}
 	}
-
-	_ = fsm.TransitionTo(CadStateDecided)
-
-	if isSatisfied {
-		return &ListNode{Elements: witness}, nil
+	traverse(formula)
+	if walkErr != nil {
+		return nil, nil, walkErr
 	}
-	return &VarNode{Name: "false"}, nil
+	return relOps, polys, nil
+}
+
+// evaluateFormulaOnCell evaluates a relational or boolean formula over a sign-invariant CAD cell.
+func evaluateFormulaOnCell(formula Node, cell *CadCell, vars []string, env *Env) (bool, error) {
+	if formula == nil {
+		return false, nil
+	}
+	switch node := formula.(type) {
+	case *RelOpNode:
+		negR, err := simplifyUnaryOp("-", node.RHS)
+		if err != nil {
+			return false, err
+		}
+		zeroExpr, err := simplifyAdd([]Node{node.LHS, negR})
+		if err != nil {
+			return false, err
+		}
+		evaled, err := EvalWithEnv(zeroExpr, env)
+		if err == nil {
+			zeroExpr = evaled
+		}
+		if isConstantNode(zeroExpr) {
+			if r, ok := zeroExpr.(*RationalNode); ok {
+				return evalRelationalSign(r.Val.Sign(), node.Op), nil
+			}
+		}
+		key := zeroExpr.String()
+		sign, ok := cell.SignVector[key]
+		if !ok {
+			curr := zeroExpr
+			for i, v := range vars {
+				if i < len(cell.SamplePoint) {
+					curr = Substitute(curr, v, cell.SamplePoint[i])
+				}
+			}
+			val, err := EvalWithEnv(curr, env)
+			if err != nil {
+				val = curr
+			}
+			if r, ok := val.(*RationalNode); ok {
+				sign = r.Val.Sign()
+			} else {
+				sign = int(exactSignEval(val, 0))
+			}
+		}
+		return evalRelationalSign(sign, node.Op), nil
+
+	case *ListNode:
+		for _, elem := range node.Elements {
+			sat, err := evaluateFormulaOnCell(elem, cell, vars, env)
+			if err != nil || !sat {
+				return false, err
+			}
+		}
+		return true, nil
+
+	case *FuncNode:
+		switch strings.ToLower(node.Name) {
+		case "and":
+			for _, arg := range node.Args {
+				sat, err := evaluateFormulaOnCell(arg, cell, vars, env)
+				if err != nil || !sat {
+					return false, err
+				}
+			}
+			return true, nil
+		case "or":
+			for _, arg := range node.Args {
+				sat, err := evaluateFormulaOnCell(arg, cell, vars, env)
+				if err == nil && sat {
+					return true, nil
+				}
+			}
+			return false, nil
+		case "not":
+			if len(node.Args) != 1 {
+				return false, fmt.Errorf("not expects 1 argument")
+			}
+			sat, err := evaluateFormulaOnCell(node.Args[0], cell, vars, env)
+			if err != nil {
+				return false, err
+			}
+			return !sat, nil
+		}
+
+	case *UnaryOpNode:
+		if node.Op == "!" || node.Op == "not" {
+			sat, err := evaluateFormulaOnCell(node.Expr, cell, vars, env)
+			if err != nil {
+				return false, err
+			}
+			return !sat, nil
+		}
+
+	case *VarNode:
+		if node.Name == "true" {
+			return true, nil
+		}
+		if node.Name == "false" {
+			return false, nil
+		}
+	}
+	return false, fmt.Errorf("unsupported formula: %s", formula.String())
+}
+
+// extractFactors flattens MulNode and PowNode with positive integer exponents into individual factors.
+func extractFactors(n Node) []Node {
+	if n == nil {
+		return nil
+	}
+	switch node := n.(type) {
+	case *MulNode:
+		var res []Node
+		for _, f := range node.Factors {
+			res = append(res, extractFactors(f)...)
+		}
+		return res
+	case *PowNode:
+		if r, ok := node.Exp.(*RationalNode); ok && r.Val.IsInt() && r.Val.Sign() > 0 {
+			return extractFactors(node.Base)
+		}
+		return []Node{n}
+	default:
+		return []Node{n}
+	}
 }
 
 // specializePolyForCAD substitutes sample coordinates into polynomial p,
 // simplifies it, and extracts a univariate polynomial in targetVar.
-// If the polynomial vanishes identically (isZero), a nullification error is returned.
+// If the polynomial vanishes identically (isZero), it returns a degree-0 zero polynomial.
 func specializePolyForCAD(p Node, vars []string, samplePoint []Node, targetVar string, env *Env) (*univariatePoly, bool, error) {
 	curr := p
 	for i := 0; i < len(samplePoint); i++ {
@@ -623,9 +800,9 @@ func specializePolyForCAD(p Node, vars []string, samplePoint []Node, targetVar s
 		curr = simplified
 	}
 
-	// Nullification Check:
+	// Nullification Check: if curr vanishes identically, treat as constant zero (no roots).
 	if isZero(curr) {
-		return nil, false, fmt.Errorf("nullification detected: %s vanished identically over cell with sample %v", p.String(), samplePoint)
+		return &univariatePoly{coeffs: []Node{mustRational(0, 1)}}, true, nil
 	}
 
 	uPoly, ok := extractPoly(curr, targetVar)
@@ -786,25 +963,18 @@ func liftCADCells(projSets [][]Node, vars []string, env *Env, fsm *CadLifecycleF
 
 		for _, parent := range currentLevelCells {
 			var specializedPolys []*univariatePoly
-			hasNullification := false
-
 			for _, p := range levelPolys {
+				// Only consider polynomials containing targetVar for real root isolation in this level
+				if !containsVar(p, targetVar) {
+					continue
+				}
 				uPoly, isConst, err := specializePolyForCAD(p, vars[:level-1], parent.SamplePoint, targetVar, env)
 				if err != nil {
-					if strings.Contains(err.Error(), "nullification") {
-						hasNullification = true
-						break
-					}
 					return nil, err
 				}
-				if !isConst && uPoly.degree() > 0 {
+				if !isConst && uPoly != nil && uPoly.degree() > 0 {
 					specializedPolys = append(specializedPolys, uPoly)
 				}
-			}
-
-			if hasNullification {
-				_ = fsm.TransitionTo(CadStateUnsupported)
-				return nil, fmt.Errorf("CAD lifting failed due to nullification on cell %v", parent.SamplePoint)
 			}
 
 			if len(specializedPolys) == 0 {
@@ -924,4 +1094,105 @@ func CADDecompose(polys []Node, vars []string, env *Env) (*ListNode, error) {
 		sampleNodes = append(sampleNodes, &ListNode{Elements: cell.SamplePoint})
 	}
 	return &ListNode{Elements: sampleNodes}, nil
+}
+
+// CADSolveFormula solves a semialgebraic system or boolean formula over R^n using sign-invariant CAD cells.
+func CADSolveFormula(formula Node, vars []string, env *Env) (Node, error) {
+	sol, _, err := CADSolveFormulaCells(formula, vars, env)
+	return sol, err
+}
+
+// CADSolveFormulaCells solves formula over R^n and returns both the reconstructed solution Node and satisfied CadCells.
+func CADSolveFormulaCells(formula Node, vars []string, env *Env) (Node, []CadCell, error) {
+	if formula == nil {
+		return nil, nil, fmt.Errorf("cannot solve nil formula")
+	}
+
+	// 1. Extract free variables if vars not provided
+	if len(vars) == 0 {
+		vars = ExtractFreeVariables(formula)
+	}
+
+	// Fast-path: constant formula with no variables
+	if len(vars) == 0 {
+		evaled, err := EvalWithEnv(formula, env)
+		if err == nil {
+			if b, ok := evaled.(*VarNode); ok && (b.Name == "true" || b.Name == "false") {
+				return b, nil, nil
+			}
+		}
+	}
+
+	// 2. Extract atomic polynomials
+	_, polys, err := extractAtomicRelationsAndPolys(formula, env)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if len(polys) == 0 {
+		sat, err := evaluateFormulaOnCell(formula, &CadCell{}, vars, env)
+		if err != nil {
+			return nil, nil, err
+		}
+		if sat {
+			return &VarNode{Name: "true"}, nil, nil
+		}
+		return &VarNode{Name: "false"}, nil, nil
+	}
+
+	// 3. Decompose R^n into sign-invariant CAD cells
+	cells, err := CADDecomposeCells(polys, vars, env)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// 4. Evaluate formula truth on every cell
+	var satisfiedCells []CadCell
+	allSatisfied := true
+
+	for i := range cells {
+		sat, err := evaluateFormulaOnCell(formula, &cells[i], vars, env)
+		if err != nil {
+			return nil, nil, err
+		}
+		cells[i].Satisfied = sat
+		if sat {
+			satisfiedCells = append(satisfiedCells, cells[i])
+		} else {
+			allSatisfied = false
+		}
+	}
+
+	// 5. Solution Reconstruction
+	// Case A: UNSAT (Empty solution set)
+	if len(satisfiedCells) == 0 {
+		return &VarNode{Name: "false"}, satisfiedCells, nil
+	}
+
+	// Case B: TAUTOLOGY (Entire space R^n satisfies formula)
+	if allSatisfied {
+		return &VarNode{Name: "true"}, satisfiedCells, nil
+	}
+
+	// Case C: 1D Univariate RelOp interval reconstruction
+	if len(vars) == 1 {
+		if relOp, ok := formula.(*RelOpNode); ok && len(polys) == 1 {
+			if p, ok := extractPoly(polys[0], vars[0]); ok && isRationalPoly(p) {
+				_, roots, err := decompose1DCADInternal([]*univariatePoly{trimPoly(p)}, vars[0], env)
+				if err == nil {
+					intervals, err := reconstruct1DIntervalsFromCells(cells, roots, trimPoly(p), relOp.Op)
+					if err == nil {
+						return intervals, satisfiedCells, nil
+					}
+				}
+			}
+		}
+	}
+
+	// Case D: Multivariate Solution Samples / Points
+	var samples []Node
+	for _, sc := range satisfiedCells {
+		samples = append(samples, &ListNode{Elements: sc.SamplePoint})
+	}
+	return &ListNode{Elements: samples}, satisfiedCells, nil
 }
