@@ -86,7 +86,7 @@ ihd "pi < 22/7"
 # 出力: true（有理区間論理とテイラー剰余項による超越数不等式の決定論的判定）
 
 ihd "qe(forall([x], x^2 + a*x + b > 0))"
-# 出力: -4*b + a^2 < 0（CAD基盤の完全量化子消去・パラメータ不等式自動導出）
+# 出力: -4*b + a^2 < 0（二次判別式・CAD連携による量化子消去・パラメータ不等式自動導出）
 ```
 
 #### 2. 対話モード（REPL）
@@ -362,7 +362,7 @@ ihd "pi < 22/7"
 # Output: true (Deterministic transcendental inequality evaluation via rational interval arithmetic)
 
 ihd "qe(forall([x], x^2 + a*x + b > 0))"
-# Output: -4*b + a^2 < 0 (Full Quantifier Elimination via CAD & parameter condition derivation)
+# Output: -4*b + a^2 < 0 (Quantifier elimination via quadratic discriminant & CAD integration)
 ```
 
 #### 2. Interactive REPL
