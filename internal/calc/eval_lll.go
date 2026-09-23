@@ -353,15 +353,6 @@ func vectorDotBigInt(v1, v2 []*big.Int) *big.Int {
 	return res
 }
 
-// vectorDotBigRat computes the dot product of two rational vectors.
-func vectorDotBigRat(v1, v2 []*big.Rat) *big.Rat {
-	res := big.NewRat(0, 1)
-	for i := 0; i < len(v1); i++ {
-		term := new(big.Rat).Mul(v1[i], v2[i])
-		res.Add(res, term)
-	}
-	return res
-}
 
 // findIntegerRelationCandidates computes candidate integer coefficient vectors
 // by applying LLL reduction to an (n) x (n+1) lattice.
@@ -519,9 +510,10 @@ func FindMinimalPolynomial(val Node, maxDegree int, env *Env) (Node, error) {
 				}
 
 				cNode := &RationalNode{Val: new(big.Rat).SetInt(c)}
-				if p == 0 {
+				switch p {
+				case 0:
 					terms = append(terms, cNode)
-				} else if p == 1 {
+				case 1:
 					if c.Cmp(big.NewInt(1)) == 0 {
 						terms = append(terms, xVar)
 					} else if c.Cmp(big.NewInt(-1)) == 0 {
@@ -529,7 +521,7 @@ func FindMinimalPolynomial(val Node, maxDegree int, env *Env) (Node, error) {
 					} else {
 						terms = append(terms, &MulNode{Factors: []Node{cNode, xVar}})
 					}
-				} else {
+				default:
 					powNode := &PowNode{Base: xVar, Exp: &RationalNode{Val: big.NewRat(int64(p), 1)}}
 					if c.Cmp(big.NewInt(1)) == 0 {
 						terms = append(terms, powNode)
