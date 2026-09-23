@@ -428,3 +428,137 @@ func TestCAD_RecursiveLifting_2D_Intersection(t *testing.T) {
 	}
 }
 
+func TestCAD_SolutionReconstruction_2D_CircleInterior(t *testing.T) {
+	env := NewEnv()
+	expr, err := Parse("x^2 + y^2 - 1 < 0")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	sol, err := CADSolveFormula(expr, []string{"x", "y"}, env)
+	if err != nil {
+		t.Fatalf("CADSolveFormula failed: %v", err)
+	}
+
+	list, ok := sol.(*ListNode)
+	if !ok || len(list.Elements) == 0 {
+		t.Fatalf("expected non-empty ListNode for circle interior, got %v", sol)
+	}
+
+	// Must include origin [0, 0] as satisfying sample
+	foundOrigin := false
+	for _, elem := range list.Elements {
+		pair, ok := elem.(*ListNode)
+		if ok && len(pair.Elements) == 2 {
+			xRat, xOk := pair.Elements[0].(*RationalNode)
+			yRat, yOk := pair.Elements[1].(*RationalNode)
+			if xOk && yOk && xRat.Val.Sign() == 0 && yRat.Val.Sign() == 0 {
+				foundOrigin = true
+				break
+			}
+		}
+	}
+	if !foundOrigin {
+		t.Errorf("expected circle interior solution to contain origin [0, 0], got: %s", sol.String())
+	}
+}
+
+func TestCAD_SolutionReconstruction_2D_CircleBoundary(t *testing.T) {
+	env := NewEnv()
+	expr, err := Parse("x^2 + y^2 - 1 == 0")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	sol, cells, err := CADSolveFormulaCells(expr, []string{"x", "y"}, env)
+	if err != nil {
+		t.Fatalf("CADSolveFormulaCells failed: %v", err)
+	}
+
+	if len(cells) == 0 {
+		t.Fatalf("expected satisfying boundary cells, got empty")
+	}
+
+	// All satisfying cells must be sections (dim <= 1)
+	for _, c := range cells {
+		if !c.IsSection && c.Dimension == 2 {
+			t.Errorf("boundary equation solution should not contain 2D sector cell: %v", c.SamplePoint)
+		}
+	}
+	_ = sol
+}
+
+func TestCAD_SolutionReconstruction_BooleanFormula(t *testing.T) {
+	env := NewEnv()
+	// Circle interior AND right half-plane: x^2 + y^2 - 1 < 0 AND x > 0
+	c1, _ := Parse("x^2 + y^2 - 1 < 0")
+	c2, _ := Parse("x > 0")
+	andNode := &FuncNode{Name: "and", Args: []Node{c1, c2}}
+
+	sol, cells, err := CADSolveFormulaCells(andNode, []string{"x", "y"}, env)
+	if err != nil {
+		t.Fatalf("CADSolveFormulaCells failed: %v", err)
+	}
+
+	if len(cells) == 0 {
+		t.Fatalf("expected non-empty solution for and(circle, right half plane)")
+	}
+
+	// In all satisfying cells, x coordinate must be positive
+	for _, c := range cells {
+		xVal := c.SamplePoint[0]
+		if rat, ok := xVal.(*RationalNode); ok {
+			if rat.Val.Sign() <= 0 {
+				t.Errorf("expected positive x coordinate in satisfying cell, got %v", rat.Val)
+			}
+		}
+	}
+	_ = sol
+}
+
+func TestCAD_SolutionReconstruction_UNSAT(t *testing.T) {
+	env := NewEnv()
+	// x^2 + y^2 + 1 <= 0 is completely unsatisfiable over R^2
+	expr, _ := Parse("x^2 + y^2 + 1 <= 0")
+	sol, err := CADSolveFormula(expr, []string{"x", "y"}, env)
+	if err != nil {
+		t.Fatalf("CADSolveFormula failed: %v", err)
+	}
+
+	vNode, ok := sol.(*VarNode)
+	if !ok || vNode.Name != "false" {
+		t.Fatalf("expected false for UNSAT system, got %v", sol)
+	}
+}
+
+func TestCAD_SolutionReconstruction_Tautology(t *testing.T) {
+	env := NewEnv()
+	// x^2 + y^2 + 1 > 0 is true everywhere on R^2
+	expr, _ := Parse("x^2 + y^2 + 1 > 0")
+	sol, err := CADSolveFormula(expr, []string{"x", "y"}, env)
+	if err != nil {
+		t.Fatalf("CADSolveFormula failed: %v", err)
+	}
+
+	vNode, ok := sol.(*VarNode)
+	if !ok || vNode.Name != "true" {
+		t.Fatalf("expected true for TAUTOLOGY system, got %v", sol)
+	}
+}
+
+func TestCAD_SolutionReconstruction_Disconnected(t *testing.T) {
+	env := NewEnv()
+	// (x^2 - 1) * (y^2 - 1) > 0 has 5 disconnected open components in R^2
+	expr, _ := Parse("(x^2 - 1) * (y^2 - 1) > 0")
+	sol, cells, err := CADSolveFormulaCells(expr, []string{"x", "y"}, env)
+	if err != nil {
+		t.Fatalf("CADSolveFormulaCells failed: %v", err)
+	}
+
+	if len(cells) < 4 {
+		t.Fatalf("expected at least 4 disconnected sector components, got %d cells", len(cells))
+	}
+	_ = sol
+}
+
+
