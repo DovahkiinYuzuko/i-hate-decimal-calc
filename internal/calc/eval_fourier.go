@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"strings"
 )
@@ -18,12 +19,12 @@ import (
 //   - n: expansion order/degree (optional, defaults to 3)
 func EvalFourierSeries(args []Node, env *Env) (Node, error) {
 	if len(args) < 1 || len(args) > 4 {
-		return nil, fmt.Errorf("fourier_series: requires between 1 and 4 arguments: f(t), [var, L, n]")
+		return nil, fmt.Errorf("%s", i18n.T("fourier.err_fourier_series_requires_between_1"))
 	}
 
 	f := args[0]
 	if f == nil {
-		return nil, fmt.Errorf("fourier_series: nil function argument")
+		return nil, fmt.Errorf("%s", i18n.T("fourier.err_fourier_series_nil_function_argument"))
 	}
 
 	// 1. Variable extraction
@@ -51,7 +52,7 @@ func EvalFourierSeries(args []Node, env *Env) (Node, error) {
 		L = evalL
 	}
 	if isZero(L) {
-		return nil, fmt.Errorf("fourier_series: half-period L cannot be zero")
+		return nil, fmt.Errorf("%s", i18n.T("fourier.err_fourier_series_half_period_l"))
 	}
 
 	// 3. Expansion order n (default: 3)
@@ -72,7 +73,7 @@ func EvalFourierSeries(args []Node, env *Env) (Node, error) {
 	// 4. Compute DC component: a0 = (1 / (2L)) * int_{-L}^L f(t) dt
 	intA0, err := evalDefiniteIntegral(f, tVar, negL, L)
 	if err != nil {
-		return nil, fmt.Errorf("fourier_series: failed to integrate DC term: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("fourier.err_fourier_series_failed_to_integrate", err))
 	}
 
 	twoL, err := simplifyMul([]Node{mustRational(2, 1), L})
@@ -157,7 +158,7 @@ func EvalFourierSeries(args []Node, env *Env) (Node, error) {
 				}
 			}
 		} else if err != nil {
-			return nil, fmt.Errorf("fourier_series: failed to integrate cos harmonic k=%d: %w", k, err)
+			return nil, fmt.Errorf("%s", i18n.T("fourier.err_fourier_series_failed_to_integrate_1", k, err))
 		}
 
 		// Sine harmonic: bk = (1 / L) * int_{-L}^L f(t) * sin(omega_k * t) dt
@@ -184,7 +185,7 @@ func EvalFourierSeries(args []Node, env *Env) (Node, error) {
 				}
 			}
 		} else if err != nil {
-			return nil, fmt.Errorf("fourier_series: failed to integrate sin harmonic k=%d: %w", k, err)
+			return nil, fmt.Errorf("%s", i18n.T("fourier.err_fourier_series_failed_to_integrate_2", k, err))
 		}
 	}
 
@@ -248,12 +249,12 @@ func extractFourierOrder(node Node, defaultN int64) (int64, error) {
 	if rn, ok := evaled.(*RationalNode); ok && rn.Val.IsInt() {
 		val := rn.Val.Num().Int64()
 		if val <= 0 {
-			return 0, fmt.Errorf("fourier_series: degree n must be a positive integer, got %d", val)
+			return 0, fmt.Errorf("%s", i18n.T("fourier.err_fourier_series_degree_n_must", val))
 		}
 		if val > 100 {
-			return 0, fmt.Errorf("fourier_series: degree n exceeds maximum limit (100), got %d", val)
+			return 0, fmt.Errorf("%s", i18n.T("fourier.err_fourier_series_degree_n_exceeds", val))
 		}
 		return val, nil
 	}
-	return 0, fmt.Errorf("fourier_series: invalid degree node %s", node.String())
+	return 0, fmt.Errorf("%s", i18n.T("fourier.err_fourier_series_invalid_degree_node", node.String()))
 }

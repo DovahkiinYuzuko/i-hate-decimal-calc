@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"math/big"
 
@@ -35,7 +36,7 @@ type GosperResult struct {
 // Returns scalar Z and monic coprime polynomials f(k), g(k) such that r(k) = Z * f(k)/g(k).
 func ExtractHypergeometricRatio(term ast.Node, kVar string) (Z *big.Rat, f, g *univariatePoly, err error) {
 	if term == nil {
-		return nil, nil, nil, fmt.Errorf("nil term")
+		return nil, nil, nil, fmt.Errorf("%s", i18n.T("gosper.err_nil_term"))
 	}
 
 	nums, dens := decomposeTermFactors(term)
@@ -68,7 +69,7 @@ func ExtractHypergeometricRatio(term ast.Node, kVar string) (Z *big.Rat, f, g *u
 	}
 
 	if isPolyZero(totalDen) {
-		return nil, nil, nil, fmt.Errorf("term ratio denominator is zero")
+		return nil, nil, nil, fmt.Errorf("%s", i18n.T("gosper.err_term_ratio_denominator_is_zero"))
 	}
 
 	// Normalize leading coefficients and reduce gcd
@@ -161,12 +162,12 @@ func factorRatio(factor ast.Node, kVar string) (*univariatePoly, *univariatePoly
 	if unary, ok := factor.(*ast.UnaryOpNode); ok && unary.Op == "!" {
 		polyArg, okArg := extractPoly(unary.Expr, kVar)
 		if !okArg || polyArg.degree() != 1 {
-			return nil, nil, nil, fmt.Errorf("factorial argument must be linear in %s", kVar)
+			return nil, nil, nil, fmt.Errorf("%s", i18n.T("gosper.err_factorial_argument_must_be_linear", kVar))
 		}
 		cNode := polyArg.coeff(1)
 		cRat, okC := cNode.(*ast.RationalNode)
 		if !okC || !cRat.Val.IsInt() {
-			return nil, nil, nil, fmt.Errorf("factorial coefficient of %s must be integer", kVar)
+			return nil, nil, nil, fmt.Errorf("%s", i18n.T("gosper.err_factorial_coefficient_of", kVar))
 		}
 		step := cRat.Val.Num().Int64()
 		if step == 0 {
@@ -239,7 +240,7 @@ func factorRatio(factor ast.Node, kVar string) (*univariatePoly, *univariatePoly
 		return polyNext, poly, oneRat, nil
 	}
 
-	return nil, nil, nil, fmt.Errorf("unsupported factor type for hypergeometric term ratio: %s", factor.String())
+	return nil, nil, nil, fmt.Errorf("%s", i18n.T("gosper.err_unsupported_factor_type_for_hypergeometric", factor.String()))
 }
 
 // GosperNormalForm performs the iterative gcd-peel on r(k) = Z * f(k)/g(k)
@@ -358,7 +359,7 @@ func ComputeGosperDegreeBound(a, b, c *univariatePoly) (int, bool) {
 // Returns y(k) and verifies identity by resubstitution.
 func SolveGosperEquation(a, b, c *univariatePoly, d int, kVar string) (*univariatePoly, error) {
 	if d < 0 {
-		return nil, fmt.Errorf("degree bound is negative (not Gosper-summable)")
+		return nil, fmt.Errorf("%s", i18n.T("gosper.err_degree_bound_is_negative_not"))
 	}
 
 	bShift := shiftPoly1D(b, -1)
@@ -413,7 +414,7 @@ func SolveGosperEquation(a, b, c *univariatePoly, d int, kVar string) (*univaria
 	// Solve overdetermined linear system using Gaussian elimination with consistency check
 	uSol, err := solveRationalLinearSystem(M, C, numEqs, d+1)
 	if err != nil {
-		return nil, fmt.Errorf("inconsistent linear system: %w (not Gosper-summable)", err)
+		return nil, fmt.Errorf("%s", i18n.T("gosper.err_inconsistent_linear_system_not_gosper", err))
 	}
 
 	// Build y(k)
@@ -431,7 +432,7 @@ func SolveGosperEquation(a, b, c *univariatePoly, d int, kVar string) (*univaria
 	checkDiff := polySub1D(lhsDiff, c)
 
 	if !isPolyZero(checkDiff) {
-		return nil, fmt.Errorf("resubstitution verification failed (not Gosper-summable)")
+		return nil, fmt.Errorf("%s", i18n.T("gosper.err_resubstitution_verification_failed_not_gosper"))
 	}
 
 	return y, nil
@@ -461,7 +462,7 @@ func GosperIndefiniteSum(term ast.Node, kVar string) (ast.Node, error) {
 	d, ok := ComputeGosperDegreeBound(a, b, c)
 	if !ok {
 		_ = fsm.TransitionTo(GosperStateNotSummable)
-		return nil, fmt.Errorf("term is not Gosper-summable (negative degree bound)")
+		return nil, fmt.Errorf("%s", i18n.T("gosper.err_term_is_not_gosper_summable"))
 	}
 	_ = fsm.TransitionTo(GosperStateDegreeBounded)
 
@@ -542,7 +543,7 @@ func GenerateWZCertificate(term ast.Node, nVar, kVar string) (ast.Node, error) {
 	// 1. Extract r_n(n, k) = F(n+1, k) / F(n, k)
 	Zn, fn, gn, err := ExtractHypergeometricRatio(term, nVar)
 	if err != nil {
-		return nil, fmt.Errorf("term is not hypergeometric in %s: %w", nVar, err)
+		return nil, fmt.Errorf("%s", i18n.T("gosper.err_term_is_not_hypergeometric_in", nVar, err))
 	}
 
 	// 2. r_n - 1 = (Zn * fn - gn) / gn
@@ -553,7 +554,7 @@ func GenerateWZCertificate(term ast.Node, nVar, kVar string) (ast.Node, error) {
 	// 3. Extract r_k(n, k) = F(n, k+1) / F(n, k)
 	Zk, fk, gk, err := ExtractHypergeometricRatio(term, kVar)
 	if err != nil {
-		return nil, fmt.Errorf("term is not hypergeometric in %s: %w", kVar, err)
+		return nil, fmt.Errorf("%s", i18n.T("gosper.err_term_is_not_hypergeometric_in", kVar, err))
 	}
 
 	// 4. Combined ratio of Delta_n F with respect to k:
@@ -561,7 +562,7 @@ func GenerateWZCertificate(term ast.Node, nVar, kVar string) (ast.Node, error) {
 	pNumK, okNumK := extractPoly(pNum.toNode(), kVar)
 	pDenK, okDenK := extractPoly(pDen.toNode(), kVar)
 	if !okNumK || !okDenK {
-		return nil, fmt.Errorf("difference factor is not polynomial in %s", kVar)
+		return nil, fmt.Errorf("%s", i18n.T("gosper.err_difference_factor_is_not_polynomial", kVar))
 	}
 
 	pNumKShift := shiftPoly1D(pNumK, 1)
@@ -595,17 +596,17 @@ func GenerateWZCertificate(term ast.Node, nVar, kVar string) (ast.Node, error) {
 	// 5. Gosper normal form on r_Delta(k)
 	a, b, c, err := GosperNormalForm(totalZ, fNorm, gNorm, kVar)
 	if err != nil {
-		return nil, fmt.Errorf("Gosper normal form failed on Delta_n F: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("gosper.err_gosper_normal_form_failed_on", err))
 	}
 
 	d, ok := ComputeGosperDegreeBound(a, b, c)
 	if !ok {
-		return nil, fmt.Errorf("summand does not admit a first-order WZ certificate (degree bound negative)")
+		return nil, fmt.Errorf("%s", i18n.T("gosper.err_summand_does_not_admit_a"))
 	}
 
 	y, err := SolveGosperEquation(a, b, c, d, kVar)
 	if err != nil {
-		return nil, fmt.Errorf("summand does not admit a first-order WZ certificate: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("gosper.err_summand_does_not_admit_a_1", err))
 	}
 
 	// 6. R(n, k) = (b(k-1) * y(k) / c(k)) * (pNum(k) / pDen(k))
@@ -894,7 +895,7 @@ func solveRationalLinearSystem(M [][]*big.Rat, C []*big.Rat, m, n int) ([]*big.R
 	// Check consistency: all rows from pivotRow to m must have A[r][n] == 0
 	for r := pivotRow; r < m; r++ {
 		if A[r][n].Sign() != 0 {
-			return nil, fmt.Errorf("inconsistent system at row %d", r)
+			return nil, fmt.Errorf("%s", i18n.T("gosper.err_inconsistent_system_at_row", r))
 		}
 	}
 

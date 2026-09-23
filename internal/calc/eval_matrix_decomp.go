@@ -19,14 +19,14 @@ func matMul(a, b *ast.MatrixNode) (*ast.MatrixNode, error) {
 	}
 	mat, ok := node.(*ast.MatrixNode)
 	if !ok {
-		return nil, fmt.Errorf("expected MatrixNode from multiplication, got %T", node)
+		return nil, fmt.Errorf("%s", i18n.T("matrix.err_expected_matrixnode_from_multiplication_got", node))
 	}
 	return mat, nil
 }
 
 func dotProductNodes(u, v []ast.Node) (ast.Node, error) {
 	if len(u) != len(v) {
-		return nil, fmt.Errorf("vector length mismatch: %d vs %d", len(u), len(v))
+		return nil, fmt.Errorf("%s", i18n.T("matrix.err_vector_length_mismatch", len(u), len(v)))
 	}
 	var terms []ast.Node
 	for i := 0; i < len(u); i++ {
@@ -67,7 +67,7 @@ func isNodeNonPositive(n ast.Node) bool {
 // such that P * A = L * U.
 func evalLU(mat *ast.MatrixNode) (*ast.ListNode, error) {
 	if mat == nil || mat.Rows == 0 || mat.Cols == 0 {
-		return nil, fmt.Errorf("cannot compute LU decomposition of empty matrix")
+		return nil, fmt.Errorf("%s", i18n.T("matrix.err_cannot_compute_lu_decomposition_of"))
 	}
 
 	m := mat.Rows
@@ -203,14 +203,14 @@ func evalLU(mat *ast.MatrixNode) (*ast.ListNode, error) {
 // Returns [Q, R] where Q has orthonormal columns and R is upper triangular.
 func evalTwoStageQR(mat *ast.MatrixNode) (*ast.ListNode, error) {
 	if mat == nil || mat.Rows == 0 || mat.Cols == 0 {
-		return nil, fmt.Errorf("cannot compute QR decomposition of empty matrix")
+		return nil, fmt.Errorf("%s", i18n.T("matrix.err_cannot_compute_qr_decomposition_of"))
 	}
 
 	m := mat.Rows
 	n := mat.Cols
 
 	if m < n {
-		return nil, fmt.Errorf("%s error: QR decomposition requires rows >= cols, got %dx%d", "qr", m, n)
+		return nil, fmt.Errorf("%s", i18n.T("matrix.err_qr_decomposition_requires_rows_cols", "qr", m, n))
 	}
 
 	// Extract column vectors of A
@@ -368,7 +368,7 @@ func evalTwoStageQR(mat *ast.MatrixNode) (*ast.ListNode, error) {
 // Returns [L_unit, D_mat] where L_unit is unit lower triangular and D_mat is diagonal with positive entries.
 func evalLDLT(mat *ast.MatrixNode) (*ast.ListNode, error) {
 	if mat == nil || mat.Rows == 0 || mat.Cols == 0 {
-		return nil, fmt.Errorf("cannot compute LDL^T decomposition of empty matrix")
+		return nil, fmt.Errorf("%s", i18n.T("matrix.err_cannot_compute_ldl_t_decomposition"))
 	}
 
 	n := mat.Rows
@@ -538,7 +538,7 @@ func evalCholesky(mat *ast.MatrixNode) (*ast.MatrixNode, error) {
 // evalPinv computes the exact Moore-Penrose pseudoinverse A^+ of matrix A (m x n).
 func evalPinv(mat *ast.MatrixNode) (*ast.MatrixNode, error) {
 	if mat == nil || mat.Rows == 0 || mat.Cols == 0 {
-		return nil, fmt.Errorf("cannot compute pseudoinverse of empty matrix")
+		return nil, fmt.Errorf("%s", i18n.T("matrix.err_cannot_compute_pseudoinverse_of_empty"))
 	}
 
 	m := mat.Rows

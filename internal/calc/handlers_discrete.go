@@ -189,7 +189,7 @@ func handleRand(args []Node, env *Env) (Node, error) {
 		minVal := minRat.Val.Num().Int64()
 		maxVal := maxRat.Val.Num().Int64()
 		if minVal > maxVal {
-			return nil, fmt.Errorf("rand domain error: min cannot be greater than max, got %d > %d", minVal, maxVal)
+			return nil, fmt.Errorf("%s", i18n.T("errors.domain_rand_min_gt_max", minVal, maxVal))
 		}
 		delta := maxVal - minVal + 1
 		rng := rand.New(rand.NewPCG(uint64(seedVal), 1))

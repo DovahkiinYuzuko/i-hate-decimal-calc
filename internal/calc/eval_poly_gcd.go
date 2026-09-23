@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"math/big"
 	"sort"
@@ -15,7 +16,7 @@ import (
 // If varName is empty, the main variable is automatically selected.
 func EvalPolyGCD(p, q Node, varName string, env *Env) (Node, error) {
 	if p == nil || q == nil {
-		return nil, fmt.Errorf("poly_gcd: nil argument")
+		return nil, fmt.Errorf("%s", i18n.T("poly.err_poly_gcd_nil_argument"))
 	}
 
 	evalP, err := Eval(expandNode(p))
@@ -57,7 +58,7 @@ func EvalPolyGCD(p, q Node, varName string, env *Env) (Node, error) {
 // LCM(p, q) = (p * q) / GCD(p, q)
 func EvalPolyLCM(p, q Node, varName string, env *Env) (Node, error) {
 	if p == nil || q == nil {
-		return nil, fmt.Errorf("poly_lcm: nil argument")
+		return nil, fmt.Errorf("%s", i18n.T("poly.err_poly_lcm_nil_argument"))
 	}
 
 	evalP, err := Eval(expandNode(p))
@@ -142,7 +143,7 @@ func subresultantGCD(p, q Node, v string) (Node, error) {
 	polyQ, okQ := extractPoly(q, v)
 
 	if !okP || !okQ {
-		return nil, fmt.Errorf("poly_gcd: failed to extract polynomials in %s", v)
+		return nil, fmt.Errorf("%s", i18n.T("poly.err_poly_gcd_failed_to_extract", v))
 	}
 
 	if isPolyZero(polyP) && isPolyZero(polyQ) {
@@ -194,7 +195,7 @@ func subresultantGCD(p, q Node, v string) (Node, error) {
 		d := u.degree() - w.degree()
 		r, ok := pseudoRemainder(u, w)
 		if !ok {
-			return nil, fmt.Errorf("poly_gcd: pseudo-remainder failed in %s", v)
+			return nil, fmt.Errorf("%s", i18n.T("poly.err_poly_gcd_pseudo_remainder_failed", v))
 		}
 
 		if isPolyZero(r) {
@@ -226,7 +227,7 @@ func subresultantGCD(p, q Node, v string) (Node, error) {
 
 		wNext, err := polyExactDivideScalar(r, divisorVal)
 		if err != nil {
-			return nil, fmt.Errorf("poly_gcd: subresultant reduction failed: %w", err)
+			return nil, fmt.Errorf("%s", i18n.T("poly.err_poly_gcd_subresultant_reduction_failed", err))
 		}
 		if !isPolyZero(wNext) {
 			lastNonZero = wNext
@@ -312,7 +313,7 @@ func pseudoRemainder(u, v *univariatePoly) (*univariatePoly, bool) {
 // polyExactDivideScalar divides all coefficients of P by scalarNode.
 func polyExactDivideScalar(P *univariatePoly, scalarNode Node) (*univariatePoly, error) {
 	if isZero(scalarNode) {
-		return nil, fmt.Errorf("poly division by zero scalar")
+		return nil, fmt.Errorf("%s", i18n.T("poly.err_poly_division_by_zero_scalar"))
 	}
 	if isOne(scalarNode) {
 		return P, nil
@@ -321,7 +322,7 @@ func polyExactDivideScalar(P *univariatePoly, scalarNode Node) (*univariatePoly,
 	// 1. If scalarNode is a rational number, scale directly
 	if rat, ok := scalarNode.(*RationalNode); ok {
 		if rat.Val.Sign() == 0 {
-			return nil, fmt.Errorf("poly division by zero rational")
+			return nil, fmt.Errorf("%s", i18n.T("poly.err_poly_division_by_zero_rational"))
 		}
 		invRat := &RationalNode{Val: new(big.Rat).Inv(rat.Val)}
 		newCoeffs := make([]Node, len(P.coeffs))

@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"math/big"
 )
@@ -60,10 +61,10 @@ func simplifyUnaryOp(op string, expr Node) (Node, error) {
 			return &UnaryOpNode{Op: op, Expr: expr}, nil
 		}
 		if !rat.Val.IsInt() || rat.Val.Sign() < 0 {
-			return nil, fmt.Errorf("factorial domain error: factorial requires non-negative integer, got %s", expr.String())
+			return nil, fmt.Errorf("%s", i18n.T("simplify.err_factorial_domain_error_factorial_requires", expr.String()))
 		}
 		if !rat.Val.Num().IsInt64() || rat.Val.Num().Int64() > 100000 {
-			return nil, fmt.Errorf("factorial domain error: factorial is too large to compute, got %s", expr.String())
+			return nil, fmt.Errorf("%s", i18n.T("simplify.err_factorial_domain_error_factorial_is", expr.String()))
 		}
 		n := rat.Val.Num().Int64()
 		if n <= 1 {
@@ -82,7 +83,7 @@ func simplifyUnaryOp(op string, expr Node) (Node, error) {
 		return &RationalNode{Val: new(big.Rat).SetInt(res)}, nil
 
 	default:
-		return nil, fmt.Errorf("unknown unary operator: %s", op)
+		return nil, fmt.Errorf("%s", i18n.T("approx.err_unknown_unary_operator", op))
 	}
 }
 

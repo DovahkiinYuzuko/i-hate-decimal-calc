@@ -45,7 +45,7 @@ func (vc *VerificationCertificate) String() string {
 // classifies its domain, and executes an independent reverse-verification checker.
 func VerifyComputation(expr, result Node, env *Env) (*VerificationCertificate, error) {
 	if expr == nil || result == nil {
-		return nil, fmt.Errorf("cannot verify nil expression or result")
+		return nil, fmt.Errorf("%s", i18n.T("verify.err_cannot_verify_nil_expression_or"))
 	}
 
 	fsm := NewVerifyLifecycleFSM()
@@ -108,7 +108,7 @@ func VerifyComputation(expr, result Node, env *Env) (*VerificationCertificate, e
 func verifyIntegral(fn *FuncNode, F Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
 	if len(fn.Args) < 1 {
 		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
-		return nil, fmt.Errorf("integrate requires at least 1 argument")
+		return nil, fmt.Errorf("%s", i18n.T("verify.err_integrate_requires_at_least_1"))
 	}
 	f := fn.Args[0]
 	varName := "x"
@@ -122,7 +122,7 @@ func verifyIntegral(fn *FuncNode, F Node, env *Env, fsm *VerifyLifecycleFSM) (*V
 	fPrime, err := differentiate(F, varName)
 	if err != nil {
 		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
-		return nil, fmt.Errorf("verify: failed to differentiate result: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("verify.err_verify_failed_to_differentiate_result", err))
 	}
 
 	// Residual = F'(x) - f(x)
@@ -166,7 +166,7 @@ func verifyIntegral(fn *FuncNode, F Node, env *Env, fsm *VerifyLifecycleFSM) (*V
 func verifyFactor(fn *FuncNode, factorResult Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
 	if len(fn.Args) < 1 {
 		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
-		return nil, fmt.Errorf("factor requires at least 1 argument")
+		return nil, fmt.Errorf("%s", i18n.T("verify.err_factor_requires_at_least_1"))
 	}
 	orig := fn.Args[0]
 
@@ -209,7 +209,7 @@ func verifyFactor(fn *FuncNode, factorResult Node, env *Env, fsm *VerifyLifecycl
 func verifySolve(fn *FuncNode, rootsResult Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
 	if len(fn.Args) < 1 {
 		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
-		return nil, fmt.Errorf("solve requires at least 1 argument")
+		return nil, fmt.Errorf("%s", i18n.T("verify.err_solve_requires_at_least_1"))
 	}
 	eq := fn.Args[0]
 	varName := "x"
@@ -280,7 +280,7 @@ func verifySolve(fn *FuncNode, rootsResult Node, env *Env, fsm *VerifyLifecycleF
 func verifyApart(fn *FuncNode, apartResult Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
 	if len(fn.Args) < 1 {
 		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
-		return nil, fmt.Errorf("apart requires at least 1 argument")
+		return nil, fmt.Errorf("%s", i18n.T("verify.err_apart_requires_at_least_1"))
 	}
 	orig := fn.Args[0]
 
@@ -325,13 +325,13 @@ func verifyApart(fn *FuncNode, apartResult Node, env *Env, fsm *VerifyLifecycleF
 func verifyMatrixInv(fn *FuncNode, invResult Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
 	if len(fn.Args) < 1 {
 		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
-		return nil, fmt.Errorf("inv requires at least 1 argument")
+		return nil, fmt.Errorf("%s", i18n.T("verify.err_inv_requires_at_least_1"))
 	}
 	A, okA := fn.Args[0].(*MatrixNode)
 	AInv, okInv := invResult.(*MatrixNode)
 	if !okA || !okInv {
 		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
-		return nil, fmt.Errorf("matrix inversion verification requires MatrixNode")
+		return nil, fmt.Errorf("%s", i18n.T("verify.err_matrix_inversion_verification_requires_matrixnode"))
 	}
 
 	_ = fsm.TransitionTo(VerifyStateResidualConstructed)
@@ -393,12 +393,12 @@ func verifyMatrixInv(fn *FuncNode, invResult Node, env *Env, fsm *VerifyLifecycl
 func verifyMatrixDecomp(fn *FuncNode, decompResult Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
 	if len(fn.Args) < 1 {
 		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
-		return nil, fmt.Errorf("matrix decomposition requires at least 1 argument")
+		return nil, fmt.Errorf("%s", i18n.T("verify.err_matrix_decomposition_requires_at_least"))
 	}
 	A, okA := fn.Args[0].(*MatrixNode)
 	if !okA {
 		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
-		return nil, fmt.Errorf("argument must be a matrix")
+		return nil, fmt.Errorf("%s", i18n.T("verify.err_argument_must_be_a_matrix"))
 	}
 
 	_ = fsm.TransitionTo(VerifyStateResidualConstructed)
@@ -409,7 +409,7 @@ func verifyMatrixDecomp(fn *FuncNode, decompResult Node, env *Env, fsm *VerifyLi
 		L, okL := decompResult.(*MatrixNode)
 		if !okL {
 			_ = fsm.TransitionTo(VerifyStateRefuted)
-			return nil, fmt.Errorf("cholesky output must be a MatrixNode")
+			return nil, fmt.Errorf("%s", i18n.T("verify.err_cholesky_output_must_be_a"))
 		}
 		LT := evalTranspose(L)
 		LLT, err := evalMatrixMulVerified(L, LT)
@@ -445,19 +445,19 @@ func verifyMatrixDecomp(fn *FuncNode, decompResult Node, env *Env, fsm *VerifyLi
 		list, okList := decompResult.(*ListNode)
 		if !okList || len(list.Elements) != 3 {
 			_ = fsm.TransitionTo(VerifyStateRefuted)
-			return nil, fmt.Errorf("lu output must be a list [P, L, U]")
+			return nil, fmt.Errorf("%s", i18n.T("verify.err_lu_output_must_be_a"))
 		}
 		P, okP := list.Elements[0].(*MatrixNode)
 		L, okL := list.Elements[1].(*MatrixNode)
 		U, okU := list.Elements[2].(*MatrixNode)
 		if !okP || !okL || !okU {
 			_ = fsm.TransitionTo(VerifyStateRefuted)
-			return nil, fmt.Errorf("lu elements must be MatrixNode")
+			return nil, fmt.Errorf("%s", i18n.T("verify.err_lu_elements_must_be_matrixnode"))
 		}
 		PA, err1 := evalMatrixMulVerified(P, A)
 		LU, err2 := evalMatrixMulVerified(L, U)
 		if err1 != nil || err2 != nil {
-			return nil, fmt.Errorf("matrix mul error in lu verification")
+			return nil, fmt.Errorf("%s", i18n.T("verify.err_matrix_mul_error_in_lu"))
 		}
 		isEqual := checkMatrixEquality(PA, LU, env)
 		_ = fsm.TransitionTo(VerifyStateSimplificationEvaluated)
@@ -488,19 +488,19 @@ func verifyMatrixDecomp(fn *FuncNode, decompResult Node, env *Env, fsm *VerifyLi
 		list, okList := decompResult.(*ListNode)
 		if !okList || len(list.Elements) != 2 {
 			_ = fsm.TransitionTo(VerifyStateRefuted)
-			return nil, fmt.Errorf("qr output must be a list [Q, R]")
+			return nil, fmt.Errorf("%s", i18n.T("verify.err_qr_output_must_be_a"))
 		}
 		Q, okQ := list.Elements[0].(*MatrixNode)
 		R, okR := list.Elements[1].(*MatrixNode)
 		if !okQ || !okR {
 			_ = fsm.TransitionTo(VerifyStateRefuted)
-			return nil, fmt.Errorf("qr elements must be MatrixNode")
+			return nil, fmt.Errorf("%s", i18n.T("verify.err_qr_elements_must_be_matrixnode"))
 		}
 		QT := evalTranspose(Q)
 		QTQ, err1 := evalMatrixMulVerified(QT, Q)
 		QR, err2 := evalMatrixMulVerified(Q, R)
 		if err1 != nil || err2 != nil {
-			return nil, fmt.Errorf("matrix mul error in qr verification")
+			return nil, fmt.Errorf("%s", i18n.T("verify.err_matrix_mul_error_in_qr"))
 		}
 		// QTQ must be Identity
 		isOrthogonal := true
@@ -547,14 +547,14 @@ func verifyMatrixDecomp(fn *FuncNode, decompResult Node, env *Env, fsm *VerifyLi
 	}
 
 	_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
-	return nil, fmt.Errorf("unsupported matrix decomposition verification: %s", fn.Name)
+	return nil, fmt.Errorf("%s", i18n.T("verify.err_unsupported_matrix_decomposition_verification", fn.Name))
 }
 
 // verifyODE verifies: substituting y(x) into differential equation yields 0
 func verifyODE(fn *FuncNode, ySol Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
 	if len(fn.Args) < 1 {
 		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
-		return nil, fmt.Errorf("dsolve requires at least 1 argument")
+		return nil, fmt.Errorf("%s", i18n.T("verify.err_dsolve_requires_at_least_1"))
 	}
 	eq := fn.Args[0]
 	xName := "x"
@@ -625,7 +625,7 @@ func verifyODE(fn *FuncNode, ySol Node, env *Env, fsm *VerifyLifecycleFSM) (*Ver
 func verifyWZ(fn *FuncNode, certResult Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
 	if len(fn.Args) < 3 {
 		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
-		return nil, fmt.Errorf("wz_cert requires 3 arguments (term, n, k)")
+		return nil, fmt.Errorf("%s", i18n.T("verify.err_wz_cert_requires_3_arguments"))
 	}
 	F := fn.Args[0]
 	nVar := "n"
@@ -898,7 +898,7 @@ func evalMatrixMulVerified(a, b Node) (*MatrixNode, error) {
 	}
 	mat, ok := res.(*MatrixNode)
 	if !ok {
-		return nil, fmt.Errorf("result is not a matrix")
+		return nil, fmt.Errorf("%s", i18n.T("verify.err_result_is_not_a_matrix"))
 	}
 	return mat, nil
 }

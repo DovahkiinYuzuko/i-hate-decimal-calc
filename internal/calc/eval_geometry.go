@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 )
 
@@ -11,7 +12,7 @@ import (
 func parseLineNode(n Node) (Line2D, error) {
 	list, ok := n.(*ListNode)
 	if !ok || len(list.Elements) != 3 {
-		return Line2D{}, fmt.Errorf("line must be a 3-element list [A, B, C] representing Ax + By + C = 0, got %s", n.String())
+		return Line2D{}, fmt.Errorf("%s", i18n.T("geometry.err_line_must_be_a_3", n.String()))
 	}
 	return Line2D{
 		A: list.Elements[0],
@@ -23,7 +24,7 @@ func parseLineNode(n Node) (Line2D, error) {
 func parsePointNode(n Node) (Point2D, error) {
 	list, ok := n.(*ListNode)
 	if !ok || len(list.Elements) != 2 {
-		return Point2D{}, fmt.Errorf("point must be a 2-element list [X, Y], got %s", n.String())
+		return Point2D{}, fmt.Errorf("%s", i18n.T("geometry.err_point_must_be_a_2", n.String()))
 	}
 	return Point2D{
 		X: list.Elements[0],
@@ -38,15 +39,15 @@ func pointToNode(p Point2D) Node {
 func evalLineIntersectFunc(line1Node, line2Node Node) (Node, error) {
 	l1, err := parseLineNode(line1Node)
 	if err != nil {
-		return nil, fmt.Errorf("line_intersect error in line 1: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("geometry.err_line_intersect_error_in_line", err))
 	}
 	l2, err := parseLineNode(line2Node)
 	if err != nil {
-		return nil, fmt.Errorf("line_intersect error in line 2: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("geometry.err_line_intersect_error_in_line_1", err))
 	}
 	pt, err := IntersectLines(l1, l2)
 	if err != nil {
-		return nil, fmt.Errorf("line_intersect error: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("geometry.err_line_intersect_error", err))
 	}
 	return pointToNode(pt), nil
 }
@@ -54,20 +55,20 @@ func evalLineIntersectFunc(line1Node, line2Node Node) (Node, error) {
 func evalCircleIntersectFunc(center1Node, r1Node, center2Node, r2Node Node) (Node, error) {
 	c1Center, err := parsePointNode(center1Node)
 	if err != nil {
-		return nil, fmt.Errorf("circle_intersect error in circle 1 center: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("geometry.err_circle_intersect_error_in_circle", err))
 	}
 	c2Center, err := parsePointNode(center2Node)
 	if err != nil {
-		return nil, fmt.Errorf("circle_intersect error in circle 2 center: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("geometry.err_circle_intersect_error_in_circle_1", err))
 	}
 
 	r1Sq, err := geoMul(r1Node, r1Node)
 	if err != nil {
-		return nil, fmt.Errorf("circle_intersect error in r1^2: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("geometry.err_circle_intersect_error_in_r1", err))
 	}
 	r2Sq, err := geoMul(r2Node, r2Node)
 	if err != nil {
-		return nil, fmt.Errorf("circle_intersect error in r2^2: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("geometry.err_circle_intersect_error_in_r2", err))
 	}
 
 	c1 := Circle2D{Center: c1Center, Radius: r1Node, RadiusSq: r1Sq}
@@ -75,7 +76,7 @@ func evalCircleIntersectFunc(center1Node, r1Node, center2Node, r2Node Node) (Nod
 
 	pts, err := IntersectCircles(c1, c2)
 	if err != nil {
-		return nil, fmt.Errorf("circle_intersect error: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("geometry.err_circle_intersect_error", err))
 	}
 
 	elemNodes := make([]Node, len(pts))
@@ -88,15 +89,15 @@ func evalCircleIntersectFunc(center1Node, r1Node, center2Node, r2Node Node) (Nod
 func evalTriangleAreaFunc(p1Node, p2Node, p3Node Node) (Node, error) {
 	p1, err := parsePointNode(p1Node)
 	if err != nil {
-		return nil, fmt.Errorf("triangle_area error in vertex 1: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("geometry.err_triangle_area_error_in_vertex", err))
 	}
 	p2, err := parsePointNode(p2Node)
 	if err != nil {
-		return nil, fmt.Errorf("triangle_area error in vertex 2: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("geometry.err_triangle_area_error_in_vertex_1", err))
 	}
 	p3, err := parsePointNode(p3Node)
 	if err != nil {
-		return nil, fmt.Errorf("triangle_area error in vertex 3: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("geometry.err_triangle_area_error_in_vertex_2", err))
 	}
 
 	return TriangleArea(p1, p2, p3)
@@ -105,20 +106,20 @@ func evalTriangleAreaFunc(p1Node, p2Node, p3Node Node) (Node, error) {
 func evalTriangleCentersFunc(p1Node, p2Node, p3Node Node) (Node, error) {
 	p1, err := parsePointNode(p1Node)
 	if err != nil {
-		return nil, fmt.Errorf("triangle_centers error in vertex 1: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("geometry.err_triangle_centers_error_in_vertex", err))
 	}
 	p2, err := parsePointNode(p2Node)
 	if err != nil {
-		return nil, fmt.Errorf("triangle_centers error in vertex 2: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("geometry.err_triangle_centers_error_in_vertex_1", err))
 	}
 	p3, err := parsePointNode(p3Node)
 	if err != nil {
-		return nil, fmt.Errorf("triangle_centers error in vertex 3: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("geometry.err_triangle_centers_error_in_vertex_2", err))
 	}
 
 	res, err := TriangleCenters(p1, p2, p3)
 	if err != nil {
-		return nil, fmt.Errorf("triangle_centers error: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("geometry.err_triangle_centers_error", err))
 	}
 
 	return &ListNode{

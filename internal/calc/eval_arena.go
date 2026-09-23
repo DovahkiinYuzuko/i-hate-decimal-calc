@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"math/big"
 	"sync"
@@ -88,7 +89,7 @@ func (a *NodeArena) AllocRational(num, denom int64) (*ast.RationalNode, error) {
 		return nil, err
 	}
 	if denom == 0 {
-		return nil, fmt.Errorf("division by zero: denominator cannot be zero")
+		return nil, fmt.Errorf("%s", i18n.T("errors.zero_division_denominator"))
 	}
 
 	var r *big.Rat

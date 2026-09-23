@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"math/big"
 )
@@ -8,7 +9,7 @@ import (
 // EvalLaplace computes the symbolic Laplace transform of f(t): L[f(t)](s) = int_0^inf exp(-st)*f(t) dt.
 func EvalLaplace(f Node, tName, sName string, env *Env) (Node, error) {
 	if f == nil {
-		return nil, fmt.Errorf("laplace: input expression cannot be nil")
+		return nil, fmt.Errorf("%s", i18n.T("laplace.err_laplace_input_expression_cannot_be"))
 	}
 
 	if tName == "" {
@@ -198,13 +199,13 @@ func laplaceTerm(term Node, tName string, sVar *VarNode) (Node, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("laplace: cannot transform unsupported term %s", term.String())
+	return nil, fmt.Errorf("%s", i18n.T("laplace.err_laplace_cannot_transform_unsupported_term", term.String()))
 }
 
 // EvalInvLaplace computes the symbolic inverse Laplace transform: L^-1[F(s)](t).
 func EvalInvLaplace(F Node, sName, tName string, env *Env) (Node, error) {
 	if F == nil {
-		return nil, fmt.Errorf("inv_laplace: input expression cannot be nil")
+		return nil, fmt.Errorf("%s", i18n.T("laplace.err_inv_laplace_input_expression_cannot"))
 	}
 
 	if sName == "" {
@@ -368,7 +369,7 @@ func invLaplaceTerm(term Node, sName string, tVar *VarNode, env *Env) (Node, err
 		return trigSum, nil
 	}
 
-	return nil, fmt.Errorf("inv_laplace: unsupported term %s", term.String())
+	return nil, fmt.Errorf("%s", i18n.T("laplace.err_inv_laplace_unsupported_term", term.String()))
 }
 
 // -------------------------------------------------------------------------
@@ -394,7 +395,7 @@ func extractConstantCoeff(term Node, tName string) (*big.Rat, Node, error) {
 				if r, ok := f.(*RationalNode); ok {
 					coeff.Mul(coeff, r.Val)
 				} else {
-					return nil, nil, fmt.Errorf("non-rational constant factor %s", f.String())
+					return nil, nil, fmt.Errorf("%s", i18n.T("laplace.err_non_rational_constant_factor", f.String()))
 				}
 			} else {
 				nonConst = append(nonConst, f)

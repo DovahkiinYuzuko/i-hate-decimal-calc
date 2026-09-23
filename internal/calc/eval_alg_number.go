@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"math/big"
 
@@ -30,11 +31,11 @@ func MonicPoly(p *ast.PolyNode) *ast.PolyNode {
 // where deg(remainder) < deg(divisor) with respect to mainVar in Q[x].
 func PolyDivRem(dividend, divisor *ast.PolyNode, mainVar string) (quotient, remainder *ast.PolyNode, err error) {
 	if divisor == nil || len(divisor.Terms) == 0 {
-		return nil, nil, fmt.Errorf("polynomial division by zero")
+		return nil, nil, fmt.Errorf("%s", i18n.T("algebra.err_polynomial_division_by_zero"))
 	}
 	degDivisor := DegreeInVar(divisor, mainVar)
 	if degDivisor < 0 {
-		return nil, nil, fmt.Errorf("polynomial division by zero")
+		return nil, nil, fmt.Errorf("%s", i18n.T("algebra.err_polynomial_division_by_zero"))
 	}
 	degDividend := DegreeInVar(dividend, mainVar)
 	if degDividend < degDivisor {
@@ -44,7 +45,7 @@ func PolyDivRem(dividend, divisor *ast.PolyNode, mainVar string) (quotient, rema
 
 	lcDivisorNode := LeadingCoeffInVar(divisor, mainVar)
 	if len(lcDivisorNode.Terms) == 0 {
-		return nil, nil, fmt.Errorf("divisor leading coefficient is zero")
+		return nil, nil, fmt.Errorf("%s", i18n.T("algebra.err_divisor_leading_coefficient_is_zero"))
 	}
 	scalarLC := lcDivisorNode.Terms[0].Coeff
 
@@ -146,14 +147,14 @@ func canonicalPolyExtendedGCD(a, b *ast.PolyNode, mainVar string) (*polyExtended
 // Invariant deg(repPoly) < deg(minPoly) is guaranteed by polynomial reduction.
 func NewAlgebraicNumber(minPoly, repPoly *ast.PolyNode, symbol string) (*ast.AlgebraicNumberNode, error) {
 	if minPoly == nil || len(minPoly.Terms) == 0 {
-		return nil, fmt.Errorf("minPoly cannot be nil or zero")
+		return nil, fmt.Errorf("%s", i18n.T("algebra.err_minpoly_cannot_be_nil_or"))
 	}
 	if symbol == "" {
 		symbol = "alpha"
 	}
 	monicMin := MonicPoly(minPoly)
 	if len(monicMin.Vars) == 0 {
-		return nil, fmt.Errorf("minPoly must have at least one variable")
+		return nil, fmt.Errorf("%s", i18n.T("algebra.err_minpoly_must_have_at_least"))
 	}
 	mainVar := monicMin.Vars[0]
 
@@ -168,7 +169,7 @@ func NewAlgebraicNumber(minPoly, repPoly *ast.PolyNode, symbol string) (*ast.Alg
 		}
 		_, rem, err := PolyDivRem(targetRep, monicMin, mainVar)
 		if err != nil {
-			return nil, fmt.Errorf("reduction modulo minimal polynomial failed: %w", err)
+			return nil, fmt.Errorf("%s", i18n.T("algebra.err_reduction_modulo_minimal_polynomial_failed", err))
 		}
 		normRep = rem
 	}
@@ -191,10 +192,10 @@ func IsZeroAlg(a *ast.AlgebraicNumberNode) bool {
 // checkSameField verifies that two algebraic numbers belong to the same algebraic number field.
 func checkSameField(a, b *ast.AlgebraicNumberNode) error {
 	if a == nil || b == nil {
-		return fmt.Errorf("nil algebraic number operand")
+		return fmt.Errorf("%s", i18n.T("algebra.err_nil_algebraic_number_operand"))
 	}
 	if !a.MinPoly.Equal(b.MinPoly) {
-		return fmt.Errorf("algebraic operations across different number fields are not directly supported without tower extension (%s vs %s)", a.MinPoly.String(), b.MinPoly.String())
+		return fmt.Errorf("%s", i18n.T("algebra.err_algebraic_operations_across_different_number", a.MinPoly.String(), b.MinPoly.String()))
 	}
 	return nil
 }
@@ -229,7 +230,7 @@ func MulAlg(a, b *ast.AlgebraicNumberNode) (*ast.AlgebraicNumberNode, error) {
 // InvAlg computes the multiplicative inverse a(alpha)^(-1) in Q(alpha) using extended Euclidean algorithm.
 func InvAlg(a *ast.AlgebraicNumberNode) (*ast.AlgebraicNumberNode, error) {
 	if a == nil {
-		return nil, fmt.Errorf("nil algebraic number")
+		return nil, fmt.Errorf("%s", i18n.T("algebra.err_nil_algebraic_number"))
 	}
 	if IsZeroAlg(a) {
 		return nil, NewZeroDivisionError("division by zero in algebraic number field")
@@ -238,12 +239,12 @@ func InvAlg(a *ast.AlgebraicNumberNode) (*ast.AlgebraicNumberNode, error) {
 	mainVar := a.MinPoly.Vars[0]
 	res, err := canonicalPolyExtendedGCD(a.RepPoly, a.MinPoly, mainVar)
 	if err != nil {
-		return nil, fmt.Errorf("extended GCD failed: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("algebra.err_extended_gcd_failed", err))
 	}
 
 	// In an algebraic field, gcd(rep, minPoly) must be 1 (degree 0) since minPoly is irreducible
 	if len(res.gcd.Terms) == 0 || DegreeInVar(res.gcd, mainVar) != 0 {
-		return nil, fmt.Errorf("element is not invertible modulo %s (zero divisor found)", a.MinPoly.String())
+		return nil, fmt.Errorf("%s", i18n.T("algebra.err_element_is_not_invertible_modulo", a.MinPoly.String()))
 	}
 
 	return NewAlgebraicNumber(a.MinPoly, res.u, a.Symbol)
@@ -253,7 +254,7 @@ func InvAlg(a *ast.AlgebraicNumberNode) (*ast.AlgebraicNumberNode, error) {
 // using Sylvester resultant Res_x(m1(y - x), m2(x)).
 func MinPolySum(m1, m2 *ast.PolyNode, varName string) (*ast.PolyNode, error) {
 	if m1 == nil || len(m1.Terms) == 0 || m2 == nil || len(m2.Terms) == 0 {
-		return nil, fmt.Errorf("minimal polynomials cannot be nil or zero")
+		return nil, fmt.Errorf("%s", i18n.T("algebra.err_minimal_polynomials_cannot_be_nil"))
 	}
 	if varName == "" {
 		varName = "y"
@@ -282,13 +283,13 @@ func MinPolySum(m1, m2 *ast.PolyNode, varName string) (*ast.PolyNode, error) {
 	env := NewEnv()
 	resNode, err := EvalResultant(substM1, substM2, xVar, env)
 	if err != nil {
-		return nil, fmt.Errorf("resultant elimination failed: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("algebra.err_resultant_elimination_failed", err))
 	}
 
 	// Convert resultant back to PolyNode in varName
 	resPoly, err := NodeToPoly(resNode, []string{varName}, ast.OrderLex)
 	if err != nil {
-		return nil, fmt.Errorf("conversion of elimination polynomial failed: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("algebra.err_conversion_of_elimination_polynomial_failed", err))
 	}
 
 	return MonicPoly(resPoly), nil

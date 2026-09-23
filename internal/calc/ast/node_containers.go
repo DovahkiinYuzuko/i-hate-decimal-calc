@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"strings"
 )
@@ -56,14 +57,14 @@ type MatrixNode struct {
 // NewMatrix creates a new MatrixNode and validates that all rows have identical column length.
 func NewMatrix(rows, cols int, data [][]Node) (*MatrixNode, error) {
 	if rows <= 0 || cols <= 0 {
-		return nil, fmt.Errorf("matrix dimension error: rows and cols must be >= 1, got %dx%d", rows, cols)
+		return nil, fmt.Errorf("%s", i18n.T("ast.err_matrix_dimension_error_rows_and", rows, cols))
 	}
 	if len(data) != rows {
-		return nil, fmt.Errorf("matrix dimension error: expected %d rows, got %d", rows, len(data))
+		return nil, fmt.Errorf("%s", i18n.T("ast.err_matrix_dimension_error_expected_got", rows, len(data)))
 	}
 	for r, row := range data {
 		if len(row) != cols {
-			return nil, fmt.Errorf("matrix dimension error: row %d has %d elements, expected %d", r, len(row), cols)
+			return nil, fmt.Errorf("%s", i18n.T("ast.err_matrix_dimension_error_row_expected", r, len(row), cols))
 		}
 	}
 	return &MatrixNode{Rows: rows, Cols: cols, Data: data}, nil

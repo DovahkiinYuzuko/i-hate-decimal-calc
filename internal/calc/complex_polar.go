@@ -136,7 +136,7 @@ func evalArg(z Node) (Node, error) {
 	sRe, errRe := signNode(re)
 	sIm, errIm := signNode(im)
 	if errRe != nil || errIm != nil {
-		return nil, fmt.Errorf("cannot determine sign of complex components (re=%s, im=%s)", re.String(), im.String())
+		return nil, fmt.Errorf("%s", i18n.T("complex.err_cannot_determine_sign_of_complex", re.String(), im.String()))
 	}
 
 	// Origin: undefined

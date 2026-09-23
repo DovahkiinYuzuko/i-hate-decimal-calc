@@ -138,13 +138,13 @@ func handleToPoly(args []Node, env *Env) (Node, error) {
 				if vn, ok := elem.(*VarNode); ok {
 					vars = append(vars, vn.Name)
 				} else {
-					return nil, fmt.Errorf("variable list must contain only variable symbols, got %s", elem.String())
+					return nil, fmt.Errorf("%s", i18n.T("handlers.err_variable_list_must_contain_only", elem.String()))
 				}
 			}
 		case *VarNode:
 			vars = []string{v.Name}
 		default:
-			return nil, fmt.Errorf("second argument to to_poly must be a variable or list of variables, got %s", args[1].String())
+			return nil, fmt.Errorf("%s", i18n.T("handlers.err_second_argument_to_to_poly", args[1].String()))
 		}
 	} else {
 		vars = ast.ExtractFreeVariables(expr)
@@ -163,7 +163,7 @@ func handleToPoly(args []Node, env *Env) (Node, error) {
 		case "grevlex", "degrevlex", "gradedreverselexicographic":
 			order = ast.OrderGrevLex
 		default:
-			return nil, fmt.Errorf("unsupported polynomial order %s, must be 'lex' or 'grevlex'", args[2].String())
+			return nil, fmt.Errorf("%s", i18n.T("handlers.err_unsupported_polynomial_order_must_be", args[2].String()))
 		}
 	}
 
@@ -186,12 +186,12 @@ func handleToAlg(args []Node, env *Env) (Node, error) {
 
 	minPoly, err := NodeToPoly(minPolyExpr, []string{mainVar}, ast.OrderLex)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse minimal polynomial: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("handlers.err_failed_to_parse_minimal_polynomial", err))
 	}
 
 	repPoly, err := NodeToPoly(repExpr, []string{mainVar}, ast.OrderLex)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse representative polynomial: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("handlers.err_failed_to_parse_representative_polynomial", err))
 	}
 
 	symbol := mainVar
@@ -212,7 +212,7 @@ func handleAlgInv(args []Node, env *Env) (Node, error) {
 	}
 	algNode, ok := args[0].(*AlgebraicNumberNode)
 	if !ok {
-		return nil, fmt.Errorf("argument to alg_inv must be an AlgebraicNumberNode, got %T", args[0])
+		return nil, fmt.Errorf("%s", i18n.T("handlers.err_argument_to_alg_inv_must", args[0]))
 	}
 	return InvAlg(algNode)
 }
@@ -228,7 +228,7 @@ func handleMinPoly(args []Node, env *Env) (Node, error) {
 	}
 	m1, err := NodeToPoly(args[0], []string{vars1[0]}, ast.OrderLex)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse first polynomial: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("handlers.err_failed_to_parse_first_polynomial", err))
 	}
 
 	vars2 := ast.ExtractFreeVariables(args[1])
@@ -237,7 +237,7 @@ func handleMinPoly(args []Node, env *Env) (Node, error) {
 	}
 	m2, err := NodeToPoly(args[1], []string{vars2[0]}, ast.OrderLex)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse second polynomial: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("handlers.err_failed_to_parse_second_polynomial", err))
 	}
 
 	varName := "y"

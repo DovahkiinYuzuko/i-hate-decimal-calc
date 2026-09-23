@@ -11,7 +11,7 @@ import (
 // It returns the resulting RREF MatrixNode and a slice of 0-based pivot column indices.
 func computeRREF(m *MatrixNode) (*MatrixNode, []int, error) {
 	if m == nil {
-		return nil, nil, fmt.Errorf("cannot compute RREF of nil matrix")
+		return nil, nil, fmt.Errorf("%s", i18n.T("matrix.err_cannot_compute_rref_of_nil"))
 	}
 
 	rows := m.Rows
@@ -196,7 +196,7 @@ func evalSolveLinear(matNode, bNode Node) (Node, error) {
 	}
 	A, ok := evalA.(*MatrixNode)
 	if !ok {
-		return nil, fmt.Errorf("solve_linear error: first argument must be a matrix, got %T", evalA)
+		return nil, fmt.Errorf("%s", i18n.T("matrix.err_solve_linear_error_first_argument", evalA))
 	}
 
 	evalB, err := Eval(bNode)
@@ -217,15 +217,14 @@ func evalSolveLinear(matNode, bNode Node) (Node, error) {
 		} else if vb.Rows == 1 {
 			bElems = vb.Data[0]
 		} else {
-			return nil, fmt.Errorf("solve_linear error: constant vector b must be 1D or column matrix, got %dx%d", vb.Rows, vb.Cols)
+			return nil, fmt.Errorf("%s", i18n.T("matrix.err_solve_linear_error_constant_vector", vb.Rows, vb.Cols))
 		}
 	default:
-		return nil, fmt.Errorf("solve_linear error: second argument must be a vector or list, got %T", evalB)
+		return nil, fmt.Errorf("%s", i18n.T("matrix.err_solve_linear_error_second_argument", evalB))
 	}
 
 	if len(bElems) != A.Rows {
-		return nil, fmt.Errorf("%s (matrix has %d rows, vector has %d elements)",
-			i18n.T("errors.linear_dim_mismatch"), A.Rows, len(bElems))
+		return nil, fmt.Errorf("%s", i18n.T("matrix.err_matrix_has_vector_has", i18n.T("errors.linear_dim_mismatch"), A.Rows, len(bElems)))
 	}
 
 	// Build augmented matrix [A | b] with dimensions A.Rows x (A.Cols + 1)

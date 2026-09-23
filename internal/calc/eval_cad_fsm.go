@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"sync"
 )
@@ -90,7 +91,7 @@ func (fsm *CadLifecycleFSM) TransitionTo(target CadState) error {
 	}
 
 	if !valid {
-		return fmt.Errorf("invalid CAD FSM transition: %s -> %s", fsm.currentState, target)
+		return fmt.Errorf("%s", i18n.T("cad.err_invalid_cad_fsm_transition", fsm.currentState, target))
 	}
 
 	fsm.currentState = target

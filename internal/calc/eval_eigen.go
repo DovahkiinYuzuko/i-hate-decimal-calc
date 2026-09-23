@@ -14,7 +14,7 @@ import (
 // EvalTrace calculates the exact matrix trace: tr(A) = sum_{i=1}^n A_{i,i}.
 func EvalTrace(mat *MatrixNode, env *Env) (Node, error) {
 	if mat == nil {
-		return nil, fmt.Errorf("trace: nil matrix")
+		return nil, fmt.Errorf("%s", i18n.T("eigen.err_trace_nil_matrix"))
 	}
 	if mat.Rows != mat.Cols {
 		return nil, fmt.Errorf("%s", i18n.T("errors.matrix_non_square", mat.Rows, mat.Cols))
@@ -75,7 +75,7 @@ func faddeevLeVerrier(mat *MatrixNode) ([]Node, error) {
 		}
 		AkMat, ok := AkNode.(*MatrixNode)
 		if !ok {
-			return nil, fmt.Errorf("faddeevLeVerrier: intermediate matrix multiplication failed")
+			return nil, fmt.Errorf("%s", i18n.T("eigen.err_faddeevleverrier_intermediate_matrix_multiplication_failed"))
 		}
 
 		// tr_k = tr(A_k)
@@ -287,7 +287,7 @@ func solvePolyRoots(poly []Node) ([]Node, error) {
 		deg--
 	}
 	if deg <= 0 {
-		return nil, fmt.Errorf("cannot find roots of constant or zero polynomial")
+		return nil, fmt.Errorf("%s", i18n.T("eigen.err_cannot_find_roots_of_constant"))
 	}
 
 	if deg == 1 {
@@ -405,14 +405,14 @@ func solvePolyRoots(poly []Node) ([]Node, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("eigenvals: cannot find exact roots for degree %d characteristic polynomial", deg)
+	return nil, fmt.Errorf("%s", i18n.T("eigen.err_eigenvals_cannot_find_exact_roots", deg))
 }
 
 // nullSpaceBasis computes the exact null space basis vectors for matrix A (satisfying A * v = 0).
 // Each basis vector is returned as a 1D ListNode containing normalized integer or exact scalar components.
 func nullSpaceBasis(A *MatrixNode) ([]Node, error) {
 	if A == nil {
-		return nil, fmt.Errorf("nullSpaceBasis: nil matrix")
+		return nil, fmt.Errorf("%s", i18n.T("eigen.err_nullspacebasis_nil_matrix"))
 	}
 
 	rrefMat, pivotCols, err := computeRREF(A)
@@ -552,7 +552,7 @@ func normalizeBasisVector(vec []Node) []Node {
 // EvalEigenvals calculates all eigenvalues of square matrix mat.
 func EvalEigenvals(mat *MatrixNode, env *Env) (Node, error) {
 	if mat == nil {
-		return nil, fmt.Errorf("eigenvals: nil matrix")
+		return nil, fmt.Errorf("%s", i18n.T("eigen.err_eigenvals_nil_matrix"))
 	}
 	if mat.Rows != mat.Cols {
 		return nil, fmt.Errorf("%s", i18n.T("errors.matrix_non_square", mat.Rows, mat.Cols))
@@ -589,7 +589,7 @@ func EvalEigenvals(mat *MatrixNode, env *Env) (Node, error) {
 // Returns [[lambda_1, [v_1, ...]], [lambda_2, [v_2, ...]], ...]
 func EvalEigenvects(mat *MatrixNode, env *Env) (Node, error) {
 	if mat == nil {
-		return nil, fmt.Errorf("eigenvects: nil matrix")
+		return nil, fmt.Errorf("%s", i18n.T("eigen.err_eigenvects_nil_matrix"))
 	}
 	if mat.Rows != mat.Cols {
 		return nil, fmt.Errorf("%s", i18n.T("errors.matrix_non_square", mat.Rows, mat.Cols))

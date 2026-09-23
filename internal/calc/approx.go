@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"math"
 	"math/cmplx"
@@ -10,7 +11,7 @@ import (
 // Approx evaluates an AST node into an approximate decimal string representation.
 func Approx(n Node) (string, error) {
 	if n == nil {
-		return "", fmt.Errorf("cannot approximate nil node")
+		return "", fmt.Errorf("%s", i18n.T("approx.err_cannot_approximate_nil_node"))
 	}
 	if list, ok := n.(*ListNode); ok {
 		appStrs := make([]string, len(list.Elements))
@@ -81,7 +82,7 @@ func evalFloat(n Node) (float64, error) {
 		return 0, err
 	}
 	if math.Abs(imag(c)) > 1e-14 {
-		return 0, fmt.Errorf("result is complex, not a real number: %v", c)
+		return 0, fmt.Errorf("%s", i18n.T("approx.err_result_is_complex_not_a", c))
 	}
 	return real(c), nil
 }
@@ -103,7 +104,7 @@ func evalComplex(n Node) (complex128, error) {
 		case "i":
 			return complex(0, 1), nil
 		default:
-			return 0, fmt.Errorf("unknown constant: %s", v.Name)
+			return 0, fmt.Errorf("%s", i18n.T("errors.unknown_constant", v.Name))
 		}
 
 	case *SqrtNode:
@@ -149,7 +150,7 @@ func evalComplex(n Node) (complex128, error) {
 				}
 				return cmplx.Pow(arg, complex(1.0/3.0, 0)), nil
 			default:
-				return 0, fmt.Errorf("unknown function: %s", v.Name)
+				return 0, fmt.Errorf("%s", i18n.T("errors.unknown_function", v.Name))
 			}
 		} else if len(v.Args) == 2 && v.Name == "log" {
 			base, err := evalComplex(v.Args[0])
@@ -163,11 +164,11 @@ func evalComplex(n Node) (complex128, error) {
 			// log_b(x) = ln(x) / ln(b)
 			lnBase := cmplx.Log(base)
 			if lnBase == 0 {
-				return 0, fmt.Errorf("division by zero in log base")
+				return 0, fmt.Errorf("%s", i18n.T("approx.err_division_by_zero_in_log"))
 			}
 			return cmplx.Log(arg) / lnBase, nil
 		}
-		return 0, fmt.Errorf("invalid function call: %s", v.Name)
+		return 0, fmt.Errorf("%s", i18n.T("approx.err_invalid_function_call", v.Name))
 
 	case *ComplexNode:
 		r, err := evalFloat(v.Real)
@@ -190,7 +191,7 @@ func evalComplex(n Node) (complex128, error) {
 		}
 		if v.Op == "!" {
 			if math.Abs(imag(val)) > 1e-14 || real(val) < 0 || math.Floor(real(val)) != real(val) {
-				return 0, fmt.Errorf("factorial requires non-negative integer")
+				return 0, fmt.Errorf("%s", i18n.T("approx.err_factorial_requires_non_negative_integer"))
 			}
 			n := int64(real(val))
 			res := 1.0
@@ -199,7 +200,7 @@ func evalComplex(n Node) (complex128, error) {
 			}
 			return complex(res, 0), nil
 		}
-		return 0, fmt.Errorf("unknown unary operator: %s", v.Op)
+		return 0, fmt.Errorf("%s", i18n.T("approx.err_unknown_unary_operator", v.Op))
 
 	case *PowNode:
 		base, err := evalComplex(v.Base)
@@ -235,6 +236,6 @@ func evalComplex(n Node) (complex128, error) {
 		return sum, nil
 
 	default:
-		return 0, fmt.Errorf("cannot approximate node type: %T", n)
+		return 0, fmt.Errorf("%s", i18n.T("approx.err_cannot_approximate_node_type", n))
 	}
 }

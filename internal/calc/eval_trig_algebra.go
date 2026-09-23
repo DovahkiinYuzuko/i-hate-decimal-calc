@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"math/big"
 	"strings"
@@ -15,7 +16,7 @@ import (
 // and multiple-angle formulas (trig_expand).
 func EvalTrigExpand(expr Node, env *Env) (Node, error) {
 	if expr == nil {
-		return nil, fmt.Errorf("cannot expand nil expression")
+		return nil, fmt.Errorf("%s", i18n.T("errors.err_cannot_expand_nil_expression"))
 	}
 
 	expanded := expandTrigNode(expr, env)
@@ -34,7 +35,7 @@ func EvalTrigExpand(expr Node, env *Env) (Node, error) {
 // to linear sums (product-to-sum, half-angle formulas) and performs harmonic addition.
 func EvalTrigReduce(expr Node, env *Env) (Node, error) {
 	if expr == nil {
-		return nil, fmt.Errorf("cannot reduce nil expression")
+		return nil, fmt.Errorf("%s", i18n.T("errors.err_cannot_reduce_nil_expression"))
 	}
 
 	// 1. First pass: expand products of expressions if necessary to expose trig products

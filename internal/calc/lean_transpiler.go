@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"sort"
 	"strings"
@@ -59,7 +60,7 @@ func escapeLeanIdent(name string) string {
 // ToLeanSyntax converts an internal AST node to Lean 4 / Mathlib syntax string.
 func ToLeanSyntax(node Node) (string, error) {
 	if node == nil {
-		return "", fmt.Errorf("cannot convert nil node to Lean syntax")
+		return "", fmt.Errorf("%s", i18n.T("lean.err_cannot_convert_nil_node_to"))
 	}
 
 	switch n := node.(type) {
@@ -297,10 +298,10 @@ func CollectFreeVariables(nodes ...Node) []string {
 // TranspileCertificateToLean translates a verified certificate and its input/result expressions into a Lean 4 theorem.
 func TranspileCertificateToLean(cert *VerificationCertificate, inputExpr, resultExpr Node) (string, error) {
 	if cert == nil {
-		return "", fmt.Errorf("certificate is nil")
+		return "", fmt.Errorf("%s", i18n.T("lean.err_certificate_is_nil"))
 	}
 	if !cert.IsVerified {
-		return "", fmt.Errorf("cannot transpile unverified certificate: %s", cert.Details)
+		return "", fmt.Errorf("%s", i18n.T("lean.err_cannot_transpile_unverified_certificate", cert.Details))
 	}
 
 	var equalityStr string

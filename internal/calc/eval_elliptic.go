@@ -245,7 +245,7 @@ func FindTorsionSubgroup(aRat, bRat *big.Rat, fsm *EllipticLifecycleFSM) ([]Elli
 	aPrimeRat := new(big.Rat).Mul(aRat, new(big.Rat).SetInt(d4))
 	if !aPrimeRat.IsInt() {
 		_ = fsm.TransitionTo(EcStateFailed)
-		return nil, "", fmt.Errorf("failed to integralize A: %s", aPrimeRat.RatString())
+		return nil, "", fmt.Errorf("%s", i18n.T("elliptic.err_failed_to_integralize_a", aPrimeRat.RatString()))
 	}
 	aPrime := aPrimeRat.Num()
 
@@ -253,7 +253,7 @@ func FindTorsionSubgroup(aRat, bRat *big.Rat, fsm *EllipticLifecycleFSM) ([]Elli
 	bPrimeRat := new(big.Rat).Mul(bRat, new(big.Rat).SetInt(d6))
 	if !bPrimeRat.IsInt() {
 		_ = fsm.TransitionTo(EcStateFailed)
-		return nil, "", fmt.Errorf("failed to integralize B: %s", bPrimeRat.RatString())
+		return nil, "", fmt.Errorf("%s", i18n.T("elliptic.err_failed_to_integralize_b", bPrimeRat.RatString()))
 	}
 	bPrime := bPrimeRat.Num()
 
@@ -743,11 +743,11 @@ func evalEcAdd(args []Node, env *Env) (Node, error) {
 
 	aRat, err := evalToRat(args[0], env)
 	if err != nil {
-		return nil, fmt.Errorf("A parameter error: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("elliptic.err_a_parameter_error", err))
 	}
 	bRat, err := evalToRat(args[1], env)
 	if err != nil {
-		return nil, fmt.Errorf("B parameter error: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("elliptic.err_b_parameter_error", err))
 	}
 
 	var p1, p2 EllipticPoint
@@ -798,16 +798,16 @@ func evalEcMul(args []Node, env *Env) (Node, error) {
 
 	aRat, err := evalToRat(args[0], env)
 	if err != nil {
-		return nil, fmt.Errorf("A parameter error: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("elliptic.err_a_parameter_error", err))
 	}
 	bRat, err := evalToRat(args[1], env)
 	if err != nil {
-		return nil, fmt.Errorf("B parameter error: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("elliptic.err_b_parameter_error", err))
 	}
 
 	nRat, err := evalToRat(args[2], env)
 	if err != nil {
-		return nil, fmt.Errorf("scalar error: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("elliptic.err_scalar_error", err))
 	}
 	if !nRat.IsInt() {
 		return nil, fmt.Errorf("%s", i18n.T("elliptic.err_scalar_int_required"))
@@ -847,11 +847,11 @@ func evalEcTorsion(args []Node, env *Env) (Node, error) {
 
 	aRat, err := evalToRat(args[0], env)
 	if err != nil {
-		return nil, fmt.Errorf("A parameter error: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("elliptic.err_a_parameter_error", err))
 	}
 	bRat, err := evalToRat(args[1], env)
 	if err != nil {
-		return nil, fmt.Errorf("B parameter error: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("elliptic.err_b_parameter_error", err))
 	}
 
 	fsm := NewEllipticLifecycleFSM()
@@ -881,7 +881,7 @@ func evalToRat(n Node, env *Env) (*big.Rat, error) {
 	if r, ok := ev.(*RationalNode); ok {
 		return new(big.Rat).Set(r.Val), nil
 	}
-	return nil, fmt.Errorf("expected rational number, got: %s", n.String())
+	return nil, fmt.Errorf("%s", i18n.T("elliptic.err_expected_rational_number_got", n.String()))
 }
 
 func parseEllipticPointNode(n Node, env *Env) (EllipticPoint, error) {

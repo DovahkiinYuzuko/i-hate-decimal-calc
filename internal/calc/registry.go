@@ -132,7 +132,7 @@ func EvaluateFunction(name string, args []Node) (Node, error) {
 		return nil, fmt.Errorf("%s", i18n.T("errors.unknown_function", name))
 	}
 	if spec.Evaluate == nil {
-		return nil, fmt.Errorf("function %s has no evaluation handler registered", name)
+		return nil, fmt.Errorf("%s", i18n.T("registry.err_function", name))
 	}
 	return spec.Evaluate(args)
 }
@@ -346,10 +346,10 @@ func init() {
 		MaxArgs: 4,
 		Validate: func(args []Node) error {
 			if len(args) != 2 && len(args) != 4 {
-				return fmt.Errorf("integrate requires 2 arguments (indefinite) or 4 arguments (definite), got %d", len(args))
+				return fmt.Errorf("%s", i18n.T("registry.err_integrate_requires_2_arguments_indefinite", len(args)))
 			}
 			if _, ok := args[1].(*VarNode); !ok {
-				return fmt.Errorf("integrate error: second argument must be a variable name, got %s", args[1].String())
+				return fmt.Errorf("%s", i18n.T("registry.err_integrate_error_second_argument_must", args[1].String()))
 			}
 			return nil
 		},
@@ -385,10 +385,10 @@ func init() {
 		MaxArgs: 4,
 		Validate: func(args []Node) error {
 			if len(args) != 3 && len(args) != 4 {
-				return fmt.Errorf("limit requires 3 arguments (expr, var, target) or 4 arguments (expr, var, target, direction), got %d", len(args))
+				return fmt.Errorf("%s", i18n.T("registry.err_limit_requires_3_arguments_expr", len(args)))
 			}
 			if _, ok := args[1].(*VarNode); !ok {
-				return fmt.Errorf("limit error: second argument must be a variable name, got %s", args[1].String())
+				return fmt.Errorf("%s", i18n.T("registry.err_limit_error_second_argument_must", args[1].String()))
 			}
 			return nil
 		},

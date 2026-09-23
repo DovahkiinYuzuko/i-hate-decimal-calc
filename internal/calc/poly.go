@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"container/heap"
 	"fmt"
 	"math/big"
@@ -419,7 +420,7 @@ func LeadingCoeffInVar(p *ast.PolyNode, varName string) *ast.PolyNode {
 // premFactor * dividend = quotient * divisor + remainder, where deg(remainder) < deg(divisor).
 func PseudoDivRem(dividend, divisor *ast.PolyNode, mainVar string) (quotient, remainder *ast.PolyNode, premFactor *big.Rat, err error) {
 	if divisor == nil || len(divisor.Terms) == 0 {
-		return nil, nil, nil, fmt.Errorf("polynomial division by zero")
+		return nil, nil, nil, fmt.Errorf("%s", i18n.T("algebra.err_polynomial_division_by_zero"))
 	}
 
 	degDivisor := DegreeInVar(divisor, mainVar)
@@ -433,7 +434,7 @@ func PseudoDivRem(dividend, divisor *ast.PolyNode, mainVar string) (quotient, re
 	// In single-variable or scalar leading coefficient cases:
 	lcDivisor := LeadingCoeffInVar(divisor, mainVar)
 	if len(lcDivisor.Terms) == 0 {
-		return nil, nil, nil, fmt.Errorf("divisor leading coefficient is zero")
+		return nil, nil, nil, fmt.Errorf("%s", i18n.T("algebra.err_divisor_leading_coefficient_is_zero"))
 	}
 
 	// delta = degDividend - degDivisor + 1
@@ -511,7 +512,7 @@ func NodeToPoly(node ast.Node, vars []string, order ast.MonomialOrder) (*ast.Pol
 	case *ast.VarNode:
 		idx, found := varMap[v.Name]
 		if !found {
-			return nil, fmt.Errorf("variable %s not present in polynomial variable list %v", v.Name, vars)
+			return nil, fmt.Errorf("%s", i18n.T("poly.err_variable", v.Name, vars))
 		}
 		exps := make([]int, len(vars))
 		exps[idx] = 1
@@ -556,7 +557,7 @@ func NodeToPoly(node ast.Node, vars []string, order ast.MonomialOrder) (*ast.Pol
 		case "+":
 			return NodeToPoly(v.Expr, vars, order)
 		default:
-			return nil, fmt.Errorf("unsupported unary operator %s in polynomial", v.Op)
+			return nil, fmt.Errorf("%s", i18n.T("poly.err_unsupported_unary_operator", v.Op))
 		}
 
 	case *ast.PowNode:
@@ -566,11 +567,11 @@ func NodeToPoly(node ast.Node, vars []string, order ast.MonomialOrder) (*ast.Pol
 		}
 		expRat, ok := v.Exp.(*ast.RationalNode)
 		if !ok || !expRat.Val.IsInt() || expRat.Val.Sign() < 0 {
-			return nil, fmt.Errorf("polynomial exponent must be a non-negative integer, got %s", v.Exp.String())
+			return nil, fmt.Errorf("%s", i18n.T("poly.err_polynomial_exponent_must_be_a", v.Exp.String()))
 		}
 		expInt := expRat.Val.Num().Int64()
 		if expInt > 1000 {
-			return nil, fmt.Errorf("polynomial exponent %d exceeds reasonable limit", expInt)
+			return nil, fmt.Errorf("%s", i18n.T("poly.err_polynomial_exponent", expInt))
 		}
 
 		// Binary exponentiation
@@ -593,7 +594,7 @@ func NodeToPoly(node ast.Node, vars []string, order ast.MonomialOrder) (*ast.Pol
 		return v.Clone(), nil
 
 	default:
-		return nil, fmt.Errorf("unsupported node type %T in polynomial conversion", node)
+		return nil, fmt.Errorf("%s", i18n.T("poly.err_unsupported_node_type", node))
 	}
 }
 

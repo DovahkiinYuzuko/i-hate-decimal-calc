@@ -46,7 +46,7 @@ func Eval(n Node) (Node, error) {
 // EvalWithEnv evaluates and simplifies an AST node in the context of the given environment.
 func EvalWithEnv(n Node, env *Env) (Node, error) {
 	if n == nil {
-		return nil, fmt.Errorf("cannot evaluate nil node")
+		return nil, fmt.Errorf("%s", i18n.T("errors.err_cannot_evaluate_nil_node"))
 	}
 
 	switch v := n.(type) {
@@ -198,7 +198,7 @@ func EvalWithEnv(n Node, env *Env) (Node, error) {
 		return v, nil
 
 	default:
-		return nil, fmt.Errorf("unknown node type for evaluation: %T", n)
+		return nil, fmt.Errorf("%s", i18n.T("errors.err_unknown_node_type_for_evaluation", n))
 	}
 }
 

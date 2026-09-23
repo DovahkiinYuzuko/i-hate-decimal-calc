@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"math/big"
 	"strings"
@@ -298,17 +299,17 @@ func repeatingDecimalToRat(intStr, nonRepeatStr, repeatStr string) (*big.Rat, er
 	}
 	intBig, ok := new(big.Int).SetString(intStr, 10)
 	if !ok {
-		return nil, fmt.Errorf("invalid integer part: %s", intStr)
+		return nil, fmt.Errorf("%s", i18n.T("parser.err_invalid_integer_part", intStr))
 	}
 
 	rLen := int64(len(repeatStr))
 	if rLen == 0 {
-		return nil, fmt.Errorf("repeating part cannot be empty")
+		return nil, fmt.Errorf("%s", i18n.T("parser.err_repeating_part_cannot_be_empty"))
 	}
 
 	repBig, ok := new(big.Int).SetString(repeatStr, 10)
 	if !ok {
-		return nil, fmt.Errorf("invalid repeating part: %s", repeatStr)
+		return nil, fmt.Errorf("%s", i18n.T("parser.err_invalid_repeating_part", repeatStr))
 	}
 
 	tenPowR := new(big.Int).Exp(big.NewInt(10), big.NewInt(rLen), nil)
@@ -324,7 +325,7 @@ func repeatingDecimalToRat(intStr, nonRepeatStr, repeatStr string) (*big.Rat, er
 		// Mixed repeating decimal: (N * (10^r - 1) + R) / (10^n * (10^r - 1))
 		nonRepBig, ok := new(big.Int).SetString(nonRepeatStr, 10)
 		if !ok {
-			return nil, fmt.Errorf("invalid non-repeating part: %s", nonRepeatStr)
+			return nil, fmt.Errorf("%s", i18n.T("parser.err_invalid_non_repeating_part", nonRepeatStr))
 		}
 		num := new(big.Int).Mul(nonRepBig, nines)
 		num.Add(num, repBig)
@@ -367,7 +368,7 @@ func Tokenize(input string) ([]Token, error) {
 	for {
 		tok := l.NextToken()
 		if tok.Type == TokenIllegal {
-			return nil, fmt.Errorf("illegal character '%s' at position %d", tok.Literal, tok.Pos)
+			return nil, fmt.Errorf("%s", i18n.T("parser.err_illegal_character_at_position", tok.Literal, tok.Pos))
 		}
 		tokens = append(tokens, tok)
 		if tok.Type == TokenEOF {

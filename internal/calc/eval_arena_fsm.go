@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"sync"
 )
@@ -75,11 +76,11 @@ func (fsm *ArenaLifecycleFSM) CheckCanAllocate() error {
 	case ArenaStateActive, ArenaStateDetached:
 		return nil
 	case ArenaStateReleased:
-		return fmt.Errorf("arena allocation violation: cannot allocate from released arena (state: %s)", fsm.state)
+		return fmt.Errorf("%s", i18n.T("arena.err_arena_allocation_violation_cannot_allocate", fsm.state))
 	case ArenaStateInactive:
-		return fmt.Errorf("arena allocation violation: cannot allocate from inactive arena (state: %s)", fsm.state)
+		return fmt.Errorf("%s", i18n.T("arena.err_arena_allocation_violation_cannot_allocate_1", fsm.state))
 	default:
-		return fmt.Errorf("arena allocation violation: invalid arena state %s", fsm.state)
+		return fmt.Errorf("%s", i18n.T("arena.err_arena_allocation_violation_invalid_arena", fsm.state))
 	}
 }
 
@@ -88,7 +89,7 @@ func (fsm *ArenaLifecycleFSM) MarkDetached() error {
 	fsm.mu.Lock()
 	defer fsm.mu.Unlock()
 	if fsm.state != ArenaStateActive && fsm.state != ArenaStateDetached {
-		return fmt.Errorf("cannot mark detached from state: %s", fsm.state)
+		return fmt.Errorf("%s", i18n.T("arena.err_cannot_mark_detached_from_state", fsm.state))
 	}
 	fsm.state = ArenaStateDetached
 	return nil
@@ -99,7 +100,7 @@ func (fsm *ArenaLifecycleFSM) Release() error {
 	fsm.mu.Lock()
 	defer fsm.mu.Unlock()
 	if fsm.state == ArenaStateReleased {
-		return fmt.Errorf("arena double release violation: arena is already released")
+		return fmt.Errorf("%s", i18n.T("arena.err_arena_double_release_violation_arena"))
 	}
 	fsm.state = ArenaStateReleased
 	return nil

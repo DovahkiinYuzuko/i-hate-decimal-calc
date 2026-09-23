@@ -25,7 +25,7 @@ type CadCell struct {
 // executes the CAD/1D Fast-Path pipeline, and returns exact solution intervals.
 func SolveInequality(relOp *RelOpNode, varName string, env *Env) (Node, error) {
 	if relOp == nil {
-		return nil, fmt.Errorf("cannot solve nil inequality")
+		return nil, fmt.Errorf("%s", i18n.T("cad.err_cannot_solve_nil_inequality"))
 	}
 
 	fsm := NewCadLifecycleFSM()
@@ -56,7 +56,7 @@ func SolveInequality(relOp *RelOpNode, varName string, env *Env) (Node, error) {
 		}
 		r, ok := c.(*RationalNode)
 		if !ok {
-			return nil, fmt.Errorf("constant expression did not evaluate to rational: %s", c)
+			return nil, fmt.Errorf("%s", i18n.T("cad.err_constant_expression_did_not_evaluate", c))
 		}
 		satisfied := evalRelationalSign(r.Val.Sign(), relOp.Op)
 		if satisfied {
@@ -210,7 +210,7 @@ func solveExactRoots(expr Node, varName string) ([]Node, error) {
 	}
 	list, ok := sol.(*ListNode)
 	if !ok {
-		return nil, fmt.Errorf("no exact roots")
+		return nil, fmt.Errorf("%s", i18n.T("cad.err_no_exact_roots"))
 	}
 	var realRoots []Node
 	for _, r := range list.Elements {
@@ -736,7 +736,7 @@ func evaluateFormulaOnCell(formula Node, cell *CadCell, vars []string, env *Env)
 			return false, nil
 		case "not":
 			if len(node.Args) != 1 {
-				return false, fmt.Errorf("not expects 1 argument")
+				return false, fmt.Errorf("%s", i18n.T("cad.err_not_expects_1_argument"))
 			}
 			sat, err := evaluateFormulaOnCell(node.Args[0], cell, vars, env)
 			if err != nil {
@@ -762,7 +762,7 @@ func evaluateFormulaOnCell(formula Node, cell *CadCell, vars []string, env *Env)
 			return false, nil
 		}
 	}
-	return false, fmt.Errorf("unsupported formula: %s", formula.String())
+	return false, fmt.Errorf("%s", i18n.T("cad.err_unsupported_formula", formula.String()))
 }
 
 // extractFactors flattens MulNode and PowNode with positive integer exponents into individual factors.
@@ -807,7 +807,7 @@ func specializePolyForCAD(p Node, vars []string, samplePoint []Node, targetVar s
 
 	uPoly, ok := extractPoly(curr, targetVar)
 	if !ok {
-		return nil, false, fmt.Errorf("failed to extract univariate polynomial in %s from %s", targetVar, curr.String())
+		return nil, false, fmt.Errorf("%s", i18n.T("cad.err_failed_to_extract_univariate_polynomial", targetVar, curr.String()))
 	}
 	uPoly = trimPoly(uPoly)
 
@@ -917,7 +917,7 @@ func isConstantNode(n Node) bool {
 func liftCADCells(projSets [][]Node, vars []string, env *Env, fsm *CadLifecycleFSM) ([]CadCell, error) {
 	n := len(vars)
 	if n == 0 {
-		return nil, fmt.Errorf("no variables specified")
+		return nil, fmt.Errorf("%s", i18n.T("cad.err_no_variables_specified"))
 	}
 
 	// 1. Base decomposition at Level 1 (vars[0])
@@ -1105,7 +1105,7 @@ func CADSolveFormula(formula Node, vars []string, env *Env) (Node, error) {
 // CADSolveFormulaCells solves formula over R^n and returns both the reconstructed solution Node and satisfied CadCells.
 func CADSolveFormulaCells(formula Node, vars []string, env *Env) (Node, []CadCell, error) {
 	if formula == nil {
-		return nil, nil, fmt.Errorf("cannot solve nil formula")
+		return nil, nil, fmt.Errorf("%s", i18n.T("cad.err_cannot_solve_nil_formula"))
 	}
 
 	// 1. Extract free variables if vars not provided

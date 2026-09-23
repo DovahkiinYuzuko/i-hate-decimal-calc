@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"strings"
 )
@@ -20,7 +21,7 @@ func NewConst(name string) (*ConstNode, error) {
 	case "pi", "e", "deg":
 		return &ConstNode{Name: name}, nil
 	default:
-		return nil, fmt.Errorf("unknown constant: %s", name)
+		return nil, fmt.Errorf("%s", i18n.T("errors.unknown_constant", name))
 	}
 }
 

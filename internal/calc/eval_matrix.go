@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 )
 
@@ -14,8 +15,7 @@ func mulMatrixOrScalar(a, b Node) (Node, error) {
 
 	if isMatA && isMatB {
 		if matA.Cols != matB.Rows {
-			return nil, fmt.Errorf("matrix dimension mismatch: cannot multiply %dx%d matrix by %dx%d matrix",
-				matA.Rows, matA.Cols, matB.Rows, matB.Cols)
+			return nil, fmt.Errorf("%s", i18n.T("matrix.err_matrix_dimension_mismatch_cannot_multiply", matA.Rows, matA.Cols, matB.Rows, matB.Cols))
 		}
 		resData := make([][]Node, matA.Rows)
 		for r := 0; r < matA.Rows; r++ {
@@ -97,7 +97,7 @@ func submatrix(m *MatrixNode, dropR, dropC int) *MatrixNode {
 // evalDet calculates the exact determinant using division-free Laplace expansion.
 func evalDet(m *MatrixNode) (Node, error) {
 	if m.Rows != m.Cols {
-		return nil, fmt.Errorf("matrix dimension error: det requires square matrix, got %dx%d", m.Rows, m.Cols)
+		return nil, fmt.Errorf("%s", i18n.T("matrix.err_matrix_dimension_error_det_requires", m.Rows, m.Cols))
 	}
 
 	n := m.Rows

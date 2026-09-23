@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"sync"
 )
@@ -78,8 +79,8 @@ func (f *TaskFSM) Transition(to TaskState) error {
 			return nil
 		}
 	case StateCompleted, StateFailed, StateCancelled:
-		return fmt.Errorf("invalid transition from terminal state %s to %s", f.state, to)
+		return fmt.Errorf("%s", i18n.T("concurrent.err_invalid_transition_from_terminal_state", f.state, to))
 	}
 
-	return fmt.Errorf("invalid transition from %s to %s", f.state, to)
+	return fmt.Errorf("%s", i18n.T("concurrent.err_invalid_transition_from", f.state, to))
 }

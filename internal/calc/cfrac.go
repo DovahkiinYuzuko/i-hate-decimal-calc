@@ -24,7 +24,7 @@ func floorRat(r *big.Rat) *big.Int {
 // Returns a ListNode [a0, a1, ..., an] where each ak is an integer.
 func cfracRational(r *big.Rat) (*ListNode, error) {
 	if r == nil {
-		return nil, fmt.Errorf("cannot compute continued fraction of nil rational")
+		return nil, fmt.Errorf("%s", i18n.T("cfrac.err_cannot_compute_continued_fraction_of"))
 	}
 
 	var elems []Node
@@ -49,7 +49,7 @@ func cfracRational(r *big.Rat) (*ListNode, error) {
 // Returns [a0, [a1, a2, ..., am]] where a0 is the floor and [a1...am] is the repeating period.
 func cfracSqrt(d *big.Int) (*ListNode, error) {
 	if d.Sign() < 0 {
-		return nil, fmt.Errorf("continued fraction of imaginary square root sqrt(%s) is not supported", d.String())
+		return nil, fmt.Errorf("%s", i18n.T("cfrac.err_continued_fraction_of_imaginary_square", d.String()))
 	}
 	if d.Sign() == 0 {
 		return &ListNode{Elements: []Node{mustRational(0, 1)}}, nil
@@ -143,7 +143,7 @@ func evalFromCFrac(arg Node) (Node, error) {
 	cur := new(big.Rat).Set(rats[n-1])
 	for k := n - 2; k >= 0; k-- {
 		if cur.Sign() == 0 {
-			return nil, fmt.Errorf("division by zero in continued fraction reconstruction")
+			return nil, fmt.Errorf("%s", i18n.T("cfrac.err_division_by_zero_in_continued"))
 		}
 		inv := new(big.Rat).Inv(cur)
 		cur = new(big.Rat).Add(rats[k], inv)
