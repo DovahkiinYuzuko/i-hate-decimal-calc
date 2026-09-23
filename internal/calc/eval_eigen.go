@@ -405,6 +405,13 @@ func solvePolyRoots(poly []Node) ([]Node, error) {
 		}
 	}
 
+	if deg == 3 {
+		cubicRoots, err := SolveCubicExact(poly[3], poly[2], poly[1], poly[0])
+		if err == nil {
+			return cubicRoots, nil
+		}
+	}
+
 	return nil, fmt.Errorf("%s", i18n.T("eigen.err_eigenvals_cannot_find_exact_roots", deg))
 }
 

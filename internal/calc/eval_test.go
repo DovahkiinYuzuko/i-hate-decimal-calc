@@ -802,6 +802,11 @@ func TestEval_Solve(t *testing.T) {
 		// Quadratic (complex / imaginary roots)
 		{"solve(x^2 + 1, x)", "[-i, i]"},
 		{"solve(x^2 + 4, x)", "[-2*i, 2*i]"},
+
+		// Cubic (Cardano exact roots)
+		{"solve(x^3 - 6*x^2 + 11*x - 6, x)", "[1, 2, 3]"},
+		{"solve(x^3 - 3*x^2 + 3*x - 1, x)", "[1]"},
+		{"solve(x^3 - 8, x)", "[2, -1 - √3*i, -1 + √3*i]"},
 	}
 
 	for _, tc := range cases {

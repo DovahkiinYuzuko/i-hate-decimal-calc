@@ -227,6 +227,11 @@
     "err_unsupported_body": "quantifier elimination error: unsupported formula structure",
     "err_invalid_qe_fsm_transition": "invalid QE FSM transition: %s -> %s"
   },
+  "cubic": {
+    "err_nil_coefficients": "cubic equation error: nil coefficient provided",
+    "err_cannot_solve_cubic": "failed to solve cubic equation: %v",
+    "err_invalid_cubic_fsm_transition": "invalid Cubic FSM transition: %s -> %s"
+  },
   "elliptic": {
     "err_singular_curve": "singular elliptic curve error: discriminant is zero (4A^3 + 27B^2 = 0)",
     "err_invalid_point": "elliptic curve error: specified point does not lie on curve y^2 = x^3 + Ax + B: %s",

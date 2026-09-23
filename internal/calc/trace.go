@@ -15,6 +15,7 @@ const (
 	RuleRationalize    RuleID = "Rationalize"
 	RuleDenestRadical  RuleID = "DenestRadical"
 	RuleSolveQuadratic RuleID = "SolveQuadratic"
+	RuleSolveCubic     RuleID = "SolveCubic"
 	RuleSolveLinear    RuleID = "SolveLinear"
 	RuleDiffPower      RuleID = "DiffPower"
 	RuleDiffProduct    RuleID = "DiffProduct"
@@ -124,6 +125,7 @@ var ruleTitles = map[RuleID]string{
 	RuleRationalize:    "分母の有理化",
 	RuleDenestRadical:  "二重根号の簡約",
 	RuleSolveQuadratic: "2次方程式の求解（解の公式）",
+	RuleSolveCubic:     "3次方程式の求解（カルダノの公式）",
 	RuleSolveLinear:    "1次方程式の求解",
 	RuleDiffPower:      "べき乗の微分公式の適用",
 	RuleDiffProduct:    "積の微分公式の適用",

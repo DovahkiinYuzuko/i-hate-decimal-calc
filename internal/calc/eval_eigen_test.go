@@ -92,3 +92,37 @@ func TestEvalEigenvects(t *testing.T) {
 		})
 	}
 }
+
+func TestEvalEigenvals_CubicExact(t *testing.T) {
+	// 3x3 matrix with characteristic poly lambda^3 - 2 = 0
+	// Companion matrix: [[0, 1, 0], [0, 0, 1], [2, 0, 0]]
+	node, err := Parse("eigenvals([[0, 1, 0], [0, 0, 1], [2, 0, 0]])")
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+	res, err := Eval(node)
+	if err != nil {
+		t.Fatalf("Eval failed: %v", err)
+	}
+	listNode, ok := res.(*ListNode)
+	if !ok || len(listNode.Elements) != 3 {
+		t.Fatalf("expected 3 eigenvalues, got %v", res)
+	}
+	// Check that we got 3 exact roots
+	t.Logf("eigenvals(x^3 - 2 = 0) = %s", res.String())
+
+	// 3x3 matrix with casus irreducibilis poly lambda^3 - 3*lambda - 1 = 0
+	node2, err := Parse("eigenvals([[0, 1, 0], [0, 0, 1], [1, 3, 0]])")
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+	res2, err := Eval(node2)
+	if err != nil {
+		t.Fatalf("Eval failed: %v", err)
+	}
+	listNode2, ok := res2.(*ListNode)
+	if !ok || len(listNode2.Elements) != 3 {
+		t.Fatalf("expected 3 eigenvalues, got %v", res2)
+	}
+	t.Logf("eigenvals(x^3 - 3x - 1 = 0) = %s", res2.String())
+}

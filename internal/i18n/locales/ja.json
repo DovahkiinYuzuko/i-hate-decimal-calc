@@ -227,6 +227,11 @@
     "err_unsupported_body": "量化子消去エラー: 未対応の論理式形式です",
     "err_invalid_qe_fsm_transition": "数理計算エラー: invalid QE FSM transition: %s -> %s"
   },
+  "cubic": {
+    "err_nil_coefficients": "3次方程式エラー: 係数がnilです",
+    "err_cannot_solve_cubic": "3次方程式の求解に失敗しました: %v",
+    "err_invalid_cubic_fsm_transition": "無効な3次方程式 FSM 状態遷移: %s -> %s"
+  },
   "elliptic": {
     "err_singular_curve": "特異楕円曲線エラー: 判別式が 0 のため非特異曲線ではありません (4A^3 + 27B^2 = 0)",
     "err_invalid_point": "楕円曲線エラー: 指定された点は曲線 y^2 = x^3 + Ax + B 上に存在しません: %s",
