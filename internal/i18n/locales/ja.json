@@ -432,17 +432,17 @@
   },
   "ode": {
     "err_dsolve_equation_cannot_be_nil": "実行不能な操作です: dsolve: equation cannot be nil",
-    "err_dsolve_classification_error": "数理計算エラー: dsolve classification error: %w",
-    "err_dsolve_1st_order_error": "数理計算エラー: dsolve 1st-order error: %w",
-    "err_dsolve_2nd_order_error": "数理計算エラー: dsolve 2nd-order error: %w",
+    "err_dsolve_classification_error": "数理計算エラー: dsolve classification error: %v",
+    "err_dsolve_1st_order_error": "数理計算エラー: dsolve 1st-order error: %v",
+    "err_dsolve_2nd_order_error": "数理計算エラー: dsolve 2nd-order error: %v",
     "err_dsolve_unable_to_classify_equation": "数理計算エラー: dsolve: unable to classify equation into a supported ODE type",
     "err_coefficient_of_y_is_zero": "数理計算エラー: coefficient of y'' is zero",
     "err_2nd_order_ode_has_non": "数理計算エラー: 2nd-order ODE has non-constant coefficients",
     "err_no_derivative_terms_y_or": "数理計算エラー: no derivative terms y' or y'' found in equation",
-    "err_failed_to_integrate_p_x": "数理計算エラー: failed to integrate P(x): %w",
-    "err_failed_to_compute_integrating_factor": "数理計算エラー: failed to compute integrating factor: %w",
-    "err_failed_to_integrate_mu_x": "数理計算エラー: failed to integrate mu(x)*Q(x): %w",
-    "err_unable_to_find_particular_solution": "数理計算エラー: unable to find particular solution for RHS %s: %w",
+    "err_failed_to_integrate_p_x": "数理計算エラー: failed to integrate P(x): %v",
+    "err_failed_to_compute_integrating_factor": "数理計算エラー: failed to compute integrating factor: %v",
+    "err_failed_to_integrate_mu_x": "数理計算エラー: failed to integrate mu(x)*Q(x): %v",
+    "err_unable_to_find_particular_solution": "数理計算エラー: unable to find particular solution for RHS %s: %v",
     "err_undetermined_coefficients_unsupported_rhs_pattern": "未対応の操作または形式です: undetermined coefficients: unsupported RHS pattern"
   },
   "poly": {
@@ -595,5 +595,15 @@
     "err_matrix_dimension_mismatch_cannot_add": "実行不能な操作です: matrix dimension mismatch: cannot add %dx%d matrix and %dx%d matrix",
     "err_factorial_domain_error_factorial_requires": "入力形式または引数の要件を満たしていません: factorial domain error: factorial requires non-negative integer, got %s",
     "err_factorial_domain_error_factorial_is": "数理計算エラー: factorial domain error: factorial is too large to compute, got %s"
+  },
+  "kovacic": {
+    "err_invalid_kovacic_fsm_transition": "数理計算エラー: invalid Kovacic FSM transition: %s -> %s",
+    "err_unsupported_non_rational_coefficients": "数理計算エラー: Kovacic algorithm requires rational function coefficients in %s",
+    "err_failed_to_reduce_normal_form": "数理計算エラー: failed to reduce second-order ODE to normal form: %w",
+    "err_failed_to_solve_case1_poly": "数理計算エラー: failed to solve Case 1 auxiliary polynomial ODE: %w",
+    "err_failed_to_solve_case2_poly": "数理計算エラー: failed to solve Case 2 symmetric square ODE: %w",
+    "msg_non_liouvillian_proven": "微分ガロア理論証明: 方程式は初等リウヴィル解を持たないことが確定証明されました (Galois group is SL(2, C))",
+    "msg_case1_liouvillian_found": "Kovacic Case 1: 有理指数積分型初等解が導出されました",
+    "msg_case2_liouvillian_found": "Kovacic Case 2: 2次代数拡大対称積初等解が導出されました"
   }
 }

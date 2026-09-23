@@ -432,17 +432,17 @@
   },
   "ode": {
     "err_dsolve_equation_cannot_be_nil": "dsolve: equation cannot be nil",
-    "err_dsolve_classification_error": "dsolve classification error: %w",
-    "err_dsolve_1st_order_error": "dsolve 1st-order error: %w",
-    "err_dsolve_2nd_order_error": "dsolve 2nd-order error: %w",
+    "err_dsolve_classification_error": "dsolve classification error: %v",
+    "err_dsolve_1st_order_error": "dsolve 1st-order error: %v",
+    "err_dsolve_2nd_order_error": "dsolve 2nd-order error: %v",
     "err_dsolve_unable_to_classify_equation": "dsolve: unable to classify equation into a supported ODE type",
     "err_coefficient_of_y_is_zero": "coefficient of y'' is zero",
     "err_2nd_order_ode_has_non": "2nd-order ODE has non-constant coefficients",
     "err_no_derivative_terms_y_or": "no derivative terms y' or y'' found in equation",
-    "err_failed_to_integrate_p_x": "failed to integrate P(x): %w",
-    "err_failed_to_compute_integrating_factor": "failed to compute integrating factor: %w",
-    "err_failed_to_integrate_mu_x": "failed to integrate mu(x)*Q(x): %w",
-    "err_unable_to_find_particular_solution": "unable to find particular solution for RHS %s: %w",
+    "err_failed_to_integrate_p_x": "failed to integrate P(x): %v",
+    "err_failed_to_compute_integrating_factor": "failed to compute integrating factor: %v",
+    "err_failed_to_integrate_mu_x": "failed to integrate mu(x)*Q(x): %v",
+    "err_unable_to_find_particular_solution": "unable to find particular solution for RHS %s: %v",
     "err_undetermined_coefficients_unsupported_rhs_pattern": "undetermined coefficients: unsupported RHS pattern"
   },
   "poly": {
@@ -595,5 +595,15 @@
     "err_matrix_dimension_mismatch_cannot_add": "matrix dimension mismatch: cannot add %dx%d matrix and %dx%d matrix",
     "err_factorial_domain_error_factorial_requires": "factorial domain error: factorial requires non-negative integer, got %s",
     "err_factorial_domain_error_factorial_is": "factorial domain error: factorial is too large to compute, got %s"
+  },
+  "kovacic": {
+    "err_invalid_kovacic_fsm_transition": "math error: invalid Kovacic FSM transition: %s -> %s",
+    "err_unsupported_non_rational_coefficients": "math error: Kovacic algorithm requires rational function coefficients in %s",
+    "err_failed_to_reduce_normal_form": "math error: failed to reduce second-order ODE to normal form: %w",
+    "err_failed_to_solve_case1_poly": "math error: failed to solve Case 1 auxiliary polynomial ODE: %w",
+    "err_failed_to_solve_case2_poly": "math error: failed to solve Case 2 symmetric square ODE: %w",
+    "msg_non_liouvillian_proven": "Differential Galois Theory Certificate: equation has no Liouvillian solutions (Galois group is SL(2, C))",
+    "msg_case1_liouvillian_found": "Kovacic Case 1: rational exponential integral solution derived",
+    "msg_case2_liouvillian_found": "Kovacic Case 2: quadratic algebraic extension symmetric square solution derived"
   }
 }

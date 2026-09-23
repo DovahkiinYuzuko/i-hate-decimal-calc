@@ -13,6 +13,7 @@ const (
 	odeUnknown odeType = iota
 	odeFirstLinear
 	odeSecondLinearConstCoeff
+	odeSecondLinearKovacic
 )
 
 // EvalDSolve solves an ordinary differential equation analytically and returns an equation node y = f(x).
@@ -22,6 +23,7 @@ const (
 // 3. 2nd-order linear ODEs with constant coefficients: a*y'' + b*y' + c*y = f(x)
 //    - Homogeneous part via characteristic equation a*r^2 + b*r + c = 0
 //    - Particular solution via method of undetermined coefficients for polynomials, exponentials, and sines/cosines.
+// 4. 2nd-order linear homogeneous ODEs with variable coefficients via Kovacic's algorithm.
 func EvalDSolve(eq Node, yName, xName string, env *Env) (Node, error) {
 	if eq == nil {
 		return nil, fmt.Errorf("%s", i18n.T("ode.err_dsolve_equation_cannot_be_nil"))
@@ -75,6 +77,12 @@ func EvalDSolve(eq Node, yName, xName string, env *Env) (Node, error) {
 
 	case odeSecondLinearConstCoeff:
 		sol, err = solve2ndLinearConstCoeffODE(coeffs.a, coeffs.b, coeffs.c, coeffs.f, xName, env)
+		if err != nil {
+			return nil, fmt.Errorf("%s", i18n.T("ode.err_dsolve_2nd_order_error", err))
+		}
+
+	case odeSecondLinearKovacic:
+		sol, err = solve2ndLinearKovacicODE(coeffs.P, coeffs.Q, xName)
 		if err != nil {
 			return nil, fmt.Errorf("%s", i18n.T("ode.err_dsolve_2nd_order_error", err))
 		}
@@ -318,6 +326,32 @@ func classifyODE(expr Node, yName, xName string) (odeType, *odeCoeffs, error) {
 				b: new(big.Rat).Set(rb.Val),
 				c: new(big.Rat).Set(rc.Val),
 				f: rhsNode,
+			}, nil
+		}
+		// If not constant coefficients, but homogeneous (RHS == 0), dispatch to Kovacic's algorithm!
+		isZeroRHS := false
+		if r, ok := rhsNode.(*RationalNode); ok && r.Val.Sign() == 0 {
+			isZeroRHS = true
+		}
+		if isZeroRHS {
+			// Normalize to y'' + P(x)*y' + Q(x)*y = 0
+			// P(x) = coeffB / coeffA
+			// Q(x) = coeffC / coeffA
+			invA, err := simplifyPow(coeffA, mustRational(-1, 1))
+			if err != nil {
+				return odeUnknown, nil, err
+			}
+			pNode, err := simplifyMul([]Node{coeffB, invA})
+			if err != nil {
+				return odeUnknown, nil, err
+			}
+			qNode, err := simplifyMul([]Node{coeffC, invA})
+			if err != nil {
+				return odeUnknown, nil, err
+			}
+			return odeSecondLinearKovacic, &odeCoeffs{
+				P: pNode,
+				Q: qNode,
 			}, nil
 		}
 		return odeUnknown, nil, fmt.Errorf("%s", i18n.T("ode.err_2nd_order_ode_has_non"))
@@ -987,4 +1021,16 @@ func parseSingleTrigTerm(t Node, xName string) (k, omega *big.Rat, isSin, isCos 
 func isSinOrCos(n Node) bool {
 	fn, ok := n.(*FuncNode)
 	return ok && (fn.Name == "sin" || fn.Name == "cos") && len(fn.Args) == 1
+}
+
+// solve2ndLinearKovacicODE solves y'' + P(x)*y' + Q(x)*y = 0 using Kovacic's algorithm.
+func solve2ndLinearKovacicODE(pNode, qNode Node, xName string) (Node, error) {
+	res, err := SolveKovacicExact(pNode, qNode, xName)
+	if err != nil {
+		return nil, err
+	}
+	if !res.IsLiouvillian {
+		return nil, fmt.Errorf("%s", res.ProofMessage)
+	}
+	return res.GeneralSol, nil
 }
