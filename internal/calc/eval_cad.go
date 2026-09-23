@@ -263,7 +263,7 @@ func decompose1DCADInternal(polys []*univariatePoly, varName string, env *Env) (
 		exactRoots, err := solveExactRoots(pTrimmed.toNode(), varName)
 		if err == nil && len(exactRoots) > 0 {
 			for _, r := range exactRoots {
-				low, high, ok := getExactRootBounds(r, pTrimmed)
+				low, high, ok := getExactRootBounds(r)
 				if ok {
 					allRoots = append(allRoots, cad1DRoot{
 						node: r,
@@ -359,7 +359,7 @@ func decompose1DCADInternal(polys []*univariatePoly, varName string, env *Env) (
 	return cells, dedupRoots, nil
 }
 
-func getExactRootBounds(r Node, p *univariatePoly) (*big.Rat, *big.Rat, bool) {
+func getExactRootBounds(r Node) (*big.Rat, *big.Rat, bool) {
 	if rat, ok := r.(*RationalNode); ok {
 		return new(big.Rat).Set(rat.Val), new(big.Rat).Set(rat.Val), true
 	}

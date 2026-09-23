@@ -261,8 +261,7 @@ func BenchmarkGroebner_ChainCriterion(b *testing.B) {
 		b.Fatalf("Parse error: %v", err)
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := Eval(node)
 		if err != nil {
 			b.Fatalf("Eval error: %v", err)
