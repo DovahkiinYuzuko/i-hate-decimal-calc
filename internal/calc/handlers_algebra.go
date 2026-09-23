@@ -21,6 +21,8 @@ func init() {
 	RegisterHandler("alg_inv", handleAlgInv)
 	RegisterHandler("min_poly", handleMinPoly)
 	RegisterHandler("cad", handleCAD)
+	RegisterHandler("lll", HandleLLL)
+	RegisterHandler("find_min_poly", HandleFindMinPoly)
 }
 
 func handlePolyGCD(args []Node, env *Env) (Node, error) {

@@ -599,11 +599,22 @@
   "kovacic": {
     "err_invalid_kovacic_fsm_transition": "数理計算エラー: invalid Kovacic FSM transition: %s -> %s",
     "err_unsupported_non_rational_coefficients": "数理計算エラー: Kovacic algorithm requires rational function coefficients in %s",
-    "err_failed_to_reduce_normal_form": "数理計算エラー: failed to reduce second-order ODE to normal form: %w",
-    "err_failed_to_solve_case1_poly": "数理計算エラー: failed to solve Case 1 auxiliary polynomial ODE: %w",
-    "err_failed_to_solve_case2_poly": "数理計算エラー: failed to solve Case 2 symmetric square ODE: %w",
+    "err_failed_to_reduce_normal_form": "数理計算エラー: failed to reduce second-order ODE to normal form: %v",
+    "err_failed_to_solve_case1_poly": "数理計算エラー: failed to solve Case 1 auxiliary polynomial ODE: %v",
+    "err_failed_to_solve_case2_poly": "数理計算エラー: failed to solve Case 2 symmetric square ODE: %v",
     "msg_non_liouvillian_proven": "微分ガロア理論証明: 方程式は初等リウヴィル解を持たないことが確定証明されました (Galois group is SL(2, C))",
     "msg_case1_liouvillian_found": "Kovacic Case 1: 有理指数積分型初等解が導出されました",
     "msg_case2_liouvillian_found": "Kovacic Case 2: 2次代数拡大対称積初等解が導出されました"
+  },
+  "lll": {
+    "err_invalid_lll_fsm_transition": "数理計算エラー: invalid LLL FSM transition: %s -> %s",
+    "err_empty_basis": "入力形式または引数の要件を満たしていません: basis matrix must not be empty",
+    "err_inconsistent_dimension": "入力形式または引数の要件を満たしていません: basis row dimension mismatch: row %d has length %d, expected %d",
+    "err_linearly_dependent_basis": "数理計算エラー: basis vectors must be linearly independent",
+    "err_invalid_delta": "入力形式または引数の要件を満たしていません: Lovasz parameter delta must satisfy 1/4 < delta < 1, got %v",
+    "err_find_min_poly_degree": "入力形式または引数の要件を満たしていません: maxDegree must be positive integer, got %d",
+    "err_relation_not_found": "数理計算エラー: no non-trivial integer relation found within precision",
+    "err_matrix_expected": "入力形式または引数の要件を満たしていません: lll expects a matrix of integers",
+    "err_find_min_poly_args": "入力形式または引数の要件を満たしていません: find_min_poly requires 2 arguments (expr, maxDegree)"
   }
 }

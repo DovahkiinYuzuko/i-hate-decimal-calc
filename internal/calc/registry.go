@@ -837,6 +837,18 @@ func init() {
 		MinArgs: 2,
 		MaxArgs: 2,
 	})
+
+	// LLL Lattice Basis Reduction & Integer Relation (issue-75)
+	RegisterFunction(FunctionSpec{
+		Name:    "lll",
+		MinArgs: 1,
+		MaxArgs: 2,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "find_min_poly",
+		MinArgs: 2,
+		MaxArgs: 2,
+	})
 }
 
 

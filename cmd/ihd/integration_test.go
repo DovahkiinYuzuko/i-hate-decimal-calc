@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc"
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
 // TestIntegration_SpecificationExamples verifies all primary calculation examples from specifications.
@@ -141,6 +142,7 @@ func TestIntegration_SpecificationExamples(t *testing.T) {
 
 // TestIntegration_DomainAndSyntaxErrors verifies all invalid operations produce explicit errors.
 func TestIntegration_DomainAndSyntaxErrors(t *testing.T) {
+	_ = i18n.Init("en")
 	errorInputs := []struct {
 		input       string
 		errContains string

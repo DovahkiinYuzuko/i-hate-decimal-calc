@@ -87,6 +87,9 @@ ihd "pi < 22/7"
 
 ihd "qe(forall([x], x^2 + a*x + b > 0))"
 # 出力: -4*b + a^2 < 0（二次判別式・CAD連携による量化子消去・パラメータ不等式自動導出）
+
+ihd "find_min_poly(sqrt(2) + sqrt(3), 4)"
+# 出力: 1 - 10*x^2 + x^4（LLL格子基底縮小による代数的数の最小多項式完全逆算）
 ```
 
 #### 2. 対話モード（REPL）
@@ -366,6 +369,9 @@ ihd "pi < 22/7"
 
 ihd "qe(forall([x], x^2 + a*x + b > 0))"
 # Output: -4*b + a^2 < 0 (Quantifier elimination via quadratic discriminant & CAD integration)
+
+ihd "find_min_poly(sqrt(2) + sqrt(3), 4)"
+# Output: 1 - 10*x^2 + x^4 (Exact minimal polynomial reconstruction via LLL lattice reduction)
 ```
 
 #### 2. Interactive REPL

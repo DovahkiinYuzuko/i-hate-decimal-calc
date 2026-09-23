@@ -599,11 +599,22 @@
   "kovacic": {
     "err_invalid_kovacic_fsm_transition": "math error: invalid Kovacic FSM transition: %s -> %s",
     "err_unsupported_non_rational_coefficients": "math error: Kovacic algorithm requires rational function coefficients in %s",
-    "err_failed_to_reduce_normal_form": "math error: failed to reduce second-order ODE to normal form: %w",
-    "err_failed_to_solve_case1_poly": "math error: failed to solve Case 1 auxiliary polynomial ODE: %w",
-    "err_failed_to_solve_case2_poly": "math error: failed to solve Case 2 symmetric square ODE: %w",
+    "err_failed_to_reduce_normal_form": "math error: failed to reduce second-order ODE to normal form: %v",
+    "err_failed_to_solve_case1_poly": "math error: failed to solve Case 1 auxiliary polynomial ODE: %v",
+    "err_failed_to_solve_case2_poly": "math error: failed to solve Case 2 symmetric square ODE: %v",
     "msg_non_liouvillian_proven": "Differential Galois Theory Certificate: equation has no Liouvillian solutions (Galois group is SL(2, C))",
     "msg_case1_liouvillian_found": "Kovacic Case 1: rational exponential integral solution derived",
     "msg_case2_liouvillian_found": "Kovacic Case 2: quadratic algebraic extension symmetric square solution derived"
+  },
+  "lll": {
+    "err_invalid_lll_fsm_transition": "math error: invalid LLL FSM transition: %s -> %s",
+    "err_empty_basis": "invalid argument: basis matrix must not be empty",
+    "err_inconsistent_dimension": "invalid argument: basis row dimension mismatch: row %d has length %d, expected %d",
+    "err_linearly_dependent_basis": "math error: basis vectors must be linearly independent",
+    "err_invalid_delta": "invalid argument: Lovasz parameter delta must satisfy 1/4 < delta < 1, got %v",
+    "err_find_min_poly_degree": "invalid argument: maxDegree must be positive integer, got %d",
+    "err_relation_not_found": "math error: no non-trivial integer relation found within precision",
+    "err_matrix_expected": "invalid argument: lll expects a matrix of integers",
+    "err_find_min_poly_args": "invalid argument: find_min_poly requires 2 arguments (expr, maxDegree)"
   }
 }
