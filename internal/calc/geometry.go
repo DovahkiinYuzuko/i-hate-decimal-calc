@@ -1,15 +1,15 @@
 package calc
 
 import (
-	"errors"
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 )
 
 var (
-	ErrParallelLines     = errors.New("lines are parallel and do not intersect")
-	ErrCoincidentLines   = errors.New("lines are coincident (infinite intersections)")
-	ErrCoincidentCircles = errors.New("circles are coincident (infinite intersections)")
-	ErrDegenerateTriangle = errors.New("points are collinear; circumcenter/orthocenter/incenter undefined")
+	ErrParallelLines     = fmt.Errorf("%s", i18n.T("geometry.err_lines_are_parallel_and_do"))
+	ErrCoincidentLines   = fmt.Errorf("%s", i18n.T("geometry.err_lines_are_coincident_infinite_intersections"))
+	ErrCoincidentCircles = fmt.Errorf("%s", i18n.T("geometry.err_circles_are_coincident_infinite_intersections"))
+	ErrDegenerateTriangle = fmt.Errorf("%s", i18n.T("geometry.err_points_are_collinear_circumcenter_orthocenter"))
 )
 
 // Point2D represents an exact point in the 2D plane.
@@ -241,7 +241,7 @@ func IntersectLines(l1, l2 Line2D) (Point2D, error) {
 // Circle: (x - H)^2 + (y - K)^2 = R^2
 func IntersectLineCircle(l Line2D, c Circle2D) ([]Point2D, error) {
 	if isZeroExpr(l.A) && isZeroExpr(l.B) {
-		return nil, fmt.Errorf("invalid line: A and B cannot both be zero")
+		return nil, fmt.Errorf("%s", i18n.T("geometry.err_invalid_line_a_and_b"))
 	}
 
 	two := mustRational(2, 1)

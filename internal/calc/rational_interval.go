@@ -428,7 +428,7 @@ func RationalBoundLn(x *big.Rat, steps int) (RationalInterval, error) {
 // using integer square root (big.Int.Sqrt) with dyadic scaling, guaranteeing O(k) bit complexity without bit explosion.
 func RationalBoundSqrt(x *big.Rat, steps int) (RationalInterval, error) {
 	if x.Sign() < 0 {
-		return RationalInterval{}, fmt.Errorf("sqrt of negative rational")
+		return RationalInterval{}, fmt.Errorf("%s", i18n.T("interval.err_sqrt_of_negative_rational"))
 	}
 	if x.Sign() == 0 {
 		return NewExactRationalInterval(big.NewRat(0, 1)), nil
@@ -461,7 +461,7 @@ func RationalBoundSqrt(x *big.Rat, steps int) (RationalInterval, error) {
 // EvalNodeInterval recursively evaluates an AST expression into a RationalInterval enclosure.
 func EvalNodeInterval(n Node, steps int) (RationalInterval, error) {
 	if n == nil {
-		return RationalInterval{}, fmt.Errorf("nil node")
+		return RationalInterval{}, fmt.Errorf("%s", i18n.T("interval.err_nil_node"))
 	}
 
 	switch node := n.(type) {
@@ -474,7 +474,7 @@ func EvalNodeInterval(n Node, steps int) (RationalInterval, error) {
 			return RationalInterval{}, err
 		}
 		if sub.Low.Sign() < 0 {
-			return RationalInterval{}, fmt.Errorf("sqrt of negative interval")
+			return RationalInterval{}, fmt.Errorf("%s", i18n.T("interval.err_sqrt_of_negative_interval"))
 		}
 		lowBound, err := RationalBoundSqrt(sub.Low, steps)
 		if err != nil {
@@ -498,7 +498,7 @@ func EvalNodeInterval(n Node, steps int) (RationalInterval, error) {
 			deg180 := big.NewRat(180, 1)
 			return NewRationalInterval(new(big.Rat).Quo(piBound.Low, deg180), new(big.Rat).Quo(piBound.High, deg180)), nil
 		}
-		return RationalInterval{}, fmt.Errorf("unsupported constant in interval evaluation: %s", node.Name)
+		return RationalInterval{}, fmt.Errorf("%s", i18n.T("interval.err_unsupported_constant_in_interval_evaluation", node.Name))
 
 	case *VarNode:
 		if node.Name == "pi" || node.Name == "π" {
@@ -507,7 +507,7 @@ func EvalNodeInterval(n Node, steps int) (RationalInterval, error) {
 		if node.Name == "e" {
 			return RationalBoundE(steps), nil
 		}
-		return RationalInterval{}, fmt.Errorf("unsupported free variable in interval evaluation: %s", node.Name)
+		return RationalInterval{}, fmt.Errorf("%s", i18n.T("interval.err_unsupported_free_variable_in_interval", node.Name))
 
 	case *UnaryOpNode:
 		sub, err := EvalNodeInterval(node.Expr, steps)
@@ -593,7 +593,7 @@ func EvalNodeInterval(n Node, steps int) (RationalInterval, error) {
 		}
 
 		if !baseInt.IsStrictlyPositive() {
-			return RationalInterval{}, fmt.Errorf("non-positive base in real power: %s", baseInt.String())
+			return RationalInterval{}, fmt.Errorf("%s", i18n.T("interval.err_non_positive_base_in_real", baseInt.String()))
 		}
 
 		// ln(baseInt) = [ln(baseInt.Low).Low, ln(baseInt.High).High]
@@ -619,7 +619,7 @@ func EvalNodeInterval(n Node, steps int) (RationalInterval, error) {
 		switch node.Name {
 		case "exp":
 			if len(node.Args) != 1 {
-				return RationalInterval{}, fmt.Errorf("exp expects 1 argument")
+				return RationalInterval{}, fmt.Errorf("%s", i18n.T("interval.err_exp_expects_1_argument"))
 			}
 			argInt, err := EvalNodeInterval(node.Args[0], steps)
 			if err != nil {
@@ -631,14 +631,14 @@ func EvalNodeInterval(n Node, steps int) (RationalInterval, error) {
 
 		case "ln", "log":
 			if len(node.Args) != 1 {
-				return RationalInterval{}, fmt.Errorf("ln expects 1 argument")
+				return RationalInterval{}, fmt.Errorf("%s", i18n.T("interval.err_ln_expects_1_argument"))
 			}
 			argInt, err := EvalNodeInterval(node.Args[0], steps)
 			if err != nil {
 				return RationalInterval{}, err
 			}
 			if !argInt.IsStrictlyPositive() {
-				return RationalInterval{}, fmt.Errorf("ln argument must be strictly positive: %s", argInt.String())
+				return RationalInterval{}, fmt.Errorf("%s", i18n.T("interval.err_ln_argument_must_be_strictly", argInt.String()))
 			}
 			lowBound, err := RationalBoundLn(argInt.Low, steps)
 			if err != nil {
@@ -652,7 +652,7 @@ func EvalNodeInterval(n Node, steps int) (RationalInterval, error) {
 
 		case "sin":
 			if len(node.Args) != 1 {
-				return RationalInterval{}, fmt.Errorf("sin expects 1 argument")
+				return RationalInterval{}, fmt.Errorf("%s", i18n.T("interval.err_sin_expects_1_argument"))
 			}
 			if r, isR := node.Args[0].(*RationalNode); isR {
 				return RationalBoundSinCos(r.Val, true, steps), nil
@@ -676,7 +676,7 @@ func EvalNodeInterval(n Node, steps int) (RationalInterval, error) {
 
 		case "cos":
 			if len(node.Args) != 1 {
-				return RationalInterval{}, fmt.Errorf("cos expects 1 argument")
+				return RationalInterval{}, fmt.Errorf("%s", i18n.T("interval.err_cos_expects_1_argument"))
 			}
 			if r, isR := node.Args[0].(*RationalNode); isR {
 				return RationalBoundSinCos(r.Val, false, steps), nil
@@ -699,14 +699,14 @@ func EvalNodeInterval(n Node, steps int) (RationalInterval, error) {
 
 		case "sqrt":
 			if len(node.Args) != 1 {
-				return RationalInterval{}, fmt.Errorf("sqrt expects 1 argument")
+				return RationalInterval{}, fmt.Errorf("%s", i18n.T("interval.err_sqrt_expects_1_argument"))
 			}
 			argInt, err := EvalNodeInterval(node.Args[0], steps)
 			if err != nil {
 				return RationalInterval{}, err
 			}
 			if argInt.Low.Sign() < 0 {
-				return RationalInterval{}, fmt.Errorf("sqrt of negative interval")
+				return RationalInterval{}, fmt.Errorf("%s", i18n.T("interval.err_sqrt_of_negative_interval"))
 			}
 			lowBound, err := RationalBoundSqrt(argInt.Low, steps)
 			if err != nil {
@@ -720,7 +720,7 @@ func EvalNodeInterval(n Node, steps int) (RationalInterval, error) {
 		}
 	}
 
-	return RationalInterval{}, fmt.Errorf("unsupported node for interval evaluation: %s", n.String())
+	return RationalInterval{}, fmt.Errorf("%s", i18n.T("interval.err_unsupported_node_for_interval_evaluation", n.String()))
 }
 
 // EvaluateRelOpWithInterval evaluates a relational operator (==, !=, <, <=, >, >=)

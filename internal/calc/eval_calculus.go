@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"math/big"
 )
@@ -11,7 +12,7 @@ import (
 // differentiate computes the exact symbolic derivative of node n with respect to varName.
 func differentiate(n Node, varName string) (Node, error) {
 	if n == nil {
-		return nil, fmt.Errorf("cannot differentiate nil node")
+		return nil, fmt.Errorf("%s", i18n.T("calculus.err_cannot_differentiate_nil_node"))
 	}
 
 	// If n does not contain varName, derivative is 0
@@ -45,7 +46,7 @@ func differentiate(n Node, varName string) (Node, error) {
 			}
 			return simplifyUnaryOp("-", de)
 		}
-		return nil, fmt.Errorf("cannot differentiate unary operator %s", v.Op)
+		return nil, fmt.Errorf("%s", i18n.T("calculus.err_cannot_differentiate_unary_operator", v.Op))
 
 	case *MulNode:
 		// Product rule: d(f_1 * ... * f_k) = sum_i (f_i' * prod_{j != i} f_j)
@@ -269,7 +270,7 @@ func differentiate(n Node, varName string) (Node, error) {
 				}
 				dfDu, err = simplifyMul([]Node{u, absUInv})
 			default:
-				return nil, fmt.Errorf("differentiation of function %s is not supported", v.Name)
+				return nil, fmt.Errorf("%s", i18n.T("calculus.err_differentiation_of_function", v.Name))
 			}
 			if err != nil {
 				return nil, err
@@ -277,7 +278,7 @@ func differentiate(n Node, varName string) (Node, error) {
 			return simplifyMul([]Node{dfDu, du})
 		} else if v.Name == "log" && len(v.Args) == 2 {
 			if containsVar(v.Args[0], varName) {
-				return nil, fmt.Errorf("differentiation of log with variable base is not supported")
+				return nil, fmt.Errorf("%s", i18n.T("calculus.err_differentiation_of_log_with_variable"))
 			}
 			u := v.Args[1]
 			du, err := differentiate(u, varName)
@@ -298,10 +299,10 @@ func differentiate(n Node, varName string) (Node, error) {
 			}
 			return simplifyMul([]Node{uInv, lnBaseInv, du})
 		}
-		return nil, fmt.Errorf("cannot differentiate function %s with %d arguments", v.Name, len(v.Args))
+		return nil, fmt.Errorf("%s", i18n.T("calculus.err_cannot_differentiate_function", v.Name, len(v.Args)))
 
 	default:
-		return nil, fmt.Errorf("cannot differentiate node of type %T", n)
+		return nil, fmt.Errorf("%s", i18n.T("calculus.err_cannot_differentiate_node_of_type", n))
 	}
 }
 
@@ -340,7 +341,7 @@ func extractPolyCoeffs(expr Node, varName string) (map[int]Node, error) {
 					return addCoeff(int(r.Val.Num().Int64()), mustRational(1, 1))
 				}
 			}
-			return fmt.Errorf("solve error: non-polynomial exponent in %s", t.String())
+			return fmt.Errorf("%s", i18n.T("calculus.err_solve_error_non_polynomial_exponent", t.String()))
 		}
 		if mul, ok := t.(*MulNode); ok {
 			var varFactor Node
@@ -349,7 +350,7 @@ func extractPolyCoeffs(expr Node, varName string) (map[int]Node, error) {
 			for _, f := range mul.Factors {
 				if containsVar(f, varName) {
 					if varFound {
-						return fmt.Errorf("solve error: multiple variable factors in term %s", t.String())
+						return fmt.Errorf("%s", i18n.T("calculus.err_solve_error_multiple_variable_factors", t.String()))
 					}
 					varFactor = f
 					varFound = true
@@ -371,9 +372,9 @@ func extractPolyCoeffs(expr Node, varName string) (map[int]Node, error) {
 					}
 				}
 			}
-			return fmt.Errorf("solve error: non-polynomial factor in term %s", t.String())
+			return fmt.Errorf("%s", i18n.T("calculus.err_solve_error_non_polynomial_factor", t.String()))
 		}
-		return fmt.Errorf("solve error: non-polynomial term %s", t.String())
+		return fmt.Errorf("%s", i18n.T("calculus.err_solve_error_non_polynomial_term", t.String()))
 	}
 
 	if add, ok := expr.(*AddNode); ok {
@@ -401,7 +402,7 @@ func extractPolyCoeffs(expr Node, varName string) (map[int]Node, error) {
 // solveEquation algebraically solves expr = 0 for varName.
 func solveEquation(expr Node, varName string) (Node, error) {
 	if expr == nil {
-		return nil, fmt.Errorf("cannot solve nil equation")
+		return nil, fmt.Errorf("%s", i18n.T("calculus.err_cannot_solve_nil_equation"))
 	}
 
 	// 1. Expand the expression to standard form
@@ -410,9 +411,9 @@ func solveEquation(expr Node, varName string) (Node, error) {
 	// Check if varName is in the equation
 	if !containsVar(expanded, varName) {
 		if isZero(expanded) {
-			return nil, fmt.Errorf("solve: identity equation (infinite solutions)")
+			return nil, fmt.Errorf("%s", i18n.T("calculus.err_solve_identity_equation_infinite_solutions"))
 		}
-		return nil, fmt.Errorf("solve: equation has no solution (contradiction: %s = 0)", expanded.String())
+		return nil, fmt.Errorf("%s", i18n.T("calculus.err_solve_equation_has_no_solution", expanded.String()))
 	}
 
 	// 2. Extract polynomial coefficients
@@ -429,7 +430,7 @@ func solveEquation(expr Node, varName string) (Node, error) {
 	}
 
 	if maxDeg == 0 {
-		return nil, fmt.Errorf("solve: equation contains no degree of %s", varName)
+		return nil, fmt.Errorf("%s", i18n.T("calculus.err_solve_equation_contains_no_degree", varName))
 	}
 
 	a0 := coeffs[0]
@@ -541,7 +542,7 @@ func solveEquation(expr Node, varName string) (Node, error) {
 		return resList, nil
 	}
 
-	return nil, fmt.Errorf("solve error: polynomial degree %d is not currently supported (only linear and quadratic equations)", maxDeg)
+	return nil, fmt.Errorf("%s", i18n.T("calculus.err_solve_error_polynomial_degree_only", maxDeg))
 }
 
 // -------------------------------------------------------------------------
@@ -551,13 +552,13 @@ func solveEquation(expr Node, varName string) (Node, error) {
 func evalTaylor(f Node, varNode Node, center Node, orderNode Node) (Node, error) {
 	v, ok := varNode.(*VarNode)
 	if !ok {
-		return nil, fmt.Errorf("taylor error: second argument must be a variable, got %s", varNode.String())
+		return nil, fmt.Errorf("%s", i18n.T("calculus.err_taylor_error_second_argument_must", varNode.String()))
 	}
 	varName := v.Name
 
 	rOrder, ok := orderNode.(*RationalNode)
 	if !ok || !rOrder.Val.IsInt() || rOrder.Val.Sign() < 0 {
-		return nil, fmt.Errorf("taylor error: order must be non-negative integer, got %s", orderNode.String())
+		return nil, fmt.Errorf("%s", i18n.T("calculus.err_taylor_error_order_must_be", orderNode.String()))
 	}
 	n := rOrder.Val.Num().Int64()
 
@@ -574,7 +575,7 @@ func evalTaylor(f Node, varNode Node, center Node, orderNode Node) (Node, error)
 			kFact.Mul(kFact, big.NewInt(k))
 			d, err := differentiate(currentDeriv, varName)
 			if err != nil {
-				return nil, fmt.Errorf("taylor error in %d-th derivative: %w", k, err)
+				return nil, fmt.Errorf("%s", i18n.T("calculus.err_taylor_error_in", k, err))
 			}
 			currentDeriv = d
 		}
@@ -582,7 +583,7 @@ func evalTaylor(f Node, varNode Node, center Node, orderNode Node) (Node, error)
 		// evaluate f^(k)(center)
 		fVal, err := EvalWithEnv(currentDeriv, subEnv)
 		if err != nil {
-			return nil, fmt.Errorf("taylor error: cannot evaluate derivative at center: %w", err)
+			return nil, fmt.Errorf("%s", i18n.T("calculus.err_taylor_error_cannot_evaluate_derivative", err))
 		}
 
 		if isZeroNode(fVal) {
@@ -750,7 +751,7 @@ func extractPowerOfK(term Node, kVar string) (Node, int64, error) {
 		}
 		return coeff, totalPow, nil
 	}
-	return nil, 0, fmt.Errorf("sum error: cannot handle term %s in symbolic sum", term.String())
+	return nil, 0, fmt.Errorf("%s", i18n.T("calculus.err_sum_error_cannot_handle_term", term.String()))
 }
 
 func isOneRat(n Node) bool {
@@ -763,7 +764,7 @@ func isOneRat(n Node) bool {
 func evalSum(expr Node, kVarNode Node, startNode Node, endNode Node) (Node, error) {
 	v, ok := kVarNode.(*VarNode)
 	if !ok {
-		return nil, fmt.Errorf("sum error: second argument must be a variable, got %s", kVarNode.String())
+		return nil, fmt.Errorf("%s", i18n.T("calculus.err_sum_error_second_argument_must", kVarNode.String()))
 	}
 	kName := v.Name
 
@@ -774,7 +775,7 @@ func evalSum(expr Node, kVarNode Node, startNode Node, endNode Node) (Node, erro
 		startVal := rStart.Val.Num().Int64()
 		endVal := rEnd.Val.Num().Int64()
 		if startVal > endVal {
-			return nil, fmt.Errorf("sum error: start value exceeds end value: %d > %d", startVal, endVal)
+			return nil, fmt.Errorf("%s", i18n.T("calculus.err_sum_error_start_value_exceeds", startVal, endVal))
 		}
 
 		var sumTerms []Node
@@ -783,7 +784,7 @@ func evalSum(expr Node, kVarNode Node, startNode Node, endNode Node) (Node, erro
 			subEnv.Set(kName, mustRational(k, 1))
 			val, err := EvalWithEnv(expr, subEnv)
 			if err != nil {
-				return nil, fmt.Errorf("sum error at %s=%d: %w", kName, k, err)
+				return nil, fmt.Errorf("%s", i18n.T("calculus.err_sum_error_at", kName, k, err))
 			}
 			sumTerms = append(sumTerms, val)
 		}
@@ -842,7 +843,7 @@ func evalSum(expr Node, kVarNode Node, startNode Node, endNode Node) (Node, erro
 		return gosperRes, nil
 	}
 
-	return nil, fmt.Errorf("sum error: unsupported bounds %s to %s (and not Gosper-summable: %w)", startNode.String(), endNode.String(), err)
+	return nil, fmt.Errorf("%s", i18n.T("calculus.err_sum_error_unsupported_bounds_and", startNode.String(), endNode.String(), err))
 }
 
 // -------------------------------------------------------------------------

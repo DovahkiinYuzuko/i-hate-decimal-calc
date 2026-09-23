@@ -11,7 +11,7 @@ import (
 func extractRat(n Node, context string) (*big.Rat, error) {
 	rat, ok := n.(*RationalNode)
 	if !ok {
-		return nil, fmt.Errorf("%s: expected rational number, got %s", context, n.String())
+		return nil, fmt.Errorf("%s", i18n.T("prob.err_expected_rational_number_got", context, n.String()))
 	}
 	return new(big.Rat).Set(rat.Val), nil
 }
@@ -120,7 +120,7 @@ func getDistName(n Node) string {
 // EvalBinomPMF calculates binomial distribution PMF P(X = k) = C(n, k) * p^k * (1-p)^(n-k).
 func EvalBinomPMF(args []Node) (Node, error) {
 	if len(args) != 3 {
-		return nil, fmt.Errorf("binom requires 3 arguments (n, k, p), got %d", len(args))
+		return nil, fmt.Errorf("%s", i18n.T("prob.err_binom_requires_3_arguments_n", len(args)))
 	}
 
 	n, err := extractNonNegativeInt(args[0], "binom: n")
@@ -159,7 +159,7 @@ func EvalBinomPMF(args []Node) (Node, error) {
 // EvalHyperPMF calculates hypergeometric distribution PMF P(X = k) = C(K, k) * C(N-K, n-k) / C(N, n).
 func EvalHyperPMF(args []Node) (Node, error) {
 	if len(args) != 4 {
-		return nil, fmt.Errorf("hyper requires 4 arguments (N, K, n, k), got %d", len(args))
+		return nil, fmt.Errorf("%s", i18n.T("prob.err_hyper_requires_4_arguments_n", len(args)))
 	}
 
 	N, err := extractPositiveInt(args[0], "hyper: N")
@@ -207,7 +207,7 @@ func EvalHyperPMF(args []Node) (Node, error) {
 // EvalGeomPMF calculates geometric distribution PMF P(X = k) = (1-p)^(k-1) * p.
 func EvalGeomPMF(args []Node) (Node, error) {
 	if len(args) != 2 {
-		return nil, fmt.Errorf("geom requires 2 arguments (p, k), got %d", len(args))
+		return nil, fmt.Errorf("%s", i18n.T("prob.err_geom_requires_2_arguments_p", len(args)))
 	}
 
 	p, err := extractProbRat(args[0], "geom: p")
@@ -215,7 +215,7 @@ func EvalGeomPMF(args []Node) (Node, error) {
 		return nil, err
 	}
 	if p.Sign() == 0 {
-		return nil, fmt.Errorf("geom: p cannot be zero")
+		return nil, fmt.Errorf("%s", i18n.T("prob.err_geom_p_cannot_be_zero"))
 	}
 
 	k, err := extractPositiveInt(args[1], "geom: k")
@@ -236,7 +236,7 @@ func EvalGeomPMF(args []Node) (Node, error) {
 // EvalBayes calculates posterior probability P(A|B) = P(B|A) * P(A) / P(B).
 func EvalBayes(args []Node) (Node, error) {
 	if len(args) != 3 {
-		return nil, fmt.Errorf("bayes requires 3 arguments (prior, likelihood, marginal), got %d", len(args))
+		return nil, fmt.Errorf("%s", i18n.T("prob.err_bayes_requires_3_arguments_prior", len(args)))
 	}
 
 	priorRat, err := extractProbRat(args[0], "bayes: prior P(A)")
@@ -280,7 +280,7 @@ func extractDiscretePairs(n Node) ([]probPair, error) {
 		for _, elem := range v.Elements {
 			pairList, ok := elem.(*ListNode)
 			if !ok || len(pairList.Elements) != 2 {
-				return nil, fmt.Errorf("each element of discrete distribution must be a [value, prob] pair, got %s", elem.String())
+				return nil, fmt.Errorf("%s", i18n.T("prob.err_each_element_of_discrete_distribution", elem.String()))
 			}
 			pRat, err := extractProbRat(pairList.Elements[1], "discrete list: prob")
 			if err != nil {
@@ -291,7 +291,7 @@ func extractDiscretePairs(n Node) ([]probPair, error) {
 
 	case *MatrixNode:
 		if v.Cols != 2 {
-			return nil, fmt.Errorf("discrete distribution matrix must have exactly 2 columns [value, prob], got %d cols", v.Cols)
+			return nil, fmt.Errorf("%s", i18n.T("prob.err_discrete_distribution_matrix_must_have", v.Cols))
 		}
 		for r := 0; r < v.Rows; r++ {
 			pRat, err := extractProbRat(v.Data[r][1], "discrete matrix: prob")
@@ -306,7 +306,7 @@ func extractDiscretePairs(n Node) ([]probPair, error) {
 	}
 
 	if len(pairs) == 0 {
-		return nil, fmt.Errorf("discrete distribution cannot be empty")
+		return nil, fmt.Errorf("%s", i18n.T("prob.err_discrete_distribution_cannot_be_empty"))
 	}
 
 	sumProb := big.NewRat(0, 1)
@@ -324,7 +324,7 @@ func extractDiscretePairs(n Node) ([]probPair, error) {
 // EvalExpect calculates expected value E[X].
 func EvalExpect(args []Node) (Node, error) {
 	if len(args) == 0 {
-		return nil, fmt.Errorf("expect requires at least 1 argument")
+		return nil, fmt.Errorf("%s", i18n.T("prob.err_expect_requires_at_least_1"))
 	}
 
 	// Case 1: Discrete list or matrix distribution [[x1, p1], [x2, p2], ...]
@@ -341,7 +341,7 @@ func EvalExpect(args []Node) (Node, error) {
 	switch dist {
 	case "binom":
 		if len(args) != 3 {
-			return nil, fmt.Errorf("expect(binom) requires 3 arguments (binom, n, p), got %d", len(args))
+			return nil, fmt.Errorf("%s", i18n.T("prob.err_expect_binom_requires_3_arguments", len(args)))
 		}
 		n, err := extractNonNegativeInt(args[1], "expect: n")
 		if err != nil {
@@ -357,14 +357,14 @@ func EvalExpect(args []Node) (Node, error) {
 
 	case "geom":
 		if len(args) != 2 {
-			return nil, fmt.Errorf("expect(geom) requires 2 arguments (geom, p), got %d", len(args))
+			return nil, fmt.Errorf("%s", i18n.T("prob.err_expect_geom_requires_2_arguments", len(args)))
 		}
 		p, err := extractProbRat(args[1], "expect: p")
 		if err != nil {
 			return nil, err
 		}
 		if p.Sign() == 0 {
-			return nil, fmt.Errorf("expect: p cannot be zero")
+			return nil, fmt.Errorf("%s", i18n.T("prob.err_expect_p_cannot_be_zero"))
 		}
 		one := big.NewRat(1, 1)
 		ans := new(big.Rat).Quo(one, p)
@@ -372,7 +372,7 @@ func EvalExpect(args []Node) (Node, error) {
 
 	case "hyper":
 		if len(args) != 4 {
-			return nil, fmt.Errorf("expect(hyper) requires 4 arguments (hyper, N, K, n), got %d", len(args))
+			return nil, fmt.Errorf("%s", i18n.T("prob.err_expect_hyper_requires_4_arguments", len(args)))
 		}
 		N, err := extractPositiveInt(args[1], "expect: N")
 		if err != nil {
@@ -402,7 +402,7 @@ func EvalExpect(args []Node) (Node, error) {
 // EvalVariance calculates variance V[X] = E[X^2] - (E[X])^2.
 func EvalVariance(args []Node) (Node, error) {
 	if len(args) == 0 {
-		return nil, fmt.Errorf("variance requires at least 1 argument")
+		return nil, fmt.Errorf("%s", i18n.T("prob.err_variance_requires_at_least_1"))
 	}
 
 	// Case 1: Discrete list or matrix distribution [[x1, p1], [x2, p2], ...]
@@ -419,7 +419,7 @@ func EvalVariance(args []Node) (Node, error) {
 	switch dist {
 	case "binom":
 		if len(args) != 3 {
-			return nil, fmt.Errorf("variance(binom) requires 3 arguments (binom, n, p), got %d", len(args))
+			return nil, fmt.Errorf("%s", i18n.T("prob.err_variance_binom_requires_3_arguments", len(args)))
 		}
 		n, err := extractNonNegativeInt(args[1], "variance: n")
 		if err != nil {
@@ -439,14 +439,14 @@ func EvalVariance(args []Node) (Node, error) {
 
 	case "geom":
 		if len(args) != 2 {
-			return nil, fmt.Errorf("variance(geom) requires 2 arguments (geom, p), got %d", len(args))
+			return nil, fmt.Errorf("%s", i18n.T("prob.err_variance_geom_requires_2_arguments", len(args)))
 		}
 		p, err := extractProbRat(args[1], "variance: p")
 		if err != nil {
 			return nil, err
 		}
 		if p.Sign() == 0 {
-			return nil, fmt.Errorf("variance: p cannot be zero")
+			return nil, fmt.Errorf("%s", i18n.T("prob.err_variance_p_cannot_be_zero"))
 		}
 		// V = (1 - p) / p^2
 		one := big.NewRat(1, 1)
@@ -457,7 +457,7 @@ func EvalVariance(args []Node) (Node, error) {
 
 	case "hyper":
 		if len(args) != 4 {
-			return nil, fmt.Errorf("variance(hyper) requires 4 arguments (hyper, N, K, n), got %d", len(args))
+			return nil, fmt.Errorf("%s", i18n.T("prob.err_variance_hyper_requires_4_arguments", len(args)))
 		}
 		N, err := extractPositiveInt(args[1], "variance: N")
 		if err != nil {

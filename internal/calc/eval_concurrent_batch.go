@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -93,7 +94,7 @@ func ParallelBatchMap[T any, R any](items []T, workerFunc func(T) (R, error), cu
 
 	if panicVal != nil {
 		_ = fsm.Transition(StateFailed)
-		return nil, fmt.Errorf("concurrent task panicked: %v", panicVal)
+		return nil, fmt.Errorf("%s", i18n.T("concurrent.err_concurrent_task_panicked", panicVal))
 	}
 	if firstErr != nil {
 		_ = fsm.Transition(StateFailed)

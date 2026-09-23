@@ -180,7 +180,7 @@ func handleResidue(args []Node, env *Env) (Node, error) {
 
 func handleGosperSum(args []Node, env *Env) (Node, error) {
 	if len(args) < 2 {
-		return nil, fmt.Errorf("gosper_sum requires at least 2 arguments (term, k)")
+		return nil, fmt.Errorf("%s", i18n.T("handlers.err_gosper_sum_requires_at_least"))
 	}
 	kVar := "k"
 	if v, ok := args[1].(*VarNode); ok {
@@ -192,12 +192,12 @@ func handleGosperSum(args []Node, env *Env) (Node, error) {
 	if len(args) == 4 {
 		return GosperDefiniteSum(args[0], kVar, args[2], args[3])
 	}
-	return nil, fmt.Errorf("gosper_sum requires 2 arguments for indefinite, or 4 arguments for definite sum")
+	return nil, fmt.Errorf("%s", i18n.T("handlers.err_gosper_sum_requires_2_arguments"))
 }
 
 func handleWZCert(args []Node, env *Env) (Node, error) {
 	if len(args) < 3 {
-		return nil, fmt.Errorf("wz_cert requires 3 arguments (term, n, k)")
+		return nil, fmt.Errorf("%s", i18n.T("verify.err_wz_cert_requires_3_arguments"))
 	}
 	nVar := "n"
 	if vn, ok := args[1].(*VarNode); ok {
@@ -212,7 +212,7 @@ func handleWZCert(args []Node, env *Env) (Node, error) {
 
 func handleRischIntegrate(args []Node, env *Env) (Node, error) {
 	if len(args) < 1 {
-		return nil, fmt.Errorf("risch_integrate requires at least 1 argument (expr, [var])")
+		return nil, fmt.Errorf("%s", i18n.T("handlers.err_risch_integrate_requires_at_least"))
 	}
 	varName := "x"
 	if len(args) >= 2 {
@@ -227,7 +227,7 @@ func handleRischIntegrate(args []Node, env *Env) (Node, error) {
 
 func handleVerify(args []Node, env *Env) (Node, error) {
 	if len(args) < 1 {
-		return nil, fmt.Errorf("verify requires at least 1 argument (expr, [expected])")
+		return nil, fmt.Errorf("%s", i18n.T("handlers.err_verify_requires_at_least_1"))
 	}
 	if len(args) == 2 {
 		cert, err := VerifyAlgebraicEquivalence(args[0], args[1], env)
@@ -240,7 +240,7 @@ func handleVerify(args []Node, env *Env) (Node, error) {
 	// 1 argument: evaluate expression first, then verify
 	evalRes, err := Eval(args[0])
 	if err != nil {
-		return nil, fmt.Errorf("verify: failed to evaluate expression: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("handlers.err_verify_failed_to_evaluate_expression", err))
 	}
 	cert, err := VerifyComputation(args[0], evalRes, env)
 	if err != nil {

@@ -399,7 +399,7 @@ func EvalIsolateRoots(p Node, varName string, a, b Node, env *Env) (Node, error)
 // Sign preservation: dividing by positive content preserves algebraic sign at all points.
 func buildPrimitiveSturmSequence(p *univariatePoly) ([]*univariatePoly, error) {
 	if isPolyZero(p) {
-		return nil, fmt.Errorf("sturm: zero polynomial")
+		return nil, fmt.Errorf("%s", i18n.T("sturm.err_sturm_zero_polynomial"))
 	}
 
 	// f_0 = p
@@ -419,7 +419,7 @@ func buildPrimitiveSturmSequence(p *univariatePoly) ([]*univariatePoly, error) {
 	for {
 		_, rem, ok := polyDivide(u, w)
 		if !ok {
-			return nil, fmt.Errorf("sturm: polynomial division failed")
+			return nil, fmt.Errorf("%s", i18n.T("sturm.err_sturm_polynomial_division_failed"))
 		}
 		if isPolyZero(rem) {
 			break
@@ -487,7 +487,7 @@ func evalPolyAtRat(p *univariatePoly, x *big.Rat) (*big.Rat, error) {
 	leadNode := p.coeffs[deg]
 	leadRat, ok := leadNode.(*RationalNode)
 	if !ok {
-		return nil, fmt.Errorf("evalPolyAtRat: non-rational coefficient: %v", leadNode)
+		return nil, fmt.Errorf("%s", i18n.T("sturm.err_evalpolyatrat_non_rational_coefficient", leadNode))
 	}
 
 	res := new(big.Rat).Set(leadRat.Val)
@@ -495,7 +495,7 @@ func evalPolyAtRat(p *univariatePoly, x *big.Rat) (*big.Rat, error) {
 		cNode := p.coeffs[i]
 		cRat, ok := cNode.(*RationalNode)
 		if !ok {
-			return nil, fmt.Errorf("evalPolyAtRat: non-rational coefficient: %v", cNode)
+			return nil, fmt.Errorf("%s", i18n.T("sturm.err_evalpolyatrat_non_rational_coefficient", cNode))
 		}
 		res.Mul(res, x)
 		res.Add(res, cRat.Val)
@@ -642,5 +642,5 @@ func parseIntervalEndpoint(n Node, defaultInfSign int, env *Env) (isInf bool, si
 		return false, 0, new(big.Rat).Set(r.Val), nil
 	}
 
-	return false, 0, nil, fmt.Errorf("interval endpoint must be a rational number or infinity, got %v", evaled)
+	return false, 0, nil, fmt.Errorf("%s", i18n.T("sturm.err_interval_endpoint_must_be_a", evaled))
 }

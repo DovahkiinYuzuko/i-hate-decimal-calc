@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"math/big"
 )
@@ -45,11 +46,10 @@ func simplifyAdd(terms []Node) (Node, error) {
 		for _, t := range flatTerms {
 			m, ok := t.(*MatrixNode)
 			if !ok {
-				return nil, fmt.Errorf("matrix dimension error: cannot add scalar %s to matrix", t.String())
+				return nil, fmt.Errorf("%s", i18n.T("simplify.err_matrix_dimension_error_cannot_add", t.String()))
 			}
 			if m.Rows != firstMatrix.Rows || m.Cols != firstMatrix.Cols {
-				return nil, fmt.Errorf("matrix dimension mismatch: cannot add %dx%d matrix and %dx%d matrix",
-					firstMatrix.Rows, firstMatrix.Cols, m.Rows, m.Cols)
+				return nil, fmt.Errorf("%s", i18n.T("simplify.err_matrix_dimension_mismatch_cannot_add", firstMatrix.Rows, firstMatrix.Cols, m.Rows, m.Cols))
 			}
 			for r := 0; r < m.Rows; r++ {
 				for c := 0; c < m.Cols; c++ {

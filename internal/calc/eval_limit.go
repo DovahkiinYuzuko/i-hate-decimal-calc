@@ -16,11 +16,11 @@ import (
 // L'Hopital's rule, and infinite limits with degree comparison.
 func EvalLimit(expr Node, varNode Node, target Node, dirNode Node) (Node, error) {
 	if expr == nil {
-		return nil, fmt.Errorf("limit: expression cannot be nil")
+		return nil, fmt.Errorf("%s", i18n.T("errors.err_limit_expression_cannot_be_nil"))
 	}
 	vNode, ok := varNode.(*VarNode)
 	if !ok {
-		return nil, fmt.Errorf("limit: second argument must be a variable name, got %s", varNode.String())
+		return nil, fmt.Errorf("%s", i18n.T("errors.err_limit_second_argument_must_be", varNode.String()))
 	}
 	varName := vNode.Name
 
@@ -87,7 +87,7 @@ func isInfiniteTarget(target Node) (bool, int) {
 // evalFiniteLimit evaluates the limit as varName approaches finite target a.
 func evalFiniteLimit(expr Node, varName string, a Node, dir int, depth int) (Node, error) {
 	if depth > 5 {
-		return nil, fmt.Errorf("limit: recursion depth exceeded (possible cycle or unsupported singularity)")
+		return nil, fmt.Errorf("%s", i18n.T("errors.err_limit_recursion_depth_exceeded_possible"))
 	}
 
 	// If expr does not contain varName, limit is expr itself
@@ -151,13 +151,13 @@ func evalFiniteLimit(expr Node, varName string, a Node, dir int, depth int) (Nod
 		return val, nil
 	}
 
-	return nil, fmt.Errorf("limit: unable to resolve limit at %s: %w", a.String(), err)
+	return nil, fmt.Errorf("%s", i18n.T("errors.err_limit_unable_to_resolve_limit", a.String(), err))
 }
 
 // evalInfiniteLimit evaluates the limit as varName approaches +inf (sign = 1) or -inf (sign = -1).
 func evalInfiniteLimit(expr Node, varName string, sign int, depth int) (Node, error) {
 	if depth > 5 {
-		return nil, fmt.Errorf("limit: recursion depth exceeded in infinite limit")
+		return nil, fmt.Errorf("%s", i18n.T("errors.err_limit_recursion_depth_exceeded_in"))
 	}
 
 	if !containsVar(expr, varName) {
@@ -222,7 +222,7 @@ func evalInfiniteLimit(expr Node, varName string, sign int, depth int) (Node, er
 		return evalInfiniteLimit(lhopitalExpr, varName, sign, depth+1)
 	}
 
-	return nil, fmt.Errorf("limit: unable to resolve limit at infinity for %s", expr.String())
+	return nil, fmt.Errorf("%s", i18n.T("errors.err_limit_unable_to_resolve_limit_1", expr.String()))
 }
 
 // toRationalFraction converts any expression expr into a single fraction num / den.
@@ -420,7 +420,7 @@ func evaluateSingularityLimit(numVal Node, den Node, varName string, a Node, dir
 		return simplifyUnaryOp("-", &VarNode{Name: "inf"})
 	}
 
-	return nil, fmt.Errorf("limit: two-sided limit does not exist (diverges to distinct signs from left and right)")
+	return nil, fmt.Errorf("%s", i18n.T("errors.err_limit_two_sided_limit_does"))
 }
 
 // probeDenSign checks the algebraic sign of den when varName = a + delta (dir > 0) or a - delta (dir < 0).

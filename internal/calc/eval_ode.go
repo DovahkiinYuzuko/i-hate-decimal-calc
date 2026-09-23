@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"math/big"
 )
@@ -23,7 +24,7 @@ const (
 //    - Particular solution via method of undetermined coefficients for polynomials, exponentials, and sines/cosines.
 func EvalDSolve(eq Node, yName, xName string, env *Env) (Node, error) {
 	if eq == nil {
-		return nil, fmt.Errorf("dsolve: equation cannot be nil")
+		return nil, fmt.Errorf("%s", i18n.T("ode.err_dsolve_equation_cannot_be_nil"))
 	}
 
 	// 1. Normalize equation to F(x, y, y', y'') = 0
@@ -61,7 +62,7 @@ func EvalDSolve(eq Node, yName, xName string, env *Env) (Node, error) {
 	// 3. Classify the ODE
 	typ, coeffs, err := classifyODE(expr, yName, xName)
 	if err != nil {
-		return nil, fmt.Errorf("dsolve classification error: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("ode.err_dsolve_classification_error", err))
 	}
 
 	var sol Node
@@ -69,17 +70,17 @@ func EvalDSolve(eq Node, yName, xName string, env *Env) (Node, error) {
 	case odeFirstLinear:
 		sol, err = solve1stLinearODE(coeffs.P, coeffs.Q, xName, env)
 		if err != nil {
-			return nil, fmt.Errorf("dsolve 1st-order error: %w", err)
+			return nil, fmt.Errorf("%s", i18n.T("ode.err_dsolve_1st_order_error", err))
 		}
 
 	case odeSecondLinearConstCoeff:
 		sol, err = solve2ndLinearConstCoeffODE(coeffs.a, coeffs.b, coeffs.c, coeffs.f, xName, env)
 		if err != nil {
-			return nil, fmt.Errorf("dsolve 2nd-order error: %w", err)
+			return nil, fmt.Errorf("%s", i18n.T("ode.err_dsolve_2nd_order_error", err))
 		}
 
 	default:
-		return nil, fmt.Errorf("dsolve: unable to classify equation into a supported ODE type")
+		return nil, fmt.Errorf("%s", i18n.T("ode.err_dsolve_unable_to_classify_equation"))
 	}
 
 	// Return y == sol
@@ -310,7 +311,7 @@ func classifyODE(expr Node, yName, xName string) (odeType, *odeCoeffs, error) {
 		rc, okC := coeffC.(*RationalNode)
 		if okA && okB && okC {
 			if ra.Val.Sign() == 0 {
-				return odeUnknown, nil, fmt.Errorf("coefficient of y'' is zero")
+				return odeUnknown, nil, fmt.Errorf("%s", i18n.T("ode.err_coefficient_of_y_is_zero"))
 			}
 			return odeSecondLinearConstCoeff, &odeCoeffs{
 				a: new(big.Rat).Set(ra.Val),
@@ -319,7 +320,7 @@ func classifyODE(expr Node, yName, xName string) (odeType, *odeCoeffs, error) {
 				f: rhsNode,
 			}, nil
 		}
-		return odeUnknown, nil, fmt.Errorf("2nd-order ODE has non-constant coefficients")
+		return odeUnknown, nil, fmt.Errorf("%s", i18n.T("ode.err_2nd_order_ode_has_non"))
 	}
 
 	// Case 2: 1st-order linear ODE
@@ -357,7 +358,7 @@ func classifyODE(expr Node, yName, xName string) (odeType, *odeCoeffs, error) {
 		}, nil
 	}
 
-	return odeUnknown, nil, fmt.Errorf("no derivative terms y' or y'' found in equation")
+	return odeUnknown, nil, fmt.Errorf("%s", i18n.T("ode.err_no_derivative_terms_y_or"))
 }
 
 // solve1stLinearODE solves y' + P(x)*y = Q(x)
@@ -369,13 +370,13 @@ func solve1stLinearODE(pNode, qNode Node, xName string, env *Env) (Node, error) 
 	// 1. Integrate P(x) dx
 	intP, err := evalIndefiniteIntegral(pNode, xName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to integrate P(x): %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("ode.err_failed_to_integrate_p_x", err))
 	}
 
 	// 2. Integrating factor mu(x) = exp(intP)
 	mu, err := simplifyFuncWithEnv("exp", []Node{intP}, env)
 	if err != nil {
-		return nil, fmt.Errorf("failed to compute integrating factor: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("ode.err_failed_to_compute_integrating_factor", err))
 	}
 
 	// If Q(x) == 0 (separable / homogeneous), solution is simply C_1 / mu = C_1 * exp(-intP)
@@ -398,7 +399,7 @@ func solve1stLinearODE(pNode, qNode Node, xName string, env *Env) (Node, error) 
 	}
 	intMuQ, err := evalIndefiniteIntegral(muTimesQ, xName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to integrate mu(x)*Q(x): %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("ode.err_failed_to_integrate_mu_x", err))
 	}
 
 	// 4. (intMuQ + C_1) / mu
@@ -609,7 +610,7 @@ func solve2ndLinearConstCoeffODE(a, b, c *big.Rat, fNode Node, xName string, env
 	yp, err := solveUndeterminedCoefficients(a, b, c, fNode, xName, env)
 	if err != nil {
 		// Fall back to returning homogeneous solution with warning or error
-		return nil, fmt.Errorf("unable to find particular solution for RHS %s: %w", fNode.String(), err)
+		return nil, fmt.Errorf("%s", i18n.T("ode.err_unable_to_find_particular_solution", fNode.String(), err))
 	}
 
 	return simplifyAdd([]Node{yh, yp})
@@ -810,7 +811,7 @@ func solveUndeterminedCoefficients(a, b, c *big.Rat, fNode Node, xName string, e
 		}
 	}
 
-	return nil, fmt.Errorf("undetermined coefficients: unsupported RHS pattern")
+	return nil, fmt.Errorf("%s", i18n.T("ode.err_undetermined_coefficients_unsupported_rhs_pattern"))
 }
 
 // extractExpForm tests if node is k * exp(lambda * x) or exp(lambda * x)

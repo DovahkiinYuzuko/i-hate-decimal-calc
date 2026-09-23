@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"sync"
 )
@@ -92,7 +93,7 @@ func (fsm *EllipticLifecycleFSM) TransitionTo(target EcState) error {
 	}
 
 	if !valid {
-		return fmt.Errorf("invalid Elliptic FSM transition: %s -> %s", fsm.currentState, target)
+		return fmt.Errorf("%s", i18n.T("elliptic.err_invalid_elliptic_fsm_transition", fsm.currentState, target))
 	}
 
 	fsm.currentState = target

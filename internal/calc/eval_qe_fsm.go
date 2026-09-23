@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"sync"
 )
@@ -92,7 +93,7 @@ func (fsm *QeLifecycleFSM) TransitionTo(target QeState) error {
 	}
 
 	if !valid {
-		return fmt.Errorf("invalid QE FSM transition: %s -> %s", fsm.currentState, target)
+		return fmt.Errorf("%s", i18n.T("qe.err_invalid_qe_fsm_transition", fsm.currentState, target))
 	}
 
 	fsm.currentState = target

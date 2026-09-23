@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"math/big"
 	"sort"
@@ -10,7 +11,7 @@ import (
 // into irreducible factors over the rationals.
 func Factor(expr Node, varName ...string) (Node, error) {
 	if expr == nil {
-		return nil, fmt.Errorf("factor: nil expression")
+		return nil, fmt.Errorf("%s", i18n.T("poly.err_factor_nil_expression"))
 	}
 
 	simplified, err := Eval(expr)
@@ -223,7 +224,7 @@ func factorPolynomial(expr Node, varName string) (Node, error) {
 	for d, cNode := range coeffsMap {
 		cRat, ok := cNode.(*RationalNode)
 		if !ok {
-			return nil, fmt.Errorf("factor: non-rational coefficient in degree %d: %s", d, cNode.String())
+			return nil, fmt.Errorf("%s", i18n.T("poly.err_factor_non_rational_coefficient_in", d, cNode.String()))
 		}
 		denoms = append(denoms, cRat.Val.Denom())
 	}

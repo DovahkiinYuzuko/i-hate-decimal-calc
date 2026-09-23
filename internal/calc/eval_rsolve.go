@@ -39,7 +39,7 @@ func handleRSolve(args []Node, env *Env) (Node, error) {
 // Example: rsolve(a(n+2) == a(n+1) + a(n), a(n), [a(0) == 0, a(1) == 1])
 func EvalRSolve(eqNode, fnNode, initsNode Node, env *Env) (Node, error) {
 	if eqNode == nil || fnNode == nil {
-		return nil, fmt.Errorf("rsolve: equation and sequence function cannot be nil")
+		return nil, fmt.Errorf("%s", i18n.T("rsolve.err_rsolve_equation_and_sequence_function"))
 	}
 
 	// 1. Identify sequence name and index variable from fnNode (e.g. a(n))
@@ -95,7 +95,7 @@ func extractSequenceTarget(target Node) (string, string, error) {
 	if v, ok := target.(*VarNode); ok {
 		return v.Name, "n", nil
 	}
-	return "", "", fmt.Errorf("expected sequence function like a(n), got: %s", target.String())
+	return "", "", fmt.Errorf("%s", i18n.T("rsolve.err_expected_sequence_function_like_a", target.String()))
 }
 
 // parseRecurrenceEquation converts eq into homogeneous shift coefficients and non-homogeneous f(n).
@@ -145,7 +145,7 @@ func parseRecurrenceEquation(eqNode Node, seqName, idxVar string) (map[int]*big.
 	}
 
 	if len(shiftCoeffs) == 0 {
-		return nil, nil, 0, fmt.Errorf("no terms of sequence %s(%s) found in equation", seqName, idxVar)
+		return nil, nil, 0, fmt.Errorf("%s", i18n.T("rsolve.err_no_terms_of_sequence_found", seqName, idxVar))
 	}
 
 	// Normalize shifts so minimum shift is 0 (e.g. a(n+2) == a(n+1) -> shift 2 and shift 1 -> offset by min)
@@ -260,14 +260,14 @@ func parseShiftArg(arg Node, idxVar string) (int, error) {
 					shift -= r.Val.Num().Int64()
 				}
 			} else {
-				return 0, fmt.Errorf("unsupported index expression in recurrence: %s", arg.String())
+				return 0, fmt.Errorf("%s", i18n.T("rsolve.err_unsupported_index_expression_in_recurrence", arg.String()))
 			}
 		}
 		if hasVar {
 			return int(shift), nil
 		}
 	}
-	return 0, fmt.Errorf("unsupported index expression in recurrence: %s", arg.String())
+	return 0, fmt.Errorf("%s", i18n.T("rsolve.err_unsupported_index_expression_in_recurrence", arg.String()))
 }
 
 // solveHomogeneousRecurrence solves the characteristic equation and returns basis functions b_i(n).
@@ -279,7 +279,7 @@ func solveHomogeneousRecurrence(coeffs map[int]*big.Rat, idxVar string, order in
 		c1, ok1 := coeffs[1]
 		c0, ok0 := coeffs[0]
 		if !ok1 || !ok0 || c1.Sign() == 0 {
-			return nil, fmt.Errorf("invalid 1st order recurrence coefficients")
+			return nil, fmt.Errorf("%s", i18n.T("rsolve.err_invalid_1st_order_recurrence_coefficients"))
 		}
 		lambda := new(big.Rat).Quo(new(big.Rat).Neg(c0), c1)
 		bases = append(bases, makePowerBasis(lambda, idxVar))
@@ -292,7 +292,7 @@ func solveHomogeneousRecurrence(coeffs map[int]*big.Rat, idxVar string, order in
 		c1 := coeffs[1]
 		c0 := coeffs[0]
 		if c2 == nil || c2.Sign() == 0 {
-			return nil, fmt.Errorf("invalid 2nd order recurrence coefficients")
+			return nil, fmt.Errorf("%s", i18n.T("rsolve.err_invalid_2nd_order_recurrence_coefficients"))
 		}
 		if c1 == nil {
 			c1 = big.NewRat(0, 1)
@@ -351,7 +351,7 @@ func solveHomogeneousRecurrence(coeffs map[int]*big.Rat, idxVar string, order in
 		return bases, nil
 	}
 
-	return nil, fmt.Errorf("recurrence order %d is not yet supported", order)
+	return nil, fmt.Errorf("%s", i18n.T("rsolve.err_recurrence_order", order))
 }
 
 func makePowerBasis(lambda *big.Rat, idxVar string) Node {
@@ -420,7 +420,7 @@ func solveSingleParticularTerm(coeffs map[int]*big.Rat, term Node, idxVar string
 			a := new(big.Rat).Quo(r.Val, pPrime1)
 			return &MulNode{Factors: []Node{&RationalNode{Val: a}, &VarNode{Name: idxVar}}}, nil
 		}
-		return nil, fmt.Errorf("multiplicity of root 1 exceeds supported degree for constant term")
+		return nil, fmt.Errorf("%s", i18n.T("rsolve.err_multiplicity_of_root_1_exceeds"))
 	}
 
 	// Case 2: Linear term c * n
@@ -495,7 +495,7 @@ func solveSingleParticularTerm(coeffs map[int]*big.Rat, term Node, idxVar string
 		}
 	}
 
-	return nil, fmt.Errorf("inhomogeneous term not yet supported: %s", term.String())
+	return nil, fmt.Errorf("%s", i18n.T("rsolve.err_inhomogeneous_term_not_yet_supported", term.String()))
 }
 
 func ratPow(base *big.Rat, exp int) *big.Rat {
@@ -707,7 +707,7 @@ func fitInitialConditions(homogBases []Node, partSol Node, idxVar string, inits 
 		return Eval(finalSol)
 	}
 
-	return nil, fmt.Errorf("initial condition fitting for order %d is not yet supported", order)
+	return nil, fmt.Errorf("%s", i18n.T("rsolve.err_initial_condition_fitting_for_order", order))
 }
 
 func evalBaseAt(b Node, varName string, val int) Node {

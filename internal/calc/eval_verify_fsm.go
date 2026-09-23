@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"sync"
 )
@@ -81,7 +82,7 @@ func (fsm *VerifyLifecycleFSM) TransitionTo(target VerifyState) error {
 	}
 
 	if !valid {
-		return fmt.Errorf("invalid verification FSM transition: %s -> %s", fsm.currentState, target)
+		return fmt.Errorf("%s", i18n.T("verify.err_invalid_verification_fsm_transition", fsm.currentState, target))
 	}
 
 	fsm.currentState = target

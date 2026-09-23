@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"math/big"
 )
@@ -114,7 +115,7 @@ func henriciBaseExpansion(num, base *univariatePoly, k int) ([]*rationalTerm, er
 	for j := k; j >= 1; j-- {
 		q, rem, ok := polyDivide(cur, base)
 		if !ok {
-			return nil, fmt.Errorf("henriciBaseExpansion: polynomial division failed")
+			return nil, fmt.Errorf("%s", i18n.T("rational.err_henricibaseexpansion_polynomial_division_failed"))
 		}
 		if !isPolyZero(rem) {
 			terms = append(terms, &rationalTerm{
@@ -184,7 +185,7 @@ func decomposeKungTong(num *univariatePoly, factors []polyFactorPower) ([]*ratio
 	S, T, G, ok := polyExtendedGCD(U, V)
 	if !ok || G.degree() > 0 {
 		// Not coprime or GCD failure
-		return nil, fmt.Errorf("decomposeKungTong: factors are not coprime (gcd degree %d)", G.degree())
+		return nil, fmt.Errorf("%s", i18n.T("rational.err_decomposekungtong_factors_are_not_coprime", G.degree()))
 	}
 
 	// num / (U*V) = (num * T) / U + (num * S) / V
@@ -194,7 +195,7 @@ func decomposeKungTong(num *univariatePoly, factors []polyFactorPower) ([]*ratio
 	_, remU, okU := polyDivide(numT, U)
 	_, remV, okV := polyDivide(numS, V)
 	if !okU || !okV {
-		return nil, fmt.Errorf("decomposeKungTong: reduction division failed")
+		return nil, fmt.Errorf("%s", i18n.T("rational.err_decomposekungtong_reduction_division_failed"))
 	}
 
 	leftTerms, err := decomposeKungTong(remU, leftFactors)
@@ -281,7 +282,7 @@ func collectDenominatorFactors(denNode Node, varName string) ([]polyFactorPower,
 			if r, ok := v.Exp.(*RationalNode); ok && r.Val.IsInt() && r.Val.Sign() > 0 {
 				basePoly, ok := extractPoly(v.Base, varName)
 				if !ok {
-					return fmt.Errorf("non-polynomial factor in denominator")
+					return fmt.Errorf("%s", i18n.T("rational.err_non_polynomial_factor_in_denominator"))
 				}
 				lead := basePoly.leadCoeff()
 				if !isOne(lead) {
@@ -298,7 +299,7 @@ func collectDenominatorFactors(denNode Node, varName string) ([]polyFactorPower,
 				})
 				return nil
 			}
-			return fmt.Errorf("unsupported power in denominator factor")
+			return fmt.Errorf("%s", i18n.T("rational.err_unsupported_power_in_denominator_factor"))
 
 		case *MulNode:
 			for _, sub := range v.Factors {
@@ -311,7 +312,7 @@ func collectDenominatorFactors(denNode Node, varName string) ([]polyFactorPower,
 		default:
 			basePoly, ok := extractPoly(v, varName)
 			if !ok {
-				return fmt.Errorf("non-polynomial denominator factor")
+				return fmt.Errorf("%s", i18n.T("rational.err_non_polynomial_denominator_factor"))
 			}
 			lead := basePoly.leadCoeff()
 			if !isOne(lead) {
@@ -357,7 +358,7 @@ func collectDenominatorFactors(denNode Node, varName string) ([]polyFactorPower,
 // Usage: apart(expr, [var])
 func EvalApart(expr Node, varNames ...string) (Node, error) {
 	if expr == nil {
-		return nil, fmt.Errorf("apart: nil expression")
+		return nil, fmt.Errorf("%s", i18n.T("rational.err_apart_nil_expression"))
 	}
 	simplified, err := Eval(expr)
 	if err != nil {
@@ -408,7 +409,7 @@ func EvalApart(expr Node, varNames ...string) (Node, error) {
 	// 1. Polynomial long division: num = Q * den + R
 	quot, rem, divOk := polyDivide(polyNum, polyDen)
 	if !divOk {
-		return nil, fmt.Errorf("apart: polynomial division failed")
+		return nil, fmt.Errorf("%s", i18n.T("rational.err_apart_polynomial_division_failed"))
 	}
 
 	var resultTerms []Node
@@ -483,7 +484,7 @@ func EvalApart(expr Node, varNames ...string) (Node, error) {
 // Usage: together(expr)
 func EvalTogether(expr Node) (Node, error) {
 	if expr == nil {
-		return nil, fmt.Errorf("together: nil expression")
+		return nil, fmt.Errorf("%s", i18n.T("rational.err_together_nil_expression"))
 	}
 	simplified, err := Eval(expr)
 	if err != nil {

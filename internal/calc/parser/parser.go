@@ -151,7 +151,7 @@ func ParseStatement(input string) (interface{}, error) {
 	p := NewParser(l)
 
 	if p.curTok.Type == TokenEOF {
-		return nil, fmt.Errorf("syntax error: empty input")
+		return nil, fmt.Errorf("%s", i18n.T("parser.err_syntax_error_empty_input"))
 	}
 
 	// Check if this is an assignment: Ident = Expr
@@ -387,14 +387,14 @@ func (p *Parser) parseFuncCall(name string) (ast.Node, error) {
 
 	if name == "sqrt" {
 		if len(args) != 1 {
-			return nil, fmt.Errorf("sqrt requires exactly 1 argument, got %d", len(args))
+			return nil, fmt.Errorf("%s", i18n.T("parser.err_sqrt_requires_exactly_1_argument", len(args)))
 		}
 		return ast.NewSqrt(args[0]), nil
 	}
 
 	if name == "forall" || name == "exists" {
 		if len(args) != 2 {
-			return nil, fmt.Errorf("%s requires exactly 2 arguments (variables, formula), got %d", name, len(args))
+			return nil, fmt.Errorf("%s", i18n.T("parser.err_variables_formula_got", name, len(args)))
 		}
 		var vars []string
 		if list, ok := args[0].(*ast.ListNode); ok {
@@ -402,13 +402,13 @@ func (p *Parser) parseFuncCall(name string) (ast.Node, error) {
 				if v, ok := elem.(*ast.VarNode); ok {
 					vars = append(vars, v.Name)
 				} else {
-					return nil, fmt.Errorf("%s: first argument must be a list of variables, got %s", name, elem)
+					return nil, fmt.Errorf("%s", i18n.T("parser.err_first_argument_must_be_a", name, elem))
 				}
 			}
 		} else if v, ok := args[0].(*ast.VarNode); ok {
 			vars = append(vars, v.Name)
 		} else {
-			return nil, fmt.Errorf("%s: first argument must be a variable or list of variables, got %s", name, args[0])
+			return nil, fmt.Errorf("%s", i18n.T("parser.err_first_argument_must_be_a_1", name, args[0]))
 		}
 		kind := ast.QuantifierForall
 		if name == "exists" {

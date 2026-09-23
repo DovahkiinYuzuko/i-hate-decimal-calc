@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 )
 
@@ -13,7 +14,7 @@ import (
 // If varName is empty, the main variable is automatically selected.
 func EvalResultant(p, q Node, varName string, env *Env) (Node, error) {
 	if p == nil || q == nil {
-		return nil, fmt.Errorf("resultant: nil argument")
+		return nil, fmt.Errorf("%s", i18n.T("resultant.err_resultant_nil_argument"))
 	}
 
 	evalP, err := Eval(expandNode(p))
@@ -49,7 +50,7 @@ func EvalResultant(p, q Node, varName string, env *Env) (Node, error) {
 	polyP, okP := extractPoly(evalP, v)
 	polyQ, okQ := extractPoly(evalQ, v)
 	if !okP || !okQ {
-		return nil, fmt.Errorf("resultant: failed to extract polynomials in %s", v)
+		return nil, fmt.Errorf("%s", i18n.T("resultant.err_resultant_failed_to_extract_polynomials", v))
 	}
 
 	// Boundary cases
@@ -90,7 +91,7 @@ func EvalResultant(p, q Node, varName string, env *Env) (Node, error) {
 	// Compute determinant
 	detVal, err := evalDet(sylvesterMat)
 	if err != nil {
-		return nil, fmt.Errorf("resultant: determinant calculation failed: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("resultant.err_resultant_determinant_calculation_failed", err))
 	}
 
 	// Expand and simplify the result

@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"math/big"
 	"strings"
@@ -36,7 +37,7 @@ type DifferentialExtension struct {
 // P(x)/Q(x) in Q(x) using Ostrogradsky-Hermite reduction and the Rothstein-Trager method.
 func RischIntegrateRational(numPoly, denPoly *univariatePoly, varName string, fsm *RischLifecycleFSM) (ast.Node, error) {
 	if denPoly == nil || isPolyZero(denPoly) {
-		return nil, fmt.Errorf("division by zero polynomial")
+		return nil, fmt.Errorf("%s", i18n.T("integral.err_division_by_zero_polynomial"))
 	}
 	if isPolyZero(numPoly) {
 		return mustRational(0, 1), nil
@@ -72,7 +73,7 @@ func RischIntegrateRational(numPoly, denPoly *univariatePoly, varName string, fs
 	gRationalPart, aPoly, bPoly, err := HermiteReduce(remPoly, denPoly, varName)
 	if err != nil {
 		_ = fsm.TransitionTo(RischStateUnsupported)
-		return nil, fmt.Errorf("Hermite reduction failed: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("integral.err_hermite_reduction_failed", err))
 	}
 	_ = fsm.TransitionTo(RischStateHermiteReduced)
 
@@ -296,20 +297,20 @@ func RothsteinTrager(A, B *univariatePoly, varName string) (ast.Node, error) {
 
 	resNode, err := EvalResultant(pMinusZB, B.toNode(), varName, NewEnv())
 	if err != nil {
-		return nil, fmt.Errorf("Rothstein-Trager resultant computation failed: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("integral.err_rothstein_trager_resultant_computation_failed", err))
 	}
 
 	// Extract roots of R(z) in Q
 	zPoly, okZ := extractPoly(resNode, zVar)
 	if !okZ || isPolyZero(zPoly) {
-		return nil, fmt.Errorf("resultant in z could not be analyzed")
+		return nil, fmt.Errorf("%s", i18n.T("integral.err_resultant_in_z_could_not"))
 	}
 
 	// Find rational roots of R(z)
 	roots := findUnivariatePolyRationalRoots(zPoly)
 	if len(roots) == 0 {
 		// Roots are algebraic numbers: return Unsupported as per 4-AI consensus
-		return nil, fmt.Errorf("Rothstein-Trager residues require algebraic extension (Unsupported)")
+		return nil, fmt.Errorf("%s", i18n.T("integral.err_rothstein_trager_residues_require_algebraic"))
 	}
 
 	var logTerms []ast.Node
@@ -331,7 +332,7 @@ func RothsteinTrager(A, B *univariatePoly, varName string) (ast.Node, error) {
 	}
 
 	if len(logTerms) == 0 {
-		return nil, fmt.Errorf("no valid logarithmic factors recovered from resultant roots")
+		return nil, fmt.Errorf("%s", i18n.T("integral.err_no_valid_logarithmic_factors_recovered"))
 	}
 	return simplifyAdd(logTerms)
 }
@@ -343,7 +344,7 @@ func RothsteinTrager(A, B *univariatePoly, varName string) (ast.Node, error) {
 // RischIntegrate is the master deterministic transcendental integration entry point.
 func RischIntegrate(expr ast.Node, varName string) (ast.Node, error) {
 	if expr == nil {
-		return nil, fmt.Errorf("cannot integrate nil expression")
+		return nil, fmt.Errorf("%s", i18n.T("integral.err_cannot_integrate_nil_expression"))
 	}
 
 	fsm := NewRischLifecycleFSM()
@@ -410,7 +411,7 @@ func RischIntegrate(expr ast.Node, varName string) (ast.Node, error) {
 	}
 
 	_ = fsm.TransitionTo(RischStateUnsupported)
-	return nil, fmt.Errorf("Risch integration: unsupported tower structure")
+	return nil, fmt.Errorf("%s", i18n.T("integral.err_risch_integration_unsupported_tower_structure"))
 }
 
 // normalizeMonomialsAST performs pre-normalization on AST expressions:
@@ -565,7 +566,7 @@ func solveExponentialRisch(expr ast.Node, ext DifferentialExtension, varName str
 	}
 
 	_ = fsm.TransitionTo(RischStateUnsupported)
-	return nil, fmt.Errorf("Risch integration: unsupported exponential extension")
+	return nil, fmt.Errorf("%s", i18n.T("integral.err_risch_integration_unsupported_exponential_extension"))
 }
 
 // solveLogarithmicRisch solves integrals involving a logarithmic extension t = ln(u(x)).
@@ -598,7 +599,7 @@ func solveLogarithmicRisch(expr ast.Node, _ DifferentialExtension, varName strin
 	}
 
 	_ = fsm.TransitionTo(RischStateUnsupported)
-	return nil, fmt.Errorf("Risch integration: unsupported logarithmic extension")
+	return nil, fmt.Errorf("%s", i18n.T("integral.err_risch_integration_unsupported_logarithmic_extension"))
 }
 
 func basisMonomial1D(varName string, deg int) *univariatePoly {

@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"sync"
 )
@@ -75,31 +76,31 @@ func (fsm *GosperLifecycleFSM) TransitionTo(next GosperState) error {
 	switch next {
 	case GosperStateRatioExtracted:
 		if fsm.state != GosperStateIdle {
-			return fmt.Errorf("invalid transition to RatioExtracted from %s", fsm.state)
+			return fmt.Errorf("%s", i18n.T("gosper.err_invalid_transition_to_ratioextracted_from", fsm.state))
 		}
 	case GosperStateNormalized:
 		if fsm.state != GosperStateRatioExtracted {
-			return fmt.Errorf("invalid transition to Normalized from %s", fsm.state)
+			return fmt.Errorf("%s", i18n.T("gosper.err_invalid_transition_to_normalized_from", fsm.state))
 		}
 	case GosperStateDegreeBounded:
 		if fsm.state != GosperStateNormalized {
-			return fmt.Errorf("invalid transition to DegreeBounded from %s", fsm.state)
+			return fmt.Errorf("%s", i18n.T("gosper.err_invalid_transition_to_degreebounded_from", fsm.state))
 		}
 	case GosperStateSolved:
 		if fsm.state != GosperStateDegreeBounded {
-			return fmt.Errorf("invalid transition to Solved from %s", fsm.state)
+			return fmt.Errorf("%s", i18n.T("gosper.err_invalid_transition_to_solved_from", fsm.state))
 		}
 	case GosperStateNotSummable:
 		// Can transition to NotSummable from any intermediate calculation phase
 		if fsm.state == GosperStateSolved || fsm.state == GosperStateCertified {
-			return fmt.Errorf("cannot mark NotSummable once solved or certified (state: %s)", fsm.state)
+			return fmt.Errorf("%s", i18n.T("gosper.err_cannot_mark_notsummable_once_solved", fsm.state))
 		}
 	case GosperStateCertified:
 		if fsm.state != GosperStateSolved {
-			return fmt.Errorf("invalid transition to Certified from %s", fsm.state)
+			return fmt.Errorf("%s", i18n.T("gosper.err_invalid_transition_to_certified_from", fsm.state))
 		}
 	default:
-		return fmt.Errorf("unknown target state: %d", next)
+		return fmt.Errorf("%s", i18n.T("gosper.err_unknown_target_state", next))
 	}
 
 	fsm.state = next

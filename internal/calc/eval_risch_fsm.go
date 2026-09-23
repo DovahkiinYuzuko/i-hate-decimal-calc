@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"sync"
 )
@@ -156,11 +157,11 @@ func (f *RischLifecycleFSM) TransitionTo(next RischState) error {
 	}
 
 	if next == RischStateNonelementaryCertified && !f.complete {
-		return fmt.Errorf("cannot transition to NonelementaryCertified: algorithmic completeness not proven for this tower")
+		return fmt.Errorf("%s", i18n.T("integral.err_cannot_transition_to_nonelementarycertified_algorithmic"))
 	}
 
 	if !valid {
-		return fmt.Errorf("invalid Risch FSM transition: %s -> %s", f.state.String(), next.String())
+		return fmt.Errorf("%s", i18n.T("integral.err_invalid_risch_fsm_transition", f.state.String(), next.String()))
 	}
 
 	f.state = next

@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"math/big"
 	"strings"
@@ -259,7 +260,7 @@ func NewUnaryOp(op string, expr Node) (*UnaryOpNode, error) {
 		return &UnaryOpNode{Op: op, Expr: expr}, nil
 
 	default:
-		return nil, fmt.Errorf("unknown unary operator: %s", op)
+		return nil, fmt.Errorf("%s", i18n.T("approx.err_unknown_unary_operator", op))
 	}
 }
 

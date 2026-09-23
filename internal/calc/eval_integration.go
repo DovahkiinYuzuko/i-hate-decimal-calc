@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"errors"
 	"fmt"
 	"math/big"
@@ -13,7 +14,7 @@ import (
 // evalIndefiniteIntegral computes the symbolic indefinite integral of expr with respect to varName.
 func evalIndefiniteIntegral(expr Node, varName string) (Node, error) {
 	if expr == nil {
-		return nil, fmt.Errorf("cannot integrate nil expression")
+		return nil, fmt.Errorf("%s", i18n.T("integral.err_cannot_integrate_nil_expression"))
 	}
 	F, err := integrateCore(expr, varName)
 	if err != nil {
@@ -30,7 +31,7 @@ func evalIndefiniteIntegral(expr Node, varName string) (Node, error) {
 // evalDefiniteIntegral computes the symbolic definite integral of expr from a to b with respect to varName.
 func evalDefiniteIntegral(expr Node, varName string, a, b Node) (Node, error) {
 	if expr == nil {
-		return nil, fmt.Errorf("cannot integrate nil expression")
+		return nil, fmt.Errorf("%s", i18n.T("integral.err_cannot_integrate_nil_expression"))
 	}
 	// 1. Compute indefinite integral F(x)
 	F, err := integrateCore(expr, varName)
@@ -42,14 +43,14 @@ func evalDefiniteIntegral(expr Node, varName string, a, b Node) (Node, error) {
 	subB := Substitute(F, varName, b)
 	valB, err := Eval(subB)
 	if err != nil {
-		return nil, fmt.Errorf("integrate: failed to evaluate upper limit %s: %w", b.String(), err)
+		return nil, fmt.Errorf("%s", i18n.T("integral.err_integrate_failed_to_evaluate_upper", b.String(), err))
 	}
 
 	// 3. Evaluate F(a)
 	subA := Substitute(F, varName, a)
 	valA, err := Eval(subA)
 	if err != nil {
-		return nil, fmt.Errorf("integrate: failed to evaluate lower limit %s: %w", a.String(), err)
+		return nil, fmt.Errorf("%s", i18n.T("integral.err_integrate_failed_to_evaluate_lower", a.String(), err))
 	}
 
 	// 4. Compute F(b) - F(a)
@@ -97,7 +98,7 @@ func isLinear(n Node, varName string) (a Node, b Node, ok bool) {
 // integrateCore is the recursive symbolic integration engine.
 func integrateCore(expr Node, varName string) (Node, error) {
 	if expr == nil {
-		return nil, fmt.Errorf("cannot integrate nil expression")
+		return nil, fmt.Errorf("%s", i18n.T("integral.err_cannot_integrate_nil_expression"))
 	}
 
 	// 1. Constant with respect to varName: int(c, x) = c * x
@@ -163,7 +164,7 @@ func integrateCore(expr Node, varName string) (Node, error) {
 			}
 			return simplifyUnaryOp("-", inner)
 		}
-		return nil, fmt.Errorf("integrate: unsupported unary operator %s", v.Op)
+		return nil, fmt.Errorf("%s", i18n.T("integral.err_integrate_unsupported_unary_operator", v.Op))
 
 	case *AddNode:
 		// Linearity of integration: int(f + g) = int(f) + int(g)
@@ -346,7 +347,7 @@ func integrateCore(expr Node, varName string) (Node, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("integrate: symbolic integration not supported for %s", expr.String())
+	return nil, fmt.Errorf("%s", i18n.T("integral.err_integrate_symbolic_integration_not_supported", expr.String()))
 }
 
 // tryIntegrationByParts attempts integration by parts with u = poly, and vPrime = elementary func.
