@@ -616,7 +616,7 @@ func eliminateQuantifiersCAD(q *QuantifierNode, freeVars []string, env *Env, fsm
 	}
 
 	if m == 1 {
-		res, err := reconstruct1DQuantifierFreeFormula(cadVars[0], currentCells, env)
+		res, err := reconstruct1DQuantifierFreeFormula(cadVars[0], currentCells)
 		if err != nil {
 			return nil, err
 		}
@@ -653,7 +653,7 @@ func eliminateQuantifiersCAD(q *QuantifierNode, freeVars []string, env *Env, fsm
 
 // reconstruct1DQuantifierFreeFormula constructs a quantifier-free formula for a single parameter
 // from the truth values of the base cylindrical cells.
-func reconstruct1DQuantifierFreeFormula(varName string, baseCells []*CadCell, env *Env) (Node, error) {
+func reconstruct1DQuantifierFreeFormula(varName string, baseCells []*CadCell) (Node, error) {
 	if len(baseCells) == 0 {
 		return &VarNode{Name: "false"}, nil
 	}
