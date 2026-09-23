@@ -28,6 +28,12 @@
 !internal/calc/ast/*.go
 !internal/calc/parser/
 !internal/calc/parser/*.go
+!internal/calc/concurrent/
+!internal/calc/concurrent/*.go
+!internal/calc/domain/
+!internal/calc/domain/*.go
+!internal/calc/poly/
+!internal/calc/poly/*.go
 !internal/i18n/
 !internal/i18n/*.go
 !internal/i18n/locales/

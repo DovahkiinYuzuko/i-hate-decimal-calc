@@ -616,5 +616,14 @@
     "err_relation_not_found": "math error: no non-trivial integer relation found within precision",
     "err_matrix_expected": "invalid argument: lll expects a matrix of integers",
     "err_find_min_poly_args": "invalid argument: find_min_poly requires 2 arguments (expr, maxDegree)"
+  },
+  "domain": {
+    "err_zero_division": "division by zero",
+    "err_no_inverse": "element has no multiplicative inverse: %s",
+    "err_modulus_must_be_prime": "modulus must be prime: %s",
+    "err_modulus_positive": "modulus must be greater than 1",
+    "err_monic_required": "leading coefficient must be 1 (monic polynomial required)",
+    "err_poly_zero_division": "polynomial division by zero",
+    "err_variable_mismatch": "cannot operate on polynomials with different variables or ordering"
   }
 }

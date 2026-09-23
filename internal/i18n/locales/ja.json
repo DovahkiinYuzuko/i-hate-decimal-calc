@@ -616,5 +616,14 @@
     "err_relation_not_found": "数理計算エラー: no non-trivial integer relation found within precision",
     "err_matrix_expected": "入力形式または引数の要件を満たしていません: lll expects a matrix of integers",
     "err_find_min_poly_args": "入力形式または引数の要件を満たしていません: find_min_poly requires 2 arguments (expr, maxDegree)"
+  },
+  "domain": {
+    "err_zero_division": "数理計算エラー: ゼロ除算です",
+    "err_no_inverse": "数理計算エラー: 乗法逆元が存在しません: %s",
+    "err_modulus_must_be_prime": "入力エラー: 法は素数でなければなりません: %s",
+    "err_modulus_positive": "入力エラー: 法は1より大きい整数でなければなりません",
+    "err_monic_required": "入力エラー: 最高次係数は1でなければなりません（モニック多項式が必要です）",
+    "err_poly_zero_division": "数理計算エラー: 多項式のゼロ除算です",
+    "err_variable_mismatch": "代数エラー: 変数または項順序が異なる多項式同士の演算はできません"
   }
 }
