@@ -305,7 +305,7 @@
     "err_solve_identity_equation_infinite_solutions": "solve: identity equation (infinite solutions)",
     "err_solve_equation_has_no_solution": "solve: equation has no solution (contradiction: %s = 0)",
     "err_solve_equation_contains_no_degree": "solve: equation contains no degree of %s",
-    "err_solve_error_polynomial_degree_only": "solve error: polynomial degree %d is not currently supported (only linear and quadratic equations)",
+    "err_solve_error_polynomial_degree_only": "solve error: polynomial degree %d is not currently supported (only linear, quadratic, and cubic equations)",
     "err_taylor_error_second_argument_must": "taylor error: second argument must be a variable, got %s",
     "err_taylor_error_order_must_be": "taylor error: order must be non-negative integer, got %s",
     "err_taylor_error_in": "taylor error in %d-th derivative: %w",

@@ -2,6 +2,7 @@ package calc
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc/padic"
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
@@ -37,6 +38,13 @@ func EvalPadicVal(args []Node) (Node, error) {
 	}
 
 	p := pRat.Val.Num()
+	if xRat.Val.Sign() == 0 {
+		if p.Cmp(big.NewInt(2)) < 0 {
+			return nil, fmt.Errorf("%s", i18n.T("padic.err_prime_less_than_2"))
+		}
+		return &VarNode{Name: "infinity"}, nil
+	}
+
 	v, err := padic.Valuation(xRat.Val, p)
 	if err != nil {
 		return nil, err
