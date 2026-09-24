@@ -1143,6 +1143,17 @@ func TestEvalSolveUnsupportedDegree(t *testing.T) {
 	}
 }
 
+func TestEval_MultivariateCommutativeCancellation(t *testing.T) {
+	res, err := EvalString("expand((x + y + z)^2 - (x^2 + y^2 + z^2 + 2*x*y + 2*y*z + 2*z*x))")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.String() != "0" {
+		t.Errorf("expected 0, got %s", res.String())
+	}
+}
+
+
 
 
 
