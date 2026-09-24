@@ -645,6 +645,16 @@
     "err_derivative_zero": "derivative f'(r0) is zero modulo p (not a simple root): %s",
     "err_not_coprime": "initial factors g0 and h0 must be coprime modulo p",
     "err_lift_target_precision": "target precision k must be >= 1"
+  },
+  "puiseux": {
+    "err_puiseux_args": "puiseux requires 3 or 4 arguments: (F, y, x [, order])",
+    "err_arg_must_be_variable": "puiseux: argument must be a variable, got %s",
+    "err_order_must_be_positive_int": "puiseux: expansion order must be a non-negative integer, got %s",
+    "err_equation_contains_no_var": "puiseux: equation contains no variable %s",
+    "err_identity_equation": "puiseux: identity equation (infinite solutions)",
+    "err_invalid_fsm_transition": "puiseux: invalid FSM state transition (%v -> %v)",
+    "err_no_characteristic_roots": "puiseux: no non-zero characteristic roots found",
+    "err_cannot_expand": "puiseux: local expansion failed: %s"
   }
 }
 
