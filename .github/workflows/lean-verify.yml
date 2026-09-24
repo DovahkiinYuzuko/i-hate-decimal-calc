@@ -41,11 +41,14 @@ jobs:
           echo "=== Reading expressions from formal/test_cases.txt ==="
           COUNT=0
           while IFS= read -r line || [ -n "$line" ]; do
-            # Trim leading/trailing whitespace
-            trimmed="$(echo "$line" | xargs)"
-            case "$trimmed" in
-              ""|\#*) continue ;;
+            # Safely skip empty lines and comment lines without quote parsing issues
+            case "$line" in
+              ""|\#*|[[:space:]]*\#*) continue ;;
             esac
+
+            # Trim leading/trailing whitespace using sed instead of xargs
+            trimmed="$(echo "$line" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+            [ -z "$trimmed" ] && continue
 
             COUNT=$((COUNT + 1))
             OUT_FILE="formal/Proofs/Proof_${COUNT}.lean"
