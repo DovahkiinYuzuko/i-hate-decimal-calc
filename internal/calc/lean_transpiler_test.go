@@ -200,3 +200,60 @@ func TestTranspileCertificateIRToLean_Direct(t *testing.T) {
 	}
 }
 
+func TestGenerateLeanSource_RealAndGeometry(t *testing.T) {
+	// 1. Real function typing test
+	x := NewVar("x")
+	sinX := &FuncNode{Name: "sin", Args: []Node{x}}
+	res, _ := NewRational(0, 1)
+	derivCert := NewDerivCertificate(sinX, sinX, res, "x", true, "Holds")
+	vCert := &VerificationCertificate{
+		Domain:     DomainIntegral,
+		Equation:   "deriv == sin",
+		IsVerified: true,
+		CertIR:     derivCert,
+	}
+
+	src, err := GenerateLeanSource("real_deriv_proof", vCert, sinX, sinX)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(src, "variable (x : ℝ)") {
+		t.Errorf("expected real typing 'variable (x : ℝ)', got: %s", src)
+	}
+	if !strings.Contains(src, "import Mathlib.Analysis.Calculus.Deriv.Basic") {
+		t.Errorf("missing calculus deriv import: %s", src)
+	}
+	if !strings.Contains(src, "import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic") {
+		t.Errorf("missing trigonometric import: %s", src)
+	}
+
+	// 2. Geometry certificate variable extraction test
+	ax := NewVar("A_x")
+	bx := NewVar("B_x")
+	mx := NewVar("M_x")
+	two := mustRational(2, 1)
+	twoMX, _ := simplifyMul([]Node{two, mx})
+	negAX, _ := simplifyUnaryOp("-", ax)
+	negBX, _ := simplifyUnaryOp("-", bx)
+	hyp, _ := simplifyAdd([]Node{twoMX, negAX, negBX}) // 2*M_x - A_x - B_x
+	concl := NewVar("M_x")
+
+	geoCert := NewGeometricCertificate([]Node{hyp}, concl, []Node{hyp}, nil, nil, nil, mustRational(0, 1), true, "Holds")
+	vGeoCert := &VerificationCertificate{
+		Domain:     DomainGeometry,
+		Equation:   "prem == 0",
+		IsVerified: true,
+		CertIR:     geoCert,
+	}
+
+	geoSrc, err := GenerateLeanSource("geo_midpoint", vGeoCert, NewVar("Dummy"), nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(geoSrc, "A_x") || !strings.Contains(geoSrc, "B_x") || !strings.Contains(geoSrc, "M_x") {
+		t.Errorf("missing coordinate variables in geometric proof: %s", geoSrc)
+	}
+	if !strings.Contains(geoSrc, "variable (") || !strings.Contains(geoSrc, ": ℚ)") {
+		t.Errorf("expected rational variable declaration in geometric proof: %s", geoSrc)
+	}
+}
