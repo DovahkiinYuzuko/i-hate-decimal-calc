@@ -65,13 +65,23 @@ func (fsm *WuProofLifecycleFSM) TransitionTo(next WuProofState) error {
 
 func init() {
 	RegisterFunction(FunctionSpec{
-		Name:    "geo_prove",
-		MinArgs: 2,
-		MaxArgs: 3,
+		Name:     "geo_prove",
+		MinArgs:  2,
+		MaxArgs:  3,
+		LazyArgs: true,
 		Handler: func(args []Node, env *Env) (Node, error) {
 			return EvalGeoProve(args, env)
 		},
 	})
+
+	// Geometric DSL predicates registered as symbolic functions
+	RegisterFunction(FunctionSpec{Name: "midpoint", MinArgs: 3, MaxArgs: 3})
+	RegisterFunction(FunctionSpec{Name: "collinear", MinArgs: 3, MaxArgs: 3})
+	RegisterFunction(FunctionSpec{Name: "parallel", MinArgs: 4, MaxArgs: 4})
+	RegisterFunction(FunctionSpec{Name: "perpendicular", MinArgs: 4, MaxArgs: 4})
+	RegisterFunction(FunctionSpec{Name: "equal_length_sq", MinArgs: 4, MaxArgs: 4})
+	RegisterFunction(FunctionSpec{Name: "equal_length", MinArgs: 4, MaxArgs: 4})
+	RegisterFunction(FunctionSpec{Name: "circle_concyclic", MinArgs: 4, MaxArgs: 4})
 }
 
 // EvalGeoProve evaluates the Wu's method geometric automated theorem proving engine.
