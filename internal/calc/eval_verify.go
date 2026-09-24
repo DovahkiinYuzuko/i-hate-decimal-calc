@@ -17,6 +17,7 @@ const (
 	DomainRationalApart VerificationDomain = "rational"
 	DomainMatrix        VerificationDomain = "matrix"
 	DomainWZ            VerificationDomain = "wz"
+	DomainGeometry      VerificationDomain = "geometry"
 	DomainGeneral       VerificationDomain = "general"
 )
 
@@ -104,6 +105,13 @@ func VerifyComputation(expr, result Node, env *Env) (*VerificationCertificate, e
 		case "wz_cert":
 			_ = fsm.TransitionTo(VerifyStateTargetClassified)
 			return verifyWZ(fn, result, env, fsm)
+
+		case "geo_prove":
+			_ = fsm.TransitionTo(VerifyStateTargetClassified)
+			if env != nil && env.LastCert != nil && env.LastCert.Domain == DomainGeometry {
+				return env.LastCert, nil
+			}
+			return verifyGeoProve(fn, result, env, fsm)
 		}
 
 	case *RelOpNode:
@@ -992,4 +1000,19 @@ func evalMatrixMulVerified(a, b Node) (*MatrixNode, error) {
 		return nil, fmt.Errorf("%s", i18n.T("verify.err_result_is_not_a_matrix"))
 	}
 	return mat, nil
+}
+
+func verifyGeoProve(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
+	if env != nil && env.LastCert != nil && env.LastCert.Domain == DomainGeometry {
+		return env.LastCert, nil
+	}
+	_, err := EvalGeoProve(fn.Args, env)
+	if err != nil {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		return nil, err
+	}
+	if env != nil && env.LastCert != nil {
+		return env.LastCert, nil
+	}
+	return nil, fmt.Errorf("failed to obtain geometric certificate")
 }

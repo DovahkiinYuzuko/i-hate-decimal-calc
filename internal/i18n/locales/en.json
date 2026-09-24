@@ -51,6 +51,8 @@
     "sturm_holds": "Sturm sign variation difference V(a) - V(b) == 1 holds (Root isolation confirmed)",
     "dual_holds": "Dual round-trip transformation matches original expression",
     "general_holds": "Algebraic zero reduction expand(L - R) == 0 holds (Identical expressions)",
+    "geo_holds": "Wu's method pseudo-remainder prem(g, CS) == 0 holds (Theorem certified under NDGs)",
+    "geo_fails": "Wu's method pseudo-remainder did not vanish (Refuted or incomplete hypotheses): residual = %s",
     "refuted_residual": "Verification residual did not reduce to zero: residual = %s",
     "unsupported_domain": "Autonomous verification checker is not defined for this domain",
     "err_cannot_verify_nil_expression_or": "cannot verify nil expression or result",
