@@ -358,7 +358,7 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 			intVar = "x"
 		}
 		equalityStr = fmt.Sprintf("deriv (fun %s => %s) %s = %s", intVar, resStr, intVar, fStr)
-		tactic = "by simp; ring"
+		tactic = "by first | simp | (try simp <;> ring)"
 
 	case *InvertibilityCertificate:
 		mStr, _ := ToLeanSyntax(c.Matrix)

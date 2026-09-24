@@ -183,7 +183,7 @@ func TestTranspileCertificateIRToLean_Direct(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(leanDeriv, "deriv (fun x => F) x = x := by simp; ring") {
+	if !strings.Contains(leanDeriv, "deriv (fun x => F) x = x := by first | simp | (try simp <;> ring)") {
 		t.Errorf("unexpected Lean output: %s", leanDeriv)
 	}
 
