@@ -21,6 +21,7 @@ Complete language specification and built-in function reference for `ihd` (i-hat
   - [11. Lattice Basis Reduction & Integer Relations (LLL)](#11-lattice-basis-reduction--integer-relations-lll)
   - [12. p-adic Arithmetic, Local Algebra & Hensel Lifting](#12-p-adic-arithmetic-local-algebra--hensel-lifting)
   - [13. Local Algebraic Series & Singularities (Puiseux Series)](#13-local-algebraic-series--singularities-puiseux-series)
+  - [14. Galois Theory, Solvability by Radicals & Abel-Ruffini Certificates](#14-galois-theory-solvability-by-radicals--abel-ruffini-certificates)
 
 ---
 
@@ -260,6 +261,16 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | Function | Syntax & Example | Description |
 | :--- | :--- | :--- |
 | `puiseux` | `puiseux(y^2 - x^3, y, x, 3)` | Deterministically solves for local fractional power Puiseux series branches $y(x) = \sum c_k x^{p_k/q_k}$ around singularities/branch points of $F(x, y) = 0$ via the Newton polygon algorithm (default order 3) |
+
+---
+
+### 14. Galois Theory, Solvability by Radicals & Abel-Ruffini Certificates
+
+| Function | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `galois_group` | `galois_group(x^3 - 2)` / `galois_group(p, x)` | Deterministic Galois group $\mathrm{Gal}(f/\mathbb{Q})$ computation for polynomials up to degree 5 over $\mathbb{Q}$ (identifies permutation group isomorphism types such as $S_n, A_n, D_n, C_n, V_4, F_{20}$ via squarefree factorization, discriminants, cubic/sextic resolvents, and Dedekind-Frobenius cycle-type positive witnesses) |
+| `is_solvable_by_radicals` | `is_solvable_by_radicals(x^5 - 4*x + 2)` | Deterministic solvability by radicals test based on the Fundamental Theorem of Galois Theory and Abel-Ruffini Theorem. Returns `true` for solvable Galois groups and `false` for non-solvable groups ($A_5, S_5$). Under `--verify`, emits an independently verifiable Abel-Ruffini Impossibility Certificate IR; under `--lean`, generates formal Lean 4 (Mathlib4) proof code |
+
 
 
 
