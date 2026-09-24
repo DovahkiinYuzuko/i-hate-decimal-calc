@@ -18,6 +18,9 @@ Complete language specification and built-in function reference for `ihd` (i-hat
   - [8. Real Algebraic Geometry, Mathematical Logic & Quantifier Elimination](#8-real-algebraic-geometry-mathematical-logic--quantifier-elimination)
   - [9. Elliptic Curves & Arithmetic Geometry](#9-elliptic-curves--arithmetic-geometry)
   - [10. Visualization & Verification Tools](#10-visualization--verification-tools)
+  - [11. Lattice Basis Reduction & Integer Relations (LLL)](#11-lattice-basis-reduction--integer-relations-lll)
+  - [12. p-adic Arithmetic, Local Algebra & Hensel Lifting](#12-p-adic-arithmetic-local-algebra--hensel-lifting)
+  - [13. Local Algebraic Series & Singularities (Puiseux Series)](#13-local-algebraic-series--singularities-puiseux-series)
 
 ---
 
@@ -168,6 +171,13 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `circle_intersect` | `circle_intersect(c1, r1, c2, r2)` | Exact intersection points of two circles via radical axis order reduction |
 | `triangle_area` | `triangle_area(p1, p2, p3)` | Exact area of a triangle given three vertices via Shoelace formula |
 | `triangle_centers` | `triangle_centers(p1, p2, p3)` | Triangle centers (centroid, circumcenter, orthocenter, incenter) |
+| `geo_prove` | `geo_prove(hypotheses, conclusion [, var_order])` | Automated geometric theorem proving via Wu Wen-tsun's algebraic method (Wu's Method). Computes a triangular Characteristic Set (ascending chain) from geometric hypotheses and verifies whether successive pseudo-division remainder with respect to the conclusion polynomial vanishes ($R = 0$). Supports 3-tier non-degeneracy condition (NDG: Primary / Essential / Algebraic) generation and formal Lean 4 theorem transpilation |
+| `midpoint` | `midpoint(M, A, B)` | Predicate asserting point $M$ is the midpoint of segment $AB$ ($2 M_x = A_x + B_x, 2 M_y = A_y + B_y$) |
+| `collinear` | `collinear(A, B, C)` | Predicate asserting points $A, B, C$ are collinear (cross product determinant $(B_x - A_x)(C_y - A_y) - (B_y - A_y)(C_x - A_x) = 0$) |
+| `parallel` | `parallel(A, B, C, D)` | Predicate asserting line $AB$ is parallel to line $CD$ (direction vector cross product $= 0$) |
+| `perpendicular` | `perpendicular(A, B, C, D)` | Predicate asserting line $AB$ is perpendicular to line $CD$ (direction vector dot product $= 0$) |
+| `equal_length_sq` | `equal_length_sq(A, B, C, D)` | Predicate asserting equality of squared segment lengths ($AB^2 = CD^2$) |
+| `circle_concyclic` | `circle_concyclic(A, B, C, D)` | Predicate asserting points $A, B, C, D$ lie on a common circle (concyclic condition) |
 
 ---
 

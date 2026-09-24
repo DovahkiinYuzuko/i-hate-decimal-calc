@@ -64,44 +64,20 @@ ihd "1/2 + 1/3"
 ihd "sqrt(8) + sqrt(18)"
 # 出力: 5*√2
 
-ihd "0.(142857)"
-# 出力: 1/7（循環小数の自動分数化）
-
-ihd "abs(3 + 4*i)"
-# 出力: 5（複素数の絶対値）
-
-ihd "root_count(x^3 - 3*x + 1, x)"
-# 出力: 3（スツルムの定理による実根の厳密個数算定）
-
-ihd "isolate_roots(x^2 - 2, x)"
-# 出力: [[-3/2, -3/4], [3/4, 3/2]]（実根の有理数区間完全分離）
-
 ihd "solve(x^2 - 4 < 0)"
 # 出力: [[-2, 2]]（CAD/Sturm根分離による実代数不等式の厳密解区間）
 
 ihd "rsolve(a(n+1) == 2*a(n) + 1, a(n), [a(1) == 1])"
 # 出力: -1 + 2^n（線形漸化式・差分方程式の厳密一般項求解）
 
-ihd "pi < 22/7"
-# 出力: true（有理区間論理とテイラー剰余項による超越数不等式の決定論的判定）
-
 ihd "qe(forall([x], x^2 + a*x + b > 0))"
-# 出力: -4*b + a^2 < 0（二次判別式・CAD連携による量化子消去・パラメータ不等式自動導出）
-
-ihd "find_min_poly(sqrt(2) + sqrt(3), 4)"
-# 出力: 1 - 10*x^2 + x^4（LLL格子基底縮小による代数的数の最小多項式完全逆算）
-
-ihd "padic_val(50, 5)"
-# 出力: 2（小数を介さない完全厳密な5進付値）
-
-ihd "padic_expand(2/3, 5, 4)"
-# 出力: 4 + 5 + 3*5^2 + 5^3 + O(5^4)（有理数の5進切断級数展開）
+# 出力: -4*b + a^2 < 0（CAD・判別式による量化子消去・パラメータ不等式自動導出）
 
 ihd "factor(x^4 + 3*x^2 + 2)"
-# 出力: (1 + x^2)*(2 + x^2)（ヘンゼル・リフティングによる有理根を持たない高次多項式の既約分解）
+# 出力: (1 + x^2)*(2 + x^2)（ヘンゼル・リフティングによる高次多項式の有理既約分解）
 
-ihd "puiseux(y^2 - x^3, y, x, 3)"
-# 出力: [-x^3/2, x^3/2]（ニュートン多角形による代数曲線カプス特異点の分数冪級数局所分枝展開）
+ihd "geo_prove([midpoint(M, A, B), midpoint(N, A, C)], parallel(M, N, B, C))"
+# 出力: true（呉の方法・標数集合・擬除算による中点連結定理等の初等幾何自動証明）
 ```
 
 
@@ -244,7 +220,7 @@ ihd "plot(sin(x), [-pi, pi])"
 - **三角関数・対数・複素数**: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `trig_expand`, `trig_reduce`, `exp`, `log`, `ln`, `arg`, `polar`, `polar_exp`, `rect`
 - **微積分・常微分方程式・漸化式・特殊関数・級数**: `diff`, `integrate`, `risch_integrate`, `limit`, `residue`, `gamma`, `beta`, `bernoulli`, `zeta`, `dsolve`, `rsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`, `gosper_sum`, `wz_cert`, `puiseux`
 - **線形代数・3次元ベクトル解析**: `det`, `inv`, `transpose`, `rref`, `rank`, `trace`, `eigenvals`, `eigenvects`, `lu`, `qr`, `cholesky`, `ldlt`, `pinv`, `solve_linear`, `dot`, `cross`, `norm`, `grad`, `div`, `curl`
-- **幾何学解析**: `line_intersect`, `circle_intersect`, `triangle_area`, `triangle_centers`
+- **幾何学解析**: `line_intersect`, `circle_intersect`, `triangle_area`, `triangle_centers`, `geo_prove`, `collinear`, `midpoint`, `parallel`, `perpendicular`, `equal_length_sq`, `circle_concyclic`
 - **厳密離散確率・統計**: `binom`, `hyper`, `geom`, `bayes`, `expect`, `variance`, `stddev`
 - **実代数幾何・数理論理・量化子消去**: `qe`, `forall`, `exists`, `cad`
 - **楕円曲線代数・数論幾何**: `ec_add`, `ec_mul`, `ec_torsion`
@@ -265,8 +241,8 @@ ihd "plot(sin(x), [-pi, pi])"
 | `--pretty`           | 分数線や根号を複数行アスキーアートで組版表示する2Dプリティプリント。<br>`ihd --pretty "1/2 + sqrt(2)/2"`                                                               |
 | `--deg`              | 三角関数および逆三角関数を度数法（Degree）として解釈・計算。<br>`ihd --deg "sin(30) + cos(60)"` $\to$ `1`                                                              |
 | `--explain`          | 代数的項書き換え（有理化・二重根号・微分則等）を途中式ツリーとして詳細表示。<br>`ihd --explain "1 / (sqrt(2) + 1)"`                                                    |
-| `--verify`           | 代数的証明書中間表現（Certificate IR）に基づき、計算結果（因数分解、逆行列/各種分解、微積分、ODE、超幾何和WZ等）に対し独立した逆算・双対検証を行い、反証不可能な代数的証明書を発行・出力。<br>`ihd --verify "integrate(1/(x^2 + 1), x)"` $\to$ `atan(x)`<br>`[VERIFIED: diff(F, x) - f == 0]` |
-| `--lean`             | 計算結果および Certificate IR 証明書を定理証明支援系 **Lean 4（Mathlib4）** の形式証明コード（`by ring`, `by ext <;> ring` 等）として自動トランスパイル出力。<br>`ihd --lean "factor(x^2 - 1)"`                         |
+| `--verify`           | 代数的証明書中間表現（Certificate IR）に基づき、計算結果（因数分解、逆行列/各種分解、微積分、ODE、超幾何和WZ、幾何自動証明等）に対し独立した逆算・双対検証を行い、反証不可能な代数的証明書を発行・出力。<br>`ihd --verify "integrate(1/(x^2 + 1), x)"` $\to$ `atan(x)`<br>`[VERIFIED: diff(F, x) - f == 0]` |
+| `--lean`             | 計算結果、Certificate IR、および幾何自動証明（3段階NDG条件付き定理）を定理証明支援系 **Lean 4（Mathlib4）** の形式証明コード（`by ring`, `by ext <;> ring` 等）として自動トランスパイル出力。<br>`ihd --lean "factor(x^2 - 1)"`                         |
 | `--lean-file <path>` | 生成された Lean 4 形式証明コードをスタンドアロンな `.lean` ファイルとして指定パスへ保存。<br>`ihd --lean-file proof.lean "factor(x^2 - 1)"`                                 |
 | `--lang <code/auto>` | 表示言語（ロケール）を指定（`ja`, `en`, `auto`）。設定は `~/.ihd/config.json` に永続化され、カスタム辞書（`~/.ihd/locales/`）にも対応。<br>`ihd --lang en "1/2 + 1/3"` |
 | `-h`, `--help`       | コマンドのヘルプメッセージを表示。                                                                                                                                     |
@@ -359,44 +335,20 @@ ihd "1/2 + 1/3"
 ihd "sqrt(8) + sqrt(18)"
 # Output: 5*√2
 
-ihd "0.(142857)"
-# Output: 1/7 (Exact repeating decimal fraction)
-
-ihd "abs(3 + 4*i)"
-# Output: 5 (Complex modulus)
-
-ihd "root_count(x^3 - 3*x + 1, x)"
-# Output: 3 (Exact real root count via Sturm's theorem)
-
-ihd "isolate_roots(x^2 - 2, x)"
-# Output: [[-3/2, -3/4], [3/4, 3/2]] (Real root isolation into disjoint rational intervals)
-
 ihd "solve(x^2 - 4 < 0)"
 # Output: [[-2, 2]] (Exact real algebraic inequality solving via CAD/Sturm)
 
 ihd "rsolve(a(n+1) == 2*a(n) + 1, a(n), [a(1) == 1])"
 # Output: -1 + 2^n (Exact linear recurrence relation and difference equation solving)
 
-ihd "pi < 22/7"
-# Output: true (Deterministic transcendental inequality evaluation via rational interval arithmetic)
-
 ihd "qe(forall([x], x^2 + a*x + b > 0))"
-# Output: -4*b + a^2 < 0 (Quantifier elimination via quadratic discriminant & CAD integration)
-
-ihd "find_min_poly(sqrt(2) + sqrt(3), 4)"
-# Output: 1 - 10*x^2 + x^4 (Exact minimal polynomial reconstruction via LLL lattice reduction)
-
-ihd "padic_val(50, 5)"
-# Output: 2 (Exact p-adic valuation without floating-point decimals)
-
-ihd "padic_expand(2/3, 5, 4)"
-# Output: 4 + 5 + 3*5^2 + 5^3 + O(5^4) (Truncated p-adic power series expansion of rationals)
+# Output: -4*b + a^2 < 0 (Quantifier elimination via CAD integration & discriminant)
 
 ihd "factor(x^4 + 3*x^2 + 2)"
 # Output: (1 + x^2)*(2 + x^2) (Higher-degree polynomial factorization via Hensel lifting)
 
-ihd "puiseux(y^2 - x^3, y, x, 3)"
-# Output: [-x^3/2, x^3/2] (Newton polygon algebraic fractional power series expansion at cusp singularity)
+ihd "geo_prove([midpoint(M, A, B), midpoint(N, A, C)], parallel(M, N, B, C))"
+# Output: true (Automated geometric theorem proving via Wu's method, characteristic sets & pseudo-division)
 ```
 
 
@@ -539,7 +491,7 @@ ihd "plot(sin(x), [-pi, pi])"
 - **Trigonometric, Logarithmic & Complex Functions**: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `trig_expand`, `trig_reduce`, `exp`, `log`, `ln`, `arg`, `polar`, `polar_exp`, `rect`
 - **Calculus, ODEs, Recurrences, Special Functions & Series**: `diff`, `integrate`, `risch_integrate`, `limit`, `residue`, `gamma`, `beta`, `bernoulli`, `zeta`, `dsolve`, `rsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`, `gosper_sum`, `wz_cert`, `puiseux`
 - **Linear Algebra & 3D Vector Calculus**: `det`, `inv`, `transpose`, `rref`, `rank`, `trace`, `eigenvals`, `eigenvects`, `lu`, `qr`, `cholesky`, `ldlt`, `pinv`, `solve_linear`, `dot`, `cross`, `norm`, `grad`, `div`, `curl`
-- **Computational Geometry**: `line_intersect`, `circle_intersect`, `triangle_area`, `triangle_centers`
+- **Computational Geometry**: `line_intersect`, `circle_intersect`, `triangle_area`, `triangle_centers`, `geo_prove`, `collinear`, `midpoint`, `parallel`, `perpendicular`, `equal_length_sq`, `circle_concyclic`
 - **Exact Discrete Probability & Statistics**: `binom`, `hyper`, `geom`, `bayes`, `expect`, `variance`, `stddev`
 - **Real Algebraic Geometry & Quantifier Elimination**: `qe`, `forall`, `exists`, `cad`
 - **Elliptic Curves & Arithmetic Geometry**: `ec_add`, `ec_mul`, `ec_torsion`
@@ -558,8 +510,8 @@ ihd "plot(sin(x), [-pi, pi])"
 | `--pretty`           | Output expression in multi-line 2D pretty-printed Unicode formatting.<br>`ihd --pretty "1/2 + sqrt(2)/2"`                                         |
 | `--deg`              | Evaluate trigonometric and inverse trigonometric functions in degrees.<br>`ihd --deg "sin(30) + cos(60)"` $\to$ `1`                               |
 | `--explain`          | Step-by-step educational explanations of algebraic derivations in a 2D tree.<br>`ihd --explain "1 / (sqrt(2) + 1)"`                               |
-| `--verify`           | Autonomously reverse-verify algebraic correctness via Certificate IR (factorization, matrix inv/decomps, calculus, ODE, WZ hypergeometric) and emit algebraic proof certificate.<br>`ihd --verify "factor(x^2 - 1)"` |
-| `--lean`             | Transpile calculation results and Certificate IR into formal **Lean 4 (Mathlib4)** proof theorems (`by ring`, `by ext <;> ring`).<br>`ihd --lean "factor(x^2 - 1)"` |
+| `--verify`           | Autonomously reverse-verify algebraic correctness via Certificate IR (factorization, matrix inv/decomps, calculus, ODE, WZ hypergeometric, automated geometric theorem proving) and emit algebraic proof certificate.<br>`ihd --verify "factor(x^2 - 1)"` |
+| `--lean`             | Transpile calculation results, Certificate IR, and automated geometric proofs (with 3-tier non-degeneracy conditions) into formal **Lean 4 (Mathlib4)** proof theorems (`by ring`, `by ext <;> ring`).<br>`ihd --lean "factor(x^2 - 1)"` |
 | `--lean-file <path>` | Save generated Lean 4 proof code as a standalone, runnable `.lean` file.<br>`ihd --lean-file proof.lean "factor(x^2 - 1)"`                         |
 | `--lang <code/auto>` | Specify display language (`ja`, `en`, `auto`). Persisted to `~/.ihd/config.json`.<br>`ihd --lang en "1/2 + 1/3"`                                  |
 | `-h`, `--help`       | Display command help message.                                                                                                                     |

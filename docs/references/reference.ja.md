@@ -18,6 +18,9 @@
   - [8. 実代数幾何・数理論理・量化子消去](#8-実代数幾何数理論理量化子消去)
   - [9. 楕円曲線代数・数論幾何](#9-楕円曲線代数数論幾何)
   - [10. ビジュアル・検証ツール](#10-ビジュアル検証ツール)
+  - [11. 格子基底縮小・代数的整数関係 (LLL)](#11-格子基底縮小代数的整数関係-lll)
+  - [12. p進数演算・局所代数・ヘンゼル補題](#12-p進数演算局所代数ヘンゼル補題)
+  - [13. 局所代数級数・特異点解析（ピュイズー級数）](#13-局所代数級数特異点解析ピュイズー級数)
 
 ---
 
@@ -168,6 +171,13 @@
 | `circle_intersect` | `circle_intersect(c1, r1, c2, r2)` | 2円の交点（中心座標と半径から根軸次数下げにより交点座標リストを算出） |
 | `triangle_area` | `triangle_area(p1, p2, p3)` | 3頂点座標からなる三角形の厳密面積（外積・Shoelace公式） |
 | `triangle_centers` | `triangle_centers(p1, p2, p3)` | 三角形の五心解析（重心・外心・垂心・内心をリストで一括算出） |
+| `geo_prove` | `geo_prove(hypotheses, conclusion [, var_order])` | 呉文俊（Wu Wen-tsun）の代数的幾何自動定理証明法（Wu's Method）。仮設多項式系から標数集合（Characteristic Set: 三角形式アセンダント列）を導出し、結論多項式に対する擬除算剰余（Pseudo-division remainder）が 0 となるかを判定。3段階NDG条件（Primary / Essential / Algebraic）導出および Lean 4 形式証明トランスパイル対応 |
+| `midpoint` | `midpoint(M, A, B)` | 点 $M$ が線分 $AB$ の中点（$2 M_x = A_x + B_x, 2 M_y = A_y + B_y$） |
+| `collinear` | `collinear(A, B, C)` | 3点 $A, B, C$ が同一直線上に存在（共線条件: 外積 $(B_x - A_x)(C_y - A_y) - (B_y - A_y)(C_x - A_x) = 0$） |
+| `parallel` | `parallel(A, B, C, D)` | 直線 $AB$ と $CD$ が平行（方向ベクトルの外積 $= 0$） |
+| `perpendicular` | `perpendicular(A, B, C, D)` | 直線 $AB$ と $CD$ が垂直直交（方向ベクトルの内積 $= 0$） |
+| `equal_length_sq` | `equal_length_sq(A, B, C, D)` | 線分長の平方一致関係（距離自乗の等値関係: $AB^2 = CD^2$） |
+| `circle_concyclic` | `circle_concyclic(A, B, C, D)` | 4点 $A, B, C, D$ が同一円周上に存在（共円条件） |
 
 ---
 
