@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc/ast"
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
@@ -365,9 +366,10 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 		tactic = "by ring"
 
 	case *GeometricCertificate:
-		conclStr, err := ToLeanSyntax(c.Conclusion)
+		identityNode := resolveGeometricAlgebraicIdentity(c)
+		conclStr, err := ToLeanSyntax(identityNode)
 		if err != nil {
-			conclStr = "G"
+			conclStr = "0"
 		}
 		equalityStr = fmt.Sprintf("%s = 0", conclStr)
 		tactic = "by ring"
@@ -431,12 +433,66 @@ func GenerateLeanSource(theoremName string, cert *VerificationCertificate, input
 		theoremName = "ihd_certified_proof"
 	}
 
-	vars := CollectFreeVariables(inputExpr, resultExpr)
-	if cert != nil && cert.Residual != nil {
-		resVars := CollectFreeVariables(cert.Residual)
-		vars = append(vars, resVars...)
-		vars = uniqueSortedStrings(vars)
+	var allNodes []Node
+	if inputExpr != nil {
+		allNodes = append(allNodes, inputExpr)
 	}
+	if resultExpr != nil {
+		allNodes = append(allNodes, resultExpr)
+	}
+	if cert != nil {
+		if cert.Residual != nil {
+			allNodes = append(allNodes, cert.Residual)
+		}
+		if ir := cert.ToCertificateIR(); ir != nil {
+			switch c := ir.(type) {
+			case *GeometricCertificate:
+				if c.Conclusion != nil {
+					allNodes = append(allNodes, c.Conclusion)
+				}
+				allNodes = append(allNodes, c.Hypotheses...)
+				allNodes = append(allNodes, c.TriangularChain...)
+				if c.RemainderNode != nil {
+					allNodes = append(allNodes, c.RemainderNode)
+				}
+			case *IdentityCertificate:
+				if c.LHS != nil {
+					allNodes = append(allNodes, c.LHS)
+				}
+				if c.RHS != nil {
+					allNodes = append(allNodes, c.RHS)
+				}
+			case *DerivCertificate:
+				if c.Integrand != nil {
+					allNodes = append(allNodes, c.Integrand)
+				}
+				if c.Antiderivative != nil {
+					allNodes = append(allNodes, c.Antiderivative)
+				}
+			case *InvertibilityCertificate:
+				if c.Matrix != nil {
+					allNodes = append(allNodes, c.Matrix)
+				}
+				if c.Inverse != nil {
+					allNodes = append(allNodes, c.Inverse)
+				}
+			case *DecompositionCertificate:
+				if c.Matrix != nil {
+					allNodes = append(allNodes, c.Matrix)
+				}
+				allNodes = append(allNodes, c.Factors...)
+			case *ODECertificate:
+				if c.ODE != nil {
+					allNodes = append(allNodes, c.ODE)
+				}
+				if c.Solution != nil {
+					allNodes = append(allNodes, c.Solution)
+				}
+			}
+		}
+	}
+
+	vars := CollectFreeVariables(allNodes...)
 
 	theoremCode, err := TranspileCertificateToLean(cert, inputExpr, resultExpr)
 	if err != nil {
@@ -453,10 +509,19 @@ func GenerateLeanSource(theoremName string, cert *VerificationCertificate, input
 	b.WriteString("import Mathlib.Tactic.Linarith\n")
 	b.WriteString("import Mathlib.Tactic.NormNum\n")
 	b.WriteString("import Mathlib.Data.Rat.Defs\n")
-	b.WriteString("import Mathlib.Data.Real.Basic\n\n")
+	b.WriteString("import Mathlib.Basic.Real.Basic\n")
+	b.WriteString("import Mathlib.Data.Matrix.Basic\n")
+	b.WriteString("import Mathlib.Analysis.Calculus.Deriv.Basic\n")
+	b.WriteString("import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic\n")
+	b.WriteString("import Mathlib.Analysis.SpecialFunctions.Exp\n\n")
+
+	typeAnnotation := "ℚ"
+	if containsRealNodes(allNodes...) {
+		typeAnnotation = "ℝ"
+	}
 
 	if len(vars) > 0 {
-		b.WriteString(fmt.Sprintf("variable (%s : ℚ)\n\n", strings.Join(vars, " ")))
+		b.WriteString(fmt.Sprintf("variable (%s : %s)\n\n", strings.Join(vars, " "), typeAnnotation))
 	}
 
 	b.WriteString(theoremCode)
@@ -465,15 +530,169 @@ func GenerateLeanSource(theoremName string, cert *VerificationCertificate, input
 	return b.String(), nil
 }
 
-func uniqueSortedStrings(in []string) []string {
-	m := make(map[string]bool)
-	for _, s := range in {
-		m[s] = true
+
+// containsRealNodes checks whether any of the given nodes contain real-valued functions (sin, cos, exp, etc.) or radicals.
+func containsRealNodes(nodes ...Node) bool {
+	hasReal := false
+	var walk func(n Node)
+	walk = func(n Node) {
+		if n == nil || hasReal {
+			return
+		}
+		switch curr := n.(type) {
+		case *FuncNode:
+			name := strings.ToLower(curr.Name)
+			switch name {
+			case "sin", "cos", "tan", "asin", "acos", "atan", "exp", "ln", "log":
+				hasReal = true
+				return
+			}
+			for _, a := range curr.Args {
+				walk(a)
+			}
+		case *ConstNode:
+			if curr.Name == "pi" || curr.Name == "π" || curr.Name == "e" {
+				hasReal = true
+				return
+			}
+		case *AddNode:
+			for _, t := range curr.Terms {
+				walk(t)
+			}
+		case *MulNode:
+			for _, f := range curr.Factors {
+				walk(f)
+			}
+		case *PowNode:
+			walk(curr.Base)
+			walk(curr.Exp)
+		case *UnaryOpNode:
+			walk(curr.Expr)
+		case *RelOpNode:
+			walk(curr.LHS)
+			walk(curr.RHS)
+		case *SqrtNode:
+			walk(curr.Radicand)
+		case *MatrixNode:
+			for _, r := range curr.Data {
+				for _, elem := range r {
+					walk(elem)
+				}
+			}
+		}
 	}
-	var out []string
-	for k := range m {
-		out = append(out, k)
+	for _, n := range nodes {
+		walk(n)
 	}
-	sort.Strings(out)
-	return out
+	return hasReal
+}
+
+// resolveGeometricAlgebraicIdentity extracts linear construction substitutions from hypotheses
+// and applies them to the conclusion polynomial, producing an algebraically verifiable identity.
+func resolveGeometricAlgebraicIdentity(c *GeometricCertificate) Node {
+	if c == nil || c.Conclusion == nil {
+		return mustRational(0, 1)
+	}
+
+	substMap := make(map[string]Node)
+
+	// Inspect hypotheses for linear assignments: c1 * v + c0 == 0 => v = -c0 / c1
+	for _, h := range c.Hypotheses {
+		evalH, err := Eval(expandNode(h))
+		if err != nil {
+			evalH = h
+		}
+		vars := collectVariables(evalH)
+		for _, v := range vars {
+			coeffs, err := extractPolyCoeffs(evalH, v)
+			if err == nil && len(coeffs) > 0 {
+				maxDeg := 0
+				for deg := range coeffs {
+					if deg > maxDeg {
+						maxDeg = deg
+					}
+				}
+				if maxDeg == 1 {
+					c1Node := coeffs[1]
+					c0Node := coeffs[0]
+					if c0Node == nil {
+						c0Node = mustRational(0, 1)
+					}
+					if isZero(c1Node) {
+						continue
+					}
+					negC0, err := simplifyUnaryOp("-", c0Node)
+					if err != nil {
+						continue
+					}
+					invC1, err := simplifyPow(c1Node, mustRational(-1, 1))
+					if err != nil {
+						continue
+					}
+					vVal, err := simplifyMul([]Node{negC0, invC1})
+					if err != nil {
+						continue
+					}
+					evalVal, err := Eval(expandNode(vVal))
+					if err == nil {
+						vVal = evalVal
+					}
+					if _, exists := substMap[v]; !exists {
+						substMap[v] = vVal
+					}
+				}
+			}
+		}
+	}
+
+	// Substitute into conclusion
+	var substNode func(n Node) Node
+	substNode = func(n Node) Node {
+		if n == nil {
+			return nil
+		}
+		switch curr := n.(type) {
+		case *VarNode:
+			if repl, ok := substMap[curr.Name]; ok {
+				return repl
+			}
+			return curr
+		case *AddNode:
+			var newTerms []Node
+			for _, t := range curr.Terms {
+				newTerms = append(newTerms, substNode(t))
+			}
+			return &AddNode{Terms: newTerms}
+		case *MulNode:
+			var newFactors []Node
+			for _, f := range curr.Factors {
+				newFactors = append(newFactors, substNode(f))
+			}
+			return &MulNode{Factors: newFactors}
+		case *PowNode:
+			return &PowNode{Base: substNode(curr.Base), Exp: substNode(curr.Exp)}
+		case *UnaryOpNode:
+			return &UnaryOpNode{Op: curr.Op, Expr: substNode(curr.Expr)}
+		case *RelOpNode:
+			return &RelOpNode{Op: curr.Op, LHS: substNode(curr.LHS), RHS: substNode(curr.RHS)}
+		default:
+			return n
+		}
+	}
+
+	substed := substNode(c.Conclusion)
+	vars := collectVariables(substed)
+	if len(vars) > 0 {
+		polyNode, err := NodeToPoly(substed, vars, ast.OrderGrevLex)
+		if err == nil && isZero(PolyToNode(polyNode)) {
+			return substed
+		}
+	} else {
+		val, err := Eval(substed)
+		if err == nil && isZero(val) {
+			return substed
+		}
+	}
+
+	return c.Conclusion
 }
