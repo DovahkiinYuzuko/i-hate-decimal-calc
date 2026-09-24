@@ -371,7 +371,7 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 		}
 		if dim > 0 {
 			equalityStr = fmt.Sprintf("(%s * %s : Matrix (Fin %d) (Fin %d) ℚ) = 1", mStr, invStr, dim, dim)
-			tactic = "by first | decide | (ext <;> ring)"
+			tactic = "by ext i j <;> fin_cases i <;> fin_cases j <;> norm_num"
 		} else {
 			equalityStr = fmt.Sprintf("%s * %s = 1", mStr, invStr)
 			tactic = "by ext <;> ring"
@@ -391,7 +391,7 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 		}
 		if rows > 0 && cols > 0 {
 			equalityStr = fmt.Sprintf("(%s : Matrix (Fin %d) (Fin %d) ℚ) = %s", mStr, rows, cols, strings.Join(factorStrs, " * "))
-			tactic = "by first | decide | (ext <;> ring)"
+			tactic = "by ext i j <;> fin_cases i <;> fin_cases j <;> norm_num"
 		} else {
 			equalityStr = fmt.Sprintf("%s = %s", mStr, strings.Join(factorStrs, " * "))
 			tactic = "by ext <;> ring"
@@ -545,6 +545,7 @@ func GenerateLeanSource(theoremName string, cert *VerificationCertificate, input
 	b.WriteString("import Mathlib.Tactic.Ring\n")
 	b.WriteString("import Mathlib.Tactic.Linarith\n")
 	b.WriteString("import Mathlib.Tactic.NormNum\n")
+	b.WriteString("import Mathlib.Tactic.FinCases\n")
 	b.WriteString("import Mathlib.Data.Rat.Defs\n")
 	b.WriteString("import Mathlib.Basic.Real.Basic\n")
 	b.WriteString("import Mathlib.Data.Matrix.Basic\n")
