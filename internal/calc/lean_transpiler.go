@@ -59,6 +59,27 @@ func escapeLeanIdent(name string) string {
 	return name
 }
 
+// isEnclosedInParens checks if the string starts with '(' and ends with ')',
+// and that these outermost parentheses form a single matching pair enclosing the entire string.
+func isEnclosedInParens(s string) bool {
+	if !strings.HasPrefix(s, "(") || !strings.HasSuffix(s, ")") {
+		return false
+	}
+	depth := 0
+	for i, r := range s {
+		switch r {
+		case '(':
+			depth++
+		case ')':
+			depth--
+			if depth == 0 {
+				return i == len(s)-1
+			}
+		}
+	}
+	return false
+}
+
 // ToLeanSyntax converts an internal AST node to Lean 4 / Mathlib syntax string.
 func ToLeanSyntax(node Node) (string, error) {
 	if node == nil {
@@ -129,7 +150,7 @@ func ToLeanSyntax(node Node) (string, error) {
 				if strings.HasPrefix(termStr, "-") {
 					b.WriteString(" - ")
 					b.WriteString(strings.TrimPrefix(termStr, "-"))
-				} else if strings.HasPrefix(termStr, "(-") && strings.HasSuffix(termStr, ")") {
+				} else if isEnclosedInParens(termStr) && strings.HasPrefix(termStr, "(-") {
 					b.WriteString(" - ")
 					b.WriteString(termStr[2 : len(termStr)-1])
 				} else {
@@ -337,7 +358,7 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 			intVar = "x"
 		}
 		equalityStr = fmt.Sprintf("deriv (fun %s => %s) %s = %s", intVar, resStr, intVar, fStr)
-		tactic = "by ring"
+		tactic = "by simp; ring"
 
 	case *InvertibilityCertificate:
 		mStr, _ := ToLeanSyntax(c.Matrix)
@@ -447,6 +468,7 @@ func GenerateLeanSource(theoremName string, cert *VerificationCertificate, input
 		if ir := cert.ToCertificateIR(); ir != nil {
 			switch c := ir.(type) {
 			case *GeometricCertificate:
+				allNodes = append(allNodes, resolveGeometricAlgebraicIdentity(c))
 				if c.Conclusion != nil {
 					allNodes = append(allNodes, c.Conclusion)
 				}
@@ -513,7 +535,9 @@ func GenerateLeanSource(theoremName string, cert *VerificationCertificate, input
 	b.WriteString("import Mathlib.Data.Matrix.Basic\n")
 	b.WriteString("import Mathlib.Analysis.Calculus.Deriv.Basic\n")
 	b.WriteString("import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic\n")
-	b.WriteString("import Mathlib.Analysis.SpecialFunctions.Exp\n\n")
+	b.WriteString("import Mathlib.Analysis.SpecialFunctions.Trigonometric.Deriv\n")
+	b.WriteString("import Mathlib.Analysis.SpecialFunctions.Exp\n")
+	b.WriteString("import Mathlib.Analysis.SpecialFunctions.ExpDeriv\n\n")
 
 	typeAnnotation := "ℚ"
 	if containsRealNodes(allNodes...) {
@@ -588,108 +612,49 @@ func containsRealNodes(nodes ...Node) bool {
 }
 
 // resolveGeometricAlgebraicIdentity extracts linear construction substitutions from hypotheses
-// and applies them to the conclusion polynomial, producing an algebraically verifiable identity.
+// using LinearSubstitutionFastPath and substitutes them into the conclusion polynomial,
+// producing an algebraically verifiable identity in terms of free parameters.
 func resolveGeometricAlgebraicIdentity(c *GeometricCertificate) Node {
 	if c == nil || c.Conclusion == nil {
 		return mustRational(0, 1)
 	}
 
-	substMap := make(map[string]Node)
-
-	// Inspect hypotheses for linear assignments: c1 * v + c0 == 0 => v = -c0 / c1
-	for _, h := range c.Hypotheses {
-		evalH, err := Eval(expandNode(h))
-		if err != nil {
-			evalH = h
-		}
-		vars := collectVariables(evalH)
-		for _, v := range vars {
-			coeffs, err := extractPolyCoeffs(evalH, v)
-			if err == nil && len(coeffs) > 0 {
-				maxDeg := 0
-				for deg := range coeffs {
-					if deg > maxDeg {
-						maxDeg = deg
-					}
-				}
-				if maxDeg == 1 {
-					c1Node := coeffs[1]
-					c0Node := coeffs[0]
-					if c0Node == nil {
-						c0Node = mustRational(0, 1)
-					}
-					if isZero(c1Node) {
-						continue
-					}
-					negC0, err := simplifyUnaryOp("-", c0Node)
-					if err != nil {
-						continue
-					}
-					invC1, err := simplifyPow(c1Node, mustRational(-1, 1))
-					if err != nil {
-						continue
-					}
-					vVal, err := simplifyMul([]Node{negC0, invC1})
-					if err != nil {
-						continue
-					}
-					evalVal, err := Eval(expandNode(vVal))
-					if err == nil {
-						vVal = evalVal
-					}
-					if _, exists := substMap[v]; !exists {
-						substMap[v] = vVal
-					}
-				}
-			}
+	// 1. Gather all variables appearing across hypotheses and conclusion
+	allVarsMap := make(map[string]bool)
+	for _, p := range c.Hypotheses {
+		for _, v := range collectVariables(p) {
+			allVarsMap[v] = true
 		}
 	}
-
-	// Substitute into conclusion
-	var substNode func(n Node) Node
-	substNode = func(n Node) Node {
-		if n == nil {
-			return nil
-		}
-		switch curr := n.(type) {
-		case *VarNode:
-			if repl, ok := substMap[curr.Name]; ok {
-				return repl
-			}
-			return curr
-		case *AddNode:
-			var newTerms []Node
-			for _, t := range curr.Terms {
-				newTerms = append(newTerms, substNode(t))
-			}
-			return &AddNode{Terms: newTerms}
-		case *MulNode:
-			var newFactors []Node
-			for _, f := range curr.Factors {
-				newFactors = append(newFactors, substNode(f))
-			}
-			return &MulNode{Factors: newFactors}
-		case *PowNode:
-			return &PowNode{Base: substNode(curr.Base), Exp: substNode(curr.Exp)}
-		case *UnaryOpNode:
-			return &UnaryOpNode{Op: curr.Op, Expr: substNode(curr.Expr)}
-		case *RelOpNode:
-			return &RelOpNode{Op: curr.Op, LHS: substNode(curr.LHS), RHS: substNode(curr.RHS)}
-		default:
-			return n
-		}
+	for _, v := range collectVariables(c.Conclusion) {
+		allVarsMap[v] = true
 	}
 
-	substed := substNode(c.Conclusion)
+	var order []string
+	for v := range allVarsMap {
+		order = append(order, v)
+	}
+	sort.Strings(order)
+
+	// 2. Perform systematic linear elimination of dependent variables
+	_, subs := LinearSubstitutionFastPath(c.Hypotheses, order)
+
+	// 3. Substitute solved dependent variables into conclusion
+	substed := c.Conclusion
+	for k, v := range subs {
+		substed = Substitute(substed, k, v)
+	}
+
+	// 4. Verify that substituted expression algebraically simplifies to 0
+	val, err := Eval(substed)
+	if err == nil && isZero(val) {
+		return substed
+	}
+
 	vars := collectVariables(substed)
 	if len(vars) > 0 {
 		polyNode, err := NodeToPoly(substed, vars, ast.OrderGrevLex)
 		if err == nil && isZero(PolyToNode(polyNode)) {
-			return substed
-		}
-	} else {
-		val, err := Eval(substed)
-		if err == nil && isZero(val) {
 			return substed
 		}
 	}

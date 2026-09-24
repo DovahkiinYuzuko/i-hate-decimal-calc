@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc"
@@ -295,7 +296,7 @@ func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut 
 						fmt.Fprintln(out, leanCode)
 					}
 					if ro.leanFile != "" {
-						if err := os.WriteFile(ro.leanFile, []byte(leanCode), 0644); err != nil {
+						if err := saveLeanProofFile(ro.leanFile, leanCode); err != nil {
 							fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), fmt.Sprintf(i18n.T("cli.err_write_file"), ro.leanFile, err))
 						} else {
 							fmt.Fprintln(out, fmt.Sprintf(i18n.T("cli.lean_file_saved"), ro.leanFile))
@@ -337,7 +338,7 @@ func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut 
 						fmt.Fprintln(out, leanCode)
 					}
 					if ro.leanFile != "" {
-						if err := os.WriteFile(ro.leanFile, []byte(leanCode), 0644); err != nil {
+						if err := saveLeanProofFile(ro.leanFile, leanCode); err != nil {
 							fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), fmt.Sprintf(i18n.T("cli.err_write_file"), ro.leanFile, err))
 						} else {
 							fmt.Fprintln(out, fmt.Sprintf(i18n.T("cli.lean_file_saved"), ro.leanFile))
@@ -518,7 +519,7 @@ func executeScriptLine(line string, ro runOptions, env *calc.Env, suppressOutput
 							fmt.Fprintln(out, leanCode)
 						}
 						if ro.leanFile != "" {
-							_ = os.WriteFile(ro.leanFile, []byte(leanCode), 0644)
+							_ = saveLeanProofFile(ro.leanFile, leanCode)
 						}
 					}
 				}
@@ -531,4 +532,14 @@ func executeScriptLine(line string, ro runOptions, env *calc.Env, suppressOutput
 		fmt.Fprintf(errOut, "%s:%d: %v\n", filePath, lineNum, err)
 		return err
 	}
+}
+
+func saveLeanProofFile(path, code string) error {
+	dir := filepath.Dir(path)
+	if dir != "" && dir != "." {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return err
+		}
+	}
+	return os.WriteFile(path, []byte(code), 0644)
 }
