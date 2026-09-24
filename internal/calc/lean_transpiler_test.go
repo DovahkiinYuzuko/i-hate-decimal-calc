@@ -275,8 +275,14 @@ func TestGenerateLeanSource_RealAndGeometry(t *testing.T) {
 	if !strings.Contains(fullGeoSrc, "theorem midpoint_theorem") {
 		t.Errorf("expected theorem midpoint_theorem, got: %s", fullGeoSrc)
 	}
-	if !strings.Contains(fullGeoSrc, ":= by ring") {
-		t.Errorf("expected by ring tactic, got: %s", fullGeoSrc)
+	if !strings.Contains(fullGeoSrc, "theorem midpoint_theorem_algebraic_identity") {
+		t.Errorf("expected theorem midpoint_theorem_algebraic_identity, got: %s", fullGeoSrc)
+	}
+	if !strings.Contains(fullGeoSrc, "rw [h_M_x, h_M_y, h_N_x, h_N_y]") {
+		t.Errorf("expected rw tactic with midpoint hypotheses, got: %s", fullGeoSrc)
+	}
+	if !strings.Contains(fullGeoSrc, "ring") {
+		t.Errorf("expected ring tactic, got: %s", fullGeoSrc)
 	}
 	if !strings.Contains(fullGeoSrc, "Mathlib.Analysis.SpecialFunctions.Trigonometric.Deriv") {
 		t.Errorf("expected Trigonometric.Deriv import, got: %s", fullGeoSrc)

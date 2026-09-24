@@ -6,12 +6,22 @@ factor(x^2 - 1)
 factor(x^3 - 1)
 factor(x^4 - 16)
 factor(x^8 - 1)
+(x + y)^2 == x^2 + 2*x*y + y^2
+(x - y)*(x^2 + x*y + y^2) == x^3 - y^3
 
-# 2. Calculus / Indefinite Integration (Derivative Certificates)
+# 2. Calculus / Indefinite Integration (Derivative Certificates with Simp tactic)
 integrate(exp(x), x)
+integrate(sin(x), x)
 integrate(cos(x), x)
 integrate(x*sin(x), x)
+integrate(x*exp(x), x)
 
-# 3. Geometric Automated Theorem Proving (Wu's Method with NDG tracking)
+# 3. Linear Algebra / Exact Matrix Invertibility Certificates (Ext & Ring tactics)
+inv([[1, 2], [3, 4]])
+inv([[1, 0, 2], [2, -1, 3], [4, 1, 8]])
+
+# 4. Geometric Automated Theorem Proving (Wu's Method with Structural Deductions)
 geo_prove([midpoint(M, A, B), midpoint(N, A, C)], parallel(M, N, B, C))
+
+
 

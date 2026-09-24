@@ -480,6 +480,33 @@ func TestCLI_LeanAndLeanFile(t *testing.T) {
 	if !strings.Contains(outCube.String(), "by ring") {
 		t.Errorf("expected 'by ring' for factor(x^3 - 1), got %q", outCube.String())
 	}
+
+	// 6. Test linear algebra matrix inversion: inv([[1, 2], [3, 4]])
+	outInv := new(bytes.Buffer)
+	errOutInv := new(bytes.Buffer)
+	codeInv := run([]string{"--lean", "inv([[1, 2], [3, 4]])"}, strings.NewReader(""), outInv, errOutInv)
+	if codeInv != 0 {
+		t.Fatalf("expected exit code 0, got %d. stderr: %s", codeInv, errOutInv.String())
+	}
+	invStr := outInv.String()
+	if !strings.Contains(invStr, "by ext <;> ring") {
+		t.Errorf("expected 'by ext <;> ring' for matrix inv proof, got %q", invStr)
+	}
+
+	// 7. Test structured geometric deduction theorem: midpoint theorem
+	outGeo := new(bytes.Buffer)
+	errOutGeo := new(bytes.Buffer)
+	codeGeo := run([]string{"--lean", "geo_prove([midpoint(M, A, B), midpoint(N, A, C)], parallel(M, N, B, C))"}, strings.NewReader(""), outGeo, errOutGeo)
+	if codeGeo != 0 {
+		t.Fatalf("expected exit code 0, got %d. stderr: %s", codeGeo, errOutGeo.String())
+	}
+	geoStr := outGeo.String()
+	if !strings.Contains(geoStr, "ihd_certified_proof_algebraic_identity") {
+		t.Errorf("expected algebraic identity lemma in geo proof, got %q", geoStr)
+	}
+	if !strings.Contains(geoStr, "rw [h_M_x, h_M_y, h_N_x, h_N_y]") {
+		t.Errorf("expected hypothesis rewrites in geo proof, got %q", geoStr)
+	}
 }
 
 
