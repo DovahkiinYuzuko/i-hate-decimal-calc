@@ -452,7 +452,7 @@ func GenerateLeanSource(theoremName string, cert *VerificationCertificate, input
 	b.WriteString("import Mathlib.Tactic.Ring\n")
 	b.WriteString("import Mathlib.Tactic.Linarith\n")
 	b.WriteString("import Mathlib.Tactic.NormNum\n")
-	b.WriteString("import Mathlib.Data.Rat.Basic\n")
+	b.WriteString("import Mathlib.Data.Rat.Defs\n")
 	b.WriteString("import Mathlib.Data.Real.Basic\n\n")
 
 	if len(vars) > 0 {
