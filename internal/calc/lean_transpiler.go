@@ -548,7 +548,6 @@ func GenerateLeanSource(theoremName string, cert *VerificationCertificate, input
 	b.WriteString("import Mathlib.Data.Rat.Defs\n")
 	b.WriteString("import Mathlib.Basic.Real.Basic\n")
 	b.WriteString("import Mathlib.Data.Matrix.Basic\n")
-	b.WriteString("import Mathlib.Data.Matrix.Notation\n")
 	b.WriteString("import Mathlib.Analysis.Calculus.Deriv.Basic\n")
 	b.WriteString("import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic\n")
 	b.WriteString("import Mathlib.Analysis.SpecialFunctions.Trigonometric.Deriv\n")
