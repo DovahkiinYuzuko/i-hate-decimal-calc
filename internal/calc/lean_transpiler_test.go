@@ -160,3 +160,43 @@ func TestTranspileCertificateToLean_UnverifiedError(t *testing.T) {
 		t.Fatal("expected error for unverified certificate, got nil")
 	}
 }
+
+func TestTranspileCertificateIRToLean_Direct(t *testing.T) {
+	// 1. Identity IR
+	lhs := NewVar("x")
+	rhs := NewVar("x")
+	res, _ := NewRational(0, 1)
+	idCert := NewIdentityCertificate(IdentityKindFactor, lhs, rhs, res, true, "Holds")
+	leanCode, err := TranspileCertificateIRToLean(idCert)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(leanCode, "theorem ihd_verified_proof : x = x := by ring") {
+		t.Errorf("unexpected Lean output: %s", leanCode)
+	}
+
+	// 2. Deriv IR
+	f := NewVar("x")
+	F := NewVar("F")
+	derivCert := NewDerivCertificate(f, F, res, "x", true, "Holds")
+	leanDeriv, err := TranspileCertificateIRToLean(derivCert)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(leanDeriv, "deriv (fun x => F) x = x := by ring") {
+		t.Errorf("unexpected Lean output: %s", leanDeriv)
+	}
+
+	// 3. Matrix Invertibility IR
+	m := NewVar("A")
+	inv := NewVar("B")
+	invCert := NewInvertibilityCertificate(m, inv, nil, res, true, "Holds")
+	leanInv, err := TranspileCertificateIRToLean(invCert)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(leanInv, "A * B = 1 := by ext <;> ring") {
+		t.Errorf("unexpected Lean output: %s", leanInv)
+	}
+}
+

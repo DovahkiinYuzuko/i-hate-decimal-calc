@@ -28,6 +28,25 @@ type VerificationCertificate struct {
 	IsVerified bool
 	Details    string
 	State      VerifyState
+	CertIR     Certificate
+}
+
+// ToCertificateIR returns the underlying structured certificate IR.
+// If not already set, it dynamically constructs a BaseCertificate wrapper.
+func (vc *VerificationCertificate) ToCertificateIR() Certificate {
+	if vc == nil {
+		return nil
+	}
+	if vc.CertIR != nil {
+		return vc.CertIR
+	}
+	return &BaseCertificate{
+		DomainVal:    CertificateDomain(vc.Domain),
+		Verified:     vc.IsVerified,
+		ResidualNode: vc.Residual,
+		DetailsMsg:   vc.Details,
+		EquationStr:  vc.Equation,
+	}
 }
 
 // String returns the formatted certificate line for CLI display.
@@ -140,25 +159,31 @@ func verifyIntegral(fn *FuncNode, F Node, env *Env, fsm *VerifyLifecycleFSM) (*V
 	eqStr := fmt.Sprintf("diff(F, %s) - f == 0", varName)
 	if isZeroRes {
 		_ = fsm.TransitionTo(VerifyStateCertified)
+		details := fmt.Sprintf(i18n.T("verify.integral_holds"), varName)
+		certIR := NewDerivCertificate(f, F, mustRational(0, 1), varName, true, details)
 		return &VerificationCertificate{
 			Domain:     DomainIntegral,
 			Equation:   eqStr,
 			Residual:   mustRational(0, 1),
 			IsVerified: true,
-			Details:    fmt.Sprintf(i18n.T("verify.integral_holds"), varName),
+			Details:    details,
 			State:      VerifyStateCertified,
+			CertIR:     certIR,
 		}, nil
 	}
 
 	_ = fsm.TransitionTo(VerifyStateRefuted)
 	evalRes, _ := Eval(residualNode)
+	details := fmt.Sprintf(i18n.T("verify.refuted_residual"), evalRes.String())
+	certIR := NewDerivCertificate(f, F, evalRes, varName, false, details)
 	return &VerificationCertificate{
 		Domain:     DomainIntegral,
 		Equation:   eqStr,
 		Residual:   evalRes,
 		IsVerified: false,
-		Details:    fmt.Sprintf(i18n.T("verify.refuted_residual"), evalRes.String()),
+		Details:    details,
 		State:      VerifyStateRefuted,
+		CertIR:     certIR,
 	}, nil
 }
 
@@ -183,25 +208,31 @@ func verifyFactor(fn *FuncNode, factorResult Node, env *Env, fsm *VerifyLifecycl
 	eqStr := "expand(factors) - P == 0"
 	if isZeroRes {
 		_ = fsm.TransitionTo(VerifyStateCertified)
+		details := i18n.T("verify.factor_holds")
+		certIR := NewIdentityCertificate(IdentityKindFactor, orig, factorResult, mustRational(0, 1), true, details)
 		return &VerificationCertificate{
 			Domain:     DomainFactor,
 			Equation:   eqStr,
 			Residual:   mustRational(0, 1),
 			IsVerified: true,
-			Details:    i18n.T("verify.factor_holds"),
+			Details:    details,
 			State:      VerifyStateCertified,
+			CertIR:     certIR,
 		}, nil
 	}
 
 	_ = fsm.TransitionTo(VerifyStateRefuted)
 	evalRes, _ := Eval(residual)
+	details := fmt.Sprintf(i18n.T("verify.refuted_residual"), evalRes.String())
+	certIR := NewIdentityCertificate(IdentityKindFactor, orig, factorResult, evalRes, false, details)
 	return &VerificationCertificate{
 		Domain:     DomainFactor,
 		Equation:   eqStr,
 		Residual:   evalRes,
 		IsVerified: false,
-		Details:    fmt.Sprintf(i18n.T("verify.refuted_residual"), evalRes.String()),
+		Details:    details,
 		State:      VerifyStateRefuted,
+		CertIR:     certIR,
 	}, nil
 }
 
@@ -255,24 +286,30 @@ func verifySolve(fn *FuncNode, rootsResult Node, env *Env, fsm *VerifyLifecycleF
 	eqStr := fmt.Sprintf("eq[%s -> roots] == 0", varName)
 	if allRootsSatisfied {
 		_ = fsm.TransitionTo(VerifyStateCertified)
+		details := i18n.T("verify.solve_holds")
+		certIR := NewIdentityCertificate(IdentityKindEquivalence, zeroExpr, rootsResult, mustRational(0, 1), true, details)
 		return &VerificationCertificate{
 			Domain:     DomainSolve,
 			Equation:   eqStr,
 			Residual:   mustRational(0, 1),
 			IsVerified: true,
-			Details:    i18n.T("verify.solve_holds"),
+			Details:    details,
 			State:      VerifyStateCertified,
+			CertIR:     certIR,
 		}, nil
 	}
 
 	_ = fsm.TransitionTo(VerifyStateRefuted)
+	details := fmt.Sprintf("root %s did not satisfy equation (residual = %s)", failedRoot.String(), lastResidual.String())
+	certIR := NewIdentityCertificate(IdentityKindEquivalence, zeroExpr, rootsResult, lastResidual, false, details)
 	return &VerificationCertificate{
 		Domain:     DomainSolve,
 		Equation:   eqStr,
 		Residual:   lastResidual,
 		IsVerified: false,
-		Details:    fmt.Sprintf("root %s did not satisfy equation (residual = %s)", failedRoot.String(), lastResidual.String()),
+		Details:    details,
 		State:      VerifyStateRefuted,
+		CertIR:     certIR,
 	}, nil
 }
 
@@ -299,25 +336,31 @@ func verifyApart(fn *FuncNode, apartResult Node, env *Env, fsm *VerifyLifecycleF
 	eqStr := "together(apart) - f == 0"
 	if isZeroRes {
 		_ = fsm.TransitionTo(VerifyStateCertified)
+		details := i18n.T("verify.rational_apart_holds")
+		certIR := NewIdentityCertificate(IdentityKindApart, orig, apartResult, mustRational(0, 1), true, details)
 		return &VerificationCertificate{
 			Domain:     DomainRationalApart,
 			Equation:   eqStr,
 			Residual:   mustRational(0, 1),
 			IsVerified: true,
-			Details:    i18n.T("verify.rational_apart_holds"),
+			Details:    details,
 			State:      VerifyStateCertified,
+			CertIR:     certIR,
 		}, nil
 	}
 
 	_ = fsm.TransitionTo(VerifyStateRefuted)
 	evalRes, _ := Eval(diff)
+	details := fmt.Sprintf(i18n.T("verify.refuted_residual"), evalRes.String())
+	certIR := NewIdentityCertificate(IdentityKindApart, orig, apartResult, evalRes, false, details)
 	return &VerificationCertificate{
 		Domain:     DomainRationalApart,
 		Equation:   eqStr,
 		Residual:   evalRes,
 		IsVerified: false,
-		Details:    fmt.Sprintf(i18n.T("verify.refuted_residual"), evalRes.String()),
+		Details:    details,
 		State:      VerifyStateRefuted,
+		CertIR:     certIR,
 	}, nil
 }
 
@@ -368,24 +411,30 @@ func verifyMatrixInv(fn *FuncNode, invResult Node, env *Env, fsm *VerifyLifecycl
 	eqStr := "A * inv(A) - I == O"
 	if isIdent {
 		_ = fsm.TransitionTo(VerifyStateCertified)
+		details := i18n.T("verify.matrix_inv_holds")
+		certIR := NewInvertibilityCertificate(A, AInv, nil, mustRational(0, 1), true, details)
 		return &VerificationCertificate{
 			Domain:     DomainMatrix,
 			Equation:   eqStr,
 			Residual:   mustRational(0, 1),
 			IsVerified: true,
-			Details:    i18n.T("verify.matrix_inv_holds"),
+			Details:    details,
 			State:      VerifyStateCertified,
+			CertIR:     certIR,
 		}, nil
 	}
 
 	_ = fsm.TransitionTo(VerifyStateRefuted)
+	details := i18n.T("verify.refuted_residual")
+	certIR := NewInvertibilityCertificate(A, AInv, nil, prod, false, details)
 	return &VerificationCertificate{
 		Domain:     DomainMatrix,
 		Equation:   eqStr,
 		Residual:   prod,
 		IsVerified: false,
-		Details:    i18n.T("verify.refuted_residual"),
+		Details:    details,
 		State:      VerifyStateRefuted,
+		CertIR:     certIR,
 	}, nil
 }
 
@@ -421,23 +470,29 @@ func verifyMatrixDecomp(fn *FuncNode, decompResult Node, env *Env, fsm *VerifyLi
 		eqStr := "A - L * L^T == O"
 		if isEqual {
 			_ = fsm.TransitionTo(VerifyStateCertified)
+			details := i18n.T("verify.matrix_cholesky_holds")
+			certIR := NewDecompositionCertificate(DecompCholesky, A, []Node{L, LT}, mustRational(0, 1), true, details)
 			return &VerificationCertificate{
 				Domain:     DomainMatrix,
 				Equation:   eqStr,
 				Residual:   mustRational(0, 1),
 				IsVerified: true,
-				Details:    i18n.T("verify.matrix_cholesky_holds"),
+				Details:    details,
 				State:      VerifyStateCertified,
+				CertIR:     certIR,
 			}, nil
 		}
 		_ = fsm.TransitionTo(VerifyStateRefuted)
+		details := i18n.T("verify.refuted_residual")
+		certIR := NewDecompositionCertificate(DecompCholesky, A, []Node{L, LT}, LLT, false, details)
 		return &VerificationCertificate{
 			Domain:     DomainMatrix,
 			Equation:   eqStr,
 			Residual:   LLT,
 			IsVerified: false,
-			Details:    i18n.T("verify.refuted_residual"),
+			Details:    details,
 			State:      VerifyStateRefuted,
+			CertIR:     certIR,
 		}, nil
 
 	case "lu":
@@ -464,23 +519,29 @@ func verifyMatrixDecomp(fn *FuncNode, decompResult Node, env *Env, fsm *VerifyLi
 		eqStr := "P * A - L * U == O"
 		if isEqual {
 			_ = fsm.TransitionTo(VerifyStateCertified)
+			details := i18n.T("verify.matrix_lu_holds")
+			certIR := NewDecompositionCertificate(DecompLU, A, []Node{P, L, U}, mustRational(0, 1), true, details)
 			return &VerificationCertificate{
 				Domain:     DomainMatrix,
 				Equation:   eqStr,
 				Residual:   mustRational(0, 1),
 				IsVerified: true,
-				Details:    i18n.T("verify.matrix_lu_holds"),
+				Details:    details,
 				State:      VerifyStateCertified,
+				CertIR:     certIR,
 			}, nil
 		}
 		_ = fsm.TransitionTo(VerifyStateRefuted)
+		details := i18n.T("verify.refuted_residual")
+		certIR := NewDecompositionCertificate(DecompLU, A, []Node{P, L, U}, PA, false, details)
 		return &VerificationCertificate{
 			Domain:     DomainMatrix,
 			Equation:   eqStr,
 			Residual:   PA,
 			IsVerified: false,
-			Details:    i18n.T("verify.refuted_residual"),
+			Details:    details,
 			State:      VerifyStateRefuted,
+			CertIR:     certIR,
 		}, nil
 
 	case "qr":
@@ -526,23 +587,29 @@ func verifyMatrixDecomp(fn *FuncNode, decompResult Node, env *Env, fsm *VerifyLi
 		eqStr := "Q^T * Q == I and Q * R == A"
 		if isOrthogonal && isFactored {
 			_ = fsm.TransitionTo(VerifyStateCertified)
+			details := i18n.T("verify.matrix_qr_holds")
+			certIR := NewDecompositionCertificate(DecompQR, A, []Node{Q, R}, mustRational(0, 1), true, details)
 			return &VerificationCertificate{
 				Domain:     DomainMatrix,
 				Equation:   eqStr,
 				Residual:   mustRational(0, 1),
 				IsVerified: true,
-				Details:    i18n.T("verify.matrix_qr_holds"),
+				Details:    details,
 				State:      VerifyStateCertified,
+				CertIR:     certIR,
 			}, nil
 		}
 		_ = fsm.TransitionTo(VerifyStateRefuted)
+		details := i18n.T("verify.refuted_residual")
+		certIR := NewDecompositionCertificate(DecompQR, A, []Node{Q, R}, QR, false, details)
 		return &VerificationCertificate{
 			Domain:     DomainMatrix,
 			Equation:   eqStr,
 			Residual:   QR,
 			IsVerified: false,
-			Details:    i18n.T("verify.refuted_residual"),
+			Details:    details,
 			State:      VerifyStateRefuted,
+			CertIR:     certIR,
 		}, nil
 	}
 
@@ -599,25 +666,31 @@ func verifyODE(fn *FuncNode, ySol Node, env *Env, fsm *VerifyLifecycleFSM) (*Ver
 	eqStr := "ODE_Residual[y -> y_sol] == 0"
 	if isZeroRes {
 		_ = fsm.TransitionTo(VerifyStateCertified)
+		details := i18n.T("verify.ode_holds")
+		certIR := NewODECertificate(diffEq, ySol, mustRational(0, 1), xName, "y", true, details)
 		return &VerificationCertificate{
 			Domain:     DomainODE,
 			Equation:   eqStr,
 			Residual:   mustRational(0, 1),
 			IsVerified: true,
-			Details:    i18n.T("verify.ode_holds"),
+			Details:    details,
 			State:      VerifyStateCertified,
+			CertIR:     certIR,
 		}, nil
 	}
 
 	_ = fsm.TransitionTo(VerifyStateRefuted)
 	evalRes, _ := Eval(substituted)
+	details := fmt.Sprintf(i18n.T("verify.refuted_residual"), evalRes.String())
+	certIR := NewODECertificate(diffEq, ySol, evalRes, xName, "y", false, details)
 	return &VerificationCertificate{
 		Domain:     DomainODE,
 		Equation:   eqStr,
 		Residual:   evalRes,
 		IsVerified: false,
-		Details:    fmt.Sprintf(i18n.T("verify.refuted_residual"), evalRes.String()),
+		Details:    details,
 		State:      VerifyStateRefuted,
+		CertIR:     certIR,
 	}, nil
 }
 
@@ -665,25 +738,31 @@ func verifyWZ(fn *FuncNode, certResult Node, env *Env, fsm *VerifyLifecycleFSM) 
 	eqStr := "Delta_n(F) == Delta_k(R * F)"
 	if isZeroRes {
 		_ = fsm.TransitionTo(VerifyStateCertified)
+		details := i18n.T("verify.wz_holds")
+		certIR := NewWZCertificate(F, certResult, mustRational(0, 1), nVar, kVar, true, details)
 		return &VerificationCertificate{
 			Domain:     DomainWZ,
 			Equation:   eqStr,
 			Residual:   mustRational(0, 1),
 			IsVerified: true,
-			Details:    i18n.T("verify.wz_holds"),
+			Details:    details,
 			State:      VerifyStateCertified,
+			CertIR:     certIR,
 		}, nil
 	}
 
 	_ = fsm.TransitionTo(VerifyStateRefuted)
 	evalRes, _ := Eval(residual)
+	details := fmt.Sprintf(i18n.T("verify.refuted_residual"), evalRes.String())
+	certIR := NewWZCertificate(F, certResult, evalRes, nVar, kVar, false, details)
 	return &VerificationCertificate{
 		Domain:     DomainWZ,
 		Equation:   eqStr,
 		Residual:   evalRes,
 		IsVerified: false,
-		Details:    fmt.Sprintf(i18n.T("verify.refuted_residual"), evalRes.String()),
+		Details:    details,
 		State:      VerifyStateRefuted,
+		CertIR:     certIR,
 	}, nil
 }
 
@@ -706,25 +785,31 @@ func VerifyAlgebraicEquivalence(lhs, rhs Node, env *Env) (*VerificationCertifica
 	eqStr := fmt.Sprintf("%s == %s", lhs.String(), rhs.String())
 	if isZeroRes {
 		_ = fsm.TransitionTo(VerifyStateCertified)
+		details := i18n.T("verify.general_holds")
+		certIR := NewIdentityCertificate(IdentityKindEquivalence, lhs, rhs, mustRational(0, 1), true, details)
 		return &VerificationCertificate{
 			Domain:     DomainGeneral,
 			Equation:   eqStr,
 			Residual:   mustRational(0, 1),
 			IsVerified: true,
-			Details:    i18n.T("verify.general_holds"),
+			Details:    details,
 			State:      VerifyStateCertified,
+			CertIR:     certIR,
 		}, nil
 	}
 
 	_ = fsm.TransitionTo(VerifyStateRefuted)
 	evalDiff, _ := Eval(diff)
+	details := fmt.Sprintf(i18n.T("verify.refuted_residual"), evalDiff.String())
+	certIR := NewIdentityCertificate(IdentityKindEquivalence, lhs, rhs, evalDiff, false, details)
 	return &VerificationCertificate{
 		Domain:     DomainGeneral,
 		Equation:   eqStr,
 		Residual:   evalDiff,
 		IsVerified: false,
-		Details:    fmt.Sprintf(i18n.T("verify.refuted_residual"), evalDiff.String()),
+		Details:    details,
 		State:      VerifyStateRefuted,
+		CertIR:     certIR,
 	}, nil
 }
 
@@ -740,25 +825,31 @@ func verifyGeneral(expr, result Node, env *Env, fsm *VerifyLifecycleFSM) (*Verif
 	eqStr := fmt.Sprintf("expr == %s", result.String())
 	if isZeroRes {
 		_ = fsm.TransitionTo(VerifyStateCertified)
+		details := i18n.T("verify.general_holds")
+		certIR := NewIdentityCertificate(IdentityKindGeneral, expr, result, mustRational(0, 1), true, details)
 		return &VerificationCertificate{
 			Domain:     DomainGeneral,
 			Equation:   eqStr,
 			Residual:   mustRational(0, 1),
 			IsVerified: true,
-			Details:    i18n.T("verify.general_holds"),
+			Details:    details,
 			State:      VerifyStateCertified,
+			CertIR:     certIR,
 		}, nil
 	}
 
 	_ = fsm.TransitionTo(VerifyStateRefuted)
 	evalDiff, _ := Eval(diff)
+	details := fmt.Sprintf(i18n.T("verify.refuted_residual"), evalDiff.String())
+	certIR := NewIdentityCertificate(IdentityKindGeneral, expr, result, evalDiff, false, details)
 	return &VerificationCertificate{
 		Domain:     DomainGeneral,
 		Equation:   eqStr,
 		Residual:   evalDiff,
 		IsVerified: false,
-		Details:    fmt.Sprintf(i18n.T("verify.refuted_residual"), evalDiff.String()),
+		Details:    details,
 		State:      VerifyStateRefuted,
+		CertIR:     certIR,
 	}, nil
 }
 
