@@ -645,6 +645,16 @@
     "err_derivative_zero": "代数エラー: 導関数 f'(r0) が p を法として0です（単根ではありません）: %s",
     "err_not_coprime": "代数エラー: 初期因子 g0 と h0 は p を法として互いに素である必要があります",
     "err_lift_target_precision": "入力エラー: 目標精度 k は 1 以上である必要があります"
+  },
+  "puiseux": {
+    "err_puiseux_args": "引数エラー: puiseux は 3つまたは4つの引数 (F, y, x [, order]) が必要です",
+    "err_arg_must_be_variable": "入力エラー: puiseux: 変数名である必要があります (取得値: %s)",
+    "err_order_must_be_positive_int": "入力エラー: puiseux: 展開次数は非負の整数である必要があります (取得値: %s)",
+    "err_equation_contains_no_var": "代数エラー: puiseux: 方程式に対象変数 %s が含まれていません",
+    "err_identity_equation": "代数エラー: puiseux: 恒等式のため解空間を一意決定できません",
+    "err_invalid_fsm_transition": "状態遷移エラー: puiseux: 不正な状態遷移です (%v -> %v)",
+    "err_no_characteristic_roots": "代数エラー: puiseux: 特性多項式の非ゼロ代数根が存在しません",
+    "err_cannot_expand": "数理計算エラー: puiseux: 局所展開に失敗しました: %s"
   }
 }
 

@@ -866,6 +866,13 @@ func init() {
 		MinArgs: 3,
 		MaxArgs: 3,
 	})
+
+	// Newton-Puiseux Algebraic Series Expansion (issue-84)
+	RegisterFunction(FunctionSpec{
+		Name:    "puiseux",
+		MinArgs: 3,
+		MaxArgs: 4,
+	})
 }
 
 
