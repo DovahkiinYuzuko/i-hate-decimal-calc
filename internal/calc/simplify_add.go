@@ -1,9 +1,12 @@
 package calc
 
 import (
-	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"math/big"
+	"sort"
+	"strings"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
 // -------------------------------------------------------------------------
@@ -122,7 +125,7 @@ func simplifyAdd(terms []Node) (Node, error) {
 					} else {
 						baseNode = NewMul(rest)
 					}
-					baseKey := baseNode.String()
+					baseKey := canonicalTermKey(baseNode)
 					if entry, exists := termMap[baseKey]; exists {
 						entry.coeff.Add(entry.coeff, r.Val)
 					} else {
@@ -132,7 +135,7 @@ func simplifyAdd(terms []Node) (Node, error) {
 					continue
 				}
 			}
-			baseKey := v.String()
+			baseKey := canonicalTermKey(v)
 			if entry, exists := termMap[baseKey]; exists {
 				entry.coeff.Add(entry.coeff, big.NewRat(1, 1))
 			} else {
@@ -191,3 +194,20 @@ func simplifyAdd(terms []Node) (Node, error) {
 
 	return NewAdd(resultTerms), nil
 }
+
+// canonicalTermKey generates a canonical map key for like-term collection,
+// treating commutative product factors equivalently (e.g. x*y == y*x).
+func canonicalTermKey(n Node) string {
+	mul, ok := n.(*MulNode)
+	if !ok {
+		return n.String()
+	}
+
+	factorStrs := make([]string, len(mul.Factors))
+	for i, f := range mul.Factors {
+		factorStrs[i] = f.String()
+	}
+	sort.Strings(factorStrs)
+	return strings.Join(factorStrs, "*")
+}
+
