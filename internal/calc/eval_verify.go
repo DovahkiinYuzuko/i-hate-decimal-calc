@@ -1003,6 +1003,10 @@ func evalMatrixMulVerified(a, b Node) (*MatrixNode, error) {
 }
 
 func verifyGeoProve(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
+	if c, ok := result.(*ConstNode); ok && c.Name == "false" {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		return nil, fmt.Errorf("geometric theorem could not be proven")
+	}
 	if env != nil && env.LastCert != nil && env.LastCert.Domain == DomainGeometry {
 		return env.LastCert, nil
 	}

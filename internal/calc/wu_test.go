@@ -247,4 +247,7 @@ func TestWuZeroDecompositionTree(t *testing.T) {
 	if len(root.Chain.Elements) == 0 {
 		t.Fatalf("expected non-empty chain elements")
 	}
+	if len(root.SaturationInitials) != len(initials) {
+		t.Fatalf("expected SaturationInitials length %d, got %d", len(initials), len(root.SaturationInitials))
+	}
 }
