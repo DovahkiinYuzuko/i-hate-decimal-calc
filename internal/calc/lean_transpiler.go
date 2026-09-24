@@ -372,6 +372,16 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 		equalityStr = fmt.Sprintf("%s = 0", conclStr)
 		tactic = "by ring"
 
+	case *ImpossibilityCertificate:
+		if c.Kind == ImpossibilityAbelRuffini {
+			fStr, _ := ToLeanSyntax(c.Problem)
+			equalityStr = fmt.Sprintf("¬ IsSolvable (%s).GaloisGroup", fStr)
+			tactic = "by abel_ruffini"
+		} else {
+			equalityStr = "False"
+			tactic = "by contradiction"
+		}
+
 	default:
 		// Fallback to equation string or domain mapping
 		eq := cert.EquationString()

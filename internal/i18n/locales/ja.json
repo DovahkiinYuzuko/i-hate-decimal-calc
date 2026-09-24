@@ -657,6 +657,17 @@
     "err_invalid_fsm_transition": "状態遷移エラー: puiseux: 不正な状態遷移です (%v -> %v)",
     "err_no_characteristic_roots": "代数エラー: puiseux: 特性多項式の非ゼロ代数根が存在しません",
     "err_cannot_expand": "数理計算エラー: puiseux: 局所展開に失敗しました: %s"
+  },
+  "galois": {
+    "err_galois_args": "引数エラー: %s は1つまたは2つの引数 (poly [, x]) が必要です",
+    "err_poly_must_be_univariate": "代数エラー: ガロア群算定は1変数多項式のみ対応しています: %s",
+    "err_degree_out_of_range": "未対応の操作: ガロア群算定は次数1〜5の既約多項式に対応しています (指定次数: %d)",
+    "err_poly_not_squarefree": "代数エラー: 多項式が重根を持っています (gcd(f, f') != 1)",
+    "err_poly_reducible": "代数エラー: ガロア群同定アルゴリズムは既約多項式を前提としています (因数分解可能: %s)",
+    "err_resolvent_failed": "代数エラー: 分解多項式の導出に失敗しました: %s",
+    "err_poly_must_be_monic": "代数エラー: 最高次係数は1でなければなりません（モニック多項式が必要です）",
+    "proof_abel_ruffini": "アーベル・ルフィニの定理により、ガロア群 %s は非可解群（交換子群が縮退しない）であるため、この方程式の解を四則演算と冪根で表すことは不可能です。",
+    "proof_solvable": "ガロア群 %s は可解群（導来列が自明群に縮退する）であるため、この方程式は四則演算と冪根によって代数的に解くことが可能です。"
   }
 }
 
