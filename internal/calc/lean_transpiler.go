@@ -720,14 +720,14 @@ func transpileGeometricCertificateIR(c *GeometricCertificate, theoremName string
 	var b strings.Builder
 	// 1. Auxiliary algebraic identity lemma
 	identityThmName := fmt.Sprintf("%s_algebraic_identity", escapeLeanIdent(theoremName))
-	b.WriteString(fmt.Sprintf("-- Auxiliary algebraic identity verified from geometric characteristic polynomial\n"))
+	b.WriteString("-- Auxiliary algebraic identity verified from geometric characteristic polynomial\n")
 	b.WriteString(fmt.Sprintf("theorem %s : %s = 0 := by ring\n\n", identityThmName, identityStr))
 
 	// 2. Main geometric deduction: explicit hypotheses entail the conclusion predicate
-	b.WriteString(fmt.Sprintf("-- Main geometric deduction: explicit hypotheses entail the conclusion predicate\n"))
+	b.WriteString("-- Main geometric deduction: explicit hypotheses entail the conclusion predicate\n")
 	b.WriteString(fmt.Sprintf("theorem %s\n%s :\n  %s = 0 := by\n", escapeLeanIdent(theoremName), strings.Join(hypLines, "\n"), conclStr))
 	b.WriteString(fmt.Sprintf("  rw [%s]\n", strings.Join(rwVars, ", ")))
-	b.WriteString(fmt.Sprintf("  ring"))
+	b.WriteString("  ring")
 
 	return b.String(), nil
 }
