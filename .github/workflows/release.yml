@@ -61,9 +61,9 @@ jobs:
           go build -ldflags="-s -w -X github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/updater.BuildVersion=${{ github.ref_name }}" -o "${BIN_NAME}" ./cmd/ihd
           mkdir -p dist
           if [ "${{ matrix.archive }}" = "zip" ]; then
-            zip -r "dist/${{ matrix.target }}.zip" "${BIN_NAME}" LICENSE.MIT README.md exam
+            zip -r "dist/${{ matrix.target }}.zip" "${BIN_NAME}" LICENSE.MIT README.md exam docs/references
           else
-            tar -czvf "dist/${{ matrix.target }}.tar.gz" "${BIN_NAME}" LICENSE.MIT README.md exam
+            tar -czvf "dist/${{ matrix.target }}.tar.gz" "${BIN_NAME}" LICENSE.MIT README.md exam docs/references
           fi
 
       - name: Upload build artifact
