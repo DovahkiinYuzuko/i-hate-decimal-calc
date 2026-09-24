@@ -51,6 +51,8 @@
     "sturm_holds": "スツルム符号変化数差 V(a) - V(b) == 1 が成立 (互いに素な区間根の唯一性を確認)",
     "dual_holds": "双対変換による往復演算が元の式と完全一致",
     "general_holds": "代数的ゼロ約分 expand(L - R) == 0 が成立 (両辺が厳密に恒等)",
+    "geo_holds": "呉の方法による擬剰余 prem(g, CS) == 0 が成立 (非退化条件NDGのもとで幾何定理を証明)",
+    "geo_fails": "呉の方法による擬剰余がゼロに帰着しませんでした (反証または不完全な前提条件): 残差 = %s",
     "refuted_residual": "検証残差がゼロに帰着しませんでした: 残差 = %s",
     "unsupported_domain": "自律逆算チェッカーが未定義のドメインです",
     "err_cannot_verify_nil_expression_or": "実行不能な操作です: cannot verify nil expression or result",

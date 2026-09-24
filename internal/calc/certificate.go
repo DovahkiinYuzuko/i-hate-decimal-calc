@@ -15,6 +15,7 @@ const (
 	CertDomainMatrix        CertificateDomain = "matrix"
 	CertDomainRationalApart CertificateDomain = "rational"
 	CertDomainWZ            CertificateDomain = "wz"
+	CertDomainGeometry      CertificateDomain = "geometry"
 	CertDomainImpossibility CertificateDomain = "impossibility"
 	CertDomainEquivalence   CertificateDomain = "equivalence"
 	CertDomainGeneral       CertificateDomain = "general"

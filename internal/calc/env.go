@@ -7,6 +7,7 @@ type Env struct {
 	mu          sync.RWMutex
 	vars        map[string]Node
 	assumptions *AssumptionStore
+	LastCert    *VerificationCertificate
 }
 
 // NewEnv creates a new, empty Env instance.

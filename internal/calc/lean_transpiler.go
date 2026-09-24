@@ -364,6 +364,14 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 		equalityStr = c.EquationString()
 		tactic = "by ring"
 
+	case *GeometricCertificate:
+		conclStr, err := ToLeanSyntax(c.Conclusion)
+		if err != nil {
+			conclStr = "G"
+		}
+		equalityStr = fmt.Sprintf("%s = 0", conclStr)
+		tactic = "by ring"
+
 	default:
 		// Fallback to equation string or domain mapping
 		eq := cert.EquationString()
@@ -398,7 +406,7 @@ func TranspileCertificateToLean(cert *VerificationCertificate, inputExpr, result
 		// If it's a specific structured IR, directly transpile
 		switch certIR.(type) {
 		case *IdentityCertificate, *DerivCertificate, *InvertibilityCertificate,
-			*DecompositionCertificate, *ODECertificate, *WZCertificate:
+			*DecompositionCertificate, *ODECertificate, *WZCertificate, *GeometricCertificate:
 			return TranspileCertificateIRToLean(certIR)
 		}
 	}
