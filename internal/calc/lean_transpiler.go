@@ -363,7 +363,17 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 	case *InvertibilityCertificate:
 		mStr, _ := ToLeanSyntax(c.Matrix)
 		invStr, _ := ToLeanSyntax(c.Inverse)
-		equalityStr = fmt.Sprintf("%s * %s = 1", mStr, invStr)
+		dim := 0
+		if mat, ok := c.Matrix.(*MatrixNode); ok && len(mat.Data) > 0 {
+			dim = len(mat.Data)
+		} else if mat, ok := c.Inverse.(*MatrixNode); ok && len(mat.Data) > 0 {
+			dim = len(mat.Data)
+		}
+		if dim > 0 {
+			equalityStr = fmt.Sprintf("(%s * %s : Matrix (Fin %d) (Fin %d) ℚ) = 1", mStr, invStr, dim, dim)
+		} else {
+			equalityStr = fmt.Sprintf("%s * %s = 1", mStr, invStr)
+		}
 		tactic = "by ext <;> ring"
 
 	case *DecompositionCertificate:
@@ -373,7 +383,16 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 			fs, _ := ToLeanSyntax(f)
 			factorStrs = append(factorStrs, fs)
 		}
-		equalityStr = fmt.Sprintf("%s = %s", mStr, strings.Join(factorStrs, " * "))
+		rows, cols := 0, 0
+		if mat, ok := c.Matrix.(*MatrixNode); ok && len(mat.Data) > 0 {
+			rows = len(mat.Data)
+			cols = len(mat.Data[0])
+		}
+		if rows > 0 && cols > 0 {
+			equalityStr = fmt.Sprintf("(%s : Matrix (Fin %d) (Fin %d) ℚ) = %s", mStr, rows, cols, strings.Join(factorStrs, " * "))
+		} else {
+			equalityStr = fmt.Sprintf("%s = %s", mStr, strings.Join(factorStrs, " * "))
+		}
 		tactic = "by ext <;> ring"
 
 	case *ODECertificate:

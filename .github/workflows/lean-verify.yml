@@ -99,8 +99,10 @@ jobs:
             echo "----------------------------------------"
             cat "$f"
             echo ""
+            set +e
             OUTPUT=$($HOME/.elan/bin/lake env lean "$f" 2>&1)
             EXIT_CODE=$?
+            set -e
             echo "$OUTPUT"
             echo ""
             if [ $EXIT_CODE -ne 0 ]; then
