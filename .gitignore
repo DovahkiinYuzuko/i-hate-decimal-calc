@@ -20,6 +20,11 @@
 !exam/*.ps1
 !exam/*.sh
 !exam/*.md
+# .gitignores/fomal.gitignore
+!formal/
+!formal/lean-toolchain
+!formal/lakefile.toml
+!formal/test_cases.txt
 # .gitignores/internal.gitignore
 !internal/
 !internal/calc/

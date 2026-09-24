@@ -1,0 +1,114 @@
+name: Lean 4 Proof Verification
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      custom_expr:
+        description: 'カスタム数式（空欄の場合は test_cases.txt のみ検証）'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  lean-verify:
+    name: Verify Mathematical Proofs in Lean 4
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          check-latest: true
+
+      - name: Build ihd binary
+        run: |
+          go build -buildvcs=false -o ihd ./cmd/ihd
+
+      - name: Generate Lean 4 Proofs from ihd
+        run: |
+          mkdir -p formal/Proofs
+          echo "=== Reading expressions from formal/test_cases.txt ==="
+          COUNT=0
+          while IFS= read -r line || [ -n "$line" ]; do
+            # Trim leading/trailing whitespace
+            trimmed="$(echo "$line" | xargs)"
+            case "$trimmed" in
+              ""|\#*) continue ;;
+            esac
+
+            COUNT=$((COUNT + 1))
+            OUT_FILE="formal/Proofs/Proof_${COUNT}.lean"
+            echo "Generating: $trimmed -> $OUT_FILE"
+            ./ihd --lean-file "$OUT_FILE" "$trimmed"
+          done < formal/test_cases.txt
+
+          # If custom expression provided via workflow_dispatch, generate it as well
+          CUSTOM_EXPR="${{ github.event.inputs.custom_expr }}"
+          if [ -n "$CUSTOM_EXPR" ]; then
+            COUNT=$((COUNT + 1))
+            OUT_FILE="formal/Proofs/Custom_${COUNT}.lean"
+            echo "Generating Custom: $CUSTOM_EXPR -> $OUT_FILE"
+            ./ihd --lean-file "$OUT_FILE" "$CUSTOM_EXPR"
+          fi
+
+          echo "=== Generated $(ls -1 formal/Proofs/*.lean | wc -l) Proof Files ==="
+          ls -la formal/Proofs/
+
+
+      - name: Install elan (Lean toolchain manager)
+        run: |
+          curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> $GITHUB_PATH
+
+      - name: Sync toolchain with Mathlib4
+        working-directory: formal
+        run: |
+          # Fetch exact toolchain required by Mathlib4 master to guarantee binary cache hit
+          curl -sSf https://raw.githubusercontent.com/leanprover-community/mathlib4/master/lean-toolchain -o lean-toolchain
+          echo "Using Lean toolchain: $(cat lean-toolchain)"
+          $HOME/.elan/bin/elan default $(cat lean-toolchain)
+
+      - name: Fetch Mathlib4 Cache
+        working-directory: formal
+        run: |
+          $HOME/.elan/bin/lake update
+          $HOME/.elan/bin/lake exe cache get
+
+      - name: Verify Proofs with Lean 4 Kernel
+        working-directory: formal
+        run: |
+          echo "=== Starting Lean 4 Kernel Verification ==="
+          FAILED=0
+          for f in Proofs/*.lean; do
+            echo "----------------------------------------"
+            echo "Verifying $f with Lean 4 Kernel..."
+            echo "----------------------------------------"
+            cat "$f"
+            echo ""
+            if $HOME/.elan/bin/lake env lean "$f"; then
+              echo ">>> [PASS] $f successfully verified by Lean 4 kernel."
+            else
+              echo ">>> [FAIL] $f failed Lean 4 verification."
+              FAILED=1
+            fi
+          done
+
+          if [ $FAILED -ne 0 ]; then
+            echo "Error: One or more proofs failed formal verification."
+            exit 1
+          fi
+
+          echo "============================================================"
+          echo "All generated proofs successfully verified by Lean 4 kernel!"
+          echo "============================================================"
