@@ -251,3 +251,24 @@ func TestWuZeroDecompositionTree(t *testing.T) {
 		t.Fatalf("expected SaturationInitials length %d, got %d", len(initials), len(root.SaturationInitials))
 	}
 }
+
+func TestWuGeoProveDSLMidpointTheorem(t *testing.T) {
+	expr, err := Parse("geo_prove([midpoint(M, A, B), midpoint(N, A, C)], parallel(M, N, B, C))")
+	if err != nil {
+		t.Fatalf("Parse geo_prove failed: %v", err)
+	}
+
+	env := NewEnv()
+	res, err := EvalWithEnv(expr, env)
+	if err != nil {
+		t.Fatalf("EvalWithEnv failed: %v", err)
+	}
+
+	if res.String() != "true" {
+		t.Fatalf("expected true, got %s", res.String())
+	}
+	if env.LastCert == nil || !env.LastCert.IsVerified {
+		t.Fatalf("expected verified certificate, got %v", env.LastCert)
+	}
+}
+
