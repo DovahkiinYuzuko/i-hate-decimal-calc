@@ -1,10 +1,11 @@
 package calc
 
 import (
-	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
 // LeanKeywords contains reserved keywords and built-in identifiers in Lean 4.
@@ -295,7 +296,94 @@ func CollectFreeVariables(nodes ...Node) []string {
 	return res
 }
 
-// TranspileCertificateToLean translates a verified certificate and its input/result expressions into a Lean 4 theorem.
+// TranspileCertificateIRToLean transforms a structured Certificate IR directly into a Lean 4 theorem.
+// It bypasses ad-hoc AST unpacking, translating the algebraic witness into formal Mathlib syntax.
+func TranspileCertificateIRToLean(cert Certificate) (string, error) {
+	if cert == nil {
+		return "", fmt.Errorf("%s", i18n.T("lean.err_certificate_is_nil"))
+	}
+	if !cert.IsVerified() {
+		return "", fmt.Errorf("%s", i18n.T("lean.err_cannot_transpile_unverified_certificate", cert.Details()))
+	}
+
+	var equalityStr string
+	var tactic string
+
+	switch c := cert.(type) {
+	case *IdentityCertificate:
+		lhs, err := ToLeanSyntax(c.LHS)
+		if err != nil {
+			return "", err
+		}
+		rhs, err := ToLeanSyntax(c.RHS)
+		if err != nil {
+			return "", err
+		}
+		equalityStr = fmt.Sprintf("%s = %s", lhs, rhs)
+		tactic = "by ring"
+
+	case *DerivCertificate:
+		fStr, err := ToLeanSyntax(c.Integrand)
+		if err != nil {
+			fStr = "f"
+		}
+		resStr, err := ToLeanSyntax(c.Antiderivative)
+		if err != nil {
+			resStr = "F"
+		}
+		intVar := c.Variable
+		if intVar == "" {
+			intVar = "x"
+		}
+		equalityStr = fmt.Sprintf("deriv (fun %s => %s) %s = %s", intVar, resStr, intVar, fStr)
+		tactic = "by ring"
+
+	case *InvertibilityCertificate:
+		mStr, _ := ToLeanSyntax(c.Matrix)
+		invStr, _ := ToLeanSyntax(c.Inverse)
+		equalityStr = fmt.Sprintf("%s * %s = 1", mStr, invStr)
+		tactic = "by ext <;> ring"
+
+	case *DecompositionCertificate:
+		mStr, _ := ToLeanSyntax(c.Matrix)
+		var factorStrs []string
+		for _, f := range c.Factors {
+			fs, _ := ToLeanSyntax(f)
+			factorStrs = append(factorStrs, fs)
+		}
+		equalityStr = fmt.Sprintf("%s = %s", mStr, strings.Join(factorStrs, " * "))
+		tactic = "by ext <;> ring"
+
+	case *ODECertificate:
+		odeStr, _ := ToLeanSyntax(c.ODE)
+		solStr, _ := ToLeanSyntax(c.Solution)
+		equalityStr = fmt.Sprintf("%s [%s(%s) = %s] = 0", odeStr, c.DependentVar, c.IndependentVar, solStr)
+		tactic = "by ring"
+
+	case *WZCertificate:
+		equalityStr = c.EquationString()
+		tactic = "by ring"
+
+	default:
+		// Fallback to equation string or domain mapping
+		eq := cert.EquationString()
+		if eq == "" {
+			eq = "True"
+			tactic = "by decide"
+		} else {
+			equalityStr = eq
+			tactic = "by ring"
+		}
+	}
+
+	// Normalize any leftover == to = for Lean 4 syntax
+	equalityStr = strings.ReplaceAll(equalityStr, "==", "=")
+
+	return fmt.Sprintf("theorem ihd_verified_proof : %s := %s", equalityStr, tactic), nil
+}
+
+// TranspileCertificateToLean transforms a VerificationCertificate into a Lean 4 theorem.
+// It delegates to TranspileCertificateIRToLean using the underlying Certificate IR.
 func TranspileCertificateToLean(cert *VerificationCertificate, inputExpr, resultExpr Node) (string, error) {
 	if cert == nil {
 		return "", fmt.Errorf("%s", i18n.T("lean.err_certificate_is_nil"))
@@ -304,138 +392,19 @@ func TranspileCertificateToLean(cert *VerificationCertificate, inputExpr, result
 		return "", fmt.Errorf("%s", i18n.T("lean.err_cannot_transpile_unverified_certificate", cert.Details))
 	}
 
-	var equalityStr string
-	var tactic string
-
-	switch cert.Domain {
-	case DomainFactor:
-		// e.g. factor(x^2 - 1) => (x - 1)*(x + 1)
-		// Theorem: expr = result
-		var innerExpr Node
-		if fn, ok := inputExpr.(*FuncNode); ok && len(fn.Args) > 0 {
-			innerExpr = fn.Args[0]
-		} else {
-			innerExpr = inputExpr
+	// Prefer structured Certificate IR
+	certIR := cert.ToCertificateIR()
+	if certIR != nil {
+		// If it's a specific structured IR, directly transpile
+		switch certIR.(type) {
+		case *IdentityCertificate, *DerivCertificate, *InvertibilityCertificate,
+			*DecompositionCertificate, *ODECertificate, *WZCertificate:
+			return TranspileCertificateIRToLean(certIR)
 		}
-		lhs, err := ToLeanSyntax(innerExpr)
-		if err != nil {
-			return "", err
-		}
-		rhs, err := ToLeanSyntax(resultExpr)
-		if err != nil {
-			return "", err
-		}
-		equalityStr = fmt.Sprintf("%s = %s", lhs, rhs)
-		tactic = "by ring"
-
-	case DomainIntegral:
-		// e.g. integrate(2*x, x) => x^2
-		var integrand Node
-		var intVar string = "x"
-		if fn, ok := inputExpr.(*FuncNode); ok && len(fn.Args) > 0 {
-			integrand = fn.Args[0]
-			if len(fn.Args) > 1 {
-				if v, ok := fn.Args[1].(*VarNode); ok {
-					intVar = v.Name
-				}
-			}
-		}
-		fStr, err := ToLeanSyntax(integrand)
-		if err != nil {
-			fStr = "f"
-		}
-		resStr, err := ToLeanSyntax(resultExpr)
-		if err != nil {
-			resStr = "F"
-		}
-		if fStr != "" && resStr != "" {
-			equalityStr = fmt.Sprintf("deriv (fun %s => %s) %s = %s", intVar, resStr, intVar, fStr)
-		} else if cert.Equation != "" {
-			equalityStr = cert.Equation
-		} else {
-			equalityStr = fmt.Sprintf("%s = %s", fStr, resStr)
-		}
-		tactic = "by ring"
-
-	case DomainMatrix:
-		// Matrix inversion, multiplication or decomposition
-		if cert.Equation != "" {
-			equalityStr = cert.Equation
-		} else {
-			lhs, _ := ToLeanSyntax(inputExpr)
-			rhs, _ := ToLeanSyntax(resultExpr)
-			equalityStr = fmt.Sprintf("%s = %s", lhs, rhs)
-		}
-		tactic = "by ext <;> ring"
-
-	case DomainRationalApart:
-		// Partial fraction decomposition
-		var innerExpr Node
-		if fn, ok := inputExpr.(*FuncNode); ok && len(fn.Args) > 0 {
-			innerExpr = fn.Args[0]
-		} else {
-			innerExpr = inputExpr
-		}
-		lhs, err := ToLeanSyntax(innerExpr)
-		if err != nil {
-			return "", err
-		}
-		rhs, err := ToLeanSyntax(resultExpr)
-		if err != nil {
-			return "", err
-		}
-		equalityStr = fmt.Sprintf("%s = %s", lhs, rhs)
-		tactic = "by ring"
-
-	case DomainWZ:
-		equalityStr = cert.Equation
-		tactic = "by ring"
-
-	default:
-		// General algebraic equality verification
-		// If input is verify(A == B) or verify(A, B), extract inner nodes
-		actualInput := inputExpr
-		actualResult := resultExpr
-		if fn, ok := inputExpr.(*FuncNode); ok && fn.Name == "verify" {
-			if len(fn.Args) == 1 {
-				actualInput = fn.Args[0]
-				actualResult = nil
-			} else if len(fn.Args) >= 2 {
-				actualInput = fn.Args[0]
-				actualResult = fn.Args[1]
-			}
-		}
-
-		if rel, ok := actualInput.(*RelOpNode); ok {
-			s, err := ToLeanSyntax(rel)
-			if err != nil {
-				return "", err
-			}
-			equalityStr = s
-		} else if actualResult != nil {
-			lhs, err := ToLeanSyntax(actualInput)
-			if err != nil {
-				return "", err
-			}
-			rhs, err := ToLeanSyntax(actualResult)
-			if err != nil {
-				return "", err
-			}
-			equalityStr = fmt.Sprintf("%s = %s", lhs, rhs)
-		} else {
-			s, err := ToLeanSyntax(actualInput)
-			if err != nil {
-				return "", err
-			}
-			equalityStr = s
-		}
-		tactic = "by ring"
 	}
 
-	// Normalize any leftover == to = for Lean 4 syntax
-	equalityStr = strings.ReplaceAll(equalityStr, "==", "=")
-
-	return fmt.Sprintf("theorem ihd_verified_proof : %s := %s", equalityStr, tactic), nil
+	// Backward-compatible fallback for dynamic/unclassified nodes
+	return TranspileCertificateIRToLean(certIR)
 }
 
 // GenerateLeanSource generates a standalone, fully valid Lean 4 source file with Mathlib imports, variables, and theorem.
