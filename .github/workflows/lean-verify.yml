@@ -99,11 +99,18 @@ jobs:
             echo "----------------------------------------"
             cat "$f"
             echo ""
-            if $HOME/.elan/bin/lake env lean "$f"; then
-              echo ">>> [PASS] $f successfully verified by Lean 4 kernel."
-            else
-              echo ">>> [FAIL] $f failed Lean 4 verification."
+            OUTPUT=$($HOME/.elan/bin/lake env lean "$f" 2>&1)
+            EXIT_CODE=$?
+            echo "$OUTPUT"
+            echo ""
+            if [ $EXIT_CODE -ne 0 ]; then
+              echo ">>> [FAIL] $f failed Lean 4 compilation."
               FAILED=1
+            elif echo "$OUTPUT" | grep -q "sorryAx"; then
+              echo ">>> [FAIL] $f contains 'sorryAx' (incomplete proof using sorry)."
+              FAILED=1
+            else
+              echo ">>> [PASS] $f successfully verified by Lean 4 kernel without sorry."
             fi
           done
 

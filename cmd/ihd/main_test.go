@@ -440,6 +440,9 @@ func TestCLI_LeanAndLeanFile(t *testing.T) {
 	if !strings.Contains(fileStr, "variable (x : ℚ)") {
 		t.Errorf("expected variable declaration in saved file, got %q", fileStr)
 	}
+	if !strings.Contains(fileStr, "#print axioms ihd_certified_proof") {
+		t.Errorf("expected '#print axioms ihd_certified_proof' in saved file, got %q", fileStr)
+	}
 
 	// 3. Test 'lean <expr>' prefix
 	outPrefix := new(bytes.Buffer)
@@ -450,6 +453,32 @@ func TestCLI_LeanAndLeanFile(t *testing.T) {
 	}
 	if !strings.Contains(outPrefix.String(), "by ring") {
 		t.Errorf("expected 'by ring' for prefix command, got %q", outPrefix.String())
+	}
+
+	// 4. Test calculus integration lean generation: integrate(exp(x), x)
+	outExp := new(bytes.Buffer)
+	errOutExp := new(bytes.Buffer)
+	codeExp := run([]string{"--lean", "integrate(exp(x), x)"}, strings.NewReader(""), outExp, errOutExp)
+	if codeExp != 0 {
+		t.Fatalf("expected exit code 0, got %d. stderr: %s", codeExp, errOutExp.String())
+	}
+	expStr := outExp.String()
+	if !strings.Contains(expStr, "by simp") {
+		t.Errorf("expected 'by simp' for exp deriv proof, got %q", expStr)
+	}
+	if !strings.Contains(expStr, "#print axioms ihd_certified_proof") {
+		t.Errorf("expected '#print axioms ihd_certified_proof' in output, got %q", expStr)
+	}
+
+	// 5. Test factor(x^3 - 1)
+	outCube := new(bytes.Buffer)
+	errOutCube := new(bytes.Buffer)
+	codeCube := run([]string{"--lean", "factor(x^3 - 1)"}, strings.NewReader(""), outCube, errOutCube)
+	if codeCube != 0 {
+		t.Fatalf("expected exit code 0, got %d. stderr: %s", codeCube, errOutCube.String())
+	}
+	if !strings.Contains(outCube.String(), "by ring") {
+		t.Errorf("expected 'by ring' for factor(x^3 - 1), got %q", outCube.String())
 	}
 }
 

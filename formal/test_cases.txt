@@ -3,10 +3,15 @@
 
 # 1. Algebraic Identities & Polynomial Factorization (Ring tactics)
 factor(x^2 - 1)
+factor(x^3 - 1)
+factor(x^4 - 16)
 factor(x^8 - 1)
 
 # 2. Calculus / Indefinite Integration (Derivative Certificates)
+integrate(exp(x), x)
+integrate(cos(x), x)
 integrate(x*sin(x), x)
 
 # 3. Geometric Automated Theorem Proving (Wu's Method with NDG tracking)
 geo_prove([midpoint(M, A, B), midpoint(N, A, C)], parallel(M, N, B, C))
+

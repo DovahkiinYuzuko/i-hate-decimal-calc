@@ -358,7 +358,7 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 			intVar = "x"
 		}
 		equalityStr = fmt.Sprintf("deriv (fun %s => %s) %s = %s", intVar, resStr, intVar, fStr)
-		tactic = "by first | simp | (try simp <;> ring)"
+		tactic = "by simp"
 
 	case *InvertibilityCertificate:
 		mStr, _ := ToLeanSyntax(c.Matrix)
@@ -549,7 +549,7 @@ func GenerateLeanSource(theoremName string, cert *VerificationCertificate, input
 	}
 
 	b.WriteString(theoremCode)
-	b.WriteString("\n")
+	b.WriteString(fmt.Sprintf("\n\n#print axioms %s\n", escapeLeanIdent(theoremName)))
 
 	return b.String(), nil
 }

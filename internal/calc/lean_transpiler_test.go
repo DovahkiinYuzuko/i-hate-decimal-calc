@@ -183,7 +183,7 @@ func TestTranspileCertificateIRToLean_Direct(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(leanDeriv, "deriv (fun x => F) x = x := by first | simp | (try simp <;> ring)") {
+	if !strings.Contains(leanDeriv, "deriv (fun x => F) x = x := by simp") {
 		t.Errorf("unexpected Lean output: %s", leanDeriv)
 	}
 
@@ -280,5 +280,8 @@ func TestGenerateLeanSource_RealAndGeometry(t *testing.T) {
 	}
 	if !strings.Contains(fullGeoSrc, "Mathlib.Analysis.SpecialFunctions.Trigonometric.Deriv") {
 		t.Errorf("expected Trigonometric.Deriv import, got: %s", fullGeoSrc)
+	}
+	if !strings.Contains(fullGeoSrc, "#print axioms midpoint_theorem") {
+		t.Errorf("expected #print axioms in output, got: %s", fullGeoSrc)
 	}
 }
