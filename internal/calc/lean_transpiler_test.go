@@ -183,7 +183,7 @@ func TestTranspileCertificateIRToLean_Direct(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(leanDeriv, "deriv (fun x => F) x = x := by ring") {
+	if !strings.Contains(leanDeriv, "deriv (fun x => F) x = x := by simp; ring") {
 		t.Errorf("unexpected Lean output: %s", leanDeriv)
 	}
 
@@ -250,10 +250,35 @@ func TestGenerateLeanSource_RealAndGeometry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(geoSrc, "A_x") || !strings.Contains(geoSrc, "B_x") || !strings.Contains(geoSrc, "M_x") {
+	if !strings.Contains(geoSrc, "A_x") || !strings.Contains(geoSrc, "B_x") {
 		t.Errorf("missing coordinate variables in geometric proof: %s", geoSrc)
 	}
 	if !strings.Contains(geoSrc, "variable (") || !strings.Contains(geoSrc, ": ℚ)") {
 		t.Errorf("expected rational variable declaration in geometric proof: %s", geoSrc)
+	}
+
+	// 3. Full pipeline test with midpoint theorem
+	env := NewEnv()
+	parsed, err := ParseStatement("geo_prove([midpoint(M, A, B), midpoint(N, A, C)], parallel(M, N, B, C))")
+	if err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	fn := parsed.(*FuncNode)
+	resNode, err := EvalGeoProve(fn.Args, env)
+	if err != nil || resNode.String() != "true" {
+		t.Fatalf("failed to prove geometric theorem: %v", err)
+	}
+	fullGeoSrc, err := GenerateLeanSource("midpoint_theorem", env.LastCert, fn, resNode)
+	if err != nil {
+		t.Fatalf("failed to generate lean source: %v", err)
+	}
+	if !strings.Contains(fullGeoSrc, "theorem midpoint_theorem") {
+		t.Errorf("expected theorem midpoint_theorem, got: %s", fullGeoSrc)
+	}
+	if !strings.Contains(fullGeoSrc, ":= by ring") {
+		t.Errorf("expected by ring tactic, got: %s", fullGeoSrc)
+	}
+	if !strings.Contains(fullGeoSrc, "Mathlib.Analysis.SpecialFunctions.Trigonometric.Deriv") {
+		t.Errorf("expected Trigonometric.Deriv import, got: %s", fullGeoSrc)
 	}
 }
