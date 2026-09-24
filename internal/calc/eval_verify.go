@@ -18,6 +18,7 @@ const (
 	DomainMatrix        VerificationDomain = "matrix"
 	DomainWZ            VerificationDomain = "wz"
 	DomainGeometry      VerificationDomain = "geometry"
+	DomainImpossibility VerificationDomain = "impossibility"
 	DomainGeneral       VerificationDomain = "general"
 )
 

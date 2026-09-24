@@ -11,6 +11,7 @@ const (
 	ImpossibilityNonElementaryIntegral ImpossibilityKind = "non_elementary_integral"
 	ImpossibilityNoSolution            ImpossibilityKind = "no_solution"
 	ImpossibilityLinearlyDependent     ImpossibilityKind = "linearly_dependent"
+	ImpossibilityAbelRuffini           ImpossibilityKind = "abel_ruffini"
 )
 
 // ImpossibilityCertificate represents a certified mathematical proof of impossibility / non-existence:

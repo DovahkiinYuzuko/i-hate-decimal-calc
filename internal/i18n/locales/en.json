@@ -657,6 +657,17 @@
     "err_invalid_fsm_transition": "puiseux: invalid FSM state transition (%v -> %v)",
     "err_no_characteristic_roots": "puiseux: no non-zero characteristic roots found",
     "err_cannot_expand": "puiseux: local expansion failed: %s"
+  },
+  "galois": {
+    "err_galois_args": "%s requires 1 or 2 arguments: (poly [, x])",
+    "err_poly_must_be_univariate": "Galois group computation only supports univariate polynomials: %s",
+    "err_degree_out_of_range": "Galois group computation supports irreducible polynomials of degree 1 to 5 (got degree %d)",
+    "err_poly_not_squarefree": "polynomial has multiple roots (gcd(f, f') != 1)",
+    "err_poly_reducible": "Galois group identification requires an irreducible polynomial (reducible: %s)",
+    "err_resolvent_failed": "failed to compute resolvent polynomial: %s",
+    "err_poly_must_be_monic": "algebra error: leading coefficient must be 1 (monic polynomial required)",
+    "proof_abel_ruffini": "By the Abel-Ruffini theorem, since the Galois group %s is non-solvable (its commutator subgroup does not terminate), the roots of this equation cannot be expressed in radicals.",
+    "proof_solvable": "Since the Galois group %s is solvable (its derived series terminates in the trivial group), this equation is solvable by radicals."
   }
 }
 

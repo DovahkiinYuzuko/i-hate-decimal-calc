@@ -78,6 +78,12 @@ ihd "factor(x^4 + 3*x^2 + 2)"
 
 ihd "geo_prove([midpoint(M, A, B), midpoint(N, A, C)], parallel(M, N, B, C))"
 # 出力: true（呉の方法・標数集合・擬除算による中点連結定理等の初等幾何自動証明）
+
+ihd "galois_group(x^5 - 4*x + 2)"
+# 出力: S5（レゾルベントおよびDedekind-Frobenius正の証拠による決定論的ガロア群算定）
+
+ihd --verify "is_solvable_by_radicals(x^5 - 4*x + 2)"
+# 出力: false（アーベル・ルフィニ定理による代数的不可解性証明書 [VERIFIED: expr == false] を発行）
 ```
 
 
@@ -223,6 +229,7 @@ ihd "plot(sin(x), [-pi, pi])"
 - **幾何学解析**: `line_intersect`, `circle_intersect`, `triangle_area`, `triangle_centers`, `geo_prove`, `collinear`, `midpoint`, `parallel`, `perpendicular`, `equal_length_sq`, `circle_concyclic`
 - **厳密離散確率・統計**: `binom`, `hyper`, `geom`, `bayes`, `expect`, `variance`, `stddev`
 - **実代数幾何・数理論理・量化子消去**: `qe`, `forall`, `exists`, `cad`
+- **ガロア理論・代数的根号可解性**: `galois_group`, `is_solvable_by_radicals`
 - **楕円曲線代数・数論幾何**: `ec_add`, `ec_mul`, `ec_torsion`
 - **前提条件システム（仮定）**: `assume`, `unassume`, `assumptions`, `clear_assumptions`
 - **ビジュアル・自己検証**: `plot`, `verify`
@@ -241,8 +248,8 @@ ihd "plot(sin(x), [-pi, pi])"
 | `--pretty`           | 分数線や根号を複数行アスキーアートで組版表示する2Dプリティプリント。<br>`ihd --pretty "1/2 + sqrt(2)/2"`                                                               |
 | `--deg`              | 三角関数および逆三角関数を度数法（Degree）として解釈・計算。<br>`ihd --deg "sin(30) + cos(60)"` $\to$ `1`                                                              |
 | `--explain`          | 代数的項書き換え（有理化・二重根号・微分則等）を途中式ツリーとして詳細表示。<br>`ihd --explain "1 / (sqrt(2) + 1)"`                                                    |
-| `--verify`           | 代数的証明書中間表現（Certificate IR）に基づき、計算結果（因数分解、逆行列/各種分解、微積分、ODE、超幾何和WZ、幾何自動証明等）に対し独立した逆算・双対検証を行い、反証不可能な代数的証明書を発行・出力。<br>`ihd --verify "integrate(1/(x^2 + 1), x)"` $\to$ `atan(x)`<br>`[VERIFIED: diff(F, x) - f == 0]` |
-| `--lean`             | 計算結果、Certificate IR、および幾何自動証明（3段階NDG条件付き定理）を定理証明支援系 **Lean 4（Mathlib4）** の形式証明コード（`by ring`, `by ext <;> ring` 等）として自動トランスパイル出力。<br>`ihd --lean "factor(x^2 - 1)"`                         |
+| `--verify`           | 代数的証明書中間表現（Certificate IR）に基づき、計算結果（因数分解、逆行列/各種分解、微積分、ODE、超幾何和WZ、幾何自動証明、アーベル・ルフィニ代数的不可解性等）に対し独立した逆算・双対検証を行い、反証不可能な代数的証明書を発行・出力。<br>`ihd --verify "integrate(1/(x^2 + 1), x)"` $\to$ `atan(x)`<br>`[VERIFIED: diff(F, x) - f == 0]`<br>`ihd --verify "is_solvable_by_radicals(x^5 - 4*x + 2)"` $\to$ `false`<br>`[VERIFIED: expr == false]` |
+| `--lean`             | 計算結果、Certificate IR、幾何自動証明（3段階NDG条件付き定理）、およびアーベル・ルフィニ代数的不可解性証明を定理証明支援系 **Lean 4（Mathlib4）** の形式証明コード（`by ring`, `by ext <;> ring`, `theorem ... : ¬ IsSolvable ...` 等）として自動トランスパイル出力。<br>`ihd --lean "factor(x^2 - 1)"`                         |
 | `--lean-file <path>` | 生成された Lean 4 形式証明コードをスタンドアロンな `.lean` ファイルとして指定パスへ保存。<br>`ihd --lean-file proof.lean "factor(x^2 - 1)"`                                 |
 | `--lang <code/auto>` | 表示言語（ロケール）を指定（`ja`, `en`, `auto`）。設定は `~/.ihd/config.json` に永続化され、カスタム辞書（`~/.ihd/locales/`）にも対応。<br>`ihd --lang en "1/2 + 1/3"` |
 | `-h`, `--help`       | コマンドのヘルプメッセージを表示。                                                                                                                                     |
@@ -349,6 +356,12 @@ ihd "factor(x^4 + 3*x^2 + 2)"
 
 ihd "geo_prove([midpoint(M, A, B), midpoint(N, A, C)], parallel(M, N, B, C))"
 # Output: true (Automated geometric theorem proving via Wu's method, characteristic sets & pseudo-division)
+
+ihd "galois_group(x^5 - 4*x + 2)"
+# Output: S5 (Deterministic Galois group computation via resolvents and Dedekind-Frobenius witnesses)
+
+ihd --verify "is_solvable_by_radicals(x^5 - 4*x + 2)"
+# Output: false (Emits Abel-Ruffini impossibility certificate [VERIFIED: expr == false])
 ```
 
 
@@ -494,6 +507,7 @@ ihd "plot(sin(x), [-pi, pi])"
 - **Computational Geometry**: `line_intersect`, `circle_intersect`, `triangle_area`, `triangle_centers`, `geo_prove`, `collinear`, `midpoint`, `parallel`, `perpendicular`, `equal_length_sq`, `circle_concyclic`
 - **Exact Discrete Probability & Statistics**: `binom`, `hyper`, `geom`, `bayes`, `expect`, `variance`, `stddev`
 - **Real Algebraic Geometry & Quantifier Elimination**: `qe`, `forall`, `exists`, `cad`
+- **Galois Theory & Solvability by Radicals**: `galois_group`, `is_solvable_by_radicals`
 - **Elliptic Curves & Arithmetic Geometry**: `ec_add`, `ec_mul`, `ec_torsion`
 - **Symbolic Assumptions System**: `assume`, `unassume`, `assumptions`, `clear_assumptions`
 - **Visualization & Verification Tools**: `plot`, `verify`
@@ -510,8 +524,8 @@ ihd "plot(sin(x), [-pi, pi])"
 | `--pretty`           | Output expression in multi-line 2D pretty-printed Unicode formatting.<br>`ihd --pretty "1/2 + sqrt(2)/2"`                                         |
 | `--deg`              | Evaluate trigonometric and inverse trigonometric functions in degrees.<br>`ihd --deg "sin(30) + cos(60)"` $\to$ `1`                               |
 | `--explain`          | Step-by-step educational explanations of algebraic derivations in a 2D tree.<br>`ihd --explain "1 / (sqrt(2) + 1)"`                               |
-| `--verify`           | Autonomously reverse-verify algebraic correctness via Certificate IR (factorization, matrix inv/decomps, calculus, ODE, WZ hypergeometric, automated geometric theorem proving) and emit algebraic proof certificate.<br>`ihd --verify "factor(x^2 - 1)"` |
-| `--lean`             | Transpile calculation results, Certificate IR, and automated geometric proofs (with 3-tier non-degeneracy conditions) into formal **Lean 4 (Mathlib4)** proof theorems (`by ring`, `by ext <;> ring`).<br>`ihd --lean "factor(x^2 - 1)"` |
+| `--verify`           | Autonomously reverse-verify algebraic correctness via Certificate IR (factorization, matrix inv/decomps, calculus, ODE, WZ hypergeometric, automated geometric theorem proving, Abel-Ruffini impossibility) and emit algebraic proof certificate.<br>`ihd --verify "integrate(1/(x^2 + 1), x)"` $\to$ `atan(x)`<br>`[VERIFIED: diff(F, x) - f == 0]`<br>`ihd --verify "is_solvable_by_radicals(x^5 - 4*x + 2)"` $\to$ `false`<br>`[VERIFIED: expr == false]` |
+| `--lean`             | Transpile calculation results, Certificate IR, automated geometric proofs (with 3-tier non-degeneracy conditions), and Abel-Ruffini algebraic impossibility proofs into formal **Lean 4 (Mathlib4)** proof theorems (`by ring`, `by ext <;> ring`, `theorem ... : ¬ IsSolvable ...`).<br>`ihd --lean "factor(x^2 - 1)"` |
 | `--lean-file <path>` | Save generated Lean 4 proof code as a standalone, runnable `.lean` file.<br>`ihd --lean-file proof.lean "factor(x^2 - 1)"`                         |
 | `--lang <code/auto>` | Specify display language (`ja`, `en`, `auto`). Persisted to `~/.ihd/config.json`.<br>`ihd --lang en "1/2 + 1/3"`                                  |
 | `-h`, `--help`       | Display command help message.                                                                                                                     |
