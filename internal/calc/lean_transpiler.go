@@ -371,10 +371,11 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 		}
 		if dim > 0 {
 			equalityStr = fmt.Sprintf("(%s * %s : Matrix (Fin %d) (Fin %d) ℚ) = 1", mStr, invStr, dim, dim)
+			tactic = "by first | decide | (ext <;> ring)"
 		} else {
 			equalityStr = fmt.Sprintf("%s * %s = 1", mStr, invStr)
+			tactic = "by ext <;> ring"
 		}
-		tactic = "by ext <;> ring"
 
 	case *DecompositionCertificate:
 		mStr, _ := ToLeanSyntax(c.Matrix)
@@ -390,10 +391,11 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 		}
 		if rows > 0 && cols > 0 {
 			equalityStr = fmt.Sprintf("(%s : Matrix (Fin %d) (Fin %d) ℚ) = %s", mStr, rows, cols, strings.Join(factorStrs, " * "))
+			tactic = "by first | decide | (ext <;> ring)"
 		} else {
 			equalityStr = fmt.Sprintf("%s = %s", mStr, strings.Join(factorStrs, " * "))
+			tactic = "by ext <;> ring"
 		}
-		tactic = "by ext <;> ring"
 
 	case *ODECertificate:
 		odeStr, _ := ToLeanSyntax(c.ODE)
@@ -546,6 +548,7 @@ func GenerateLeanSource(theoremName string, cert *VerificationCertificate, input
 	b.WriteString("import Mathlib.Data.Rat.Defs\n")
 	b.WriteString("import Mathlib.Basic.Real.Basic\n")
 	b.WriteString("import Mathlib.Data.Matrix.Basic\n")
+	b.WriteString("import Mathlib.Data.Matrix.Notation\n")
 	b.WriteString("import Mathlib.Analysis.Calculus.Deriv.Basic\n")
 	b.WriteString("import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic\n")
 	b.WriteString("import Mathlib.Analysis.SpecialFunctions.Trigonometric.Deriv\n")
