@@ -99,6 +99,9 @@ ihd "padic_expand(2/3, 5, 4)"
 
 ihd "factor(x^4 + 3*x^2 + 2)"
 # 出力: (1 + x^2)*(2 + x^2)（ヘンゼル・リフティングによる有理根を持たない高次多項式の既約分解）
+
+ihd "puiseux(y^2 - x^3, y, x, 3)"
+# 出力: [-x^3/2, x^3/2]（ニュートン多角形による代数曲線カプス特異点の分数冪級数局所分枝展開）
 ```
 
 
@@ -237,9 +240,9 @@ ihd "plot(sin(x), [-pi, pi])"
 > **[完全構文・演算子・関数リファレンス (Japanese Edition)](docs/references/reference.ja.md)**
 
 #### 主なカテゴリと代表関数
-- **基本代数・数論・方程式**: `sqrt`, `cbrt`, `expand`, `factor`, `apart`, `together`, `abs`, `gcd`, `lcm`, `mod`, `inv_mod`, `crt`, `totient`, `is_prime`, `cfrac`, `from_cfrac`, `rand`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `sturm`, `root_count`, `isolate_roots`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `solve`
+- **基本代数・数論・方程式**: `sqrt`, `cbrt`, `expand`, `factor`, `apart`, `together`, `abs`, `gcd`, `lcm`, `mod`, `inv_mod`, `crt`, `totient`, `is_prime`, `cfrac`, `from_cfrac`, `rand`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `sturm`, `root_count`, `isolate_roots`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `padic_val`, `padic_norm`, `padic_expand`, `solve`
 - **三角関数・対数・複素数**: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `trig_expand`, `trig_reduce`, `exp`, `log`, `ln`, `arg`, `polar`, `polar_exp`, `rect`
-- **微積分・常微分方程式・漸化式・特殊関数・級数**: `diff`, `integrate`, `risch_integrate`, `limit`, `residue`, `gamma`, `beta`, `bernoulli`, `zeta`, `dsolve`, `rsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`, `gosper_sum`, `wz_cert`
+- **微積分・常微分方程式・漸化式・特殊関数・級数**: `diff`, `integrate`, `risch_integrate`, `limit`, `residue`, `gamma`, `beta`, `bernoulli`, `zeta`, `dsolve`, `rsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`, `gosper_sum`, `wz_cert`, `puiseux`
 - **線形代数・3次元ベクトル解析**: `det`, `inv`, `transpose`, `rref`, `rank`, `trace`, `eigenvals`, `eigenvects`, `lu`, `qr`, `cholesky`, `ldlt`, `pinv`, `solve_linear`, `dot`, `cross`, `norm`, `grad`, `div`, `curl`
 - **幾何学解析**: `line_intersect`, `circle_intersect`, `triangle_area`, `triangle_centers`
 - **厳密離散確率・統計**: `binom`, `hyper`, `geom`, `bayes`, `expect`, `variance`, `stddev`
@@ -262,8 +265,8 @@ ihd "plot(sin(x), [-pi, pi])"
 | `--pretty`           | 分数線や根号を複数行アスキーアートで組版表示する2Dプリティプリント。<br>`ihd --pretty "1/2 + sqrt(2)/2"`                                                               |
 | `--deg`              | 三角関数および逆三角関数を度数法（Degree）として解釈・計算。<br>`ihd --deg "sin(30) + cos(60)"` $\to$ `1`                                                              |
 | `--explain`          | 代数的項書き換え（有理化・二重根号・微分則等）を途中式ツリーとして詳細表示。<br>`ihd --explain "1 / (sqrt(2) + 1)"`                                                    |
-| `--verify`           | 導出した計算結果に対し独立した逆算・双対検証を行い、代数的証明書を発行・出力。<br>`ihd --verify "integrate(1/(x^2 + 1), x)"` $\to$ `atan(x)`<br>`[VERIFIED: diff(F, x) - f == 0]` |
-| `--lean`             | 計算結果および自己検証証明書を定理証明支援系 **Lean 4（Mathlib4）** の証明コード（`by ring` 等）として出力。<br>`ihd --lean "factor(x^2 - 1)"`                         |
+| `--verify`           | 代数的証明書中間表現（Certificate IR）に基づき、計算結果（因数分解、逆行列/各種分解、微積分、ODE、超幾何和WZ等）に対し独立した逆算・双対検証を行い、反証不可能な代数的証明書を発行・出力。<br>`ihd --verify "integrate(1/(x^2 + 1), x)"` $\to$ `atan(x)`<br>`[VERIFIED: diff(F, x) - f == 0]` |
+| `--lean`             | 計算結果および Certificate IR 証明書を定理証明支援系 **Lean 4（Mathlib4）** の形式証明コード（`by ring`, `by ext <;> ring` 等）として自動トランスパイル出力。<br>`ihd --lean "factor(x^2 - 1)"`                         |
 | `--lean-file <path>` | 生成された Lean 4 形式証明コードをスタンドアロンな `.lean` ファイルとして指定パスへ保存。<br>`ihd --lean-file proof.lean "factor(x^2 - 1)"`                                 |
 | `--lang <code/auto>` | 表示言語（ロケール）を指定（`ja`, `en`, `auto`）。設定は `~/.ihd/config.json` に永続化され、カスタム辞書（`~/.ihd/locales/`）にも対応。<br>`ihd --lang en "1/2 + 1/3"` |
 | `-h`, `--help`       | コマンドのヘルプメッセージを表示。                                                                                                                                     |
@@ -391,6 +394,9 @@ ihd "padic_expand(2/3, 5, 4)"
 
 ihd "factor(x^4 + 3*x^2 + 2)"
 # Output: (1 + x^2)*(2 + x^2) (Higher-degree polynomial factorization via Hensel lifting)
+
+ihd "puiseux(y^2 - x^3, y, x, 3)"
+# Output: [-x^3/2, x^3/2] (Newton polygon algebraic fractional power series expansion at cusp singularity)
 ```
 
 
@@ -529,9 +535,9 @@ ihd "plot(sin(x), [-pi, pi])"
 > **[Complete Syntax, Operators & Functions Reference (English Edition)](docs/references/reference.en.md)**
 
 #### Major Categories & Representative Functions
-- **Basic Algebra, Number Theory & Equations**: `sqrt`, `cbrt`, `expand`, `factor`, `apart`, `together`, `abs`, `gcd`, `lcm`, `mod`, `inv_mod`, `crt`, `totient`, `is_prime`, `cfrac`, `from_cfrac`, `rand`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `sturm`, `root_count`, `isolate_roots`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `solve`
+- **Basic Algebra, Number Theory & Equations**: `sqrt`, `cbrt`, `expand`, `factor`, `apart`, `together`, `abs`, `gcd`, `lcm`, `mod`, `inv_mod`, `crt`, `totient`, `is_prime`, `cfrac`, `from_cfrac`, `rand`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `sturm`, `root_count`, `isolate_roots`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `padic_val`, `padic_norm`, `padic_expand`, `solve`
 - **Trigonometric, Logarithmic & Complex Functions**: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `trig_expand`, `trig_reduce`, `exp`, `log`, `ln`, `arg`, `polar`, `polar_exp`, `rect`
-- **Calculus, ODEs, Recurrences, Special Functions & Series**: `diff`, `integrate`, `risch_integrate`, `limit`, `residue`, `gamma`, `beta`, `bernoulli`, `zeta`, `dsolve`, `rsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`, `gosper_sum`, `wz_cert`
+- **Calculus, ODEs, Recurrences, Special Functions & Series**: `diff`, `integrate`, `risch_integrate`, `limit`, `residue`, `gamma`, `beta`, `bernoulli`, `zeta`, `dsolve`, `rsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`, `gosper_sum`, `wz_cert`, `puiseux`
 - **Linear Algebra & 3D Vector Calculus**: `det`, `inv`, `transpose`, `rref`, `rank`, `trace`, `eigenvals`, `eigenvects`, `lu`, `qr`, `cholesky`, `ldlt`, `pinv`, `solve_linear`, `dot`, `cross`, `norm`, `grad`, `div`, `curl`
 - **Computational Geometry**: `line_intersect`, `circle_intersect`, `triangle_area`, `triangle_centers`
 - **Exact Discrete Probability & Statistics**: `binom`, `hyper`, `geom`, `bayes`, `expect`, `variance`, `stddev`
@@ -552,8 +558,8 @@ ihd "plot(sin(x), [-pi, pi])"
 | `--pretty`           | Output expression in multi-line 2D pretty-printed Unicode formatting.<br>`ihd --pretty "1/2 + sqrt(2)/2"`                                         |
 | `--deg`              | Evaluate trigonometric and inverse trigonometric functions in degrees.<br>`ihd --deg "sin(30) + cos(60)"` $\to$ `1`                               |
 | `--explain`          | Step-by-step educational explanations of algebraic derivations in a 2D tree.<br>`ihd --explain "1 / (sqrt(2) + 1)"`                               |
-| `--verify`           | Autonomously reverse-verify algebraic correctness and emit mathematical proof certificate.<br>`ihd --verify "factor(x^2 - 1)"`                      |
-| `--lean`             | Transpile calculation result and proof certificate into **Lean 4 (Mathlib4)** proof code (`by ring`).<br>`ihd --lean "factor(x^2 - 1)"`              |
+| `--verify`           | Autonomously reverse-verify algebraic correctness via Certificate IR (factorization, matrix inv/decomps, calculus, ODE, WZ hypergeometric) and emit algebraic proof certificate.<br>`ihd --verify "factor(x^2 - 1)"` |
+| `--lean`             | Transpile calculation results and Certificate IR into formal **Lean 4 (Mathlib4)** proof theorems (`by ring`, `by ext <;> ring`).<br>`ihd --lean "factor(x^2 - 1)"` |
 | `--lean-file <path>` | Save generated Lean 4 proof code as a standalone, runnable `.lean` file.<br>`ihd --lean-file proof.lean "factor(x^2 - 1)"`                         |
 | `--lang <code/auto>` | Specify display language (`ja`, `en`, `auto`). Persisted to `~/.ihd/config.json`.<br>`ihd --lang en "1/2 + 1/3"`                                  |
 | `-h`, `--help`       | Display command help message.                                                                                                                     |

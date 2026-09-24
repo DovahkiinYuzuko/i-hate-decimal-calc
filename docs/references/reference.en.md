@@ -243,5 +243,14 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `padic_norm` | `padic_norm(3/20, 2)` | Exact ultrametric norm $|x|_p = p^{-v_p(x)}$ as an exact rational (`big.Rat`) |
 | `padic_expand` | `padic_expand(2/3, 5, 4)` | Truncated p-adic power series expansion string $a_0 + a_1 p + a_2 p^2 + \dots + O(p^k)$ |
 
+---
+
+### 13. Local Algebraic Series & Singularities (Puiseux Series)
+
+| Function | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `puiseux` | `puiseux(y^2 - x^3, y, x, 3)` | Deterministically solves for local fractional power Puiseux series branches $y(x) = \sum c_k x^{p_k/q_k}$ around singularities/branch points of $F(x, y) = 0$ via the Newton polygon algorithm (default order 3) |
+
+
 
 
