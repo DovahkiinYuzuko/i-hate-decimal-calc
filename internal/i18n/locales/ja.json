@@ -305,7 +305,7 @@
     "err_solve_identity_equation_infinite_solutions": "数理計算エラー: solve: identity equation (infinite solutions)",
     "err_solve_equation_has_no_solution": "数理計算エラー: solve: equation has no solution (contradiction: %s = 0)",
     "err_solve_equation_contains_no_degree": "数理計算エラー: solve: equation contains no degree of %s",
-    "err_solve_error_polynomial_degree_only": "数理計算エラー: solve error: polynomial degree %d is not currently supported (only linear and quadratic equations)",
+    "err_solve_error_polynomial_degree_only": "数理計算エラー: solve error: polynomial degree %d is not currently supported (only linear, quadratic, and cubic equations)",
     "err_taylor_error_second_argument_must": "入力形式または引数の要件を満たしていません: taylor error: second argument must be a variable, got %s",
     "err_taylor_error_order_must_be": "入力形式または引数の要件を満たしていません: taylor error: order must be non-negative integer, got %s",
     "err_taylor_error_in": "数理計算エラー: taylor error in %d-th derivative: %w",

@@ -25,6 +25,22 @@ func TestEvalPadicVal(t *testing.T) {
 	if !ok || rat.Val.Cmp(new(big.Rat).SetInt64(-2)) != 0 {
 		t.Fatalf("expected -2, got %s", res.String())
 	}
+
+	// padic_val(0, 5) -> infinity (mathematical definition v_p(0) = +infinity)
+	res, err = EvalString("padic_val(0, 5)")
+	if err != nil {
+		t.Fatalf("EvalString padic_val(0, 5) failed: %v", err)
+	}
+	vNode, okV := res.(*VarNode)
+	if !okV || vNode.Name != "infinity" {
+		t.Fatalf("expected 'infinity', got %s", res.String())
+	}
+
+	// padic_val(0, 1) -> error (p must be >= 2)
+	_, err = EvalString("padic_val(0, 1)")
+	if err == nil {
+		t.Fatalf("expected error for padic_val(0, 1) with non-prime base, got nil")
+	}
 }
 
 func TestEvalPadicNorm(t *testing.T) {
@@ -47,6 +63,16 @@ func TestEvalPadicNorm(t *testing.T) {
 	expected := new(big.Rat).SetFrac64(1, 25)
 	if !ok || rat.Val.Cmp(expected) != 0 {
 		t.Fatalf("expected 1/25, got %s", res.String())
+	}
+
+	// padic_norm(0, 5) -> 0 (|0|_p = 0)
+	res, err = EvalString("padic_norm(0, 5)")
+	if err != nil {
+		t.Fatalf("EvalString padic_norm(0, 5) failed: %v", err)
+	}
+	rat, ok = res.(*RationalNode)
+	if !ok || rat.Val.Sign() != 0 {
+		t.Fatalf("expected 0, got %s", res.String())
 	}
 }
 
