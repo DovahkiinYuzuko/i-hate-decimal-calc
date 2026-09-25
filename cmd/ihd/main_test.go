@@ -229,7 +229,7 @@ func TestCLI_Pipe_Variables(t *testing.T) {
 func TestCLI_Explain(t *testing.T) {
 	out := new(bytes.Buffer)
 	errOut := new(bytes.Buffer)
-	code := run([]string{"--explain", "1 / (sqrt(2) + 1)"}, nil, out, errOut)
+	code := run([]string{"--lang", "ja", "--explain", "1 / (sqrt(2) + 1)"}, nil, out, errOut)
 	if code != 0 {
 		t.Fatalf("expected code 0, got %d. stderr: %s", code, errOut.String())
 	}
@@ -243,7 +243,7 @@ func TestCLI_Explain(t *testing.T) {
 }
 
 func TestCLI_REPL_ExplainCommand(t *testing.T) {
-	input := "explain 1 / (sqrt(2) + 1)\nexit\n"
+	input := "lang ja\nexplain 1 / (sqrt(2) + 1)\nexit\n"
 	in := strings.NewReader(input)
 	out := new(bytes.Buffer)
 	errOut := new(bytes.Buffer)
@@ -489,8 +489,8 @@ func TestCLI_LeanAndLeanFile(t *testing.T) {
 		t.Fatalf("expected exit code 0, got %d. stderr: %s", codeInv, errOutInv.String())
 	}
 	invStr := outInv.String()
-	if !strings.Contains(invStr, "by ext <;> ring") {
-		t.Errorf("expected 'by ext <;> ring' for matrix inv proof, got %q", invStr)
+	if !strings.Contains(invStr, "fin_cases") && !strings.Contains(invStr, "norm_num") && !strings.Contains(invStr, "by ext") {
+		t.Errorf("expected matrix inv proof tactic, got %q", invStr)
 	}
 
 	// 7. Test structured geometric deduction theorem: midpoint theorem

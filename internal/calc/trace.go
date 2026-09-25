@@ -120,25 +120,25 @@ func RecordTraceRewrite(rule RuleID, before Node, after Node, note string) {
 	}
 }
 
-// ruleTitles maps RuleIDs to human-friendly step titles.
+// ruleTitles maps RuleIDs to human-friendly step titles (English fallback).
 var ruleTitles = map[RuleID]string{
-	RuleRationalize:    "分母の有理化",
-	RuleDenestRadical:  "二重根号の簡約",
-	RuleSolveQuadratic: "2次方程式の求解（解の公式）",
-	RuleSolveCubic:     "3次方程式の求解（カルダノの公式）",
-	RuleSolveLinear:    "1次方程式の求解",
-	RuleDiffPower:      "べき乗の微分公式の適用",
-	RuleDiffProduct:    "積の微分公式の適用",
-	RuleDiffChain:      "合成関数の微分（チェインルール）",
-	RuleDiffTrig:       "三角関数の微分公式の適用",
-	RuleTaylor:         "テイラー級数展開の計算",
-	RuleSumFaulhaber:   "Faulhaberの公式によるべき乗和の閉形式導出",
-	RuleMatrixDet:      "余因子展開による行列式の計算",
-	RuleMatrixInv:      "余因子行列による逆行列の計算",
-	RuleIntegrate:      "記号不定積分・定積分の計算",
-	RuleTrigExpand:     "三角関数の加法定理・多倍角展開",
-	RuleTrigReduce:     "積和公式・次数下げ・三角関数の合成",
-	RuleLimit:          "極限値計算・不定形の代数解消",
+	RuleRationalize:    "Denominator Rationalization",
+	RuleDenestRadical:  "Radical Denesting",
+	RuleSolveQuadratic: "Quadratic Equation Solving",
+	RuleSolveCubic:     "Cubic Equation Solving",
+	RuleSolveLinear:    "Linear Equation Solving",
+	RuleDiffPower:      "Power Rule of Differentiation",
+	RuleDiffProduct:    "Product Rule of Differentiation",
+	RuleDiffChain:      "Chain Rule of Differentiation",
+	RuleDiffTrig:       "Trigonometric Differentiation",
+	RuleTaylor:         "Taylor Series Expansion",
+	RuleSumFaulhaber:   "Faulhaber's Formula for Sum of Powers",
+	RuleMatrixDet:      "Determinant via Cofactor Expansion",
+	RuleMatrixInv:      "Matrix Inverse via Adjugate Matrix",
+	RuleIntegrate:      "Symbolic Integration",
+	RuleTrigExpand:     "Trigonometric Expansion",
+	RuleTrigReduce:     "Trigonometric Reduction",
+	RuleLimit:          "Limit Evaluation",
 }
 
 // CompressTrace converts low-level rewrite events into user-facing pedagogical steps.
@@ -174,17 +174,17 @@ func CompressTrace(events []RewriteEvent) []PedagogicalStep {
 // FormatTrace renders the pedagogical steps and final result into a 2D Unicode tree.
 func FormatTrace(inputExpr string, steps []PedagogicalStep, result Node) string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("式: %s\n", inputExpr))
+	b.WriteString(i18n.T("trace.expression_header", inputExpr))
 
 	if len(steps) == 0 {
-		b.WriteString("├── [Step 0: 単純計算]\n")
-		b.WriteString("│   式は直接簡約されました\n")
-		b.WriteString(fmt.Sprintf("└── [Result]\n    = %s\n", Format(result)))
+		b.WriteString(fmt.Sprintf("├── [%s]\n", i18n.T("trace.step_0_title")))
+		b.WriteString(fmt.Sprintf("│   %s\n", i18n.T("trace.step_0_desc")))
+		b.WriteString(fmt.Sprintf("└── %s\n    = %s\n", i18n.T("trace.result_header"), Format(result)))
 		return b.String()
 	}
 
 	for i, step := range steps {
-		b.WriteString(fmt.Sprintf("├── [Step %d: %s]\n", step.StepNumber, step.Title))
+		b.WriteString(fmt.Sprintf("├── %s\n", i18n.T("trace.step_header", step.StepNumber, step.Title)))
 		if step.Explanation != "" {
 			b.WriteString(fmt.Sprintf("│   %s\n", step.Explanation))
 		}
@@ -196,7 +196,7 @@ func FormatTrace(inputExpr string, steps []PedagogicalStep, result Node) string 
 		}
 	}
 
-	b.WriteString("└── [Result]\n")
+	b.WriteString(fmt.Sprintf("└── %s\n", i18n.T("trace.result_header")))
 	b.WriteString(fmt.Sprintf("    = %s\n", Format(result)))
 
 	return b.String()

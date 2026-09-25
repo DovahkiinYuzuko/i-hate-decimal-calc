@@ -99,7 +99,7 @@ func differentiate(n Node, varName string) (Node, error) {
 			if err != nil {
 				return nil, err
 			}
-			RecordTraceRewrite(RuleDiffPower, v, res, fmt.Sprintf("べき乗の微分公式: d/d%s [%s^%s] = %s", varName, Format(v.Base), Format(v.Exp), Format(res)))
+			RecordTraceRewrite(RuleDiffPower, v, res, i18n.T("trace.diff_power", varName, Format(v.Base), Format(v.Exp), Format(res)))
 			return res, nil
 		} else if !baseHas && expHas {
 			// d/dx [ a^v(x) ] = a^v(x) * ln(a) * v'(x)
@@ -454,7 +454,7 @@ func solveEquation(expr Node, varName string) (Node, error) {
 			return nil, err
 		}
 		res := NewList([]Node{root})
-		RecordTraceRewrite(RuleSolveLinear, expr, res, fmt.Sprintf("1次方程式 %s = 0 を移項・除算して解を導出", Format(expanded)))
+		RecordTraceRewrite(RuleSolveLinear, expr, res, i18n.T("trace.solve_linear", Format(expanded)))
 		return res, nil
 	}
 
@@ -504,7 +504,7 @@ func solveEquation(expr Node, varName string) (Node, error) {
 				return nil, err
 			}
 			res := NewList([]Node{root})
-			RecordTraceRewrite(RuleSolveQuadratic, expr, res, fmt.Sprintf("2次方程式の重解: 判別式 D = 0 より %s = -b / (2a)", varName))
+			RecordTraceRewrite(RuleSolveQuadratic, expr, res, i18n.T("trace.solve_quad_repeated", varName))
 			return res, nil
 		}
 
@@ -538,7 +538,7 @@ func solveEquation(expr Node, varName string) (Node, error) {
 		}
 
 		resList := NewList([]Node{root1, root2})
-		RecordTraceRewrite(RuleSolveQuadratic, expr, resList, fmt.Sprintf("2次方程式の解の公式: 判別式 D = b^2 - 4ac = %s, %s = (-b ± √D) / (2a)", Format(d), varName))
+		RecordTraceRewrite(RuleSolveQuadratic, expr, resList, i18n.T("trace.solve_quad_formula", Format(d), varName))
 		return resList, nil
 	}
 
@@ -566,7 +566,7 @@ func solveEquation(expr Node, varName string) (Node, error) {
 			}
 		}
 		resList := NewList(uniqueRoots)
-		RecordTraceRewrite(RuleSolveCubic, expr, resList, fmt.Sprintf("3次方程式のカルダノの公式による厳密代数解: %s", varName))
+		RecordTraceRewrite(RuleSolveCubic, expr, resList, i18n.T("trace.solve_cubic_cardano", varName))
 		return resList, nil
 	}
 

@@ -22,7 +22,8 @@ var (
 	FuncLookup func(name string) (canonicalName string, minArgs int, maxArgs int, ok bool)
 )
 
-func newSyntaxErr(msg string, args ...any) error {
+func newSyntaxErr(key string, args ...any) error {
+	msg := i18n.T(key, args...)
 	if SyntaxErrorFactory != nil {
 		return SyntaxErrorFactory(msg, args...)
 	}
@@ -127,7 +128,7 @@ func Parse(input string) (ast.Node, error) {
 	p := NewParser(l)
 
 	if p.curTok.Type == TokenEOF {
-		return nil, newSyntaxErr("syntax error: empty expression")
+		return nil, newSyntaxErr("parser.err_empty_expr")
 	}
 
 	node, err := p.ParseExpression(PREC_LOWEST)
@@ -137,9 +138,9 @@ func Parse(input string) (ast.Node, error) {
 
 	if p.peekTok.Type != TokenEOF {
 		if p.isStartOfExpression(p.peekTok.Type) {
-			return nil, newSyntaxErr("syntax error: implicit multiplication is not allowed. Please write explicit '*' operator near %q", p.peekTok.Literal)
+			return nil, newSyntaxErr("parser.err_implicit_multiplication", p.peekTok.Literal)
 		}
-		return nil, newSyntaxErr("syntax error: unexpected token %q at position %d", p.peekTok.Literal, p.peekTok.Pos)
+		return nil, newSyntaxErr("parser.err_unexpected_token_pos", p.peekTok.Literal, p.peekTok.Pos)
 	}
 
 	return node, nil
@@ -164,7 +165,7 @@ func ParseStatement(input string) (interface{}, error) {
 		p.nextToken() // move to start of expression
 
 		if p.curTok.Type == TokenEOF {
-			return nil, newSyntaxErr("syntax error: missing expression after '='")
+			return nil, newSyntaxErr("parser.err_missing_expr_after_assign")
 		}
 
 		expr, err := p.ParseExpression(PREC_LOWEST)
@@ -173,7 +174,7 @@ func ParseStatement(input string) (interface{}, error) {
 		}
 
 		if p.peekTok.Type != TokenEOF {
-			return nil, newSyntaxErr("syntax error: unexpected token %q after expression", p.peekTok.Literal)
+			return nil, newSyntaxErr("parser.err_unexpected_token_after_expr", p.peekTok.Literal)
 		}
 
 		return &ast.AssignStmt{Name: varName, Value: expr}, nil
@@ -185,7 +186,7 @@ func ParseStatement(input string) (interface{}, error) {
 // ParseExpression parses an expression with Pratt parsing algorithm.
 func (p *Parser) ParseExpression(precedence int) (ast.Node, error) {
 	if p.curTok.Type == TokenIllegal {
-		return nil, newSyntaxErr("syntax error: illegal character %q at position %d", p.curTok.Literal, p.curTok.Pos)
+		return nil, newSyntaxErr("parser.err_illegal_char_pos", p.curTok.Literal, p.curTok.Pos)
 	}
 
 	// 1. Prefix parse
@@ -196,7 +197,7 @@ func (p *Parser) ParseExpression(precedence int) (ast.Node, error) {
 
 	// Check if next token starts another expression directly (implicit multiplication like 2pi or (1+2)(3+4))
 	if p.isStartOfExpression(p.peekTok.Type) {
-		return nil, newSyntaxErr("syntax error: implicit multiplication is not allowed. Please write explicit '*' operator near %q", p.peekTok.Literal)
+		return nil, newSyntaxErr("parser.err_implicit_multiplication", p.peekTok.Literal)
 	}
 
 	// 2. Infix parse
@@ -208,7 +209,7 @@ func (p *Parser) ParseExpression(precedence int) (ast.Node, error) {
 		}
 
 		if p.isStartOfExpression(p.peekTok.Type) {
-			return nil, newSyntaxErr("syntax error: implicit multiplication is not allowed. Please write explicit '*' operator near %q", p.peekTok.Literal)
+			return nil, newSyntaxErr("parser.err_implicit_multiplication", p.peekTok.Literal)
 		}
 	}
 
@@ -227,7 +228,7 @@ func (p *Parser) parsePrefix() (ast.Node, error) {
 			return p.parseFuncCall(name)
 		}
 		if isReservedFunc(name) && !isBareSymbolAllowed(name) {
-			return nil, newSyntaxErr("syntax error at position %d: function %q missing arguments", p.curTok.Pos, name)
+			return nil, newSyntaxErr("parser.err_func_missing_args", p.curTok.Pos, name)
 		}
 		// Constants: pi, e, or imaginary unit i
 		if name == "i" {
@@ -261,7 +262,7 @@ func (p *Parser) parsePrefix() (ast.Node, error) {
 			return nil, err
 		}
 		if p.peekTok.Type != TokenRParen {
-			return nil, newSyntaxErr("syntax error: expected matching ')', got %q", p.peekTok.Literal)
+			return nil, newSyntaxErr("parser.err_expected_rparen", p.peekTok.Literal)
 		}
 		p.nextToken() // move curTok to ')'
 		return expr, nil
@@ -270,7 +271,7 @@ func (p *Parser) parsePrefix() (ast.Node, error) {
 		return p.parseBracketExpression()
 
 	default:
-		return nil, newSyntaxErr("syntax error: unexpected token %q at position %d", p.curTok.Literal, p.curTok.Pos)
+		return nil, newSyntaxErr("parser.err_unexpected_token_pos", p.curTok.Literal, p.curTok.Pos)
 	}
 }
 
@@ -341,7 +342,7 @@ func (p *Parser) parseInfix(left ast.Node) (ast.Node, error) {
 		return ast.NewUnaryOp("!", left)
 
 	default:
-		return nil, newSyntaxErr("syntax error: unexpected infix token %q", p.curTok.Literal)
+		return nil, newSyntaxErr("parser.err_unexpected_infix_token", p.curTok.Literal)
 	}
 }
 
@@ -360,7 +361,7 @@ func (p *Parser) parseFuncCall(name string) (ast.Node, error) {
 				return ast.NewFunc(name, nil)
 			}
 		}
-		return nil, newSyntaxErr("syntax error: function %q requires arguments", name)
+		return nil, newSyntaxErr("parser.err_func_requires_args", name)
 	}
 
 	p.nextToken() // move to first arg
@@ -382,7 +383,7 @@ func (p *Parser) parseFuncCall(name string) (ast.Node, error) {
 			p.nextToken() // curTok is ')'
 			break
 		}
-		return nil, newSyntaxErr("syntax error: expected ',' or ')' in function call %q, got %q", name, p.peekTok.Literal)
+		return nil, newSyntaxErr("parser.err_expected_comma_or_rparen", name, p.peekTok.Literal)
 	}
 
 	if name == "sqrt" {
@@ -441,7 +442,7 @@ func (p *Parser) parseBracketExpression() (ast.Node, error) {
 		var matrixData [][]ast.Node
 		for {
 			if p.peekTok.Type != TokenLBracket {
-				return nil, newSyntaxErr("syntax error: expected '[' at start of matrix row, got %q", p.peekTok.Literal)
+				return nil, newSyntaxErr("parser.err_expected_lbracket_matrix_row", p.peekTok.Literal)
 			}
 			p.nextToken() // move to '[' of row
 
@@ -459,13 +460,13 @@ func (p *Parser) parseBracketExpression() (ast.Node, error) {
 		}
 
 		if p.peekTok.Type != TokenRBracket {
-			return nil, newSyntaxErr("syntax error: expected ']' to close matrix, got %q", p.peekTok.Literal)
+			return nil, newSyntaxErr("parser.err_expected_rbracket_close_matrix", p.peekTok.Literal)
 		}
 		p.nextToken() // move to ']' of matrix
 
 		rows := len(matrixData)
 		if rows == 0 {
-			return nil, newSyntaxErr("syntax error: empty matrix")
+			return nil, newSyntaxErr("parser.err_empty_matrix")
 		}
 		cols := len(matrixData[0])
 		return ast.NewMatrix(rows, cols, matrixData)
@@ -505,7 +506,7 @@ func (p *Parser) parseBracketList() ([]ast.Node, error) {
 	}
 
 	if p.peekTok.Type != TokenRBracket {
-		return nil, newSyntaxErr("syntax error: expected ']', got %q", p.peekTok.Literal)
+		return nil, newSyntaxErr("parser.err_expected_rbracket", p.peekTok.Literal)
 	}
 	p.nextToken() // move to ']'
 	return elems, nil

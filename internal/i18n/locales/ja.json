@@ -30,7 +30,8 @@
     "err_run_script_required": "run サブコマンドにはスクリプトファイルのパスが必要です: ihd run <file.ihd>",
     "err_run_open_failed": "スクリプトファイル '%s' を開けませんでした: %v",
     "err_run_read_failed": "スクリプトファイル '%s' の読み込み中にエラーが発生しました: %v",
-    "err_unknown_stmt": "不明な構文タイプです: %T"
+    "err_unknown_stmt": "不明な構文タイプです: %T",
+    "approx_format": "%s (≒ %s)"
   },
   "verify": {
     "verified_header": "[VERIFIED: %s]",
@@ -198,6 +199,22 @@
     "domain": "* 表示領域 (Domain):  x ∈ [%s, %s], y ∈ [%s, %s]\n"
   },
   "explain": {
+    "rule_rationalize": "分母の有理化",
+    "rule_denestradical": "二重根号の簡約",
+    "rule_solvequadratic": "2次方程式の求解（解の公式）",
+    "rule_solvecubic": "3次方程式の求解（カルダノの公式）",
+    "rule_solvelinear": "1次方程式の求解",
+    "rule_diffpower": "べき乗の微分公式の適用",
+    "rule_diffproduct": "積の微分公式の適用",
+    "rule_diffchain": "合成関数の微分（チェインルール）",
+    "rule_difftrig": "三角関数の微分公式の適用",
+    "rule_taylor": "テイラー級数展開の計算",
+    "rule_sumfaulhaber": "Faulhaberの公式によるべき乗和の閉形式導出",
+    "rule_matrixdet": "余因子展開による行列式の計算",
+    "rule_matrixinv": "余因子行列による逆行列の計算",
+    "rule_integrate": "記号不定積分・定積分の計算",
+    "rule_trigexpand": "三角関数の加法定理・多倍角展開",
+    "rule_trigreduce": "積和公式・次数下げ・三角関数の合成",
     "rule_limit": "極限値計算・不定形の代数解消",
     "limit_inf": "無限大極限: lim_{%s->%s} %s = %s",
     "limit_eval": "極限値計算: lim_{%s->%s} %s = %s",
@@ -668,6 +685,44 @@
     "err_poly_must_be_monic": "代数エラー: 最高次係数は1でなければなりません（モニック多項式が必要です）",
     "proof_abel_ruffini": "アーベル・ルフィニの定理により、ガロア群 %s は非可解群（交換子群が縮退しない）であるため、この方程式の解を四則演算と冪根で表すことは不可能です。",
     "proof_solvable": "ガロア群 %s は可解群（導来列が自明群に縮退する）であるため、この方程式は四則演算と冪根によって代数的に解くことが可能です。"
+  },
+  "trace": {
+    "expression_header": "式: %s\n",
+    "step_0_title": "Step 0: 単純計算",
+    "step_0_desc": "式は直接簡約されました",
+    "result_header": "[Result]",
+    "step_header": "[Step %d: %s]",
+    "diff_power": "べき乗の微分公式: d/d%s [%s^%s] = %s",
+    "solve_linear": "1次方程式 %s = 0 を移項・除算して解を導出",
+    "solve_quad_repeated": "2次方程式の重解: 判別式 D = 0 より %s = -b / (2a)",
+    "solve_quad_formula": "2次方程式の解の公式: 判別式 D = b^2 - 4ac = %s, %s = (-b ± √D) / (2a)",
+    "solve_cubic_cardano": "3次方程式のカルダノの公式による厳密代数解: %s",
+    "trig_expand": "三角関数の加法定理・多倍角展開",
+    "trig_reduce": "積和公式・次数下げ・三角関数の合成",
+    "indefinite_integral": "不定積分: ∫ (%s) d%s = %s",
+    "definite_integral": "定積分: ∫_%s^%s (%s) d%s = [F(%s)]_%s^%s = %s"
+  },
+  "parser": {
+    "err_empty_expr": "構文エラー: 式が空です",
+    "err_implicit_multiplication": "構文エラー: 暗黙の乗算は許可されていません。%q の近くに明示的な '*' を記述してください",
+    "err_unexpected_token_pos": "構文エラー: 位置 %d に予期しないトークン %q があります",
+    "err_missing_expr_after_assign": "構文エラー: '=' の後に式がありません",
+    "err_unexpected_token_after_expr": "構文エラー: 式の後に予期しないトークン %q があります",
+    "err_illegal_char_pos": "構文エラー: 位置 %d に不正な文字 %q があります",
+    "err_func_missing_args": "構文エラー (位置 %d): 関数 %q に引数がありません",
+    "err_expected_rparen": "構文エラー: 対応する ')' が期待されますが、%q が見つかりました",
+    "err_unexpected_infix_token": "構文エラー: 予期しない中置演算子 %q です",
+    "err_func_requires_args": "構文エラー: 関数 %q には引数が必要です",
+    "err_expected_comma_or_rparen": "構文エラー: 関数呼び出し %q 内で ',' または ')' が期待されますが、%q が見つかりました",
+    "err_expected_lbracket_matrix_row": "構文エラー: 行列の行の先頭に '[' が期待されますが、%q が見つかりました",
+    "err_expected_rbracket_close_matrix": "構文エラー: 行列を閉じる ']' が期待されますが、%q が見つかりました",
+    "err_empty_matrix": "構文エラー: 空の行列です",
+    "err_expected_rbracket": "構文エラー: ']' が期待されますが、%q が見つかりました",
+    "err_syntax_error_empty_input": "構文エラー: 入力が空です",
+    "err_sqrt_requires_exactly_1_argument": "引数エラー: sqrt にはちょうど1つの引数が必要です (取得: %d)",
+    "err_variables_formula_got": "引数エラー: %s には2つの引数 (変数リスト, 論理式) が必要です (取得: %d)",
+    "err_first_argument_must_be_a": "引数エラー: %s: 第1引数の要素は変数である必要があります (取得: %v)",
+    "err_first_argument_must_be_a_1": "引数エラー: %s: 第1引数は変数または変数リストである必要があります (取得: %v)"
   }
 }
 

@@ -30,7 +30,8 @@
     "err_run_script_required": "run requires a script file path: ihd run <file.ihd>",
     "err_run_open_failed": "failed to open script file '%s': %v",
     "err_run_read_failed": "failed reading script file '%s': %v",
-    "err_unknown_stmt": "unknown statement type: %T"
+    "err_unknown_stmt": "unknown statement type: %T",
+    "approx_format": "%s (≈ %s)"
   },
   "verify": {
     "verified_header": "[VERIFIED: %s]",
@@ -198,6 +199,22 @@
     "domain": "* Domain:            x ∈ [%s, %s], y ∈ [%s, %s]\n"
   },
   "explain": {
+    "rule_rationalize": "Denominator Rationalization",
+    "rule_denestradical": "Radical Denesting",
+    "rule_solvequadratic": "Quadratic Equation Solving (Quadratic Formula)",
+    "rule_solvecubic": "Cubic Equation Solving (Cardano's Formula)",
+    "rule_solvelinear": "Linear Equation Solving",
+    "rule_diffpower": "Power Rule of Differentiation",
+    "rule_diffproduct": "Product Rule of Differentiation",
+    "rule_diffchain": "Chain Rule of Differentiation",
+    "rule_difftrig": "Trigonometric Differentiation",
+    "rule_taylor": "Taylor Series Expansion",
+    "rule_sumfaulhaber": "Faulhaber's Formula for Sum of Powers",
+    "rule_matrixdet": "Determinant via Cofactor Expansion",
+    "rule_matrixinv": "Matrix Inverse via Adjugate Matrix",
+    "rule_integrate": "Symbolic Integration",
+    "rule_trigexpand": "Trigonometric Expansion",
+    "rule_trigreduce": "Trigonometric Reduction",
     "rule_limit": "Limit Computation & Indeterminate Form Resolution",
     "limit_inf": "Limit at infinity: lim_{%s->%s} %s = %s",
     "limit_eval": "Limit computation: lim_{%s->%s} %s = %s",
@@ -668,6 +685,44 @@
     "err_poly_must_be_monic": "algebra error: leading coefficient must be 1 (monic polynomial required)",
     "proof_abel_ruffini": "By the Abel-Ruffini theorem, since the Galois group %s is non-solvable (its commutator subgroup does not terminate), the roots of this equation cannot be expressed in radicals.",
     "proof_solvable": "Since the Galois group %s is solvable (its derived series terminates in the trivial group), this equation is solvable by radicals."
+  },
+  "trace": {
+    "expression_header": "Expression: %s\n",
+    "step_0_title": "Step 0: Direct Evaluation",
+    "step_0_desc": "Expression was evaluated directly without intermediate rewrites",
+    "result_header": "[Result]",
+    "step_header": "[Step %d: %s]",
+    "diff_power": "Power rule of differentiation: d/d%s [%s^%s] = %s",
+    "solve_linear": "Solve linear equation %s = 0 by isolation and division",
+    "solve_quad_repeated": "Repeated root of quadratic equation: discriminant D = 0 => %s = -b / (2a)",
+    "solve_quad_formula": "Quadratic formula: discriminant D = b^2 - 4ac = %s, %s = (-b ± √D) / (2a)",
+    "solve_cubic_cardano": "Exact algebraic roots of cubic equation via Cardano's formula: %s",
+    "trig_expand": "Trigonometric expansion: addition & multiple-angle formulas",
+    "trig_reduce": "Trigonometric reduction: product-to-sum, power reduction, and harmonic addition",
+    "indefinite_integral": "Indefinite integral: ∫ (%s) d%s = %s",
+    "definite_integral": "Definite integral: ∫_%s^%s (%s) d%s = [F(%s)]_%s^%s = %s"
+  },
+  "parser": {
+    "err_empty_expr": "syntax error: empty expression",
+    "err_implicit_multiplication": "syntax error: implicit multiplication is not allowed. Please write explicit '*' operator near %q",
+    "err_unexpected_token_pos": "syntax error: unexpected token %q at position %d",
+    "err_missing_expr_after_assign": "syntax error: missing expression after '='",
+    "err_unexpected_token_after_expr": "syntax error: unexpected token %q after expression",
+    "err_illegal_char_pos": "syntax error: illegal character %q at position %d",
+    "err_func_missing_args": "syntax error at position %d: function %q missing arguments",
+    "err_expected_rparen": "syntax error: expected matching ')', got %q",
+    "err_unexpected_infix_token": "syntax error: unexpected infix token %q",
+    "err_func_requires_args": "syntax error: function %q requires arguments",
+    "err_expected_comma_or_rparen": "syntax error: expected ',' or ')' in function call %q, got %q",
+    "err_expected_lbracket_matrix_row": "syntax error: expected '[' at start of matrix row, got %q",
+    "err_expected_rbracket_close_matrix": "syntax error: expected ']' to close matrix, got %q",
+    "err_empty_matrix": "syntax error: empty matrix",
+    "err_expected_rbracket": "syntax error: expected ']', got %q",
+    "err_syntax_error_empty_input": "syntax error: empty input",
+    "err_sqrt_requires_exactly_1_argument": "argument error: sqrt requires exactly 1 argument (got: %d)",
+    "err_variables_formula_got": "argument error: %s requires 2 arguments (variables, formula) (got: %d)",
+    "err_first_argument_must_be_a": "argument error: %s: elements of first argument must be variables (got: %v)",
+    "err_first_argument_must_be_a_1": "argument error: %s: first argument must be a variable or variable list (got: %v)"
   }
 }
 

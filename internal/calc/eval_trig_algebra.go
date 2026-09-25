@@ -27,7 +27,7 @@ func EvalTrigExpand(expr Node, env *Env) (Node, error) {
 		return nil, err
 	}
 
-	RecordTraceRewrite(RuleTrigExpand, expr, res, "三角関数の加法定理・多倍角展開")
+	RecordTraceRewrite(RuleTrigExpand, expr, res, i18n.T("trace.trig_expand"))
 	return res, nil
 }
 
@@ -56,7 +56,7 @@ func EvalTrigReduce(expr Node, env *Env) (Node, error) {
 		return nil, err
 	}
 
-	RecordTraceRewrite(RuleTrigReduce, expr, res, "積和公式・次数下げ・三角関数の合成")
+	RecordTraceRewrite(RuleTrigReduce, expr, res, i18n.T("trace.trig_reduce"))
 	return res, nil
 }
 

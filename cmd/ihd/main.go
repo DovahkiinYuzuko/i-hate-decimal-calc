@@ -226,7 +226,7 @@ func formatOutput(node calc.Node, ro runOptions) string {
 	if ro.showApprox {
 		approxStr, err := calc.Approx(node)
 		if err == nil {
-			return fmt.Sprintf("%s (≈ %s)", exactStr, approxStr)
+			return i18n.T("cli.approx_format", exactStr, approxStr)
 		}
 	}
 	return exactStr

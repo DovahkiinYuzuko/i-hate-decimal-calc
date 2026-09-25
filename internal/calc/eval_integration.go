@@ -24,7 +24,7 @@ func evalIndefiniteIntegral(expr Node, varName string) (Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	RecordTraceRewrite(RuleIntegrate, expr, res, fmt.Sprintf("不定積分: ∫ (%s) d%s = %s", expr.String(), varName, res.String()))
+	RecordTraceRewrite(RuleIntegrate, expr, res, i18n.T("trace.indefinite_integral", expr.String(), varName, res.String()))
 	return res, nil
 }
 
@@ -62,7 +62,7 @@ func evalDefiniteIntegral(expr Node, varName string, a, b Node) (Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	RecordTraceRewrite(RuleIntegrate, expr, res, fmt.Sprintf("定積分: ∫_%s^%s (%s) d%s = [F(%s)]_%s^%s = %s", a.String(), b.String(), expr.String(), varName, varName, a.String(), b.String(), res.String()))
+	RecordTraceRewrite(RuleIntegrate, expr, res, i18n.T("trace.definite_integral", a.String(), b.String(), expr.String(), varName, varName, a.String(), b.String(), res.String()))
 	return res, nil
 }
 
