@@ -223,8 +223,8 @@ func TestGenerateLeanSource_RealAndGeometry(t *testing.T) {
 	if !strings.Contains(src, "import Mathlib.Analysis.Calculus.Deriv.Basic") {
 		t.Errorf("missing calculus deriv import: %s", src)
 	}
-	if !strings.Contains(src, "import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic") {
-		t.Errorf("missing trigonometric import: %s", src)
+	if !strings.Contains(src, "import Mathlib.Analysis.SpecialFunctions.Trigonometric.Deriv") {
+		t.Errorf("missing trigonometric deriv import: %s", src)
 	}
 
 	// 2. Geometry certificate variable extraction test
@@ -284,10 +284,64 @@ func TestGenerateLeanSource_RealAndGeometry(t *testing.T) {
 	if !strings.Contains(fullGeoSrc, "ring") {
 		t.Errorf("expected ring tactic, got: %s", fullGeoSrc)
 	}
-	if !strings.Contains(fullGeoSrc, "Mathlib.Analysis.SpecialFunctions.Trigonometric.Deriv") {
-		t.Errorf("expected Trigonometric.Deriv import, got: %s", fullGeoSrc)
+	// Verify that on-demand import optimization excluded unused trig imports
+	if strings.Contains(fullGeoSrc, "Trigonometric.Deriv") {
+		t.Errorf("unexpected Trigonometric.Deriv import in pure geometric proof: %s", fullGeoSrc)
 	}
 	if !strings.Contains(fullGeoSrc, "#print axioms midpoint_theorem") {
 		t.Errorf("expected #print axioms in output, got: %s", fullGeoSrc)
+	}
+}
+
+func TestDetermineRequiredImports_OnDemand(t *testing.T) {
+	// Factor / algebraic identity: only Ring and Rat
+	x := NewVar("x")
+	imports := DetermineRequiredImports(nil, x)
+	if len(imports) != 2 || imports[0] != "Mathlib.Data.Rat.Defs" || imports[1] != "Mathlib.Tactic.Ring" {
+		t.Errorf("expected [Mathlib.Data.Rat.Defs Mathlib.Tactic.Ring], got %v", imports)
+	}
+
+	// Matrix with variables: Matrix, FinCases, Ring, Rat
+	mat := &MatrixNode{
+		Rows: 2,
+		Cols: 2,
+		Data: [][]Node{
+			{x, mustRational(0, 1)},
+			{mustRational(0, 1), x},
+		},
+	}
+	matImports := DetermineRequiredImports(nil, mat)
+	expectedMat := []string{"Mathlib.Data.Matrix.Basic", "Mathlib.Data.Rat.Defs", "Mathlib.Tactic.FinCases", "Mathlib.Tactic.Ring"}
+	for _, exp := range expectedMat {
+		found := false
+		for _, imp := range matImports {
+			if imp == exp {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("missing expected import %s in %v", exp, matImports)
+		}
+	}
+}
+
+func TestTranspileCertificateIRToLean_SymbolicMatrix(t *testing.T) {
+	a := NewVar("a")
+	mat := &MatrixNode{
+		Rows: 2,
+		Cols: 2,
+		Data: [][]Node{
+			{a, mustRational(0, 1)},
+			{mustRational(0, 1), a},
+		},
+	}
+	invCert := NewInvertibilityCertificate(mat, mat, mustRational(1, 1), mustRational(0, 1), true, "Holds")
+	code, err := TranspileCertificateIRToLean(invCert)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(code, "by ext i j <;> fin_cases i <;> fin_cases j <;> ring") {
+		t.Errorf("expected symbolic ring tactic for matrix with variables, got: %s", code)
 	}
 }
