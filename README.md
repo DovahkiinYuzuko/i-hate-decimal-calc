@@ -235,7 +235,9 @@ ihd "plot(sin(x), [-pi, pi])"
 - **前提条件システム（仮定）**: `assume`, `unassume`, `assumptions`, `clear_assumptions`
 - **ビジュアル・自己検証**: `plot`, `verify`
 
----
+> [!NOTE]
+> **代数方程式ソルバーと線形代数**  
+> `solve` は1次・2次・3次方程式に加え、フェラーリ（Ferrari）法・チルンハウス変換・分解3次方程式による4次代数方程式の厳密代数解（根号表示）を完全サポートしています。また、線形代数の `eigenvals` は Faddeev-LeVerrier 法により最大 4×4 行列の特性方程式から厳密固有値を導出可能です。
 
 ---
 
@@ -516,6 +518,10 @@ ihd "plot(sin(x), [-pi, pi])"
 - **Elliptic Curves & Arithmetic Geometry**: `ec_add`, `ec_mul`, `ec_torsion`
 - **Symbolic Assumptions System**: `assume`, `unassume`, `assumptions`, `clear_assumptions`
 - **Visualization & Verification Tools**: `plot`, `verify`
+
+> [!NOTE]
+> **Algebraic Equation Solver & Linear Algebra**  
+> `solve` provides exact radical solutions for linear, quadratic, cubic, and quartic polynomials (via Ferrari's method, Tschirnhaus transformation, and resolvent cubics). Furthermore, `eigenvals` derives exact radical eigenvalues for matrices up to 4×4 using the Faddeev-LeVerrier characteristic polynomial algorithm.
 
 ---
 

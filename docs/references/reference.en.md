@@ -87,7 +87,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `crt` | `crt([r1, r2], [m1, m2])` | Chinese Remainder Theorem (Garner's algorithm & generalized non-coprime CRT) |
 | `totient` | `totient(n)` | Euler's totient function $\phi(n) = n \prod_{p \mid n} (1 - 1/p)$ |
 | `is_prime` | `is_prime(n)` | Deterministic primality test (Sorenson & Webster 12 bases for 64-bit, Baillie-PSW for big ints) |
-| `solve` | `solve(expr, var)` | Exact algebraic equation solver for linear, quadratic, and cubic equations |
+| `solve` | `solve(expr, var)` | Exact algebraic equation solver for linear, quadratic, cubic, and quartic equations (exact radical solutions via Cardano's formula, Ferrari's method, Tschirnhaus transformation, and resolvent cubics; supports multiple and complex roots) |
 | `to_poly` | `to_poly(expr, [x, y], "lex")` | Explicitly converts an expression to a canonical `PolyNode` under specified variables and monomial order (`lex`, `grevlex`) |
 | `to_alg` | `to_alg(rep, min_poly, [var])` | Constructs an algebraic number node `AlgNode` in field extension $\mathbb{Q}(\alpha) \cong \mathbb{Q}[x]/\langle m(x) \rangle$ |
 | `alg_inv` | `alg_inv(rep, min_poly)` | Computes multiplicative inverse $\beta^{-1} \in \mathbb{Q}(\alpha)$ via Extended Euclidean Algorithm |
@@ -148,7 +148,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `rref` | `rref(A)` | Reduced Row Echelon Form via Bareiss fraction-free elimination |
 | `rank` | `rank(A)` | Exact matrix rank (number of pivot columns) |
 | `trace` / `tr` | `trace(A)`, `tr(A)` | Matrix trace (sum of main diagonal entries $\sum_{i=1}^n A_{i,i}$) |
-| `eigenvals` | `eigenvals(A)` | Exact eigenvalue analysis via Faddeev-LeVerrier characteristic polynomial and algebraic solver |
+| `eigenvals` | `eigenvals(A)` | Exact eigenvalue analysis via Faddeev-LeVerrier characteristic polynomial and algebraic solver (exact radical eigenvalues up to 4×4 matrices) |
 | `eigenvects` | `eigenvects(A)` | Exact eigenvector analysis via RREF nullspace basis extraction |
 | `lu` | `lu(A)` | Exact PLU decomposition $PA=LU$ with row pivoting ($P$ permutation, $L$ unit lower, $U$ upper) |
 | `qr` | `qr(A)` | Exact QR decomposition $A=QR$ via Two-Stage Gram-Schmidt with exact radicals ($Q^T Q = I$) |
