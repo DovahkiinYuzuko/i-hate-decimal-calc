@@ -311,7 +311,7 @@ func TestDetermineRequiredImports_OnDemand(t *testing.T) {
 		},
 	}
 	matImports := DetermineRequiredImports(nil, mat)
-	expectedMat := []string{"Mathlib.Data.Matrix.Basic", "Mathlib.Data.Matrix.Notation", "Mathlib.Data.Rat.Defs", "Mathlib.Tactic.FinCases", "Mathlib.Tactic.Ring"}
+	expectedMat := []string{"Mathlib.Data.Fin.VecNotation", "Mathlib.Data.Matrix.Basic", "Mathlib.Data.Rat.Defs", "Mathlib.LinearAlgebra.Matrix.Notation", "Mathlib.Tactic.FinCases", "Mathlib.Tactic.Ring"}
 	for _, exp := range expectedMat {
 		found := false
 		for _, imp := range matImports {
