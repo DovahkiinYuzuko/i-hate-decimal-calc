@@ -594,6 +594,7 @@ func DetermineRequiredImports(cert Certificate, nodes ...Node) []string {
 		switch c := cert.(type) {
 		case *InvertibilityCertificate:
 			importsMap["Mathlib.Data.Matrix.Basic"] = true
+			importsMap["Mathlib.Data.Matrix.Notation"] = true
 			importsMap["Mathlib.Tactic.FinCases"] = true
 			hasVars := len(CollectFreeVariables(c.Matrix)) > 0 || len(CollectFreeVariables(c.Inverse)) > 0
 			if !hasVars {
@@ -601,6 +602,7 @@ func DetermineRequiredImports(cert Certificate, nodes ...Node) []string {
 			}
 		case *DecompositionCertificate:
 			importsMap["Mathlib.Data.Matrix.Basic"] = true
+			importsMap["Mathlib.Data.Matrix.Notation"] = true
 			importsMap["Mathlib.Tactic.FinCases"] = true
 			hasVars := len(CollectFreeVariables(c.Matrix)) > 0
 			for _, f := range c.Factors {
@@ -634,6 +636,7 @@ func DetermineRequiredImports(cert Certificate, nodes ...Node) []string {
 	for _, n := range nodes {
 		if containsMatrixNodes(n) {
 			importsMap["Mathlib.Data.Matrix.Basic"] = true
+			importsMap["Mathlib.Data.Matrix.Notation"] = true
 			importsMap["Mathlib.Tactic.FinCases"] = true
 			if len(CollectFreeVariables(n)) == 0 {
 				importsMap["Mathlib.Tactic.NormNum"] = true
@@ -648,7 +651,7 @@ func DetermineRequiredImports(cert Certificate, nodes ...Node) []string {
 	}
 
 	if isReal {
-		importsMap["Mathlib.Data.Real.Basic"] = true
+		importsMap["Mathlib.Basic.Real.Basic"] = true
 	} else {
 		importsMap["Mathlib.Data.Rat.Defs"] = true
 	}

@@ -311,7 +311,7 @@ func TestDetermineRequiredImports_OnDemand(t *testing.T) {
 		},
 	}
 	matImports := DetermineRequiredImports(nil, mat)
-	expectedMat := []string{"Mathlib.Data.Matrix.Basic", "Mathlib.Data.Rat.Defs", "Mathlib.Tactic.FinCases", "Mathlib.Tactic.Ring"}
+	expectedMat := []string{"Mathlib.Data.Matrix.Basic", "Mathlib.Data.Matrix.Notation", "Mathlib.Data.Rat.Defs", "Mathlib.Tactic.FinCases", "Mathlib.Tactic.Ring"}
 	for _, exp := range expectedMat {
 		found := false
 		for _, imp := range matImports {
@@ -323,6 +323,20 @@ func TestDetermineRequiredImports_OnDemand(t *testing.T) {
 		if !found {
 			t.Errorf("missing expected import %s in %v", exp, matImports)
 		}
+	}
+
+	// Real node test
+	piNode, _ := NewConst("pi")
+	realImports := DetermineRequiredImports(nil, piNode)
+	foundReal := false
+	for _, imp := range realImports {
+		if imp == "Mathlib.Basic.Real.Basic" {
+			foundReal = true
+			break
+		}
+	}
+	if !foundReal {
+		t.Errorf("expected Mathlib.Basic.Real.Basic in %v", realImports)
 	}
 }
 
