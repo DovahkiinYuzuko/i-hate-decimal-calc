@@ -412,6 +412,13 @@ func solvePolyRoots(poly []Node) ([]Node, error) {
 		}
 	}
 
+	if deg == 4 {
+		quarticRoots, err := SolveQuarticExact(poly[4], poly[3], poly[2], poly[1], poly[0])
+		if err == nil {
+			return quarticRoots, nil
+		}
+	}
+
 	return nil, fmt.Errorf("%s", i18n.T("eigen.err_eigenvals_cannot_find_exact_roots", deg))
 }
 

@@ -1133,13 +1133,13 @@ func TestEvalQuantifierElimination(t *testing.T) {
 }
 
 func TestEvalSolveUnsupportedDegree(t *testing.T) {
-	_, err := EvalString("solve(x^4 - 1, x)")
+	_, err := EvalString("solve(x^5 - 1, x)")
 	if err == nil {
-		t.Fatalf("expected error for degree 4 polynomial, got nil")
+		t.Fatalf("expected error for degree 5 polynomial, got nil")
 	}
 	errStr := err.Error()
-	if !strings.Contains(errStr, "cubic") && !strings.Contains(errStr, "3次") {
-		t.Fatalf("expected error message to mention cubic equations, got: %s", errStr)
+	if !strings.Contains(errStr, "quartic") && !strings.Contains(errStr, "4次") {
+		t.Fatalf("expected error message to mention quartic equations, got: %s", errStr)
 	}
 }
 

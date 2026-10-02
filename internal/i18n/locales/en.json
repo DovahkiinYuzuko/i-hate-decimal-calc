@@ -251,6 +251,11 @@
     "err_cannot_solve_cubic": "failed to solve cubic equation: %v",
     "err_invalid_cubic_fsm_transition": "invalid Cubic FSM transition: %s -> %s"
   },
+  "quartic": {
+    "err_nil_coefficients": "quartic equation error: nil coefficient provided",
+    "err_cannot_solve_quartic": "failed to solve quartic equation: %v",
+    "err_invalid_quartic_fsm_transition": "invalid Quartic FSM transition: %s -> %s"
+  },
   "elliptic": {
     "err_singular_curve": "singular elliptic curve error: discriminant is zero (4A^3 + 27B^2 = 0)",
     "err_invalid_point": "elliptic curve error: specified point does not lie on curve y^2 = x^3 + Ax + B: %s",
@@ -324,7 +329,7 @@
     "err_solve_identity_equation_infinite_solutions": "solve: identity equation (infinite solutions)",
     "err_solve_equation_has_no_solution": "solve: equation has no solution (contradiction: %s = 0)",
     "err_solve_equation_contains_no_degree": "solve: equation contains no degree of %s",
-    "err_solve_error_polynomial_degree_only": "solve error: polynomial degree %d is not currently supported (only linear, quadratic, and cubic equations)",
+    "err_solve_error_polynomial_degree_only": "solve error: polynomial degree %d is not currently supported (only linear, quadratic, cubic, and quartic equations)",
     "err_taylor_error_second_argument_must": "taylor error: second argument must be a variable, got %s",
     "err_taylor_error_order_must_be": "taylor error: order must be non-negative integer, got %s",
     "err_taylor_error_in": "taylor error in %d-th derivative: %w",
@@ -712,6 +717,7 @@
     "solve_quad_repeated": "Repeated root of quadratic equation: discriminant D = 0 => %s = -b / (2a)",
     "solve_quad_formula": "Quadratic formula: discriminant D = b^2 - 4ac = %s, %s = (-b ± √D) / (2a)",
     "solve_cubic_cardano": "Exact algebraic roots of cubic equation via Cardano's formula: %s",
+    "solve_quartic_ferrari": "Exact algebraic roots of quartic equation via Ferrari's formula: %s",
     "trig_expand": "Trigonometric expansion: addition & multiple-angle formulas",
     "trig_reduce": "Trigonometric reduction: product-to-sum, power reduction, and harmonic addition",
     "indefinite_integral": "Indefinite integral: ∫ (%s) d%s = %s",

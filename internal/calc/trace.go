@@ -16,6 +16,7 @@ const (
 	RuleDenestRadical  RuleID = "DenestRadical"
 	RuleSolveQuadratic RuleID = "SolveQuadratic"
 	RuleSolveCubic     RuleID = "SolveCubic"
+	RuleSolveQuartic   RuleID = "SolveQuartic"
 	RuleSolveLinear    RuleID = "SolveLinear"
 	RuleDiffPower      RuleID = "DiffPower"
 	RuleDiffProduct    RuleID = "DiffProduct"
@@ -126,6 +127,7 @@ var ruleTitles = map[RuleID]string{
 	RuleDenestRadical:  "Radical Denesting",
 	RuleSolveQuadratic: "Quadratic Equation Solving",
 	RuleSolveCubic:     "Cubic Equation Solving",
+	RuleSolveQuartic:   "Quartic Equation Solving",
 	RuleSolveLinear:    "Linear Equation Solving",
 	RuleDiffPower:      "Power Rule of Differentiation",
 	RuleDiffProduct:    "Product Rule of Differentiation",

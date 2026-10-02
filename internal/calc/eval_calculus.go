@@ -570,6 +570,38 @@ func solveEquation(expr Node, varName string) (Node, error) {
 		return resList, nil
 	}
 
+	if maxDeg == 4 {
+		a4 := coeffs[4]
+		a3 := coeffs[3]
+		if a3 == nil {
+			a3 = mustRational(0, 1)
+		}
+		a2 := coeffs[2]
+		if a2 == nil {
+			a2 = mustRational(0, 1)
+		}
+		a1 := coeffs[1]
+		if a1 == nil {
+			a1 = mustRational(0, 1)
+		}
+		roots, err := SolveQuarticExact(a4, a3, a2, a1, a0)
+		if err != nil {
+			return nil, err
+		}
+		var uniqueRoots []Node
+		seen := make(map[string]bool)
+		for _, r := range roots {
+			s := Format(r)
+			if !seen[s] {
+				seen[s] = true
+				uniqueRoots = append(uniqueRoots, r)
+			}
+		}
+		resList := NewList(uniqueRoots)
+		RecordTraceRewrite(RuleSolveQuartic, expr, resList, i18n.T("trace.solve_quartic_ferrari", varName))
+		return resList, nil
+	}
+
 	return nil, fmt.Errorf("%s", i18n.T("calculus.err_solve_error_polynomial_degree_only", maxDeg))
 }
 

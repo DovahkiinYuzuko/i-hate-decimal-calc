@@ -251,6 +251,11 @@
     "err_cannot_solve_cubic": "3次方程式の求解に失敗しました: %v",
     "err_invalid_cubic_fsm_transition": "無効な3次方程式 FSM 状態遷移: %s -> %s"
   },
+  "quartic": {
+    "err_nil_coefficients": "4次方程式エラー: 係数が nil です",
+    "err_cannot_solve_quartic": "4次方程式の求解に失敗しました: %v",
+    "err_invalid_quartic_fsm_transition": "無効な4次方程式 FSM 状態遷移: %s -> %s"
+  },
   "elliptic": {
     "err_singular_curve": "特異楕円曲線エラー: 判別式が 0 のため非特異曲線ではありません (4A^3 + 27B^2 = 0)",
     "err_invalid_point": "楕円曲線エラー: 指定された点は曲線 y^2 = x^3 + Ax + B 上に存在しません: %s",
@@ -324,7 +329,7 @@
     "err_solve_identity_equation_infinite_solutions": "方程式求解: 恒等式です (無数の解が存在します)",
     "err_solve_equation_has_no_solution": "方程式求解: 方程式に解が存在しません (矛盾: %s = 0)",
     "err_solve_equation_contains_no_degree": "方程式求解: 方程式に %s の次数が含まれていません",
-    "err_solve_error_polynomial_degree_only": "方程式求解エラー: 次数 %d の多項式には現在対応していません (1次・2次・3次方程式のみ対応)",
+    "err_solve_error_polynomial_degree_only": "方程式求解エラー: 次数 %d の多項式には現在対応していません (1次・2次・3次・4次方程式のみ対応)",
     "err_taylor_error_second_argument_must": "テイラー展開エラー: 第2引数は変数である必要があります (指定値: %s)",
     "err_taylor_error_order_must_be": "テイラー展開エラー: 次数は非負の整数である必要があります (指定値: %s)",
     "err_taylor_error_in": "テイラー展開エラー (%d 階導関数): %w",
@@ -712,6 +717,7 @@
     "solve_quad_repeated": "2次方程式の重解: 判別式 D = 0 より %s = -b / (2a)",
     "solve_quad_formula": "2次方程式の解の公式: 判別式 D = b^2 - 4ac = %s, %s = (-b ± √D) / (2a)",
     "solve_cubic_cardano": "3次方程式のカルダノの公式による厳密代数解: %s",
+    "solve_quartic_ferrari": "4次方程式のフェラーリの公式による厳密代数解: %s",
     "trig_expand": "三角関数の加法定理・多倍角展開",
     "trig_reduce": "積和公式・次数下げ・三角関数の合成",
     "indefinite_integral": "不定積分: ∫ (%s) d%s = %s",
