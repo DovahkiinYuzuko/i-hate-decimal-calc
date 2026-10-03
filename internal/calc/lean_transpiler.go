@@ -462,16 +462,48 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 		if varSubst == "" {
 			varSubst = "x"
 		}
-		substed := Substitute(c.Polynomial, varSubst, c.Root)
-		subStr, err := ToLeanSyntax(substed)
-		if err != nil {
-			subStr = "0"
+		var roots []Node
+		if list, ok := c.Root.(*ListNode); ok {
+			roots = list.Elements
+		} else if c.Root != nil {
+			roots = []Node{c.Root}
 		}
-		equalityStr = fmt.Sprintf("%s = 0", subStr)
-		if len(CollectFreeVariables(substed)) > 0 {
-			tactic = "by ring"
+
+		if len(roots) == 0 {
+			equalityStr = "True"
+			tactic = "by decide"
+		} else if len(roots) == 1 {
+			substed := Substitute(c.Polynomial, varSubst, roots[0])
+			subStr, err := ToLeanSyntax(substed)
+			if err != nil {
+				subStr = "0"
+			}
+			equalityStr = fmt.Sprintf("%s = 0", subStr)
+			if len(CollectFreeVariables(substed)) > 0 {
+				tactic = "by ring"
+			} else {
+				tactic = "by norm_num"
+			}
 		} else {
-			tactic = "by norm_num"
+			var parts []string
+			hasVars := false
+			for _, r := range roots {
+				substed := Substitute(c.Polynomial, varSubst, r)
+				subStr, err := ToLeanSyntax(substed)
+				if err != nil {
+					subStr = "0"
+				}
+				parts = append(parts, fmt.Sprintf("%s = 0", subStr))
+				if len(CollectFreeVariables(substed)) > 0 {
+					hasVars = true
+				}
+			}
+			equalityStr = strings.Join(parts, " ∧ ")
+			if hasVars {
+				tactic = "by repeat constructor <;> ring"
+			} else {
+				tactic = "by repeat constructor <;> norm_num"
+			}
 		}
 
 	case *IntegerRelationCertificate:
