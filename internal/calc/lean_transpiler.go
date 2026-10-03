@@ -469,6 +469,11 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 			roots = []Node{c.Root}
 		}
 
+		polyType := "ℚ"
+		if containsRealNodes(c.Polynomial) || containsRealNodes(roots...) {
+			polyType = "ℝ"
+		}
+
 		if len(roots) == 0 {
 			equalityStr = "True"
 			tactic = "by decide"
@@ -478,7 +483,7 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 			if err != nil {
 				subStr = "0"
 			}
-			equalityStr = fmt.Sprintf("%s = 0", subStr)
+			equalityStr = fmt.Sprintf("((%s : %s) = 0)", subStr, polyType)
 			if len(CollectFreeVariables(substed)) > 0 {
 				tactic = "by ring"
 			} else {
@@ -493,7 +498,7 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 				if err != nil {
 					subStr = "0"
 				}
-				parts = append(parts, fmt.Sprintf("%s = 0", subStr))
+				parts = append(parts, fmt.Sprintf("((%s : %s) = 0)", subStr, polyType))
 				if len(CollectFreeVariables(substed)) > 0 {
 					hasVars = true
 				}
@@ -530,7 +535,11 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 		if err != nil {
 			relStr = "0"
 		}
-		equalityStr = fmt.Sprintf("%s = 0", relStr)
+		relType := "ℚ"
+		if containsRealNodes(relationNode) {
+			relType = "ℝ"
+		}
+		equalityStr = fmt.Sprintf("((%s : %s) = 0)", relStr, relType)
 		if len(CollectFreeVariables(relationNode)) > 0 {
 			tactic = "by ring"
 		} else {
