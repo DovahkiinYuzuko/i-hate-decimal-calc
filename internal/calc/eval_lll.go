@@ -548,6 +548,7 @@ func FindMinimalPolynomial(val Node, maxDegree int, env *Env) (Node, error) {
 			if err == nil {
 				if r, ok := simped.(*RationalNode); ok && r.Val.Sign() == 0 {
 					_ = res.FSM.TransitionTo(LLLStateRelationIdentified)
+					RecordTraceRewrite(RuleLLLRelation, val, polyNode, i18n.T("trace.lll_relation", polyNode.String()))
 					return polyNode, nil
 				}
 			}
@@ -561,9 +562,11 @@ func FindMinimalPolynomial(val Node, maxDegree int, env *Env) (Node, error) {
 				bound := big.NewRat(1, 1000000000000000)
 				if width.Cmp(bound) < 0 {
 					_ = res.FSM.TransitionTo(LLLStateRelationIdentified)
+					RecordTraceRewrite(RuleLLLRelation, val, polyNode, i18n.T("trace.lll_relation", polyNode.String()))
 					return polyNode, nil
 				}
 			}
+
 		}
 	}
 

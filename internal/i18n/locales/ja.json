@@ -203,8 +203,15 @@
     "rule_denestradical": "二重根号の簡約",
     "rule_solvequadratic": "2次方程式の求解（解の公式）",
     "rule_solvecubic": "3次方程式の求解（カルダノの公式）",
+    "rule_solvequartic": "4次方程式の求解（フェラーリの公式）",
     "rule_solvelinear": "1次方程式の求解",
+    "rule_solvelinearsystem": "連立一次方程式系の求解（ガウス消去法）",
+    "rule_solvepell": "ペル方程式の整数基本解導出（連分数法）",
+    "rule_polynomialroot": "代数方程式の根の代数検証",
+    "rule_lllrelation": "LLL格子基底縮小による整数関係同定",
+    "rule_ellipticadd": "楕円曲線の有理点加法（弦接線法）",
     "rule_diffpower": "べき乗の微分公式の適用",
+
     "rule_diffproduct": "積の微分公式の適用",
     "rule_diffchain": "合成関数の微分（チェインルール）",
     "rule_difftrig": "三角関数の微分公式の適用",
@@ -287,8 +294,12 @@
   "cfrac": {
     "err_cannot_compute_continued_fraction_of": "nil 有理数の連分数を計算できません",
     "err_continued_fraction_of_imaginary_square": "虚数平方根 sqrt(%s) の連分数展開には未対応です",
-    "err_division_by_zero_in_continued": "連分数再構成におけるゼロ除算エラー"
+    "err_division_by_zero_in_continued": "連分数再構成におけるゼロ除算エラー",
+    "err_pell_d_must_be_positive_integer": "ペル方程式エラー: d は正の整数でなければなりません",
+    "err_pell_d_square": "ペル方程式エラー: d が平方数の場合、非自明な整数解は存在しません",
+    "err_pell_max_iterations_exceeded": "ペル方程式エラー: 最大反復回数を超過しました"
   },
+
   "complex": {
     "err_cannot_determine_sign_of_complex": "複素数成分の符号を決定できません (実部=%s, 虚部=%s)"
   },
@@ -718,9 +729,14 @@
     "solve_quad_formula": "2次方程式の解の公式: 判別式 D = b^2 - 4ac = %s, %s = (-b ± √D) / (2a)",
     "solve_cubic_cardano": "3次方程式のカルダノの公式による厳密代数解: %s",
     "solve_quartic_ferrari": "4次方程式のフェラーリの公式による厳密代数解: %s",
+    "solve_linear_system": "拡大係数行列の行簡約階段形（RREF）消去により連立一次方程式の解を導出: %s",
+    "solve_pell": "連分数近似分数列の評価によりペル方程式 %s^2 - %s * %s^2 = 1 の最小正整数解を導出: (%s, %s)",
+    "poly_root": "代数方程式 %s = 0 に根 %s を代入して等式成立を確認",
+    "lll_relation": "LLL格子基底縮小により整数係数関係 %s = 0 を同定",
+    "elliptic_add": "弦接線法（Chord-and-Tangent）により点 %s と点 %s の和点 %s を導出",
     "trig_expand": "三角関数の加法定理・多倍角展開",
     "trig_reduce": "積和公式・次数下げ・三角関数の合成",
     "indefinite_integral": "不定積分: ∫ (%s) d%s = %s",
     "definite_integral": "定積分: ∫_%s^%s (%s) d%s = [F(%s)]_%s^%s = %s"
   }
-}
+}

@@ -430,8 +430,19 @@ func init() {
 		MinArgs: 2,
 		MaxArgs: 2,
 	})
+	RegisterFunction(FunctionSpec{
+		Name:    "solve_pell",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "pell",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
 
 	// 3D Vector Calculus
+
 	RegisterFunction(FunctionSpec{
 		Name:    "dot",
 		MinArgs: 2,

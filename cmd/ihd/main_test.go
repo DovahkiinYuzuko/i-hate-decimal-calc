@@ -362,7 +362,7 @@ a / b
 		t.Errorf("expected error exit code 1, got 0")
 	}
 	errStr := errOutErr.String()
-	if !strings.Contains(errStr, "error.ihd:4:") || !strings.Contains(errStr, "division by zero") {
+	if !strings.Contains(errStr, "error.ihd:4:") || (!strings.Contains(errStr, "division by zero") && !strings.Contains(errStr, "ゼロ除算")) {
 		t.Errorf("expected line number 4 and zero division in stderr, got %q", errStr)
 	}
 

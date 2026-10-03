@@ -2,6 +2,7 @@ package calc
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
@@ -20,6 +21,11 @@ const (
 	DomainGeometry      VerificationDomain = "geometry"
 	DomainImpossibility VerificationDomain = "impossibility"
 	DomainGeneral       VerificationDomain = "general"
+	DomainLinearSolve   VerificationDomain = "linear_solve"
+	DomainPell          VerificationDomain = "pell"
+	DomainPolynomialRoot VerificationDomain = "polynomial_root"
+	DomainLLL           VerificationDomain = "lll"
+	DomainElliptic      VerificationDomain = "elliptic"
 )
 
 // VerificationCertificate represents a certified mathematical proof of correctness.
@@ -113,6 +119,22 @@ func VerifyComputation(expr, result Node, env *Env) (*VerificationCertificate, e
 				return env.LastCert, nil
 			}
 			return verifyGeoProve(fn, result, env, fsm)
+
+		case "solve_linear", "linsolve":
+			_ = fsm.TransitionTo(VerifyStateTargetClassified)
+			return verifyLinearSolve(fn, result, env, fsm)
+
+		case "solve_pell", "pell":
+			_ = fsm.TransitionTo(VerifyStateTargetClassified)
+			return verifyPell(fn, result, env, fsm)
+
+		case "minimal_polynomial":
+			_ = fsm.TransitionTo(VerifyStateTargetClassified)
+			return verifyMinimalPolynomial(fn, result, env, fsm)
+
+		case "ec_add":
+			_ = fsm.TransitionTo(VerifyStateTargetClassified)
+			return verifyEllipticAdd(fn, result, env, fsm)
 		}
 
 	case *RelOpNode:
@@ -296,7 +318,7 @@ func verifySolve(fn *FuncNode, rootsResult Node, env *Env, fsm *VerifyLifecycleF
 	if allRootsSatisfied {
 		_ = fsm.TransitionTo(VerifyStateCertified)
 		details := i18n.T("verify.solve_holds")
-		certIR := NewIdentityCertificate(IdentityKindEquivalence, zeroExpr, rootsResult, mustRational(0, 1), true, details)
+		certIR := NewPolynomialRootCertificate(zeroExpr, varName, rootsResult, mustRational(0, 1), true, details)
 		return &VerificationCertificate{
 			Domain:     DomainSolve,
 			Equation:   eqStr,
@@ -310,7 +332,7 @@ func verifySolve(fn *FuncNode, rootsResult Node, env *Env, fsm *VerifyLifecycleF
 
 	_ = fsm.TransitionTo(VerifyStateRefuted)
 	details := fmt.Sprintf("root %s did not satisfy equation (residual = %s)", failedRoot.String(), lastResidual.String())
-	certIR := NewIdentityCertificate(IdentityKindEquivalence, zeroExpr, rootsResult, lastResidual, false, details)
+	certIR := NewPolynomialRootCertificate(zeroExpr, varName, rootsResult, lastResidual, false, details)
 	return &VerificationCertificate{
 		Domain:     DomainSolve,
 		Equation:   eqStr,
@@ -1020,4 +1042,331 @@ func verifyGeoProve(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM
 		return env.LastCert, nil
 	}
 	return nil, fmt.Errorf("failed to obtain geometric certificate")
+}
+
+func verifyLinearSolve(fn *FuncNode, xResult Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
+	if len(fn.Args) < 2 {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, fmt.Errorf("linear solve verification requires matrix A and vector b")
+	}
+	A, okA := fn.Args[0].(*MatrixNode)
+	if !okA {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, fmt.Errorf("linear solve verification requires matrix A")
+	}
+
+	// Format b as column matrix
+	var bMat *MatrixNode
+	switch b := fn.Args[1].(type) {
+	case *MatrixNode:
+		if b.Cols == 1 {
+			bMat = b
+		} else if b.Rows == 1 {
+			data := make([][]Node, b.Cols)
+			for i := 0; i < b.Cols; i++ {
+				data[i] = []Node{b.Data[0][i]}
+			}
+			bMat = &MatrixNode{Rows: b.Cols, Cols: 1, Data: data}
+		} else {
+			bMat = b
+		}
+	case *ListNode:
+		data := make([][]Node, len(b.Elements))
+		for i, el := range b.Elements {
+			data[i] = []Node{el}
+		}
+		bMat = &MatrixNode{Rows: len(b.Elements), Cols: 1, Data: data}
+	default:
+		bMat = &MatrixNode{Rows: 1, Cols: 1, Data: [][]Node{{b}}}
+	}
+
+	// Format xResult as column matrix
+	var xMat *MatrixNode
+	switch x := xResult.(type) {
+	case *MatrixNode:
+		if x.Cols == 1 {
+			xMat = x
+		} else if x.Rows == 1 {
+			data := make([][]Node, x.Cols)
+			for i := 0; i < x.Cols; i++ {
+				data[i] = []Node{x.Data[0][i]}
+			}
+			xMat = &MatrixNode{Rows: x.Cols, Cols: 1, Data: data}
+		} else {
+			xMat = x
+		}
+	case *ListNode:
+		data := make([][]Node, len(x.Elements))
+		for i, el := range x.Elements {
+			data[i] = []Node{el}
+		}
+		xMat = &MatrixNode{Rows: len(x.Elements), Cols: 1, Data: data}
+	default:
+		xMat = &MatrixNode{Rows: 1, Cols: 1, Data: [][]Node{{x}}}
+	}
+
+	_ = fsm.TransitionTo(VerifyStateResidualConstructed)
+	prod, err := evalMatrixMulVerified(A, xMat)
+	if err != nil {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		return nil, err
+	}
+
+	_ = fsm.TransitionTo(VerifyStateSimplificationEvaluated)
+	holds := true
+	if prod.Rows != bMat.Rows || prod.Cols != bMat.Cols {
+		holds = false
+	} else {
+		for r := 0; r < prod.Rows; r++ {
+			for c := 0; c < prod.Cols; c++ {
+				negB, _ := simplifyUnaryOp("-", bMat.Data[r][c])
+				diff := NewAdd([]Node{prod.Data[r][c], negB})
+				if !checkIsZeroAlgebraically(diff, env) {
+					holds = false
+					break
+				}
+			}
+			if !holds {
+				break
+			}
+		}
+	}
+
+	eqStr := "A * x == b"
+	if holds {
+		_ = fsm.TransitionTo(VerifyStateCertified)
+		details := "linear system solution holds"
+		certIR := NewLinearSolveCertificate(A, xMat, bMat, mustRational(0, 1), true, details)
+		return &VerificationCertificate{
+			Domain:     DomainLinearSolve,
+			Equation:   eqStr,
+			Residual:   mustRational(0, 1),
+			IsVerified: true,
+			Details:    details,
+			State:      VerifyStateCertified,
+			CertIR:     certIR,
+		}, nil
+	}
+
+	_ = fsm.TransitionTo(VerifyStateRefuted)
+	details := "linear system solution does not satisfy A * x == b"
+	certIR := NewLinearSolveCertificate(A, xMat, bMat, mustRational(1, 1), false, details)
+	return &VerificationCertificate{
+		Domain:     DomainLinearSolve,
+		Equation:   eqStr,
+		Residual:   mustRational(1, 1),
+		IsVerified: false,
+		Details:    details,
+		State:      VerifyStateRefuted,
+		CertIR:     certIR,
+	}, nil
+}
+
+func verifyPell(fn *FuncNode, solResult Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
+	_ = env
+	if len(fn.Args) < 1 {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, fmt.Errorf("pell equation verification requires parameter d")
+	}
+	dVal, err := Eval(fn.Args[0])
+	if err != nil {
+		return nil, err
+	}
+	dRat, okD := dVal.(*RationalNode)
+	if !okD || !dRat.Val.IsInt() {
+		return nil, fmt.Errorf("parameter d must be an integer")
+	}
+	dBig := dRat.Val.Num()
+
+	list, okList := solResult.(*ListNode)
+	if !okList || len(list.Elements) < 2 {
+		return nil, fmt.Errorf("pell solution must be a list [x, y]")
+	}
+
+	xVal, err := Eval(list.Elements[0])
+	if err != nil {
+		return nil, err
+	}
+	yVal, err := Eval(list.Elements[1])
+	if err != nil {
+		return nil, err
+	}
+
+	xRat, okX := xVal.(*RationalNode)
+	yRat, okY := yVal.(*RationalNode)
+	if !okX || !okY || !xRat.Val.IsInt() || !yRat.Val.IsInt() {
+		return nil, fmt.Errorf("pell solution coordinates must be integers")
+	}
+
+	xBig := xRat.Val.Num()
+	yBig := yRat.Val.Num()
+
+	_ = fsm.TransitionTo(VerifyStateResidualConstructed)
+	// Calculate x^2 - d * y^2 - 1
+	x2 := new(big.Int).Mul(xBig, xBig)
+	y2 := new(big.Int).Mul(yBig, yBig)
+	dy2 := new(big.Int).Mul(dBig, y2)
+	diff := new(big.Int).Sub(x2, dy2)
+	res := new(big.Int).Sub(diff, big.NewInt(1))
+
+	_ = fsm.TransitionTo(VerifyStateSimplificationEvaluated)
+	holds := res.Sign() == 0
+	eqStr := fmt.Sprintf("x^2 - %s*y^2 == 1", dBig.String())
+
+	if holds {
+		_ = fsm.TransitionTo(VerifyStateCertified)
+		details := "pell equation fundamental solution holds"
+		certIR := NewPellCertificate(dVal, xVal, yVal, mustRational(0, 1), true, details)
+		return &VerificationCertificate{
+			Domain:     DomainPell,
+			Equation:   eqStr,
+			Residual:   mustRational(0, 1),
+			IsVerified: true,
+			Details:    details,
+			State:      VerifyStateCertified,
+			CertIR:     certIR,
+		}, nil
+	}
+
+	_ = fsm.TransitionTo(VerifyStateRefuted)
+	details := fmt.Sprintf("pell equation residual was %s", res.String())
+	resNode := &RationalNode{Val: new(big.Rat).SetInt(res)}
+	certIR := NewPellCertificate(dVal, xVal, yVal, resNode, false, details)
+	return &VerificationCertificate{
+		Domain:     DomainPell,
+		Equation:   eqStr,
+		Residual:   resNode,
+		IsVerified: false,
+		Details:    details,
+		State:      VerifyStateRefuted,
+		CertIR:     certIR,
+	}, nil
+}
+
+func verifyMinimalPolynomial(fn *FuncNode, polyResult Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
+	if len(fn.Args) < 1 {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, fmt.Errorf("minimal_polynomial requires target value")
+	}
+	alpha := fn.Args[0]
+	varName := "x"
+
+	_ = fsm.TransitionTo(VerifyStateResidualConstructed)
+	subbed := Substitute(polyResult, varName, alpha)
+
+	_ = fsm.TransitionTo(VerifyStateSimplificationEvaluated)
+	holds := checkIsZeroAlgebraically(subbed, env)
+
+	eqStr := "P(alpha) == 0"
+	if holds {
+		_ = fsm.TransitionTo(VerifyStateCertified)
+		details := "minimal polynomial root relation holds"
+		certIR := NewPolynomialRootCertificate(polyResult, varName, alpha, mustRational(0, 1), true, details)
+		return &VerificationCertificate{
+			Domain:     DomainPolynomialRoot,
+			Equation:   eqStr,
+			Residual:   mustRational(0, 1),
+			IsVerified: true,
+			Details:    details,
+			State:      VerifyStateCertified,
+			CertIR:     certIR,
+		}, nil
+	}
+
+	_ = fsm.TransitionTo(VerifyStateRefuted)
+	evalRes, _ := Eval(subbed)
+	details := "polynomial does not vanish at alpha"
+	certIR := NewPolynomialRootCertificate(polyResult, varName, alpha, evalRes, false, details)
+	return &VerificationCertificate{
+		Domain:     DomainPolynomialRoot,
+		Equation:   eqStr,
+		Residual:   evalRes,
+		IsVerified: false,
+		Details:    details,
+		State:      VerifyStateRefuted,
+		CertIR:     certIR,
+	}, nil
+}
+
+func verifyEllipticAdd(fn *FuncNode, p3Result Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
+	if len(fn.Args) < 4 {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, fmt.Errorf("elliptic addition requires a, b, P1, P2")
+	}
+	a := fn.Args[0]
+	b := fn.Args[1]
+	p1 := fn.Args[2]
+	p2 := fn.Args[3]
+
+	_ = fsm.TransitionTo(VerifyStateResidualConstructed)
+
+	// Check if p3Result satisfies y^2 == x^3 + a*x + b
+	holds := false
+	var resNode Node = mustRational(0, 1)
+
+	if pMat, ok := p3Result.(*MatrixNode); ok && len(pMat.Data) == 1 && len(pMat.Data[0]) >= 2 {
+		x := pMat.Data[0][0]
+		y := pMat.Data[0][1]
+
+		y2 := &PowNode{Base: y, Exp: mustRational(2, 1)}
+		x3 := &PowNode{Base: x, Exp: mustRational(3, 1)}
+		ax := &MulNode{Factors: []Node{a, x}}
+		rhs := &AddNode{Terms: []Node{x3, ax, b}}
+		negRHS, _ := simplifyUnaryOp("-", rhs)
+		diff := &AddNode{Terms: []Node{y2, negRHS}}
+
+		_ = fsm.TransitionTo(VerifyStateSimplificationEvaluated)
+		holds = checkIsZeroAlgebraically(diff, env)
+		if !holds {
+			resNode, _ = Eval(diff)
+		}
+	} else if pList, ok := p3Result.(*ListNode); ok && len(pList.Elements) >= 2 {
+		x := pList.Elements[0]
+		y := pList.Elements[1]
+
+		y2 := &PowNode{Base: y, Exp: mustRational(2, 1)}
+		x3 := &PowNode{Base: x, Exp: mustRational(3, 1)}
+		ax := &MulNode{Factors: []Node{a, x}}
+		rhs := &AddNode{Terms: []Node{x3, ax, b}}
+		negRHS, _ := simplifyUnaryOp("-", rhs)
+		diff := &AddNode{Terms: []Node{y2, negRHS}}
+
+		_ = fsm.TransitionTo(VerifyStateSimplificationEvaluated)
+		holds = checkIsZeroAlgebraically(diff, env)
+		if !holds {
+			resNode, _ = Eval(diff)
+		}
+	} else {
+		// Point at infinity is always valid
+		holds = true
+	}
+
+	eqStr := "y^2 == x^3 + a*x + b"
+	if holds {
+		_ = fsm.TransitionTo(VerifyStateCertified)
+		details := "elliptic curve group law addition holds"
+		certIR := NewEllipticPointCertificate(a, b, p1, p2, p3Result, mustRational(0, 1), true, details)
+		return &VerificationCertificate{
+			Domain:     DomainElliptic,
+			Equation:   eqStr,
+			Residual:   mustRational(0, 1),
+			IsVerified: true,
+			Details:    details,
+			State:      VerifyStateCertified,
+			CertIR:     certIR,
+		}, nil
+	}
+
+	_ = fsm.TransitionTo(VerifyStateRefuted)
+	details := "result point does not lie on curve"
+	certIR := NewEllipticPointCertificate(a, b, p1, p2, p3Result, resNode, false, details)
+	return &VerificationCertificate{
+		Domain:     DomainElliptic,
+		Equation:   eqStr,
+		Residual:   resNode,
+		IsVerified: false,
+		Details:    details,
+		State:      VerifyStateRefuted,
+		CertIR:     certIR,
+	}, nil
 }

@@ -203,8 +203,15 @@
     "rule_denestradical": "Radical Denesting",
     "rule_solvequadratic": "Quadratic Equation Solving (Quadratic Formula)",
     "rule_solvecubic": "Cubic Equation Solving (Cardano's Formula)",
+    "rule_solvequartic": "Quartic Equation Solving (Ferrari's Method)",
     "rule_solvelinear": "Linear Equation Solving",
+    "rule_solvelinearsystem": "Linear System Solving via Gaussian Elimination",
+    "rule_solvepell": "Pell's Equation Solving via Continued Fractions",
+    "rule_polynomialroot": "Polynomial Root Algebraic Verification",
+    "rule_lllrelation": "Integer Relation Identification via LLL",
+    "rule_ellipticadd": "Elliptic Curve Point Addition via Chord-and-Tangent",
     "rule_diffpower": "Power Rule of Differentiation",
+
     "rule_diffproduct": "Product Rule of Differentiation",
     "rule_diffchain": "Chain Rule of Differentiation",
     "rule_difftrig": "Trigonometric Differentiation",
@@ -287,8 +294,12 @@
   "cfrac": {
     "err_cannot_compute_continued_fraction_of": "cannot compute continued fraction of nil rational",
     "err_continued_fraction_of_imaginary_square": "continued fraction of imaginary square root sqrt(%s) is not supported",
-    "err_division_by_zero_in_continued": "division by zero in continued fraction reconstruction"
+    "err_division_by_zero_in_continued": "division by zero in continued fraction reconstruction",
+    "err_pell_d_must_be_positive_integer": "Pell equation error: d must be a positive integer",
+    "err_pell_d_square": "Pell equation error: no non-trivial integer solutions when d is a perfect square",
+    "err_pell_max_iterations_exceeded": "Pell equation error: maximum iterations exceeded"
   },
+
   "complex": {
     "err_cannot_determine_sign_of_complex": "cannot determine sign of complex components (re=%s, im=%s)"
   },
@@ -718,10 +729,16 @@
     "solve_quad_formula": "Quadratic formula: discriminant D = b^2 - 4ac = %s, %s = (-b ± √D) / (2a)",
     "solve_cubic_cardano": "Exact algebraic roots of cubic equation via Cardano's formula: %s",
     "solve_quartic_ferrari": "Exact algebraic roots of quartic equation via Ferrari's formula: %s",
+    "solve_linear_system": "Solve linear system by Gaussian elimination to RREF: %s",
+    "solve_pell": "Find minimal positive integer solution to Pell's equation %s^2 - %s * %s^2 = 1 via continued fractions: (%s, %s)",
+    "poly_root": "Verify root %s of algebraic polynomial %s = 0 by evaluation",
+    "lll_relation": "Identify integer relation %s = 0 via LLL lattice reduction",
+    "elliptic_add": "Elliptic curve point addition via chord-and-tangent: %s + %s = %s",
     "trig_expand": "Trigonometric expansion: addition & multiple-angle formulas",
     "trig_reduce": "Trigonometric reduction: product-to-sum, power reduction, and harmonic addition",
     "indefinite_integral": "Indefinite integral: ∫ (%s) d%s = %s",
     "definite_integral": "Definite integral: ∫_%s^%s (%s) d%s = [F(%s)]_%s^%s = %s"
   }
 }
+
 

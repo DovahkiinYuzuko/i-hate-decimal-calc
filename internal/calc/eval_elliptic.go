@@ -119,19 +119,25 @@ func AddEllipticPoints(p1, p2 EllipticPoint, a, b *big.Rat) (EllipticPoint, erro
 		y3 := new(big.Rat).Mul(lambda, dx)
 		y3.Sub(y3, p1.Y)
 
-		return NewEllipticPoint(x3, y3), nil
+		res := NewEllipticPoint(x3, y3)
+		RecordTraceRewrite(RuleEllipticAdd, pointToNodeSafely(p1), pointToNodeSafely(res), i18n.T("trace.elliptic_add", p1.String(), p2.String(), res.String()))
+		return res, nil
 	}
 
 	// Same X coordinates
 	// If y1 != y2, then y1 = -y2 => P1 + P2 = O
 	if p1.Y.Cmp(p2.Y) != 0 {
-		return InfinityPoint(), nil
+		res := InfinityPoint()
+		RecordTraceRewrite(RuleEllipticAdd, pointToNodeSafely(p1), pointToNodeSafely(res), i18n.T("trace.elliptic_add", p1.String(), p2.String(), res.String()))
+		return res, nil
 	}
 
 	// P1 == P2: tangent line (doubling)
 	// If y1 == 0, vertical tangent => 2*P = O
 	if p1.Y.Sign() == 0 {
-		return InfinityPoint(), nil
+		res := InfinityPoint()
+		RecordTraceRewrite(RuleEllipticAdd, pointToNodeSafely(p1), pointToNodeSafely(res), i18n.T("trace.elliptic_add", p1.String(), p2.String(), res.String()))
+		return res, nil
 	}
 
 	// lambda = (3*x1^2 + a) / (2*y1)
@@ -155,8 +161,11 @@ func AddEllipticPoints(p1, p2 EllipticPoint, a, b *big.Rat) (EllipticPoint, erro
 	y3 := new(big.Rat).Mul(lambda, dx)
 	y3.Sub(y3, p1.Y)
 
-	return NewEllipticPoint(x3, y3), nil
+	res := NewEllipticPoint(x3, y3)
+	RecordTraceRewrite(RuleEllipticAdd, pointToNodeSafely(p1), pointToNodeSafely(res), i18n.T("trace.elliptic_add", p1.String(), p2.String(), res.String()))
+	return res, nil
 }
+
 
 // ScalarMulEllipticPoint computes n * P using Double-and-Add algorithm over Q.
 func ScalarMulEllipticPoint(p EllipticPoint, n *big.Int, a, b *big.Rat) (EllipticPoint, error) {

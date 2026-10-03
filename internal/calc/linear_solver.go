@@ -262,7 +262,9 @@ func evalSolveLinear(matNode, bNode Node) (Node, error) {
 		for r, pc := range pivotCols {
 			solution[pc] = augRREF.Data[r][A.Cols]
 		}
-		return &ListNode{Elements: solution}, nil
+		solNode := &ListNode{Elements: solution}
+		RecordTraceRewrite(RuleSolveLinearSystem, augMat, augRREF, i18n.T("trace.solve_linear_system", solNode.String()))
+		return solNode, nil
 	}
 
 	// Underdetermined system (infinitely many solutions):
@@ -306,5 +308,8 @@ func evalSolveLinear(matNode, bNode Node) (Node, error) {
 		}
 	}
 
-	return &ListNode{Elements: solution}, nil
+	solNode := &ListNode{Elements: solution}
+	RecordTraceRewrite(RuleSolveLinearSystem, augMat, augRREF, i18n.T("trace.solve_linear_system", solNode.String()))
+	return solNode, nil
+
 }

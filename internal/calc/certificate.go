@@ -2,6 +2,7 @@ package calc
 
 import (
 	"fmt"
+	"strings"
 )
 
 // CertificateDomain defines the mathematical domain of the verified operation.
@@ -18,8 +19,13 @@ const (
 	CertDomainGeometry      CertificateDomain = "geometry"
 	CertDomainImpossibility CertificateDomain = "impossibility"
 	CertDomainEquivalence   CertificateDomain = "equivalence"
+	CertDomainNumberTheory  CertificateDomain = "number_theory"
+	CertDomainElliptic      CertificateDomain = "elliptic"
+	CertDomainRoot          CertificateDomain = "root"
+	CertDomainLattice       CertificateDomain = "lattice"
 	CertDomainGeneral       CertificateDomain = "general"
 )
+
 
 // Certificate represents a certified mathematical proof of correctness.
 // It serves as an immutable intermediate representation (IR) between the CAS solver,
@@ -84,3 +90,147 @@ func (b *BaseCertificate) String() string {
 	}
 	return fmt.Sprintf("[FAILED VERIFICATION: %s] %s", b.EquationStr, b.DetailsMsg)
 }
+
+// LinearSolveCertificate represents a certified solution to a linear system A * x = b.
+type LinearSolveCertificate struct {
+	BaseCertificate
+	Matrix   Node
+	Solution Node
+	Target   Node
+}
+
+// NewLinearSolveCertificate creates a new verified LinearSolveCertificate.
+func NewLinearSolveCertificate(matrix, solution, target, residual Node, isVerified bool, details string) *LinearSolveCertificate {
+	eqStr := ""
+	if matrix != nil && solution != nil && target != nil {
+		eqStr = fmt.Sprintf("%s * %s == %s", matrix.String(), solution.String(), target.String())
+	}
+	return &LinearSolveCertificate{
+		BaseCertificate: BaseCertificate{
+			DomainVal:    CertDomainMatrix,
+			Verified:     isVerified,
+			ResidualNode: residual,
+			DetailsMsg:   details,
+			EquationStr:  eqStr,
+		},
+		Matrix:   matrix,
+		Solution: solution,
+		Target:   target,
+	}
+}
+
+// PellCertificate represents a certified integer solution to Pell's equation x^2 - d * y^2 = 1.
+type PellCertificate struct {
+	BaseCertificate
+	D Node
+	X Node
+	Y Node
+}
+
+// NewPellCertificate creates a new verified PellCertificate.
+func NewPellCertificate(d, x, y, residual Node, isVerified bool, details string) *PellCertificate {
+	eqStr := ""
+	if d != nil && x != nil && y != nil {
+		eqStr = fmt.Sprintf("%s^2 - %s * %s^2 == 1", x.String(), d.String(), y.String())
+	}
+	return &PellCertificate{
+		BaseCertificate: BaseCertificate{
+			DomainVal:    CertDomainNumberTheory,
+			Verified:     isVerified,
+			ResidualNode: residual,
+			DetailsMsg:   details,
+			EquationStr:  eqStr,
+		},
+		D: d,
+		X: x,
+		Y: y,
+	}
+}
+
+// PolynomialRootCertificate represents a certified root alpha of an algebraic polynomial P(alpha) = 0.
+type PolynomialRootCertificate struct {
+	BaseCertificate
+	Polynomial Node
+	Variable   string
+	Root       Node
+}
+
+// NewPolynomialRootCertificate creates a new verified PolynomialRootCertificate.
+func NewPolynomialRootCertificate(poly Node, variable string, root, residual Node, isVerified bool, details string) *PolynomialRootCertificate {
+	eqStr := ""
+	if poly != nil && root != nil {
+		eqStr = fmt.Sprintf("%s [%s = %s] == 0", poly.String(), variable, root.String())
+	}
+	return &PolynomialRootCertificate{
+		BaseCertificate: BaseCertificate{
+			DomainVal:    CertDomainRoot,
+			Verified:     isVerified,
+			ResidualNode: residual,
+			DetailsMsg:   details,
+			EquationStr:  eqStr,
+		},
+		Polynomial: poly,
+		Variable:   variable,
+		Root:       root,
+	}
+}
+
+// IntegerRelationCertificate represents a certified linear integer relation sum(c_i * alpha_i) = 0.
+type IntegerRelationCertificate struct {
+	BaseCertificate
+	Elements     []Node
+	Coefficients []Node
+}
+
+// NewIntegerRelationCertificate creates a new verified IntegerRelationCertificate.
+func NewIntegerRelationCertificate(elements, coeffs []Node, residual Node, isVerified bool, details string) *IntegerRelationCertificate {
+	var terms []string
+	for i := 0; i < len(elements) && i < len(coeffs); i++ {
+		terms = append(terms, fmt.Sprintf("%s * %s", coeffs[i].String(), elements[i].String()))
+	}
+	eqStr := fmt.Sprintf("%s == 0", strings.Join(terms, " + "))
+	return &IntegerRelationCertificate{
+		BaseCertificate: BaseCertificate{
+			DomainVal:    CertDomainLattice,
+			Verified:     isVerified,
+			ResidualNode: residual,
+			DetailsMsg:   details,
+			EquationStr:  eqStr,
+		},
+		Elements:     elements,
+		Coefficients: coeffs,
+	}
+}
+
+// EllipticPointCertificate represents a certified rational point addition P1 + P2 = Sum on y^2 = x^3 + a*x + b.
+type EllipticPointCertificate struct {
+	BaseCertificate
+	CurveA Node
+	CurveB Node
+	P1     Node
+	P2     Node
+	Sum    Node
+}
+
+// NewEllipticPointCertificate creates a new verified EllipticPointCertificate.
+func NewEllipticPointCertificate(a, b, p1, p2, sum, residual Node, isVerified bool, details string) *EllipticPointCertificate {
+	eqStr := ""
+	if p1 != nil && p2 != nil && sum != nil {
+		eqStr = fmt.Sprintf("%s + %s == %s", p1.String(), p2.String(), sum.String())
+	}
+	return &EllipticPointCertificate{
+		BaseCertificate: BaseCertificate{
+			DomainVal:    CertDomainElliptic,
+			Verified:     isVerified,
+			ResidualNode: residual,
+			DetailsMsg:   details,
+			EquationStr:  eqStr,
+		},
+		CurveA: a,
+		CurveB: b,
+		P1:     p1,
+		P2:     p2,
+		Sum:    sum,
+	}
+}
+

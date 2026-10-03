@@ -3,6 +3,8 @@ package calc
 import (
 	"strings"
 	"testing"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
 // TestEval_RationalArithmetic validates basic rational arithmetic and automatic reduction.
@@ -1027,6 +1029,7 @@ func TestVectorCalculus(t *testing.T) {
 }
 
 func TestGeometryBuiltins(t *testing.T) {
+	_ = i18n.Init("en")
 	cases := []struct {
 		input    string
 		expected string
@@ -1062,11 +1065,11 @@ func TestGeometryBuiltins(t *testing.T) {
 	// Error cases
 	errorCases := []struct {
 		input       string
-		errContains string
+		targetErr   error
 	}{
-		{"line_intersect([1, 1, 1], [1, 1, 5])", "lines are parallel"},
-		{"triangle_centers([0, 0], [1, 1], [2, 2])", "points are collinear"},
-		{"circle_intersect([0, 0], 2, [0, 0], 2)", "circles are coincident"},
+		{"line_intersect([1, 1, 1], [1, 1, 5])", ErrParallelLines},
+		{"triangle_centers([0, 0], [1, 1], [2, 2])", ErrDegenerateTriangle},
+		{"circle_intersect([0, 0], 2, [0, 0], 2)", ErrCoincidentCircles},
 	}
 	for _, tc := range errorCases {
 		_, err := EvalString(tc.input)
@@ -1074,8 +1077,8 @@ func TestGeometryBuiltins(t *testing.T) {
 			t.Errorf("expected error for %q, got nil", tc.input)
 			continue
 		}
-		if !strings.Contains(err.Error(), tc.errContains) {
-			t.Errorf("expected error containing %q for %q, got %v", tc.errContains, tc.input, err)
+		if !strings.Contains(err.Error(), tc.targetErr.Error()) {
+			t.Errorf("expected error containing %q for %q, got %v", tc.targetErr.Error(), tc.input, err)
 		}
 	}
 }

@@ -423,6 +423,113 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 	case *GeometricCertificate:
 		return transpileGeometricCertificateIR(c, "ihd_verified_proof")
 
+	case *LinearSolveCertificate:
+		mStr, _ := ToLeanSyntax(c.Matrix)
+		xStr, _ := ToLeanSyntax(c.Solution)
+		bStr, _ := ToLeanSyntax(c.Target)
+		rows, cols := 0, 0
+		if mat, ok := c.Matrix.(*MatrixNode); ok && len(mat.Data) > 0 {
+			rows = len(mat.Data)
+			cols = len(mat.Data[0])
+		}
+		hasVars := len(CollectFreeVariables(c.Matrix)) > 0 || len(CollectFreeVariables(c.Solution)) > 0 || len(CollectFreeVariables(c.Target)) > 0
+		if rows > 0 && cols > 0 {
+			equalityStr = fmt.Sprintf("((%s : Matrix (Fin %d) (Fin %d) ℚ) * (%s : Matrix (Fin %d) (Fin 1) ℚ)) = (%s : Matrix (Fin %d) (Fin 1) ℚ)", mStr, rows, cols, xStr, cols, bStr, rows)
+			if hasVars {
+				tactic = "by ext i j <;> fin_cases i <;> fin_cases j <;> ring"
+			} else {
+				tactic = "by ext i j <;> fin_cases i <;> fin_cases j <;> norm_num"
+			}
+		} else {
+			equalityStr = fmt.Sprintf("%s * %s = %s", mStr, xStr, bStr)
+			tactic = "by ext <;> ring"
+		}
+
+	case *PellCertificate:
+		if c.X != nil && c.Y != nil && c.D != nil {
+			xStr, _ := ToLeanSyntax(c.X)
+			yStr, _ := ToLeanSyntax(c.Y)
+			dStr, _ := ToLeanSyntax(c.D)
+			equalityStr = fmt.Sprintf("((%s : ℤ)^2 - (%s : ℤ) * (%s : ℤ)^2 : ℤ) = 1", xStr, dStr, yStr)
+			tactic = "by decide"
+		} else {
+			equalityStr = "True"
+			tactic = "by decide"
+		}
+
+	case *PolynomialRootCertificate:
+		varSubst := c.Variable
+		if varSubst == "" {
+			varSubst = "x"
+		}
+		substed := Substitute(c.Polynomial, varSubst, c.Root)
+		subStr, err := ToLeanSyntax(substed)
+		if err != nil {
+			subStr = "0"
+		}
+		equalityStr = fmt.Sprintf("%s = 0", subStr)
+		if len(CollectFreeVariables(substed)) > 0 {
+			tactic = "by ring"
+		} else {
+			tactic = "by norm_num"
+		}
+
+	case *IntegerRelationCertificate:
+		terms := make([]Node, 0, len(c.Coefficients))
+		for i, coeffNode := range c.Coefficients {
+			if coeffNode == nil {
+				continue
+			}
+			var term Node
+			if i < len(c.Elements) && c.Elements[i] != nil {
+				term = &MulNode{Factors: []Node{coeffNode, c.Elements[i]}}
+			} else {
+				term = coeffNode
+			}
+			terms = append(terms, term)
+		}
+		var relationNode Node
+		if len(terms) == 0 {
+			relationNode = mustRational(0, 1)
+		} else {
+			relationNode = &AddNode{Terms: terms}
+		}
+		relStr, err := ToLeanSyntax(relationNode)
+		if err != nil {
+			relStr = "0"
+		}
+		equalityStr = fmt.Sprintf("%s = 0", relStr)
+		if len(CollectFreeVariables(relationNode)) > 0 {
+			tactic = "by ring"
+		} else {
+			tactic = "by norm_num"
+		}
+
+	case *EllipticPointCertificate:
+		if c.Sum != nil {
+			// Check if point is at infinity [0, 1, 0] or has coords
+			if pMat, ok := c.Sum.(*MatrixNode); ok && len(pMat.Data) == 1 && len(pMat.Data[0]) >= 2 {
+				xNode := pMat.Data[0][0]
+				yNode := pMat.Data[0][1]
+				xStr, _ := ToLeanSyntax(xNode)
+				yStr, _ := ToLeanSyntax(yNode)
+				aStr, _ := ToLeanSyntax(c.CurveA)
+				bStr, _ := ToLeanSyntax(c.CurveB)
+				equalityStr = fmt.Sprintf("(%s : ℚ)^2 = (%s : ℚ)^3 + (%s : ℚ) * (%s : ℚ) + (%s : ℚ)", yStr, xStr, aStr, xStr, bStr)
+				if len(CollectFreeVariables(xNode)) > 0 || len(CollectFreeVariables(yNode)) > 0 || len(CollectFreeVariables(c.CurveA)) > 0 || len(CollectFreeVariables(c.CurveB)) > 0 {
+					tactic = "by ring"
+				} else {
+					tactic = "by norm_num"
+				}
+			} else {
+				equalityStr = "True"
+				tactic = "by decide"
+			}
+		} else {
+			equalityStr = "True"
+			tactic = "by decide"
+		}
+
 	case *ImpossibilityCertificate:
 		if c.Kind == ImpossibilityAbelRuffini {
 			fStr, _ := ToLeanSyntax(c.Problem)
@@ -467,7 +574,9 @@ func TranspileCertificateToLean(cert *VerificationCertificate, inputExpr, result
 		// If it's a specific structured IR, directly transpile
 		switch certIR.(type) {
 		case *IdentityCertificate, *DerivCertificate, *InvertibilityCertificate,
-			*DecompositionCertificate, *ODECertificate, *WZCertificate, *GeometricCertificate:
+			*DecompositionCertificate, *ODECertificate, *WZCertificate, *GeometricCertificate,
+			*LinearSolveCertificate, *PellCertificate, *PolynomialRootCertificate,
+			*IntegerRelationCertificate, *EllipticPointCertificate:
 			return TranspileCertificateIRToLean(certIR)
 		}
 	}
@@ -537,6 +646,41 @@ func GenerateLeanSource(theoremName string, cert *VerificationCertificate, input
 				}
 				if c.Solution != nil {
 					allNodes = append(allNodes, c.Solution)
+				}
+			case *LinearSolveCertificate:
+				if c.Matrix != nil {
+					allNodes = append(allNodes, c.Matrix)
+				}
+				if c.Solution != nil {
+					allNodes = append(allNodes, c.Solution)
+				}
+				if c.Target != nil {
+					allNodes = append(allNodes, c.Target)
+				}
+			case *PolynomialRootCertificate:
+				if c.Polynomial != nil {
+					allNodes = append(allNodes, c.Polynomial)
+				}
+				if c.Root != nil {
+					allNodes = append(allNodes, c.Root)
+				}
+			case *IntegerRelationCertificate:
+				allNodes = append(allNodes, c.Elements...)
+			case *EllipticPointCertificate:
+				if c.CurveA != nil {
+					allNodes = append(allNodes, c.CurveA)
+				}
+				if c.CurveB != nil {
+					allNodes = append(allNodes, c.CurveB)
+				}
+				if c.P1 != nil {
+					allNodes = append(allNodes, c.P1)
+				}
+				if c.P2 != nil {
+					allNodes = append(allNodes, c.P2)
+				}
+				if c.Sum != nil {
+					allNodes = append(allNodes, c.Sum)
 				}
 			}
 		}
@@ -616,6 +760,21 @@ func DetermineRequiredImports(cert Certificate, nodes ...Node) []string {
 			if !hasVars {
 				importsMap["Mathlib.Tactic.NormNum"] = true
 			}
+		case *LinearSolveCertificate:
+			importsMap["Mathlib.Data.Matrix.Basic"] = true
+			importsMap["Mathlib.Data.Fin.VecNotation"] = true
+			importsMap["Mathlib.LinearAlgebra.Matrix.Notation"] = true
+			importsMap["Mathlib.Tactic.FinCases"] = true
+			hasVars := len(CollectFreeVariables(c.Matrix)) > 0 || len(CollectFreeVariables(c.Solution)) > 0 || len(CollectFreeVariables(c.Target)) > 0
+			if !hasVars {
+				importsMap["Mathlib.Tactic.NormNum"] = true
+			}
+		case *PellCertificate:
+			importsMap["Mathlib.Data.Int.Basic"] = true
+			importsMap["Mathlib.Tactic.NormNum"] = true
+		case *PolynomialRootCertificate, *IntegerRelationCertificate, *EllipticPointCertificate:
+			importsMap["Mathlib.Data.Rat.Defs"] = true
+			importsMap["Mathlib.Tactic.NormNum"] = true
 		case *DerivCertificate:
 			importsMap["Mathlib.Analysis.Calculus.Deriv.Basic"] = true
 			if c.Integrand != nil && containsTrigNodes(c.Integrand) {

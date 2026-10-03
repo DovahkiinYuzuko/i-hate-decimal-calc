@@ -27,10 +27,16 @@ const (
 	RuleMatrixDet      RuleID = "MatrixDet"
 	RuleMatrixInv      RuleID = "MatrixInv"
 	RuleIntegrate      RuleID = "Integrate"
-	RuleTrigExpand     RuleID = "TrigExpand"
-	RuleTrigReduce     RuleID = "TrigReduce"
-	RuleLimit          RuleID = "Limit"
+	RuleTrigExpand        RuleID = "TrigExpand"
+	RuleTrigReduce        RuleID = "TrigReduce"
+	RuleLimit             RuleID = "Limit"
+	RuleSolveLinearSystem RuleID = "SolveLinearSystem"
+	RuleSolvePell         RuleID = "SolvePell"
+	RulePolynomialRoot    RuleID = "PolynomialRoot"
+	RuleLLLRelation       RuleID = "LLLRelation"
+	RuleEllipticAdd       RuleID = "EllipticAdd"
 )
+
 
 // RewriteEvent records an atomic term-rewriting step.
 type RewriteEvent struct {
@@ -137,11 +143,17 @@ var ruleTitles = map[RuleID]string{
 	RuleSumFaulhaber:   "Faulhaber's Formula for Sum of Powers",
 	RuleMatrixDet:      "Determinant via Cofactor Expansion",
 	RuleMatrixInv:      "Matrix Inverse via Adjugate Matrix",
-	RuleIntegrate:      "Symbolic Integration",
-	RuleTrigExpand:     "Trigonometric Expansion",
-	RuleTrigReduce:     "Trigonometric Reduction",
-	RuleLimit:          "Limit Evaluation",
+	RuleIntegrate:         "Symbolic Integration",
+	RuleTrigExpand:        "Trigonometric Expansion",
+	RuleTrigReduce:        "Trigonometric Reduction",
+	RuleLimit:             "Limit Evaluation",
+	RuleSolveLinearSystem: "Linear System Solving via Gaussian Elimination",
+	RuleSolvePell:         "Pell's Equation Solving via Continued Fractions",
+	RulePolynomialRoot:    "Polynomial Root Verification",
+	RuleLLLRelation:       "Integer Relation Identification via LLL",
+	RuleEllipticAdd:       "Elliptic Curve Point Addition via Chord-and-Tangent",
 }
+
 
 // CompressTrace converts low-level rewrite events into user-facing pedagogical steps.
 func CompressTrace(events []RewriteEvent) []PedagogicalStep {

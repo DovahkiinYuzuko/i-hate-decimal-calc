@@ -151,3 +151,66 @@ func evalFromCFrac(arg Node) (Node, error) {
 
 	return &RationalNode{Val: cur}, nil
 }
+
+// evalSolvePell solves Pell's equation x^2 - d * y^2 = 1 for the fundamental positive integer solution (x0, y0).
+func evalSolvePell(arg Node) (Node, error) {
+	evaled, err := Eval(arg)
+	if err != nil {
+		return nil, err
+	}
+
+	rat, ok := evaled.(*RationalNode)
+	if !ok || !rat.Val.IsInt() || rat.Val.Sign() <= 0 {
+		return nil, fmt.Errorf("%s", i18n.T("cfrac.err_pell_d_must_be_positive_integer"))
+	}
+
+	d := rat.Val.Num()
+
+	// Check if d is a square
+	a0 := new(big.Int).Sqrt(d)
+	a0Sq := new(big.Int).Mul(a0, a0)
+	if a0Sq.Cmp(d) == 0 {
+		return nil, fmt.Errorf("%s", i18n.T("cfrac.err_pell_d_square"))
+	}
+
+	// Continued fraction expansion convergents of sqrt(d)
+	m := big.NewInt(0)
+	denom := big.NewInt(1)
+	a := new(big.Int).Set(a0)
+
+	pPrev2 := big.NewInt(1)
+	pPrev1 := new(big.Int).Set(a0)
+	qPrev2 := big.NewInt(0)
+	qPrev1 := big.NewInt(1)
+
+	const maxPellIterations = 100000
+	for iter := 0; iter < maxPellIterations; iter++ {
+		// Test if pPrev1^2 - d * qPrev1^2 == 1
+		pSq := new(big.Int).Mul(pPrev1, pPrev1)
+		qSq := new(big.Int).Mul(qPrev1, qPrev1)
+		dqSq := new(big.Int).Mul(d, qSq)
+		diff := new(big.Int).Sub(pSq, dqSq)
+		if diff.Cmp(big.NewInt(1)) == 0 {
+			xNode := &RationalNode{Val: new(big.Rat).SetInt(pPrev1)}
+			yNode := &RationalNode{Val: new(big.Rat).SetInt(qPrev1)}
+			resNode := &ListNode{Elements: []Node{xNode, yNode}}
+			RecordTraceRewrite(RuleSolvePell, NewSqrt(rat), resNode, i18n.T("trace.solve_pell", pPrev1.String(), d.String(), qPrev1.String(), pPrev1.String(), qPrev1.String()))
+			return resNode, nil
+		}
+
+		// Next partial quotient
+		m = new(big.Int).Sub(new(big.Int).Mul(denom, a), m)
+		mSq := new(big.Int).Mul(m, m)
+		denom = new(big.Int).Div(new(big.Int).Sub(d, mSq), denom)
+		a = new(big.Int).Div(new(big.Int).Add(a0, m), denom)
+
+		pNext := new(big.Int).Add(new(big.Int).Mul(a, pPrev1), pPrev2)
+		qNext := new(big.Int).Add(new(big.Int).Mul(a, qPrev1), qPrev2)
+
+		pPrev2, pPrev1 = pPrev1, pNext
+		qPrev2, qPrev1 = qPrev1, qNext
+	}
+
+	return nil, fmt.Errorf("%s", i18n.T("cfrac.err_pell_max_iterations_exceeded"))
+}
+

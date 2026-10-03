@@ -36,11 +36,14 @@ func init() {
 	RegisterHandler("variance", handleVariance)
 	RegisterHandler("stddev", handleStdDev)
 
-	// Continued fractions
+	// Continued fractions & Pell equation
 	RegisterHandler("cfrac", handleCFrac)
 	RegisterHandler("from_cfrac", handleFromCFrac)
+	RegisterHandler("solve_pell", handleSolvePell)
+	RegisterHandler("pell", handleSolvePell)
 
 	// Geometry
+
 	RegisterHandler("line_intersect", handleLineIntersect)
 	RegisterHandler("circle_intersect", handleCircleIntersect)
 	RegisterHandler("triangle_area", handleTriangleArea)
@@ -267,7 +270,15 @@ func handleFromCFrac(args []Node, env *Env) (Node, error) {
 	return evalFromCFrac(args[0])
 }
 
+func handleSolvePell(args []Node, env *Env) (Node, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("%s", i18n.T("cfrac.err_pell_d_must_be_positive_integer"))
+	}
+	return evalSolvePell(args[0])
+}
+
 func handleLineIntersect(args []Node, env *Env) (Node, error) {
+
 	return evalLineIntersectFunc(args[0], args[1])
 }
 
