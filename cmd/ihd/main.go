@@ -276,6 +276,11 @@ func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut 
 			fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
 			return err
 		}
+		if rel, ok := evaled.(*calc.RelOpNode); ok && (rel.Op == "==" || rel.Op == "!=") {
+			if resolved, errEq := calc.EvaluateRelOpEquality(rel, env); errEq == nil && resolved != nil {
+				evaled = resolved
+			}
+		}
 		env.Set(v.Name, evaled)
 		env.Set("ans", evaled)
 		if ro.explain {
@@ -318,6 +323,11 @@ func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut 
 		if err != nil {
 			fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
 			return err
+		}
+		if rel, ok := evaled.(*calc.RelOpNode); ok && (rel.Op == "==" || rel.Op == "!=") {
+			if resolved, errEq := calc.EvaluateRelOpEquality(rel, env); errEq == nil && resolved != nil {
+				evaled = resolved
+			}
 		}
 		env.Set("ans", evaled)
 		if ro.explain {

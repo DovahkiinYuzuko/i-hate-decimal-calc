@@ -37,7 +37,14 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | 4 | `-` | Prefix Unary | Unary negation (Lower precedence than `^`: `-3^2 = -(3^2) = -9`) |
 | 5 | `*`, `/` | Left-associative | Multiplication and division (Explicit `*` required) |
 | 6 | `+`, `-` | Left-associative | Addition and subtraction |
-| 7 | `<`, `<=`, `>`, `>=`, `==`, `!=` | None | Relational operations & inequalities (Rigorous evaluation via rational interval arithmetic) |
+| 7 | `<`, `<=`, `>`, `>=`, `==`, `!=` | None | Relational operations & inequalities (Rigorous evaluation via rational interval arithmetic and algebraic proof) |
+
+### Distinguishing Relational Operators and Variable Assignment
+- **Assignment Operator (`=`)**: Binds an evaluated expression to a variable in REPL and scripts (e.g., `x = 42`, `f = sin(x)`).
+- **Equality & Relational Comparison (`==`, `!=`)**:
+  - Top-level evaluation: Rigorously evaluated to `true` or `false` using exact algebraic identity (`lhs - rhs == 0` and equivalence verification) and rational interval arithmetic (e.g., `1 == 2` $\to$ `false`, `0.(9) == 1` $\to$ `true`, `sqrt(2)+sqrt(3) == sqrt(5+2*sqrt(6))` $\to$ `true`, `1 != 2` $\to$ `true`).
+  - Solver arguments (`solve`, `dsolve`, `rsolve`, `verify`, etc.): Preserved intact as equation/relation AST nodes to serve as equation inputs for root finding and theorem proving (e.g., `solve(2 == 0, x)` correctly raises a contradiction error, and `dsolve(y' == y, y, x)` is solved as an ODE).
+- **Disambiguation from Factorial (`!`)**: When an expression contains factorial adjacent to equality, `1!=2` is unambiguously tokenized as `1 != 2` (not-equal). Explicit factorial comparisons can be written as `(5!) == 120` or `5! != 120`.
 
 ---
 

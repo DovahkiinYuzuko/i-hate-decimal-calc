@@ -237,6 +237,14 @@ func handleVerify(args []Node, env *Env) (Node, error) {
 		return &VarNode{Name: cert.String()}, nil
 	}
 
+	if rel, ok := args[0].(*RelOpNode); ok && rel.Op == "==" {
+		cert, err := VerifyAlgebraicEquivalence(rel.LHS, rel.RHS, env)
+		if err != nil {
+			return nil, err
+		}
+		return &VarNode{Name: cert.String()}, nil
+	}
+
 	// 1 argument: evaluate expression first, then verify
 	evalRes, err := Eval(args[0])
 	if err != nil {

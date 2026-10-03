@@ -213,7 +213,14 @@ func EvalStringWithEnv(input string, env *Env) (Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	return EvalWithEnv(node, env)
+	res, err := EvalWithEnv(node, env)
+	if err != nil {
+		return nil, err
+	}
+	if rel, ok := res.(*RelOpNode); ok && (rel.Op == "==" || rel.Op == "!=") {
+		return EvaluateRelOpEquality(rel, env)
+	}
+	return res, nil
 }
 
 // ApplyDegreeMode transforms trigonometric and inverse trigonometric function calls in the AST
@@ -355,5 +362,70 @@ func simplifyFuncWithEnv(name string, args []Node, env *Env) (Node, error) {
 		return spec.Evaluate(args)
 	}
 	return NewFunc(name, args)
+}
+
+// EvaluateRelOpEquality evaluates equality and inequality relations (==, !=) into boolean values (true/false)
+// when decidable algebraically or numerically via interval arithmetic. If undecided (e.g. contains variables),
+// it returns the original relation unchanged.
+func EvaluateRelOpEquality(rel *RelOpNode, env *Env) (Node, error) {
+	if rel == nil {
+		return nil, nil
+	}
+	if rel.Op != "==" && rel.Op != "!=" {
+		return rel, nil
+	}
+
+	lhs := rel.LHS
+	rhs := rel.RHS
+
+	// 1. 代数的完全一致 (Algebraic exact identity)
+	if lhs.Equal(rhs) {
+		if rel.Op == "==" {
+			return &VarNode{Name: "true"}, nil
+		}
+		return &VarNode{Name: "false"}, nil
+	}
+
+	// 2. 単一有理数値どうしの厳密比較
+	if lRat, okL := lhs.(*RationalNode); okL {
+		if rRat, okR := rhs.(*RationalNode); okR {
+			isEqual := lRat.Val.Cmp(rRat.Val) == 0
+			if (rel.Op == "==" && isEqual) || (rel.Op == "!=" && !isEqual) {
+				return &VarNode{Name: "true"}, nil
+			}
+			return &VarNode{Name: "false"}, nil
+		}
+	}
+
+	// 3. 代数式全体の差の簡約: Simplify(lhs - rhs) == 0
+	negR, errNeg := simplifyUnaryOp("-", rhs)
+	if errNeg == nil {
+		diff, errDiff := simplifyAdd([]Node{lhs, negR})
+		if errDiff == nil && isZero(diff) {
+			if rel.Op == "==" {
+				return &VarNode{Name: "true"}, nil
+			}
+			return &VarNode{Name: "false"}, nil
+		}
+	}
+
+	// 4. 代数的等価性検証エンジンによる証明 (Algebraic equivalence verification)
+	if cert, err := VerifyAlgebraicEquivalence(lhs, rhs, env); err == nil && cert != nil && cert.IsVerified {
+		if rel.Op == "==" {
+			return &VarNode{Name: "true"}, nil
+		}
+		return &VarNode{Name: "false"}, nil
+	}
+
+	// 5. 有理区間解析による厳密分離判定 (Rigorous rational interval separation)
+	if res, decided := EvaluateRelOpWithInterval(rel); decided {
+		if res {
+			return &VarNode{Name: "true"}, nil
+		}
+		return &VarNode{Name: "false"}, nil
+	}
+
+	// 6. 判定不能（未確定の変数を含む方程式: x == 1, y' == y など）は式のまま保持
+	return rel, nil
 }
 

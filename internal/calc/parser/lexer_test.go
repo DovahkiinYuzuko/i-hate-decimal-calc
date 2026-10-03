@@ -152,3 +152,36 @@ func TestLexer_NormalizeZenkaku(t *testing.T) {
 		}
 	}
 }
+
+func TestLexer_NotEqualAndFactorial(t *testing.T) {
+	// 1!=2 -> [TokenNumber(1), TokenNEQ("!="), TokenNumber(2), TokenEOF]
+	tokens, err := Tokenize("1!=2")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	expected := []TokenType{TokenNumber, TokenNEQ, TokenNumber, TokenEOF}
+	if len(tokens) != len(expected) {
+		t.Fatalf("expected %d tokens, got %d", len(expected), len(tokens))
+	}
+	for i, exp := range expected {
+		if tokens[i].Type != exp {
+			t.Errorf("token %d: expected %v, got %v (%q)", i, exp, tokens[i].Type, tokens[i].Literal)
+		}
+	}
+
+	// 5! != 120 -> [TokenNumber(5), TokenBang("!"), TokenNEQ("!="), TokenNumber(120), TokenEOF]
+	tokensFact, err := Tokenize("5! != 120")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	expectedFact := []TokenType{TokenNumber, TokenBang, TokenNEQ, TokenNumber, TokenEOF}
+	if len(tokensFact) != len(expectedFact) {
+		t.Fatalf("expected %d tokens, got %d", len(expectedFact), len(tokensFact))
+	}
+	for i, exp := range expectedFact {
+		if tokensFact[i].Type != exp {
+			t.Errorf("token %d: expected %v, got %v (%q)", i, exp, tokensFact[i].Type, tokensFact[i].Literal)
+		}
+	}
+}
+

@@ -223,3 +223,45 @@ func TestParser_VariablesAndAssignments(t *testing.T) {
 		}
 	}
 }
+
+func TestParser_RelationalOperators(t *testing.T) {
+	// 1 != 2 -> RelOpNode{LHS: 1, Op: "!=", RHS: 2}
+	node, err := Parse("1 != 2")
+	if err != nil {
+		t.Fatalf("unexpected error parsing '1 != 2': %v", err)
+	}
+	rel, ok := node.(*ast.RelOpNode)
+	if !ok {
+		t.Fatalf("expected *RelOpNode, got %T", node)
+	}
+	if rel.Op != "!=" || rel.LHS.String() != "1" || rel.RHS.String() != "2" {
+		t.Errorf("unexpected rel node: %+v", rel)
+	}
+
+	// 1!=2 without spaces
+	nodeTight, err := Parse("1!=2")
+	if err != nil {
+		t.Fatalf("unexpected error parsing '1!=2': %v", err)
+	}
+	relTight, ok := nodeTight.(*ast.RelOpNode)
+	if !ok {
+		t.Fatalf("expected *RelOpNode, got %T", nodeTight)
+	}
+	if relTight.Op != "!=" {
+		t.Errorf("expected '!=', got %q", relTight.Op)
+	}
+
+	// (5!) == 120 -> RelOpNode{LHS: 5!, Op: "==", RHS: 120}
+	nodeFact, err := Parse("(5!) == 120")
+	if err != nil {
+		t.Fatalf("unexpected error parsing '(5!) == 120': %v", err)
+	}
+	relFact, ok := nodeFact.(*ast.RelOpNode)
+	if !ok {
+		t.Fatalf("expected *RelOpNode, got %T", nodeFact)
+	}
+	if relFact.Op != "==" {
+		t.Errorf("expected '==', got %q", relFact.Op)
+	}
+}
+

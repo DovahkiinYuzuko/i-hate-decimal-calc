@@ -82,8 +82,15 @@ func (l *Lexer) NextToken() Token {
 		tok = Token{Type: TokenCaret, Literal: "^", Pos: startPos}
 		l.readChar()
 	case '!':
-		tok = Token{Type: TokenBang, Literal: "!", Pos: startPos}
-		l.readChar()
+		if l.peekChar() == '=' {
+			ch := l.ch
+			l.readChar()
+			tok = Token{Type: TokenNEQ, Literal: string(ch) + string(l.ch), Pos: startPos}
+			l.readChar()
+		} else {
+			tok = Token{Type: TokenBang, Literal: "!", Pos: startPos}
+			l.readChar()
+		}
 	case '(':
 		tok = Token{Type: TokenLParen, Literal: "(", Pos: startPos}
 		l.readChar()

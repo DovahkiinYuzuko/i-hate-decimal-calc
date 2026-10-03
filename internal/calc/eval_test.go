@@ -1156,6 +1156,43 @@ func TestEval_MultivariateCommutativeCancellation(t *testing.T) {
 	}
 }
 
+func TestEval_RelationalEqualityAndNotEqual(t *testing.T) {
+	cases := []struct {
+		input    string
+		expected string
+	}{
+		{"1 == 2", "false"},
+		{"1 != 2", "true"},
+		{"0.(9) == 1", "true"},
+		{"0.(9) != 1", "false"},
+		{"sqrt(2) + sqrt(3) == sqrt(5 + 2*sqrt(6))", "true"},
+		{"sqrt(2) + sqrt(3) != sqrt(5 + 2*sqrt(6))", "false"},
+		{"(5!) == 120", "true"},
+		{"5! == 120", "true"},
+		{"(5!) != 120", "false"},
+		{"pi == 3", "false"},
+		{"pi != 3", "true"},
+		{"e^pi == pi^e", "false"},
+		{"e^pi != pi^e", "true"},
+		{"x == 1", "x == 1"},
+		{"x == x", "true"},
+		{"x != x", "false"},
+	}
+
+	for _, tc := range cases {
+		res, err := EvalString(tc.input)
+		if err != nil {
+			t.Errorf("input %q: unexpected error: %v", tc.input, err)
+			continue
+		}
+		actual := Format(res)
+		if actual != tc.expected {
+			t.Errorf("input %q: got %q, want %q", tc.input, actual, tc.expected)
+		}
+	}
+}
+
+
 
 
 

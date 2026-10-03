@@ -29,6 +29,7 @@ const (
 	TokenGTE
 	TokenLTE
 	TokenEQ
+	TokenNEQ
 )
 
 // Token represents a single lexical token.
