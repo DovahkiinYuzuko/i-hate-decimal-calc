@@ -275,7 +275,12 @@
     "err_b_parameter_error": "パラメータ B のエラー: %w",
     "err_scalar_error": "スカラー演算エラー: %w",
     "err_expected_rational_number_got": "有理数が期待されましたが、次の値が渡されました: %s",
-    "err_invalid_elliptic_fsm_transition": "無効な楕円曲線 FSM 状態遷移です: %s -> %s"
+    "err_invalid_elliptic_fsm_transition": "無効な楕円曲線 FSM 状態遷移です: %s -> %s",
+    "err_prime_required": "標数 p は 3 より大きい素数である必要があります: %s",
+    "err_singular_finite_curve": "有限体上の特異楕円曲線エラー: 判別式 4A^3 + 27B^2 ≡ 0 (mod p) です",
+    "err_p_invalid_args": "有限体楕円曲線エラー: 引数の形式が不正です",
+    "err_invalid_schoof_fsm_transition": "無効な Schoof FSM 状態遷移です: %s -> %s",
+    "err_trace_not_found": "フロベニウス・トレース (mod %d) の探索に失敗しました"
   },
   "approx": {
     "err_cannot_approximate_nil_node": "nil ノードを近似できません",

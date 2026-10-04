@@ -891,6 +891,28 @@ func init() {
 		MinArgs: 1,
 		MaxArgs: 1,
 	})
+
+	// Finite Field Elliptic Curves & Schoof's Algorithm (issue-88)
+	RegisterFunction(FunctionSpec{
+		Name:    "ec_p_add",
+		MinArgs: 4,
+		MaxArgs: 4,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "ec_p_mul",
+		MinArgs: 4,
+		MaxArgs: 4,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "ec_p_order",
+		MinArgs: 2,
+		MaxArgs: 2,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "ec_p_trace",
+		MinArgs: 2,
+		MaxArgs: 2,
+	})
 }
 
 

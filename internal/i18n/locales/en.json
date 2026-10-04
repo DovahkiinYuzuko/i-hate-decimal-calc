@@ -275,7 +275,12 @@
     "err_b_parameter_error": "B parameter error: %w",
     "err_scalar_error": "scalar error: %w",
     "err_expected_rational_number_got": "expected rational number, got: %s",
-    "err_invalid_elliptic_fsm_transition": "invalid Elliptic FSM transition: %s -> %s"
+    "err_invalid_elliptic_fsm_transition": "invalid Elliptic FSM transition: %s -> %s",
+    "err_prime_required": "characteristic p must be a prime integer greater than 3, got: %s",
+    "err_singular_finite_curve": "singular elliptic curve error over finite field: discriminant 4A^3 + 27B^2 = 0 mod p",
+    "err_p_invalid_args": "finite field elliptic curve error: invalid argument format",
+    "err_invalid_schoof_fsm_transition": "invalid Schoof FSM transition: %s -> %s",
+    "err_trace_not_found": "failed to find Frobenius trace mod %d"
   },
   "approx": {
     "err_cannot_approximate_nil_node": "cannot approximate nil node",
