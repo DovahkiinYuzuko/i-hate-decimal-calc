@@ -30,6 +30,23 @@ func simplifyAdd(terms []Node) (Node, error) {
 		}
 	}
 
+	// 1.2. Check if any term is a PiecewiseNode
+	hasPiecewise := false
+	for _, t := range flatTerms {
+		if _, ok := t.(*PiecewiseNode); ok {
+			hasPiecewise = true
+			break
+		}
+	}
+	if hasPiecewise {
+		folded, err := PiecewiseFold(&AddNode{Terms: flatTerms}, nil)
+		if err == nil {
+			if _, ok := folded.(*PiecewiseNode); ok {
+				return folded, nil
+			}
+		}
+	}
+
 	// 1.5. Check if any term is a MatrixNode
 	var firstMatrix *MatrixNode
 	for _, t := range flatTerms {

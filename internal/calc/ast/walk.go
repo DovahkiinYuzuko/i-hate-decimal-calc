@@ -56,6 +56,16 @@ func Walk(node Node, visitor func(Node) bool) {
 		Walk(v.RHS, visitor)
 	case *QuantifierNode:
 		Walk(v.Body, visitor)
+	case *PiecewiseNode:
+		for _, c := range v.Cases {
+			Walk(c.Expr, visitor)
+			if c.Condition != nil {
+				Walk(c.Condition, visitor)
+			}
+		}
+		if v.Otherwise != nil {
+			Walk(v.Otherwise, visitor)
+		}
 	case *RationalNode, *ConstNode, *VarNode, *PlotNode, *PolyNode, *AlgebraicNumberNode:
 		// Leaf nodes: no children
 	}
@@ -154,6 +164,26 @@ func Transform(node Node, transformer func(Node) Node) Node {
 			Kind: v.Kind,
 			Vars: append([]string(nil), v.Vars...),
 			Body: Transform(v.Body, transformer),
+		}
+	case *PiecewiseNode:
+		newCases := make([]PiecewiseCase, len(v.Cases))
+		for i, c := range v.Cases {
+			var newCond Node
+			if c.Condition != nil {
+				newCond = Transform(c.Condition, transformer)
+			}
+			newCases[i] = PiecewiseCase{
+				Expr:      Transform(c.Expr, transformer),
+				Condition: newCond,
+			}
+		}
+		var newOtherwise Node
+		if v.Otherwise != nil {
+			newOtherwise = Transform(v.Otherwise, transformer)
+		}
+		transformedChild = &PiecewiseNode{
+			Cases:     newCases,
+			Otherwise: newOtherwise,
 		}
 	case *RationalNode, *ConstNode, *VarNode, *PlotNode, *PolyNode, *AlgebraicNumberNode:
 		transformedChild = node

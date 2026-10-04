@@ -913,6 +913,15 @@ func init() {
 		MinArgs: 2,
 		MaxArgs: 2,
 	})
+
+	// Piecewise Functions & CAD Domain Branching (issue-98)
+	RegisterFunction(FunctionSpec{
+		Name:     "piecewise",
+		MinArgs:  1,
+		MaxArgs:  2,
+		LazyArgs: true,
+		Handler:  EvalPiecewiseHandler,
+	})
 }
 
 

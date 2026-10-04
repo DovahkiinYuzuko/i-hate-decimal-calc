@@ -301,6 +301,28 @@ func differentiate(n Node, varName string) (Node, error) {
 		}
 		return nil, fmt.Errorf("%s", i18n.T("calculus.err_cannot_differentiate_function", v.Name, len(v.Args)))
 
+	case *PiecewiseNode:
+		newCases := make([]PiecewiseCase, len(v.Cases))
+		for i, c := range v.Cases {
+			dExpr, err := differentiate(c.Expr, varName)
+			if err != nil {
+				return nil, err
+			}
+			newCases[i] = PiecewiseCase{
+				Expr:      dExpr,
+				Condition: c.Condition,
+			}
+		}
+		var newOtherwise Node
+		if v.Otherwise != nil {
+			dOtherwise, err := differentiate(v.Otherwise, varName)
+			if err != nil {
+				return nil, err
+			}
+			newOtherwise = dOtherwise
+		}
+		return NormalizePiecewise(NewPiecewiseNode(newCases, newOtherwise), nil)
+
 	default:
 		return nil, fmt.Errorf("%s", i18n.T("calculus.err_cannot_differentiate_node_of_type", n))
 	}
@@ -403,6 +425,70 @@ func extractPolyCoeffs(expr Node, varName string) (map[int]Node, error) {
 func solveEquation(expr Node, varName string) (Node, error) {
 	if expr == nil {
 		return nil, fmt.Errorf("%s", i18n.T("calculus.err_cannot_solve_nil_equation"))
+	}
+
+	// 0. Check if expression contains a piecewise definition
+	if folded, err := PiecewiseFold(expr, nil); err == nil {
+		if pw, ok := folded.(*PiecewiseNode); ok {
+			var validSolutions []Node
+			seen := make(map[string]bool)
+
+			for _, c := range pw.Cases {
+				sols, err := solveEquation(c.Expr, varName)
+				if err != nil {
+					continue
+				}
+				var solList []Node
+				if l, ok := sols.(*ListNode); ok {
+					solList = l.Elements
+				} else {
+					solList = []Node{sols}
+				}
+
+				for _, sol := range solList {
+					if sat, decided := evalConditionAt(c.Condition, varName, sol, nil); decided && sat {
+						key := sol.String()
+						if !seen[key] {
+							seen[key] = true
+							validSolutions = append(validSolutions, sol)
+						}
+					}
+				}
+			}
+
+			if pw.Otherwise != nil {
+				sols, err := solveEquation(pw.Otherwise, varName)
+				if err == nil {
+					var solList []Node
+					if l, ok := sols.(*ListNode); ok {
+						solList = l.Elements
+					} else {
+						solList = []Node{sols}
+					}
+					for _, sol := range solList {
+						anyMet := false
+						for _, c := range pw.Cases {
+							if sat, decided := evalConditionAt(c.Condition, varName, sol, nil); decided && sat {
+								anyMet = true
+								break
+							}
+						}
+						if !anyMet {
+							key := sol.String()
+							if !seen[key] {
+								seen[key] = true
+								validSolutions = append(validSolutions, sol)
+							}
+						}
+					}
+				}
+			}
+
+			if len(validSolutions) == 0 {
+				return nil, fmt.Errorf("%s", i18n.T("calculus.err_solve_equation_has_no_solution", expr.String()))
+			}
+			return NewList(validSolutions), nil
+		}
 	}
 
 	// 1. Expand the expression to standard form

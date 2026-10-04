@@ -119,9 +119,22 @@ func handleSolve(args []Node, env *Env) (Node, error) {
 		}
 	}
 
-	// Check if relational inequality (<, <=, >, >=)
-	if rel, ok := args[0].(*RelOpNode); ok && (rel.Op == "<" || rel.Op == "<=" || rel.Op == ">" || rel.Op == ">=") {
-		return SolveInequality(rel, varName, env)
+	// Check if relational inequality or equality
+	if rel, ok := args[0].(*RelOpNode); ok {
+		if rel.Op == "<" || rel.Op == "<=" || rel.Op == ">" || rel.Op == ">=" {
+			return SolveInequality(rel, varName, env)
+		}
+		if rel.Op == "==" {
+			negRHS, err := simplifyUnaryOp("-", rel.RHS)
+			if err != nil {
+				negRHS = &UnaryOpNode{Op: "-", Expr: rel.RHS}
+			}
+			diff, err := simplifyAdd([]Node{rel.LHS, negRHS})
+			if err != nil {
+				diff = NewAdd([]Node{rel.LHS, negRHS})
+			}
+			return solveEquation(diff, varName)
+		}
 	}
 
 	return solveEquation(args[0], varName)

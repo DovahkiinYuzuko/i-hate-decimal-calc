@@ -120,3 +120,74 @@ func (n *PlotNode) Equal(other Node) bool {
 	}
 	return false
 }
+
+// -------------------------------------------------------------------------
+// PiecewiseNode (Piecewise Algebraic Function)
+// -------------------------------------------------------------------------
+
+// PiecewiseCase represents a single branch (expression, condition) in a piecewise definition.
+type PiecewiseCase struct {
+	Expr      Node
+	Condition Node
+}
+
+// PiecewiseNode represents a piecewise-defined mathematical function.
+// e.g., piecewise([[expr1, cond1], [expr2, cond2]], otherwise)
+type PiecewiseNode struct {
+	Cases     []PiecewiseCase
+	Otherwise Node // optional default expression, can be nil
+}
+
+// NewPiecewiseNode creates a new PiecewiseNode.
+func NewPiecewiseNode(cases []PiecewiseCase, otherwise Node) *PiecewiseNode {
+	return &PiecewiseNode{
+		Cases:     cases,
+		Otherwise: otherwise,
+	}
+}
+
+func (n *PiecewiseNode) Type() NodeType { return NodePiecewise }
+
+func (n *PiecewiseNode) String() string {
+	caseStrs := make([]string, len(n.Cases))
+	for i, c := range n.Cases {
+		condStr := "true"
+		if c.Condition != nil {
+			condStr = c.Condition.String()
+		}
+		caseStrs[i] = fmt.Sprintf("[%s, %s]", c.Expr.String(), condStr)
+	}
+	casesBlock := fmt.Sprintf("[%s]", strings.Join(caseStrs, ", "))
+	if n.Otherwise != nil {
+		return fmt.Sprintf("piecewise(%s, %s)", casesBlock, n.Otherwise.String())
+	}
+	return fmt.Sprintf("piecewise(%s)", casesBlock)
+}
+
+func (n *PiecewiseNode) Equal(other Node) bool {
+	o, ok := other.(*PiecewiseNode)
+	if !ok || len(n.Cases) != len(o.Cases) {
+		return false
+	}
+	for i := range n.Cases {
+		if !n.Cases[i].Expr.Equal(o.Cases[i].Expr) {
+			return false
+		}
+		c1 := n.Cases[i].Condition
+		c2 := o.Cases[i].Condition
+		if (c1 == nil && c2 != nil) || (c1 != nil && c2 == nil) {
+			return false
+		}
+		if c1 != nil && c2 != nil && !c1.Equal(c2) {
+			return false
+		}
+	}
+	if (n.Otherwise == nil && o.Otherwise != nil) || (n.Otherwise != nil && o.Otherwise == nil) {
+		return false
+	}
+	if n.Otherwise != nil && o.Otherwise != nil && !n.Otherwise.Equal(o.Otherwise) {
+		return false
+	}
+	return true
+}
+

@@ -743,6 +743,13 @@
     "trig_reduce": "Trigonometric reduction: product-to-sum, power reduction, and harmonic addition",
     "indefinite_integral": "Indefinite integral: ∫ (%s) d%s = %s",
     "definite_integral": "Definite integral: ∫_%s^%s (%s) d%s = [F(%s)]_%s^%s = %s"
+  },
+  "piecewise": {
+    "err_invalid_piecewise_args": "piecewise function requires 1 or 2 arguments: piecewise(cases [, otherwise])",
+    "err_invalid_cases_format": "piecewise cases must be a list of [expr, condition] pairs",
+    "err_case_pair_format": "each piecewise case must be a list containing exactly [expr, condition], got: %s",
+    "err_invalid_piecewise_fsm_transition": "invalid Piecewise FSM transition: %s -> %s",
+    "err_cad_domain_partition_failed": "CAD domain partitioning failed for piecewise expression: %v"
   }
 }
 

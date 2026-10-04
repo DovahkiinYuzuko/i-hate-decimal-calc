@@ -743,5 +743,12 @@
     "trig_reduce": "積和公式・次数下げ・三角関数の合成",
     "indefinite_integral": "不定積分: ∫ (%s) d%s = %s",
     "definite_integral": "定積分: ∫_%s^%s (%s) d%s = [F(%s)]_%s^%s = %s"
+  },
+  "piecewise": {
+    "err_invalid_piecewise_args": "引数エラー: piecewise 関数は 1 つまたは 2 つの引数が必要です: piecewise(cases [, otherwise])",
+    "err_invalid_cases_format": "構文エラー: piecewise の各ケースは [式, 条件] のペアのリストである必要があります",
+    "err_case_pair_format": "構文エラー: 各 piecewise ケースは [式, 条件] の2要素リストである必要があります (取得値: %s)",
+    "err_invalid_piecewise_fsm_transition": "状態遷移エラー: piecewise: 不正な状態遷移です (%s -> %s)",
+    "err_cad_domain_partition_failed": "数理計算エラー: 区分定義式のCAD領域セル分解に失敗しました: %v"
   }
 }

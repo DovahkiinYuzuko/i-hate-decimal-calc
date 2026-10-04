@@ -54,6 +54,7 @@ const (
 	NodePoly            = ast.NodePoly
 	NodeAlgebraicNumber = ast.NodeAlgebraicNumber
 	NodeQuantifier      = ast.NodeQuantifier
+	NodePiecewise       = ast.NodePiecewise
 )
 
 type QuantifierKind = ast.QuantifierKind
@@ -83,6 +84,8 @@ type (
 	PolyNode            = ast.PolyNode
 	AlgebraicNumberNode = ast.AlgebraicNumberNode
 	QuantifierNode      = ast.QuantifierNode
+	PiecewiseCase       = ast.PiecewiseCase
+	PiecewiseNode       = ast.PiecewiseNode
 )
 
 var (
@@ -102,6 +105,7 @@ var (
 	NewPlotNode             = ast.NewPlotNode
 	NewRelOp                = ast.NewRelOp
 	NewQuantifier           = ast.NewQuantifier
+	NewPiecewiseNode        = ast.NewPiecewiseNode
 	Walk                    = ast.Walk
 	Inspect                 = ast.Inspect
 	Transform               = ast.Transform

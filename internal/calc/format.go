@@ -165,6 +165,21 @@ func formatNode(n Node, opts FormatOptions) string {
 	case *QuantifierNode:
 		return v.String()
 
+	case *PiecewiseNode:
+		var parts []string
+		for _, c := range v.Cases {
+			exprStr := formatNode(c.Expr, opts)
+			if c.Condition == nil {
+				parts = append(parts, fmt.Sprintf("[%s, true]", exprStr))
+			} else {
+				parts = append(parts, fmt.Sprintf("[%s, %s]", exprStr, formatNode(c.Condition, opts)))
+			}
+		}
+		if v.Otherwise != nil {
+			return fmt.Sprintf("piecewise([%s], %s)", strings.Join(parts, ", "), formatNode(v.Otherwise, opts))
+		}
+		return fmt.Sprintf("piecewise([%s])", strings.Join(parts, ", "))
+
 	default:
 		return n.String()
 	}

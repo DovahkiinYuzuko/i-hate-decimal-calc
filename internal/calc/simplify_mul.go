@@ -19,6 +19,23 @@ func simplifyMul(factors []Node) (Node, error) {
 		}
 	}
 
+	// 1.2. Check if any factor is a PiecewiseNode
+	hasPiecewise := false
+	for _, f := range flatFactors {
+		if _, ok := f.(*PiecewiseNode); ok {
+			hasPiecewise = true
+			break
+		}
+	}
+	if hasPiecewise {
+		folded, err := PiecewiseFold(&MulNode{Factors: flatFactors}, nil)
+		if err == nil {
+			if _, ok := folded.(*PiecewiseNode); ok {
+				return folded, nil
+			}
+		}
+	}
+
 	// 1.5. Check if any factor is a MatrixNode (non-commutative sequential multiplication)
 	hasMatrix := false
 	for _, f := range flatFactors {

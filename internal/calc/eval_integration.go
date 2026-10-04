@@ -33,6 +33,16 @@ func evalDefiniteIntegral(expr Node, varName string, a, b Node) (Node, error) {
 	if expr == nil {
 		return nil, fmt.Errorf("%s", i18n.T("integral.err_cannot_integrate_nil_expression"))
 	}
+
+	// Check if expression is a piecewise function
+	evaledExpr, _ := Eval(expr)
+	if evaledExpr == nil {
+		evaledExpr = expr
+	}
+	if pw, ok := evaledExpr.(*PiecewiseNode); ok {
+		return evalPiecewiseDefiniteIntegral(pw, varName, a, b)
+	}
+
 	// 1. Compute indefinite integral F(x)
 	F, err := integrateCore(expr, varName)
 	if err != nil {
@@ -64,6 +74,146 @@ func evalDefiniteIntegral(expr Node, varName string, a, b Node) (Node, error) {
 	}
 	RecordTraceRewrite(RuleIntegrate, expr, res, i18n.T("trace.definite_integral", a.String(), b.String(), expr.String(), varName, varName, a.String(), b.String(), res.String()))
 	return res, nil
+}
+
+// evalPiecewiseDefiniteIntegral splits integration interval [a, b] at piecewise boundaries and integrates each sub-interval.
+func evalPiecewiseDefiniteIntegral(pw *PiecewiseNode, varName string, a, b Node) (Node, error) {
+	evalA, err := Eval(a)
+	if err != nil {
+		return nil, err
+	}
+	evalB, err := Eval(b)
+	if err != nil {
+		return nil, err
+	}
+	ratA, okA := evalA.(*RationalNode)
+	ratB, okB := evalB.(*RationalNode)
+
+	if !okA || !okB || ratA.Val == nil || ratB.Val == nil {
+		// Non-constant boundaries: integrate case-by-case symbolically
+		F, err := integrateCore(pw, varName)
+		if err != nil {
+			return nil, err
+		}
+		subB := Substitute(F, varName, b)
+		valB, err := Eval(subB)
+		if err != nil {
+			return nil, err
+		}
+		subA := Substitute(F, varName, a)
+		valA, err := Eval(subA)
+		if err != nil {
+			return nil, err
+		}
+		negValA, err := simplifyUnaryOp("-", valA)
+		if err != nil {
+			return nil, err
+		}
+		return Eval(NewAdd([]Node{valB, negValA}))
+	}
+
+	// Extract boundary points from conditions
+	var cutPoints []*big.Rat
+	for _, c := range pw.Cases {
+		if rel, ok := c.Condition.(*RelOpNode); ok {
+			// Find boundary of rel
+			negR, err := simplifyUnaryOp("-", rel.RHS)
+			if err == nil {
+				diff, err := simplifyAdd([]Node{rel.LHS, negR})
+				if err == nil {
+					roots, err := solveEquation(diff, varName)
+					if err == nil {
+						var rootList []Node
+						if l, ok := roots.(*ListNode); ok {
+							rootList = l.Elements
+						} else {
+							rootList = []Node{roots}
+						}
+						for _, rNode := range rootList {
+							if rRat, ok := rNode.(*RationalNode); ok && rRat.Val != nil {
+								// Check if root lies strictly inside (min(a, b), max(a, b))
+								minVal := ratA.Val
+								maxVal := ratB.Val
+								if minVal.Cmp(maxVal) > 0 {
+									minVal, maxVal = maxVal, minVal
+								}
+								if rRat.Val.Cmp(minVal) > 0 && rRat.Val.Cmp(maxVal) < 0 {
+									// Add to cutPoints if unique
+									exists := false
+									for _, cp := range cutPoints {
+										if cp.Cmp(rRat.Val) == 0 {
+											exists = true
+											break
+										}
+									}
+									if !exists {
+										cutPoints = append(cutPoints, new(big.Rat).Set(rRat.Val))
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Sort cut points
+	for i := 0; i < len(cutPoints); i++ {
+		for j := i + 1; j < len(cutPoints); j++ {
+			cmp := cutPoints[i].Cmp(cutPoints[j])
+			if (ratA.Val.Cmp(ratB.Val) < 0 && cmp > 0) || (ratA.Val.Cmp(ratB.Val) > 0 && cmp < 0) {
+				cutPoints[i], cutPoints[j] = cutPoints[j], cutPoints[i]
+			}
+		}
+	}
+
+	// Build intervals
+	var intervalBounds []*big.Rat
+	intervalBounds = append(intervalBounds, ratA.Val)
+	intervalBounds = append(intervalBounds, cutPoints...)
+	intervalBounds = append(intervalBounds, ratB.Val)
+
+	var subIntegrals []Node
+	for i := 0; i < len(intervalBounds)-1; i++ {
+		u := intervalBounds[i]
+		v := intervalBounds[i+1]
+		if u.Cmp(v) == 0 {
+			continue
+		}
+
+		// Midpoint test value
+		mid := new(big.Rat).Add(u, v)
+		mid.Mul(mid, big.NewRat(1, 2))
+		midNode := NewRationalFromBigRat(mid)
+
+		// Determine active expression at mid
+		var activeExpr Node = pw.Otherwise
+		for _, c := range pw.Cases {
+			if sat, decided := evalConditionAt(c.Condition, varName, midNode, nil); decided && sat {
+				activeExpr = c.Expr
+				break
+			}
+		}
+		if activeExpr == nil {
+			activeExpr = mustRational(0, 1)
+		}
+
+		subRes, err := evalDefiniteIntegral(activeExpr, varName, NewRationalFromBigRat(u), NewRationalFromBigRat(v))
+		if err != nil {
+			return nil, err
+		}
+		subIntegrals = append(subIntegrals, subRes)
+	}
+
+	if len(subIntegrals) == 0 {
+		return mustRational(0, 1), nil
+	}
+	sumNode, err := simplifyAdd(subIntegrals)
+	if err != nil {
+		return nil, err
+	}
+	return Eval(sumNode)
 }
 
 // isLinear checks if n is of the form a*varName + b with a != 0.
@@ -99,6 +249,30 @@ func isLinear(n Node, varName string) (a Node, b Node, ok bool) {
 func integrateCore(expr Node, varName string) (Node, error) {
 	if expr == nil {
 		return nil, fmt.Errorf("%s", i18n.T("integral.err_cannot_integrate_nil_expression"))
+	}
+
+	// 0. Piecewise function integration
+	if pw, ok := expr.(*PiecewiseNode); ok {
+		newCases := make([]PiecewiseCase, len(pw.Cases))
+		for i, c := range pw.Cases {
+			intExpr, err := integrateCore(c.Expr, varName)
+			if err != nil {
+				return nil, err
+			}
+			newCases[i] = PiecewiseCase{
+				Expr:      intExpr,
+				Condition: c.Condition,
+			}
+		}
+		var newOtherwise Node
+		if pw.Otherwise != nil {
+			intOtherwise, err := integrateCore(pw.Otherwise, varName)
+			if err != nil {
+				return nil, err
+			}
+			newOtherwise = intOtherwise
+		}
+		return NormalizePiecewise(NewPiecewiseNode(newCases, newOtherwise), nil)
 	}
 
 	// 1. Constant with respect to varName: int(c, x) = c * x

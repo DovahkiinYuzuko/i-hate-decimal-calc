@@ -197,6 +197,9 @@ func EvalWithEnv(n Node, env *Env) (Node, error) {
 	case *QuantifierNode:
 		return v, nil
 
+	case *PiecewiseNode:
+		return NormalizePiecewise(v, env)
+
 	default:
 		return nil, fmt.Errorf("%s", i18n.T("errors.err_unknown_node_type_for_evaluation", n))
 	}

@@ -78,6 +78,7 @@ const (
 	NodePoly
 	NodeAlgebraicNumber
 	NodeQuantifier
+	NodePiecewise
 )
 
 // Node represents any node in the mathematical expression tree.
