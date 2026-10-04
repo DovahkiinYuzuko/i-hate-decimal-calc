@@ -347,3 +347,16 @@ func EvalIsPrime(nNode Node) (Node, error) {
 	}
 	return mustRational(0, 1), nil
 }
+
+// EvalDigitCount returns the exact number of decimal digits of an integer nNode
+// without allocating the full decimal string representation.
+func EvalDigitCount(nNode Node) (Node, error) {
+	rat, ok := nNode.(*RationalNode)
+	if !ok || !rat.Val.IsInt() {
+		return nil, NewDomainError("", "digit_count: argument must be an integer, got %s", nNode.String())
+	}
+
+	num := rat.Val.Num()
+	digits := ComputeExactDecimalDigits(num)
+	return &RationalNode{Val: big.NewRat(int64(digits), 1)}, nil
+}

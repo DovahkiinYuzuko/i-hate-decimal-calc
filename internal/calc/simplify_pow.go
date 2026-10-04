@@ -45,8 +45,21 @@ func simplifyPow(base, exp Node) (Node, error) {
 			inv := new(big.Rat).Inv(ratBase.Val)
 			return simplifyPow(&RationalNode{Val: inv}, &RationalNode{Val: big.NewRat(-expInt, 1)})
 		}
-		numPow := new(big.Int).Exp(ratBase.Val.Num(), big.NewInt(expInt), nil)
-		denomPow := new(big.Int).Exp(ratBase.Val.Denom(), big.NewInt(expInt), nil)
+
+		var numPow, denomPow *big.Int
+		if ratBase.Val.IsInt() && ratBase.Val.Num().Cmp(big.NewInt(2)) == 0 && expInt <= 1<<30 {
+			numPow = new(big.Int).Lsh(big.NewInt(1), uint(expInt))
+			denomPow = big.NewInt(1)
+		} else if ratBase.Val.IsInt() && ratBase.Val.Num().Cmp(big.NewInt(-2)) == 0 && expInt <= 1<<30 {
+			numPow = new(big.Int).Lsh(big.NewInt(1), uint(expInt))
+			if expInt%2 != 0 {
+				numPow.Neg(numPow)
+			}
+			denomPow = big.NewInt(1)
+		} else {
+			numPow = new(big.Int).Exp(ratBase.Val.Num(), big.NewInt(expInt), nil)
+			denomPow = new(big.Int).Exp(ratBase.Val.Denom(), big.NewInt(expInt), nil)
+		}
 		return &RationalNode{Val: new(big.Rat).SetFrac(numPow, denomPow)}, nil
 	}
 

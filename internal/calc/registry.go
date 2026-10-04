@@ -884,6 +884,13 @@ func init() {
 		MinArgs: 3,
 		MaxArgs: 4,
 	})
+
+	// Certified Exact Digit Count (issue-115)
+	RegisterFunction(FunctionSpec{
+		Name:    "digit_count",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
 }
 
 

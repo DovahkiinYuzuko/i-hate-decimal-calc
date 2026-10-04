@@ -20,6 +20,7 @@ func init() {
 	RegisterHandler("crt", handleCRT)
 	RegisterHandler("totient", handleTotient)
 	RegisterHandler("is_prime", handleIsPrime)
+	RegisterHandler("digit_count", handleDigitCount)
 
 	// Complex representation
 	RegisterHandler("arg", handleArg)
@@ -296,4 +297,8 @@ func handleTriangleCenters(args []Node, env *Env) (Node, error) {
 
 func handlePlot(args []Node, env *Env) (Node, error) {
 	return EvalPlot(args)
+}
+
+func handleDigitCount(args []Node, env *Env) (Node, error) {
+	return EvalDigitCount(args[0])
 }

@@ -232,6 +232,37 @@ func formatOutput(node calc.Node, ro runOptions) string {
 	return exactStr
 }
 
+func outputNode(out io.Writer, node calc.Node, ro runOptions) error {
+	if ro.latex {
+		_, err := fmt.Fprintln(out, calc.FormatLaTeX(node))
+		return err
+	}
+	if ro.pretty {
+		_, err := fmt.Fprintln(out, calc.FormatPretty2D(node))
+		return err
+	}
+	if ro.showApprox {
+		exactStr := calc.FormatWithOptions(node, ro.opts)
+		approxStr, err := calc.Approx(node)
+		if err == nil {
+			_, err = fmt.Fprintln(out, i18n.T("cli.approx_format", exactStr, approxStr))
+			return err
+		}
+		_, err = fmt.Fprintln(out, exactStr)
+		return err
+	}
+
+	// High-performance streaming path using WriteNode with bufio
+	bw := calc.NewBufferedStreamWriter(out)
+	if err := calc.WriteNode(bw, node, ro.opts); err != nil {
+		return err
+	}
+	if err := bw.WriteByte('\n'); err != nil {
+		return err
+	}
+	return bw.Flush()
+}
+
 func evaluateLine(line string, ro runOptions, out, errOut io.Writer) error {
 	env := calc.NewEnv()
 	return evaluateLineWithEnv(line, ro, env, out, errOut)
@@ -286,7 +317,7 @@ func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut 
 		if ro.explain {
 			fmt.Fprint(out, calc.FormatTrace(line, steps, evaled))
 		} else {
-			fmt.Fprintln(out, formatOutput(evaled, ro))
+			_ = outputNode(out, evaled, ro)
 		}
 		if ro.verify {
 			cert, _ := calc.VerifyComputation(v.Value, evaled, env)
@@ -333,7 +364,7 @@ func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut 
 		if ro.explain {
 			fmt.Fprint(out, calc.FormatTrace(line, steps, evaled))
 		} else {
-			fmt.Fprintln(out, formatOutput(evaled, ro))
+			_ = outputNode(out, evaled, ro)
 		}
 		if ro.verify {
 			cert, _ := calc.VerifyComputation(v, evaled, env)
@@ -474,7 +505,7 @@ func executeScriptLine(line string, ro runOptions, env *calc.Env, suppressOutput
 			if ro.explain {
 				fmt.Fprint(out, calc.FormatTrace(line, steps, evaled))
 			} else {
-				fmt.Fprintln(out, formatOutput(evaled, ro))
+				_ = outputNode(out, evaled, ro)
 			}
 			if ro.verify {
 				cert, _ := calc.VerifyComputation(v.Value, evaled, env)
@@ -514,7 +545,7 @@ func executeScriptLine(line string, ro runOptions, env *calc.Env, suppressOutput
 			if ro.explain {
 				fmt.Fprint(out, calc.FormatTrace(line, steps, evaled))
 			} else {
-				fmt.Fprintln(out, formatOutput(evaled, ro))
+				_ = outputNode(out, evaled, ro)
 			}
 			if ro.verify {
 				cert, _ := calc.VerifyComputation(v, evaled, env)
