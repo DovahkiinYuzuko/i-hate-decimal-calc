@@ -139,6 +139,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `beta` | `beta(2, 3)` / `beta(1/2, 1/2)` | Beta function $\mathrm{B}(p, q) = \frac{\Gamma(p)\Gamma(q)}{\Gamma(p+q)}$ (exact rational or algebraic expansion for integers/half-integers, e.g. $\mathrm{B}(1/2, 1/2) = \pi$) |
 | `bernoulli` | `bernoulli(4)` / `bernoulli(10)` | $n$-th Bernoulli number $B_n$ (exact arbitrary-precision rational via Akiyama-Tanigawa algorithm, e.g. $B_{10} = 5/66$) |
 | `zeta` | `zeta(2)` / `zeta(4)` / `zeta(6)` | Riemann zeta function $\zeta(s)$ (exact algebraic closed forms for positive even integers via Euler formula, e.g. $\zeta(4) = \pi^4/90$, pole detection at $s=1$) |
+| `piecewise` | `piecewise([[expr1, cond1], ...], default)` | Piecewise algebraic function (first-class `PiecewiseNode`). Evaluates exact calculus (`diff`, `integrate`) and algebraic equation solving (`solve`) across sign-invariant CAD cells |
 | `sum` | `sum(expr, k, start, end)` | Discrete summation (finite sum or exact polynomial closed form via Faulhaber formula) |
 | `gosper_sum` | `gosper_sum(t_k, k)` | Gosper's algorithm for hypergeometric summation: finds closed-form antiderivative $z_k$ such that $z_{k+1}-z_k=t_k$ |
 | `wz_cert` | `wz_cert(F, n, k)` | Generates rational function certificate $R(n, k)$ for hypergeometric identity verification via Wilf-Zeilberger (WZ) theory |
@@ -232,6 +233,10 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `ec_add` | `ec_add([A, B], P1, P2)` | Rational point addition on Weierstrass elliptic curve $y^2 = x^3 + Ax + B$ via Chord and Tangent method (handles point at infinity `O`) |
 | `ec_mul` | `ec_mul([A, B], n, P)` | Scalar multiplication $n P$ of rational points on elliptic curves via binary Double-and-Add algorithm |
 | `ec_torsion` | `ec_torsion(A, B)` | Full determination of the rational torsion subgroup $E(\mathbb{Q})_{\text{tors}}$ based on the Nagell-Lutz and Mazur theorems |
+| `ec_p_order` | `ec_p_order(A, B, p)` | Polynomial-time deterministic group order computation $\#E(\mathbb{F}_p)$ of non-singular elliptic curves over prime finite fields $\mathbb{F}_p$ via Schoof's algorithm (division polynomials, Frobenius endomorphism & CRT) |
+| `ec_p_trace` | `ec_p_trace(A, B, p)` | Computes the Frobenius trace $a = p + 1 - \#E(\mathbb{F}_p)$ of elliptic curves over $\mathbb{F}_p$ (satisfying Hasse's bound $|a| \le 2\sqrt{p}$) |
+| `ec_p_add` | `ec_p_add(A, B, p, P, Q)` | Group point addition $P + Q$ on elliptic curves over prime finite field $\mathbb{F}_p$ (via modular inverse and Chord-and-Tangent law, supporting identity `O`) |
+| `ec_p_mul` | `ec_p_mul(A, B, p, n, P)` | Scalar point multiplication $n P$ on elliptic curves over prime finite field $\mathbb{F}_p$ (via Double-and-Add algorithm $\pmod p$) |
 
 ---
 

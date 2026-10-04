@@ -94,6 +94,12 @@ ihd "galois_group(x^5 - 4*x + 2)"
 
 ihd --verify "is_solvable_by_radicals(x^5 - 4*x + 2)"
 # 出力: false（アーベル・ルフィニ定理による代数的不可解性証明書 [VERIFIED: expr == false] を発行）
+
+ihd "diff(piecewise([[x^2, x < 0], [2*x, x >= 0]], 0), x)"
+# 出力: piecewise([[2*x, x < 0], [2, x >= 0]], 0)（区分定義関数のCADセル連携領域別微分）
+
+ihd "ec_p_order(1, 1, 5)"
+# 出力: 9（素有限体 F_5 上の楕円曲線 y^2 = x^3 + x + 1 のSchoof決定論的位数決定）
 ```
 
 
@@ -234,13 +240,13 @@ ihd "plot(sin(x), [-pi, pi])"
 #### 主なカテゴリと代表関数
 - **基本代数・数論・方程式**: `sqrt`, `cbrt`, `expand`, `factor`, `apart`, `together`, `abs`, `gcd`, `lcm`, `mod`, `inv_mod`, `crt`, `totient`, `is_prime`, `cfrac`, `from_cfrac`, `rand`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `sturm`, `root_count`, `isolate_roots`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `padic_val`, `padic_norm`, `padic_expand`, `solve`
 - **三角関数・対数・複素数**: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `trig_expand`, `trig_reduce`, `exp`, `log`, `ln`, `arg`, `polar`, `polar_exp`, `rect`
-- **微積分・常微分方程式・漸化式・特殊関数・級数**: `diff`, `integrate`, `risch_integrate`, `limit`, `residue`, `gamma`, `beta`, `bernoulli`, `zeta`, `dsolve`, `rsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`, `gosper_sum`, `wz_cert`, `puiseux`
+- **微積分・常微分方程式・漸化式・特殊関数・級数**: `diff`, `integrate`, `piecewise`, `risch_integrate`, `limit`, `residue`, `gamma`, `beta`, `bernoulli`, `zeta`, `dsolve`, `rsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`, `gosper_sum`, `wz_cert`, `puiseux`
 - **線形代数・3次元ベクトル解析**: `det`, `inv`, `transpose`, `rref`, `rank`, `trace`, `eigenvals`, `eigenvects`, `lu`, `qr`, `cholesky`, `ldlt`, `pinv`, `solve_linear`, `dot`, `cross`, `norm`, `grad`, `div`, `curl`
 - **幾何学解析**: `line_intersect`, `circle_intersect`, `triangle_area`, `triangle_centers`, `geo_prove`, `collinear`, `midpoint`, `parallel`, `perpendicular`, `equal_length_sq`, `circle_concyclic`
 - **厳密離散確率・統計**: `binom`, `hyper`, `geom`, `bayes`, `expect`, `variance`, `stddev`
 - **実代数幾何・数理論理・量化子消去**: `qe`, `forall`, `exists`, `cad`
 - **ガロア理論・代数的根号可解性**: `galois_group`, `is_solvable_by_radicals`
-- **楕円曲線代数・数論幾何**: `ec_add`, `ec_mul`, `ec_torsion`
+- **楕円曲線代数・数論幾何**: `ec_add`, `ec_mul`, `ec_torsion`, `ec_p_order`, `ec_p_trace`, `ec_p_add`, `ec_p_mul`
 - **前提条件システム（仮定）**: `assume`, `unassume`, `assumptions`, `clear_assumptions`
 - **ビジュアル・自己検証**: `plot`, `verify`
 
@@ -378,6 +384,12 @@ ihd "galois_group(x^5 - 4*x + 2)"
 
 ihd --verify "is_solvable_by_radicals(x^5 - 4*x + 2)"
 # Output: false (Emits Abel-Ruffini impossibility certificate [VERIFIED: expr == false])
+
+ihd "diff(piecewise([[x^2, x < 0], [2*x, x >= 0]], 0), x)"
+# Output: piecewise([[2*x, x < 0], [2, x >= 0]], 0) (Piecewise calculus integrated with CAD cell decomposition)
+
+ihd "ec_p_order(1, 1, 5)"
+# Output: 9 (Deterministic group order computation via Schoof's algorithm over F_5)
 ```
 
 
@@ -518,13 +530,13 @@ ihd "plot(sin(x), [-pi, pi])"
 #### Major Categories & Representative Functions
 - **Basic Algebra, Number Theory & Equations**: `sqrt`, `cbrt`, `expand`, `factor`, `apart`, `together`, `abs`, `gcd`, `lcm`, `mod`, `inv_mod`, `crt`, `totient`, `is_prime`, `cfrac`, `from_cfrac`, `rand`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `sturm`, `root_count`, `isolate_roots`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `padic_val`, `padic_norm`, `padic_expand`, `solve`
 - **Trigonometric, Logarithmic & Complex Functions**: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `trig_expand`, `trig_reduce`, `exp`, `log`, `ln`, `arg`, `polar`, `polar_exp`, `rect`
-- **Calculus, ODEs, Recurrences, Special Functions & Series**: `diff`, `integrate`, `risch_integrate`, `limit`, `residue`, `gamma`, `beta`, `bernoulli`, `zeta`, `dsolve`, `rsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`, `gosper_sum`, `wz_cert`, `puiseux`
+- **Calculus, ODEs, Recurrences, Special Functions & Series**: `diff`, `integrate`, `piecewise`, `risch_integrate`, `limit`, `residue`, `gamma`, `beta`, `bernoulli`, `zeta`, `dsolve`, `rsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`, `gosper_sum`, `wz_cert`, `puiseux`
 - **Linear Algebra & 3D Vector Calculus**: `det`, `inv`, `transpose`, `rref`, `rank`, `trace`, `eigenvals`, `eigenvects`, `lu`, `qr`, `cholesky`, `ldlt`, `pinv`, `solve_linear`, `dot`, `cross`, `norm`, `grad`, `div`, `curl`
 - **Computational Geometry**: `line_intersect`, `circle_intersect`, `triangle_area`, `triangle_centers`, `geo_prove`, `collinear`, `midpoint`, `parallel`, `perpendicular`, `equal_length_sq`, `circle_concyclic`
 - **Exact Discrete Probability & Statistics**: `binom`, `hyper`, `geom`, `bayes`, `expect`, `variance`, `stddev`
 - **Real Algebraic Geometry & Quantifier Elimination**: `qe`, `forall`, `exists`, `cad`
 - **Galois Theory & Solvability by Radicals**: `galois_group`, `is_solvable_by_radicals`
-- **Elliptic Curves & Arithmetic Geometry**: `ec_add`, `ec_mul`, `ec_torsion`
+- **Elliptic Curves & Arithmetic Geometry**: `ec_add`, `ec_mul`, `ec_torsion`, `ec_p_order`, `ec_p_trace`, `ec_p_add`, `ec_p_mul`
 - **Symbolic Assumptions System**: `assume`, `unassume`, `assumptions`, `clear_assumptions`
 - **Visualization & Verification Tools**: `plot`, `verify`
 

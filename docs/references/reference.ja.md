@@ -139,6 +139,7 @@
 | `beta` | `beta(2, 3)` / `beta(1/2, 1/2)` | ベータ関数 $\mathrm{B}(p, q) = \frac{\Gamma(p)\Gamma(q)}{\Gamma(p+q)}$（整数・半整数の厳密有理・代数展開、例: $\mathrm{B}(1/2, 1/2) = \pi$） |
 | `bernoulli` | `bernoulli(4)` / `bernoulli(10)` | 第 $n$ ベルヌーイ数 $B_n$（秋山・谷川アルゴリズムによる多倍長有理数厳密出力、例: $B_{10} = 5/66$） |
 | `zeta` | `zeta(2)` / `zeta(4)` / `zeta(6)` | リーマンゼータ関数 $\zeta(s)$（オイラーの公式による正の偶数値の完全厳密代数解、例: $\zeta(4) = \pi^4/90$、極 $s=1$ 検出） |
+| `piecewise` | `piecewise([[expr1, cond1], ...], default)` | 区分定義関数（第一級 `PiecewiseNode`）。CADセル分解と連携し、条件領域ごとの微分（`diff`）、定積分（`integrate`）、方程式求解（`solve`）を厳密代数処理 |
 | `sum` | `sum(expr, k, start, end)` | 離散和（有限整数範囲の合算、または Faulhaber 公式による $n$ に関する多項式閉形式） |
 | `gosper_sum` | `gosper_sum(t_k, k)` | 超幾何級数に対する Gosper 不定和法による閉形式原始関数 $z_k$ 導出（$z_{k+1}-z_k=t_k$） |
 | `wz_cert` | `wz_cert(F, n, k)` | Wilf-Zeilberger (WZ) 対による超幾何恒等式の有理関数証明書 $R(n, k)$ 生成 |
@@ -232,6 +233,10 @@
 | `ec_add` | `ec_add([A, B], P1, P2)` | ワイエルシュトラス標準形 $y^2 = x^3 + Ax + B$ 上の有理点加算（Chord and Tangent 法、単位元・無限遠点 `O` 対応） |
 | `ec_mul` | `ec_mul([A, B], n, P)` | 楕円曲線上の有理点のスカラー倍算 $n P$（バイナリ Double-and-Add アルゴリズム） |
 | `ec_torsion` | `ec_torsion(A, B)` | Nagell-Lutz の定理および Mazur の定理に基づく有限位数有理点群（捩れ群 $E(\mathbb{Q})_{\text{tors}}$）の完全決定アルゴリズム |
+| `ec_p_order` | `ec_p_order(A, B, p)` | 素有限体 $\mathbb{F}_p$ 上の非特異楕円曲線 $y^2 \equiv x^3 + Ax + B \pmod p$ の群位数 $\#E(\mathbb{F}_p)$ を決定論的 Schoof アルゴリズム（分割多項式・フロベニウス写像・CRT合成）により多項式時間で算定 |
+| `ec_p_trace` | `ec_p_trace(A, B, p)` | 素有限体 $\mathbb{F}_p$ 上の楕円曲線のフロベニウストレース $a = p + 1 - \#E(\mathbb{F}_p)$ を決定論的に算出（Hasseの定理 $|a| \le 2\sqrt{p}$ を満たす整数） |
+| `ec_p_add` | `ec_p_add(A, B, p, P, Q)` | 素有限体 $\mathbb{F}_p$ 上の楕円曲線群における点加算 $P + Q$（$\pmod p$ の有理逆元とChord and Tangent幾何演算、単位元・無限遠点 `O` 対応） |
+| `ec_p_mul` | `ec_p_mul(A, B, p, n, P)` | 素有限体 $\mathbb{F}_p$ 上の楕円曲線群における点のスカラー倍算 $n P$（$\pmod p$ 上のDouble-and-Add高速累乗算） |
 
 ---
 
