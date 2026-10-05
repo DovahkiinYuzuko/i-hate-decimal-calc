@@ -1,0 +1,145 @@
+package calc
+
+import (
+	"math/big"
+	"testing"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc/ast"
+)
+
+func TestProofTrace_Basic(t *testing.T) {
+	orig := &ast.VarNode{Name: "x"}
+	res := &ast.RationalNode{Val: big.NewRat(1, 1)}
+
+	trace := NewProofTrace(orig, res)
+	if trace == nil {
+		t.Fatalf("expected non-nil trace")
+	}
+	if trace.StepCount() != 0 {
+		t.Fatalf("expected 0 steps, got %d", trace.StepCount())
+	}
+	if trace.LastStep() != nil {
+		t.Fatalf("expected nil last step on empty trace")
+	}
+
+	step1 := ProofStep{
+		Before:          orig,
+		After:           res,
+		Rule:            "IdentityReduction",
+		RuleDescription: "Reduce x to 1",
+		Residual:        &ast.RationalNode{Val: big.NewRat(0, 1)},
+		IsSelfVerified:  true,
+	}
+	trace.AddStep(step1)
+
+	if trace.StepCount() != 1 {
+		t.Fatalf("expected 1 step, got %d", trace.StepCount())
+	}
+	last := trace.LastStep()
+	if last == nil || last.Rule != "IdentityReduction" {
+		t.Fatalf("unexpected last step: %+v", last)
+	}
+	if !last.IsSelfVerified {
+		t.Errorf("expected IsSelfVerified true")
+	}
+
+	str := step1.String()
+	if str == "" || !containsSubstr(str, "IdentityReduction") || !containsSubstr(str, "[VERIFIED]") {
+		t.Errorf("unexpected step string: %s", str)
+	}
+}
+
+func TestConvertCertificateToProofTrace_Identity(t *testing.T) {
+	// (x - 1)*(x + 1) == x^2 - 1
+	lhs := &ast.MulNode{
+		Factors: []ast.Node{
+			&ast.AddNode{Terms: []ast.Node{&ast.VarNode{Name: "x"}, &ast.RationalNode{Val: big.NewRat(-1, 1)}}},
+			&ast.AddNode{Terms: []ast.Node{&ast.VarNode{Name: "x"}, &ast.RationalNode{Val: big.NewRat(1, 1)}}},
+		},
+	}
+	rhs := &ast.AddNode{
+		Terms: []ast.Node{
+			&ast.PowNode{Base: &ast.VarNode{Name: "x"}, Exp: &ast.RationalNode{Val: big.NewRat(2, 1)}},
+			&ast.RationalNode{Val: big.NewRat(-1, 1)},
+		},
+	}
+	res := &ast.RationalNode{Val: big.NewRat(0, 1)}
+
+	cert := NewIdentityCertificate(IdentityKindFactor, lhs, rhs, res, true, "Difference of squares factor")
+	trace, err := ConvertCertificateToProofTrace(cert)
+	if err != nil {
+		t.Fatalf("unexpected error converting identity cert: %v", err)
+	}
+	if trace.StepCount() != 1 {
+		t.Fatalf("expected 1 step, got %d", trace.StepCount())
+	}
+	step := trace.Steps[0]
+	if step.Rule != "PolynomialFactorization" {
+		t.Errorf("expected rule PolynomialFactorization, got %s", step.Rule)
+	}
+	if !step.IsSelfVerified {
+		t.Errorf("expected step to be verified")
+	}
+	if trace.Metadata["kind"] != string(IdentityKindFactor) {
+		t.Errorf("expected metadata kind to be factor, got %s", trace.Metadata["kind"])
+	}
+}
+
+func TestConvertCertificateToProofTrace_Deriv(t *testing.T) {
+	integrand := &ast.VarNode{Name: "x"}
+	antideriv := &ast.MulNode{
+		Factors: []ast.Node{
+			&ast.RationalNode{Val: big.NewRat(1, 2)},
+			&ast.PowNode{Base: &ast.VarNode{Name: "x"}, Exp: &ast.RationalNode{Val: big.NewRat(2, 1)}},
+		},
+	}
+	res := &ast.RationalNode{Val: big.NewRat(0, 1)}
+
+	cert := NewDerivCertificate(integrand, antideriv, res, "x", true, "Power rule antiderivative")
+	trace, err := ConvertCertificateToProofTrace(cert)
+	if err != nil {
+		t.Fatalf("unexpected error converting deriv cert: %v", err)
+	}
+	if trace.StepCount() != 1 {
+		t.Fatalf("expected 1 step, got %d", trace.StepCount())
+	}
+	step := trace.Steps[0]
+	if step.Rule != "IndefiniteIntegration" {
+		t.Errorf("expected rule IndefiniteIntegration, got %s", step.Rule)
+	}
+	if trace.Metadata["variable"] != "x" {
+		t.Errorf("expected metadata variable 'x', got %s", trace.Metadata["variable"])
+	}
+}
+
+func TestConvertCertificateToProofTrace_Invertibility(t *testing.T) {
+	mat := &ast.MatrixNode{
+		Data: [][]ast.Node{
+			{&ast.RationalNode{Val: big.NewRat(1, 1)}, &ast.RationalNode{Val: big.NewRat(0, 1)}},
+			{&ast.RationalNode{Val: big.NewRat(0, 1)}, &ast.RationalNode{Val: big.NewRat(1, 1)}},
+		},
+	}
+	det := &ast.RationalNode{Val: big.NewRat(1, 1)}
+	cert := NewInvertibilityCertificate(mat, mat, det, &ast.RationalNode{Val: big.NewRat(0, 1)}, true, "Identity matrix self-inverse")
+	trace, err := ConvertCertificateToProofTrace(cert)
+	if err != nil {
+		t.Fatalf("unexpected error converting matrix cert: %v", err)
+	}
+	if trace.StepCount() != 1 {
+		t.Fatalf("expected 1 step, got %d", trace.StepCount())
+	}
+	if trace.Steps[0].Rule != "MatrixInversion" {
+		t.Errorf("expected rule MatrixInversion, got %s", trace.Steps[0].Rule)
+	}
+}
+
+func TestConvertCertificateToProofTrace_Nil(t *testing.T) {
+	_, err := ConvertCertificateToProofTrace(nil)
+	if err == nil {
+		t.Errorf("expected error on nil certificate")
+	}
+}
+
+func containsSubstr(s, sub string) bool {
+	return len(s) >= len(sub) && (s == sub || len(sub) == 0 || (len(s) > 0 && len(sub) > 0 && (s[:len(sub)] == sub || containsSubstr(s[1:], sub))))
+}
