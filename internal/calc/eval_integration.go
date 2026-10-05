@@ -285,9 +285,12 @@ func integrateCore(expr Node, varName string) (Node, error) {
 		return rischRes, nil
 	} else if rischErr != nil {
 		// If Risch algorithm definitively proved that the integral is non-elementary,
-		// short-circuit immediately without falling back to heuristics.
+		// check if special functions like erf(x) can express it in closed form!
 		var nonElemErr *NonelementaryIntegralError
 		if errors.As(rischErr, &nonElemErr) {
+			if gaussRes, ok := TryIntegrateGaussian(expr, varName); ok {
+				return gaussRes, nil
+			}
 			return nil, nonElemErr
 		}
 	}
@@ -328,7 +331,15 @@ func integrateCore(expr Node, varName string) (Node, error) {
 		return simplifyAdd(integratedTerms)
 	}
 
-	// 3. Pattern match by AST node type
+	// 3. Special function patterns: Gaussian (erf) & Lambert W
+	if gaussRes, ok := TryIntegrateGaussian(expr, varName); ok {
+		return gaussRes, nil
+	}
+	if lambertRes, ok := TryIntegrateLambertW(expr, varName); ok {
+		return lambertRes, nil
+	}
+
+	// 4. Pattern match by AST node type
 	switch v := expr.(type) {
 	case *UnaryOpNode:
 		if v.Op == "-" {

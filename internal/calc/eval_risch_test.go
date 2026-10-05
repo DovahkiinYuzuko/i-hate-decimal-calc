@@ -171,14 +171,22 @@ func TestRisch_IntegrationDispatch(t *testing.T) {
 	}
 	t.Logf("∫ 1/(x^2+1) dx = %s", res1.String())
 
-	// 2. Non-elementary integral fail-fast
-	expr2 := parseExprForTest(t, "exp(-x^2)")
+	// 2. Non-elementary integral fail-fast (Exponential integral Ei(x) has no elementary/erf closed form)
+	expr2 := parseExprForTest(t, "exp(x) / x")
 	_, err2 := evalIndefiniteIntegral(expr2, "x")
 	if err2 == nil {
-		t.Fatalf("expected fail-fast non-elementary error for exp(-x^2)")
+		t.Fatalf("expected fail-fast non-elementary error for exp(x) / x")
 	}
 	if _, isNonElem := err2.(*NonelementaryIntegralError); !isNonElem {
 		t.Fatalf("expected *NonelementaryIntegralError, got %T: %v", err2, err2)
 	}
-	t.Logf("Confirmed integration fail-fast for exp(-x^2): %v", err2)
+	t.Logf("Confirmed integration fail-fast for exp(x)/x: %v", err2)
+
+	// 3. Gaussian integral closed-form via erf (issue-99)
+	expr3 := parseExprForTest(t, "exp(-x^2)")
+	res3, err3 := evalIndefiniteIntegral(expr3, "x")
+	if err3 != nil {
+		t.Fatalf("expected closed form erf for exp(-x^2), got error: %v", err3)
+	}
+	t.Logf("Confirmed Gaussian integral via erf: %s", res3.String())
 }

@@ -269,6 +269,10 @@ func differentiate(n Node, varName string) (Node, error) {
 					return nil, err2
 				}
 				dfDu, err = simplifyMul([]Node{u, absUInv})
+			case "lambert_w":
+				return DifferentiateLambertW(u, varName)
+			case "erf":
+				return DifferentiateErf(u, varName)
 			default:
 				return nil, fmt.Errorf("%s", i18n.T("calculus.err_differentiation_of_function", v.Name))
 			}
@@ -505,6 +509,10 @@ func solveEquation(expr Node, varName string) (Node, error) {
 	// 2. Extract polynomial coefficients
 	coeffs, err := extractPolyCoeffs(expanded, varName)
 	if err != nil {
+		// Fallback to transcendental solver (Lambert W)
+		if sol, transErr := SolveTranscendental(expanded, varName); transErr == nil {
+			return sol, nil
+		}
 		return nil, err
 	}
 
