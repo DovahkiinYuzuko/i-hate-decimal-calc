@@ -635,6 +635,22 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 			tactic = "by ext <;> ring"
 		}
 
+	case *PrimitiveElementCertificate:
+		mStr, _ := ToLeanSyntax(c.MinPolyTheta)
+		qgStr, _ := ToLeanSyntax(c.QuotientG)
+		qfStr, _ := ToLeanSyntax(c.QuotientF)
+
+		substG := Substitute(c.MinPolyBeta, "x", c.RepBeta)
+		substF := Substitute(c.MinPolyAlpha, "x", c.RepAlpha)
+		lhsGStr, _ := ToLeanSyntax(substG)
+		lhsFStr, _ := ToLeanSyntax(substF)
+
+		equalityStr = fmt.Sprintf("∀ (x : ℚ), (%s = (%s) * (%s)) ∧ (%s = (%s) * (%s))",
+			lhsGStr, qgStr, mStr,
+			lhsFStr, qfStr, mStr,
+		)
+		tactic = "by intro x ; constructor <;> ring"
+
 	case *ImpossibilityCertificate:
 		if c.Kind == ImpossibilityAbelRuffini {
 			fStr, _ := ToLeanSyntax(c.Problem)

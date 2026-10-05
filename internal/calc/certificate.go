@@ -23,6 +23,7 @@ const (
 	CertDomainElliptic      CertificateDomain = "elliptic"
 	CertDomainRoot          CertificateDomain = "root"
 	CertDomainLattice       CertificateDomain = "lattice"
+	CertDomainAlgebraicExtension CertificateDomain = "algebraic_extension"
 	CertDomainGeneral       CertificateDomain = "general"
 )
 
@@ -265,6 +266,46 @@ func NewLinearDiophantineCertificate(a, b, c, xSol, ySol Node, paramVar string, 
 		XSolution: xSol,
 		YSolution: ySol,
 		ParamVar:  paramVar,
+	}
+}
+
+// PrimitiveElementCertificate represents a certified simple extension isomorphism Q(alpha, beta) = Q(theta).
+type PrimitiveElementCertificate struct {
+	BaseCertificate
+	MinPolyTheta Node
+	SymbolTheta  string
+	C            int64
+	RepAlpha     Node
+	RepBeta      Node
+	MinPolyAlpha Node
+	MinPolyBeta  Node
+	QuotientG    Node
+	QuotientF    Node
+}
+
+// NewPrimitiveElementCertificate creates a new verified PrimitiveElementCertificate.
+func NewPrimitiveElementCertificate(minPolyTheta Node, symbolTheta string, c int64, repAlpha, repBeta, minPolyAlpha, minPolyBeta, quoG, quoF, residual Node, isVerified bool, details string) *PrimitiveElementCertificate {
+	eqStr := ""
+	if minPolyTheta != nil && repAlpha != nil && repBeta != nil {
+		eqStr = fmt.Sprintf("Q(%s, %s) =~ Q(%s), theta = alpha + %d*beta", minPolyAlpha.String(), minPolyBeta.String(), symbolTheta, c)
+	}
+	return &PrimitiveElementCertificate{
+		BaseCertificate: BaseCertificate{
+			DomainVal:    CertDomainAlgebraicExtension,
+			Verified:     isVerified,
+			ResidualNode: residual,
+			DetailsMsg:   details,
+			EquationStr:  eqStr,
+		},
+		MinPolyTheta: minPolyTheta,
+		SymbolTheta:  symbolTheta,
+		C:            c,
+		RepAlpha:     repAlpha,
+		RepBeta:      repBeta,
+		MinPolyAlpha: minPolyAlpha,
+		MinPolyBeta:  minPolyBeta,
+		QuotientG:    quoG,
+		QuotientF:    quoF,
 	}
 }
 

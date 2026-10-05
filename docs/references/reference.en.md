@@ -101,6 +101,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `min_poly` | `min_poly(rep, min_poly)` | Derives the irreducible monic minimal polynomial $m(x) \in \mathbb{Q}[x]$ of an algebraic element |
 | `solve_diophantine` | `solve_diophantine(3*x + 5*y == 7, [x, y])` | Exact Diophantine equation solver for linear Diophantine equations (via Extended Euclidean Algorithm and Bezout's identity parameterized by integer $t$) and Pythagorean triples. Supports `--verify` algebraic certificate and `--lean` formal proof generation |
 | `pell_solve` | `pell_solve(D)` / `pell_solve(D, 1)` / `pell_solve(D, -1)` | Exact solver for Pell's equation $x^2 - D y^2 = 1$ and negative Pell's equation $x^2 - D y^2 = -1$, computing fundamental integer solutions $(x_1, y_1)$ via continuous fraction expansion of $\sqrt{D}$. Supports `--verify` and `--lean` (`by decide` proof) |
+| `to_primitive_element` / `primitive_element` | `to_primitive_element([sqrt(2), sqrt(3)])` / `to_primitive_element([x^2 - 2, x^2 - 3])` | Derives the simple extension isomorphism $\mathbb{Q}(\theta) \cong \mathbb{Q}(\alpha_1, \dots, \alpha_k)$ via the Primitive Element Theorem. Computes primitive element symbol, composite minimal polynomial $m_\theta(x)$, and generator representation polynomial list $[P_{\alpha_1}(\theta), \dots, P_{\alpha_k}(\theta)]$ using Sylvester resultants and algebraic field GCD. `primitive_element` is an alias. Supports `--verify` and `--lean` formal proof verification |
 
 ---
 

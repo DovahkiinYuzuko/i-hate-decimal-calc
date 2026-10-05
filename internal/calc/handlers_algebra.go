@@ -23,6 +23,8 @@ func init() {
 	RegisterHandler("cad", handleCAD)
 	RegisterHandler("lll", HandleLLL)
 	RegisterHandler("find_min_poly", HandleFindMinPoly)
+	RegisterHandler("to_primitive_element", EvalToPrimitiveElement)
+	RegisterHandler("primitive_element", EvalToPrimitiveElement)
 }
 
 func handlePolyGCD(args []Node, env *Env) (Node, error) {

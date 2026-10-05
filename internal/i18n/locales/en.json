@@ -784,6 +784,16 @@
     "trace_pell_solve": "Pell's equation %s^2 - %s*%s^2 = 1 fundamental solution via continued fractions: [%s, %s]",
     "trace_linear_diophantine": "Linear Diophantine equation %s = 0 solved via extended Euclidean algorithm: %s",
     "trace_pythagorean": "Pythagorean equation solved with general parameters: %s"
+  },
+  "primitive_element": {
+    "err_invalid_fsm_transition": "invalid Primitive Element FSM transition: %s -> %s",
+    "err_args_count": "to_primitive_element requires at least 1 argument: to_primitive_element([expr1, expr2, ...]) or to_primitive_element(expr1, expr2)",
+    "err_nil_polynomial": "primitive_element error: minimal polynomial cannot be nil or empty",
+    "err_failed_to_find_c": "primitive_element error: failed to find primitive element coefficient c within search limit",
+    "err_not_algebraic": "primitive_element error: expression is not a recognized algebraic number or polynomial: %s",
+    "err_gcd_not_linear": "primitive_element error: field GCD did not yield a linear factor for generator recovery",
+    "trace_primitive_found": "Primitive element found: theta = %s + %d*%s with minimal polynomial: %s",
+    "trace_collapse_step": "Collapsing algebraic extensions: Q(%s, %s) -> Q(%s)"
   }
 }
 

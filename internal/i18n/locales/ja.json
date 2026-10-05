@@ -784,5 +784,15 @@
     "trace_pell_solve": "連分数展開によるペル方程式 %s^2 - %s*%s^2 = 1 の基本解導出: [%s, %s]",
     "trace_linear_diophantine": "拡張ユークリッド互除法による1次不定方程式 %s = 0 の解法: %s",
     "trace_pythagorean": "ピタゴラス方程式の一般パラメトリック解導出: %s"
+  },
+  "primitive_element": {
+    "err_invalid_fsm_transition": "状態遷移エラー: 原始元FSM: 不正な状態遷移です (%s -> %s)",
+    "err_args_count": "引数エラー: to_primitive_element 関数は少なくとも1つの引数が必要です: to_primitive_element([expr1, expr2, ...]) または to_primitive_element(expr1, expr2)",
+    "err_nil_polynomial": "数理計算エラー: 最小多項式を空またはnilにすることはできません",
+    "err_failed_to_find_c": "数理計算エラー: 探索制限内で原始元を生成する適切な係数 c を見つけることができませんでした",
+    "err_not_algebraic": "引数エラー: 式が代数的数または多項式として認識できません: %s",
+    "err_gcd_not_linear": "代数計算エラー: 拡大体上の最大公約数が生成元を復元するための1次因子になりませんでした",
+    "trace_primitive_found": "原始元を検出: theta = %s + %d*%s (最小多項式: %s)",
+    "trace_collapse_step": "代数拡大体の畳み込み: Q(%s, %s) -> Q(%s)"
   }
 }

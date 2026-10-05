@@ -977,6 +977,18 @@ func init() {
 		MinArgs: 1,
 		MaxArgs: 1,
 	})
+
+	// Primitive Element Theorem & Simple Extension Isomorphism (issue-103)
+	RegisterFunction(FunctionSpec{
+		Name:    "to_primitive_element",
+		MinArgs: 1,
+		MaxArgs: 10,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "primitive_element",
+		MinArgs: 1,
+		MaxArgs: 10,
+	})
 }
 
 
