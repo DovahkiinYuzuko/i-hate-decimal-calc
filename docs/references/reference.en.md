@@ -166,6 +166,12 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `ldlt` | `ldlt(A)` | Exact square-root-free $LDL^T$ decomposition ($L$ unit lower, $D$ positive diagonal rational matrix) |
 | `pinv` | `pinv(A)` | Exact Moore-Penrose pseudoinverse $A^+$ via RREF full-rank factorization |
 | `solve_linear` / `linsolve` | `solve_linear(A, b)` | Exact linear system solver $Ax=b$ (unique, inconsistent, or parametric solutions) |
+| `hnf` | `hnf(A)` | Hermite Normal Form (HNF) of integer matrices via fraction-free elementary row operations and modulo reduction to row echelon upper triangular form $H$ |
+| `hnf_transform` | `hnf_transform(A)` | Hermite Normal Form with unimodular transform $[H, U]$ ($U \in \text{GL}_m(\mathbb{Z}), U A = H$) |
+| `snf` | `snf(A)` | Smith Normal Form (SNF) of integer matrices via elementary row/column operations with invariant factor divisibility chain $d_1 \mid d_2 \mid \dots \mid d_r$ |
+| `snf_transform` | `snf_transform(A)` | Smith Normal Form with bilateral unimodular transforms $[D, U, V]$ ($U \in \text{GL}_m(\mathbb{Z}), V \in \text{GL}_n(\mathbb{Z}), U A V = D$) |
+| `invariant_factors` | `invariant_factors(A)` | Extract invariant factors $[d_1, d_2, \dots, d_r]$ (positive diagonal entries of SNF) |
+| `abelian_group_structure` | `abelian_group_structure(A)` | Identify direct sum structure of finitely generated abelian group $G = \mathbb{Z}^m / \operatorname{Im}(A)$ (e.g. `Z_2 + Z_6`, free part `Z`) |
 | `dot`, `cross` | `dot(u, v)`, `cross(u, v)` | Vector dot product and 3D vector cross product |
 | `norm` | `norm(v)` | Euclidean vector norm ($\sqrt{\sum v_i^2}$, with radical simplification) |
 | `grad` | `grad(f, [x, y, z])` | Gradient vector field ($\nabla f$) |

@@ -26,6 +26,8 @@ const (
 	DomainPolynomialRoot VerificationDomain = "polynomial_root"
 	DomainLLL           VerificationDomain = "lll"
 	DomainElliptic      VerificationDomain = "elliptic"
+	DomainSNF           VerificationDomain = "snf"
+	DomainHNF           VerificationDomain = "hnf"
 )
 
 // VerificationCertificate represents a certified mathematical proof of correctness.
@@ -135,6 +137,14 @@ func VerifyComputation(expr, result Node, env *Env) (*VerificationCertificate, e
 		case "ec_add":
 			_ = fsm.TransitionTo(VerifyStateTargetClassified)
 			return verifyEllipticAdd(fn, result, env, fsm)
+
+		case "snf", "snf_transform":
+			_ = fsm.TransitionTo(VerifyStateTargetClassified)
+			return verifySNF(fn, result, env, fsm)
+
+		case "hnf", "hnf_transform":
+			_ = fsm.TransitionTo(VerifyStateTargetClassified)
+			return verifyHNF(fn, result, env, fsm)
 		}
 
 	case *RelOpNode:
@@ -1370,3 +1380,295 @@ func verifyEllipticAdd(fn *FuncNode, p3Result Node, env *Env, fsm *VerifyLifecyc
 		CertIR:     certIR,
 	}, nil
 }
+
+// verifySNF verifies Smith Normal Form: U * A * V == D, |det(U)| == 1, |det(V)| == 1, and d_i | d_{i+1}
+func verifySNF(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
+	_ = result
+	if len(fn.Args) < 1 {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, fmt.Errorf("%s", i18n.T("matrix_integer.err_snf_args"))
+	}
+	A, okA := fn.Args[0].(*MatrixNode)
+	if !okA {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, fmt.Errorf("%s", i18n.T("matrix_integer.err_matrix_expected", fn.Args[0].String()))
+	}
+
+	intMat, err := extractIntegerMatrix(A)
+	if err != nil {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		return nil, err
+	}
+
+	rawD, rawU, rawV, err := ComputeSNF(intMat)
+	if err != nil {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		return nil, err
+	}
+
+	D, err := buildMatrixNode(rawD)
+	if err != nil {
+		return nil, err
+	}
+	U, err := buildMatrixNode(rawU)
+	if err != nil {
+		return nil, err
+	}
+	V, err := buildMatrixNode(rawV)
+	if err != nil {
+		return nil, err
+	}
+
+	factors := ExtractInvariantFactors(rawD)
+	var invFactors []Node
+	for _, f := range factors {
+		invFactors = append(invFactors, NewRationalFromBigRat(new(big.Rat).SetInt(&f)))
+	}
+
+	_ = fsm.TransitionTo(VerifyStateResidualConstructed)
+
+	// Step 1: verify U * A * V == D
+	UA, err := evalMatrixMulVerified(U, A)
+	if err != nil {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		return nil, err
+	}
+	UAV, err := evalMatrixMulVerified(UA, V)
+	if err != nil {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		return nil, err
+	}
+
+	isZeroResidual := true
+	resData := make([][]Node, UAV.Rows)
+	for r := 0; r < UAV.Rows; r++ {
+		resData[r] = make([]Node, UAV.Cols)
+		for c := 0; c < UAV.Cols; c++ {
+			elem := UAV.Data[r][c]
+			dElem := D.Data[r][c]
+			negD, _ := simplifyUnaryOp("-", dElem)
+			diff := NewAdd([]Node{elem, negD})
+			if !checkIsZeroAlgebraically(diff, env) {
+				isZeroResidual = false
+			}
+			resData[r][c] = diff
+		}
+	}
+	residualMat := &MatrixNode{Rows: UAV.Rows, Cols: UAV.Cols, Data: resData}
+
+	// Step 2: Unimodularity of U and V
+	detU, errU := evalDet(U)
+	detV, errV := evalDet(V)
+	isUnimodular := false
+	if errU == nil && errV == nil {
+		uOne := checkIsZeroAlgebraically(NewAdd([]Node{detU, mustRational(-1, 1)}), env) ||
+			checkIsZeroAlgebraically(NewAdd([]Node{detU, mustRational(1, 1)}), env)
+		vOne := checkIsZeroAlgebraically(NewAdd([]Node{detV, mustRational(-1, 1)}), env) ||
+			checkIsZeroAlgebraically(NewAdd([]Node{detV, mustRational(1, 1)}), env)
+		isUnimodular = uOne && vOne
+	}
+
+	// Step 3: Divisibility of invariant factors: d_i | d_{i+1}
+	divisibilityHolds := true
+	for i := 0; i+1 < len(factors); i++ {
+		if factors[i].Sign() != 0 {
+			rem := new(big.Int).Rem(&factors[i+1], &factors[i])
+			if rem.Sign() != 0 {
+				divisibilityHolds = false
+				break
+			}
+		}
+	}
+
+	holds := isZeroResidual && isUnimodular && divisibilityHolds
+	eqStr := fmt.Sprintf("%s * %s * %s == %s", U.String(), A.String(), V.String(), D.String())
+
+	if holds {
+		_ = fsm.TransitionTo(VerifyStateCertified)
+		details := "smith normal form decomposition verified (U*A*V = D, unimodular U, V, and d_i | d_{i+1})"
+		certIR := NewSmithNormalFormCertificate(A, U, V, D, invFactors, mustRational(0, 1), true, details)
+		return &VerificationCertificate{
+			Domain:     DomainSNF,
+			Equation:   eqStr,
+			Residual:   mustRational(0, 1),
+			IsVerified: true,
+			Details:    details,
+			State:      VerifyStateCertified,
+			CertIR:     certIR,
+		}, nil
+	}
+
+	_ = fsm.TransitionTo(VerifyStateRefuted)
+	details := fmt.Sprintf("smith normal form verification failed (zeroResidual=%v, unimodular=%v, divisibility=%v)", isZeroResidual, isUnimodular, divisibilityHolds)
+	certIR := NewSmithNormalFormCertificate(A, U, V, D, invFactors, residualMat, false, details)
+	return &VerificationCertificate{
+		Domain:     DomainSNF,
+		Equation:   eqStr,
+		Residual:   residualMat,
+		IsVerified: false,
+		Details:    details,
+		State:      VerifyStateRefuted,
+		CertIR:     certIR,
+	}, nil
+}
+
+// verifyHNF verifies Hermite Normal Form: U * A == H, |det(U)| == 1, and H satisfies lower triangular HNF conditions
+func verifyHNF(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
+	_ = result
+	if len(fn.Args) < 1 {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, fmt.Errorf("%s", i18n.T("matrix_integer.err_hnf_args"))
+	}
+	A, okA := fn.Args[0].(*MatrixNode)
+	if !okA {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, fmt.Errorf("%s", i18n.T("matrix_integer.err_matrix_expected", fn.Args[0].String()))
+	}
+
+	intMat, err := extractIntegerMatrix(A)
+	if err != nil {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		return nil, err
+	}
+
+	rawH, rawU, err := ComputeHNF(intMat)
+	if err != nil {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		return nil, err
+	}
+
+	H, err := buildMatrixNode(rawH)
+	if err != nil {
+		return nil, err
+	}
+	U, err := buildMatrixNode(rawU)
+	if err != nil {
+		return nil, err
+	}
+
+	_ = fsm.TransitionTo(VerifyStateResidualConstructed)
+
+	// Step 1: verify U * A == H
+	UA, err := evalMatrixMulVerified(U, A)
+	if err != nil {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		return nil, err
+	}
+
+	isZeroResidual := true
+	resData := make([][]Node, UA.Rows)
+	for r := 0; r < UA.Rows; r++ {
+		resData[r] = make([]Node, UA.Cols)
+		for c := 0; c < UA.Cols; c++ {
+			elem := UA.Data[r][c]
+			hElem := H.Data[r][c]
+			negH, _ := simplifyUnaryOp("-", hElem)
+			diff := NewAdd([]Node{elem, negH})
+			if !checkIsZeroAlgebraically(diff, env) {
+				isZeroResidual = false
+			}
+			resData[r][c] = diff
+		}
+	}
+	residualMat := &MatrixNode{Rows: UA.Rows, Cols: UA.Cols, Data: resData}
+
+	// Step 2: Unimodularity of U
+	detU, errU := evalDet(U)
+	isUnimodular := false
+	if errU == nil {
+		uOne := checkIsZeroAlgebraically(NewAdd([]Node{detU, mustRational(-1, 1)}), env) ||
+			checkIsZeroAlgebraically(NewAdd([]Node{detU, mustRational(1, 1)}), env)
+		isUnimodular = uOne
+	}
+
+	// Step 3: H canonical conditions (Row Hermite Normal Form: row echelon, positive pivots, reduced above)
+	hnfConditionsHold := true
+	lastPivotCol := -1
+	for r := 0; r < H.Rows; r++ {
+		pivotCol := -1
+		for c := 0; c < H.Cols; c++ {
+			if !checkIsZeroAlgebraically(H.Data[r][c], env) {
+				pivotCol = c
+				break
+			}
+		}
+		if pivotCol == -1 {
+			// Zero row: ensure all subsequent rows are also zero
+			for r2 := r + 1; r2 < H.Rows; r2++ {
+				for c := 0; c < H.Cols; c++ {
+					if !checkIsZeroAlgebraically(H.Data[r2][c], env) {
+						hnfConditionsHold = false
+						break
+					}
+				}
+			}
+			break
+		}
+
+		// Pivot column must strictly increase
+		if pivotCol <= lastPivotCol {
+			hnfConditionsHold = false
+			break
+		}
+		lastPivotCol = pivotCol
+
+		// Pivot entry must be strictly positive
+		pivotVal, okP := H.Data[r][pivotCol].(*RationalNode)
+		if !okP || pivotVal.Val.Sign() <= 0 {
+			hnfConditionsHold = false
+			break
+		}
+
+		// Entries below the pivot must be zero: H[k][pivotCol] == 0 for k > r
+		for k := r + 1; k < H.Rows; k++ {
+			if !checkIsZeroAlgebraically(H.Data[k][pivotCol], env) {
+				hnfConditionsHold = false
+				break
+			}
+		}
+
+		// Entries above the pivot must satisfy: 0 <= H[k][pivotCol] < pivotVal
+		for k := 0; k < r; k++ {
+			elem, okElem := H.Data[k][pivotCol].(*RationalNode)
+			if !okElem || elem.Val.Sign() < 0 || elem.Val.Cmp(pivotVal.Val) >= 0 {
+				hnfConditionsHold = false
+				break
+			}
+		}
+		if !hnfConditionsHold {
+			break
+		}
+	}
+
+	holds := isZeroResidual && isUnimodular && hnfConditionsHold
+	eqStr := fmt.Sprintf("%s * %s == %s", U.String(), A.String(), H.String())
+
+	if holds {
+		_ = fsm.TransitionTo(VerifyStateCertified)
+		details := "hermite normal form decomposition verified (U*A = H, unimodular U, canonical HNF structure)"
+		certIR := NewHermiteNormalFormCertificate(A, U, H, mustRational(0, 1), true, details)
+		return &VerificationCertificate{
+			Domain:     DomainHNF,
+			Equation:   eqStr,
+			Residual:   mustRational(0, 1),
+			IsVerified: true,
+			Details:    details,
+			State:      VerifyStateCertified,
+			CertIR:     certIR,
+		}, nil
+	}
+
+	_ = fsm.TransitionTo(VerifyStateRefuted)
+	details := fmt.Sprintf("hermite normal form verification failed (zeroResidual=%v, unimodular=%v, hnfShape=%v)", isZeroResidual, isUnimodular, hnfConditionsHold)
+	certIR := NewHermiteNormalFormCertificate(A, U, H, residualMat, false, details)
+	return &VerificationCertificate{
+		Domain:     DomainHNF,
+		Equation:   eqStr,
+		Residual:   residualMat,
+		IsVerified: false,
+		Details:    details,
+		State:      VerifyStateRefuted,
+		CertIR:     certIR,
+	}, nil
+}
+

@@ -933,6 +933,38 @@ func init() {
 		LazyArgs: true,
 		Handler:  EvalPiecewiseHandler,
 	})
+
+	// Integer Matrix Normal Forms & Abelian Groups (issue-101)
+	RegisterFunction(FunctionSpec{
+		Name:    "hnf",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "hnf_transform",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "snf",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "snf_transform",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "invariant_factors",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "abelian_group_structure",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
 }
 
 

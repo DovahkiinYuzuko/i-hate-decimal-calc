@@ -34,3 +34,8 @@ solve(x^3 - 6*x^2 + 11*x - 6, x)
 
 # 8. Elliptic Curve Group Law Addition (NormNum tactic)
 ec_add(-1, 0, [-1, 0], [0, 0])
+
+# 9. Integer Matrix Normal Forms (HNF and SNF via Ext & FinCases tactics)
+hnf([[2, 4], [4, 2]])
+snf([[2, 4], [4, 2]])
+

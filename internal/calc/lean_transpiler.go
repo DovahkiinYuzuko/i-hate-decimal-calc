@@ -571,6 +571,52 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 			tactic = "by decide"
 		}
 
+	case *SmithNormalFormCertificate:
+		mStr, _ := ToLeanSyntax(c.A)
+		uStr, _ := ToLeanSyntax(c.U)
+		vStr, _ := ToLeanSyntax(c.V)
+		dStr, _ := ToLeanSyntax(c.D)
+		mRows, mCols := 0, 0
+		if mat, ok := c.A.(*MatrixNode); ok && len(mat.Data) > 0 {
+			mRows = len(mat.Data)
+			mCols = len(mat.Data[0])
+		}
+		if mRows > 0 && mCols > 0 {
+			equalityStr = fmt.Sprintf("((%s : Matrix (Fin %d) (Fin %d) ℚ) * (%s : Matrix (Fin %d) (Fin %d) ℚ) * (%s : Matrix (Fin %d) (Fin %d) ℚ) : Matrix (Fin %d) (Fin %d) ℚ) = (%s : Matrix (Fin %d) (Fin %d) ℚ)",
+				uStr, mRows, mRows,
+				mStr, mRows, mCols,
+				vStr, mCols, mCols,
+				mRows, mCols,
+				dStr, mRows, mCols,
+			)
+			tactic = "by ext i j <;> fin_cases i <;> fin_cases j <;> norm_num"
+		} else {
+			equalityStr = fmt.Sprintf("%s * %s * %s = %s", uStr, mStr, vStr, dStr)
+			tactic = "by ext <;> ring"
+		}
+
+	case *HermiteNormalFormCertificate:
+		mStr, _ := ToLeanSyntax(c.A)
+		uStr, _ := ToLeanSyntax(c.U)
+		hStr, _ := ToLeanSyntax(c.H)
+		mRows, mCols := 0, 0
+		if mat, ok := c.A.(*MatrixNode); ok && len(mat.Data) > 0 {
+			mRows = len(mat.Data)
+			mCols = len(mat.Data[0])
+		}
+		if mRows > 0 && mCols > 0 {
+			equalityStr = fmt.Sprintf("((%s : Matrix (Fin %d) (Fin %d) ℚ) * (%s : Matrix (Fin %d) (Fin %d) ℚ) : Matrix (Fin %d) (Fin %d) ℚ) = (%s : Matrix (Fin %d) (Fin %d) ℚ)",
+				uStr, mRows, mRows,
+				mStr, mRows, mCols,
+				mRows, mCols,
+				hStr, mRows, mCols,
+			)
+			tactic = "by ext i j <;> fin_cases i <;> fin_cases j <;> norm_num"
+		} else {
+			equalityStr = fmt.Sprintf("%s * %s = %s", uStr, mStr, hStr)
+			tactic = "by ext <;> ring"
+		}
+
 	case *ImpossibilityCertificate:
 		if c.Kind == ImpossibilityAbelRuffini {
 			fStr, _ := ToLeanSyntax(c.Problem)
@@ -723,6 +769,29 @@ func GenerateLeanSource(theoremName string, cert *VerificationCertificate, input
 				if c.Sum != nil {
 					allNodes = append(allNodes, c.Sum)
 				}
+			case *SmithNormalFormCertificate:
+				if c.A != nil {
+					allNodes = append(allNodes, c.A)
+				}
+				if c.U != nil {
+					allNodes = append(allNodes, c.U)
+				}
+				if c.V != nil {
+					allNodes = append(allNodes, c.V)
+				}
+				if c.D != nil {
+					allNodes = append(allNodes, c.D)
+				}
+			case *HermiteNormalFormCertificate:
+				if c.A != nil {
+					allNodes = append(allNodes, c.A)
+				}
+				if c.U != nil {
+					allNodes = append(allNodes, c.U)
+				}
+				if c.H != nil {
+					allNodes = append(allNodes, c.H)
+				}
 			}
 		}
 	}
@@ -810,6 +879,12 @@ func DetermineRequiredImports(cert Certificate, nodes ...Node) []string {
 			if !hasVars {
 				importsMap["Mathlib.Tactic.NormNum"] = true
 			}
+		case *SmithNormalFormCertificate, *HermiteNormalFormCertificate:
+			importsMap["Mathlib.Data.Matrix.Basic"] = true
+			importsMap["Mathlib.Data.Fin.VecNotation"] = true
+			importsMap["Mathlib.LinearAlgebra.Matrix.Notation"] = true
+			importsMap["Mathlib.Tactic.FinCases"] = true
+			importsMap["Mathlib.Tactic.NormNum"] = true
 		case *PellCertificate:
 			importsMap["Mathlib.Data.Int.Basic"] = true
 			importsMap["Mathlib.Tactic.NormNum"] = true
