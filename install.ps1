@@ -21,13 +21,10 @@ if ($Local) {
     
     Push-Location $LocalRoot
     try {
-        $GitTag = ""
-        try {
-            $GitTag = (git describe --tags --exact-match 2>$null)
-            if (-not $GitTag) {
-                $GitTag = (git describe --tags 2>$null)
-            }
-        } catch {}
+        $GitTag = (git describe --tags --exact-match 2>$null)
+        if (-not $GitTag) {
+            $GitTag = (git describe --tags 2>$null)
+        }
 
         $LdFlags = "-s -w"
         if ($GitTag) {
