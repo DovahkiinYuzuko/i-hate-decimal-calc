@@ -771,5 +771,18 @@
     "err_snf_transform_args": "引数エラー: snf_transform 関数は 1 つの引数が必要です: snf_transform(matrix)",
     "err_invariant_factors_args": "引数エラー: invariant_factors 関数は 1 つの引数が必要です: invariant_factors(matrix)",
     "err_abelian_group_structure_args": "引数エラー: abelian_group_structure 関数は 1 つの引数が必要です: abelian_group_structure(matrix)"
+  },
+  "diophantine": {
+    "err_invalid_fsm_transition": "状態遷移エラー: ディオファントスFSM: 不正な状態遷移です (%s -> %s)",
+    "err_solve_diophantine_args": "引数エラー: solve_diophantine 関数は 1 つまたは 2 つの引数が必要です: solve_diophantine(eq [, [vars]])",
+    "err_pell_solve_args": "引数エラー: pell_solve 関数は 1 つの引数が必要です: pell_solve(D)",
+    "err_pell_d_must_be_positive_integer": "引数エラー: pell_solve には正の整数 D を指定してください (取得値: %s)",
+    "err_pell_d_is_square": "判別式 D = %s は完全平方数のため、ペル方程式に自明解以外の非自明整数解は存在しません",
+    "err_no_integer_solution": "指定された不定方程式の整数解は存在しません: %s",
+    "err_unsupported_equation_type": "方程式 %s は対応している不定方程式形式（一次不定方程式、ペル方程式、ピタゴラス方程式等）ではありません",
+    "err_equation_expected": "方程式（==）または数式が期待されます (取得値: %s)",
+    "trace_pell_solve": "連分数展開によるペル方程式 %s^2 - %s*%s^2 = 1 の基本解導出: [%s, %s]",
+    "trace_linear_diophantine": "拡張ユークリッド互除法による1次不定方程式 %s = 0 の解法: %s",
+    "trace_pythagorean": "ピタゴラス方程式の一般パラメトリック解導出: %s"
   }
 }

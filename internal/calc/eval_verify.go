@@ -126,7 +126,7 @@ func VerifyComputation(expr, result Node, env *Env) (*VerificationCertificate, e
 			_ = fsm.TransitionTo(VerifyStateTargetClassified)
 			return verifyLinearSolve(fn, result, env, fsm)
 
-		case "solve_pell", "pell":
+		case "solve_pell", "pell", "pell_solve":
 			_ = fsm.TransitionTo(VerifyStateTargetClassified)
 			return verifyPell(fn, result, env, fsm)
 

@@ -234,3 +234,38 @@ func NewEllipticPointCertificate(a, b, p1, p2, sum, residual Node, isVerified bo
 	}
 }
 
+// LinearDiophantineCertificate represents a certified general integer solution to a*x + b*y = c.
+type LinearDiophantineCertificate struct {
+	BaseCertificate
+	A         Node
+	B         Node
+	C         Node
+	XSolution Node
+	YSolution Node
+	ParamVar  string
+}
+
+// NewLinearDiophantineCertificate creates a new verified LinearDiophantineCertificate.
+func NewLinearDiophantineCertificate(a, b, c, xSol, ySol Node, paramVar string, residual Node, isVerified bool, details string) *LinearDiophantineCertificate {
+	eqStr := ""
+	if a != nil && b != nil && c != nil && xSol != nil && ySol != nil {
+		eqStr = fmt.Sprintf("%s * (%s) + %s * (%s) == %s", a.String(), xSol.String(), b.String(), ySol.String(), c.String())
+	}
+	return &LinearDiophantineCertificate{
+		BaseCertificate: BaseCertificate{
+			DomainVal:    CertDomainNumberTheory,
+			Verified:     isVerified,
+			ResidualNode: residual,
+			DetailsMsg:   details,
+			EquationStr:  eqStr,
+		},
+		A:         a,
+		B:         b,
+		C:         c,
+		XSolution: xSol,
+		YSolution: ySol,
+		ParamVar:  paramVar,
+	}
+}
+
+
