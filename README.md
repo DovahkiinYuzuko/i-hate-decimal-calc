@@ -383,6 +383,10 @@ ihd --verify "is_solvable_by_radicals(x^5 - 4*x + 2)"
 # Elliptic curve point count over finite fields (Schoof's algorithm)
 ihd "ec_p_order(1, 1, 5)"
 # Output: 9
+
+# Integer matrix normal forms and finitely generated abelian group structure (HNF / SNF)
+ihd "abelian_group_structure([[2, 4], [4, 2]])"
+# Output: Z_2 + Z_6
 ```
 
 
@@ -524,7 +528,7 @@ ihd "plot(sin(x), [-pi, pi])"
 - **Basic Algebra, Number Theory & Equations**: `sqrt`, `cbrt`, `expand`, `factor`, `apart`, `together`, `abs`, `gcd`, `lcm`, `mod`, `inv_mod`, `crt`, `totient`, `is_prime`, `cfrac`, `from_cfrac`, `rand`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `sturm`, `root_count`, `isolate_roots`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `padic_val`, `padic_norm`, `padic_expand`, `solve`
 - **Trigonometric, Logarithmic & Complex Functions**: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `trig_expand`, `trig_reduce`, `exp`, `log`, `ln`, `arg`, `polar`, `polar_exp`, `rect`
 - **Calculus, ODEs, Recurrences, Special Functions & Series**: `diff`, `integrate`, `piecewise`, `risch_integrate`, `limit`, `residue`, `lambert_w`, `erf`, `gamma`, `beta`, `bernoulli`, `zeta`, `dsolve`, `rsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`, `gosper_sum`, `wz_cert`, `puiseux`
-- **Linear Algebra & 3D Vector Calculus**: `det`, `inv`, `transpose`, `rref`, `rank`, `trace`, `eigenvals`, `eigenvects`, `lu`, `qr`, `cholesky`, `ldlt`, `pinv`, `solve_linear`, `dot`, `cross`, `norm`, `grad`, `div`, `curl`
+- **Linear Algebra, Integer Normal Forms & 3D Vector Calculus**: `det`, `inv`, `transpose`, `rref`, `rank`, `trace`, `eigenvals`, `eigenvects`, `lu`, `qr`, `cholesky`, `ldlt`, `pinv`, `solve_linear`, `hnf`, `hnf_transform`, `snf`, `snf_transform`, `invariant_factors`, `abelian_group_structure`, `dot`, `cross`, `norm`, `grad`, `div`, `curl`
 - **Computational Geometry**: `line_intersect`, `circle_intersect`, `triangle_area`, `triangle_centers`, `geo_prove`, `collinear`, `midpoint`, `parallel`, `perpendicular`, `equal_length_sq`, `circle_concyclic`
 - **Exact Discrete Probability & Statistics**: `binom`, `hyper`, `geom`, `bayes`, `expect`, `variance`, `stddev`
 - **Real Algebraic Geometry & Quantifier Elimination**: `qe`, `forall`, `exists`, `cad`
