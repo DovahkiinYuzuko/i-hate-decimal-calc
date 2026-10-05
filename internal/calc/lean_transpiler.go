@@ -457,6 +457,24 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 			tactic = "by decide"
 		}
 
+	case *LinearDiophantineCertificate:
+		if c.A != nil && c.B != nil && c.C != nil && c.XSolution != nil && c.YSolution != nil {
+			aStr, _ := ToLeanSyntax(c.A)
+			bStr, _ := ToLeanSyntax(c.B)
+			cStr, _ := ToLeanSyntax(c.C)
+			xStr, _ := ToLeanSyntax(c.XSolution)
+			yStr, _ := ToLeanSyntax(c.YSolution)
+			param := c.ParamVar
+			if param == "" {
+				param = "t"
+			}
+			equalityStr = fmt.Sprintf("∀ (%s : ℤ), ((%s : ℤ) * (%s) + (%s : ℤ) * (%s) : ℤ) = (%s : ℤ)", param, aStr, xStr, bStr, yStr, cStr)
+			tactic = fmt.Sprintf("by intro %s ; ring", param)
+		} else {
+			equalityStr = "True"
+			tactic = "by decide"
+		}
+
 	case *PolynomialRootCertificate:
 		varSubst := c.Variable
 		if varSubst == "" {

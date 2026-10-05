@@ -965,6 +965,18 @@ func init() {
 		MinArgs: 1,
 		MaxArgs: 1,
 	})
+
+	// Diophantine Equation Solvers (issue-102)
+	RegisterFunction(FunctionSpec{
+		Name:    "solve_diophantine",
+		MinArgs: 1,
+		MaxArgs: 2,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "pell_solve",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
 }
 
 

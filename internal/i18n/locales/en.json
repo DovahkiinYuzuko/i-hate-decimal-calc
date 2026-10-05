@@ -771,6 +771,19 @@
     "err_snf_transform_args": "snf_transform requires 1 argument: snf_transform(matrix)",
     "err_invariant_factors_args": "invariant_factors requires 1 argument: invariant_factors(matrix)",
     "err_abelian_group_structure_args": "abelian_group_structure requires 1 argument: abelian_group_structure(matrix)"
+  },
+  "diophantine": {
+    "err_invalid_fsm_transition": "invalid Diophantine FSM transition: %s -> %s",
+    "err_solve_diophantine_args": "solve_diophantine requires 1 or 2 arguments: solve_diophantine(eq [, [vars]])",
+    "err_pell_solve_args": "pell_solve requires 1 argument: pell_solve(D)",
+    "err_pell_d_must_be_positive_integer": "pell_solve requires positive integer D, got: %s",
+    "err_pell_d_is_square": "D = %s is a perfect square; Pell's equation has no non-trivial integer solutions",
+    "err_no_integer_solution": "no integer solution exists for the given Diophantine equation: %s",
+    "err_unsupported_equation_type": "equation %s is not a supported Diophantine equation (linear, Pell, or Pythagorean)",
+    "err_equation_expected": "expected an equation (==) or expression, got: %s",
+    "trace_pell_solve": "Pell's equation %s^2 - %s*%s^2 = 1 fundamental solution via continued fractions: [%s, %s]",
+    "trace_linear_diophantine": "Linear Diophantine equation %s = 0 solved via extended Euclidean algorithm: %s",
+    "trace_pythagorean": "Pythagorean equation solved with general parameters: %s"
   }
 }
 
