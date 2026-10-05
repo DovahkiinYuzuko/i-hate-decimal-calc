@@ -1383,6 +1383,7 @@ func verifyEllipticAdd(fn *FuncNode, p3Result Node, env *Env, fsm *VerifyLifecyc
 
 // verifySNF verifies Smith Normal Form: U * A * V == D, |det(U)| == 1, |det(V)| == 1, and d_i | d_{i+1}
 func verifySNF(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
+	_ = result
 	if len(fn.Args) < 1 {
 		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
 		return nil, fmt.Errorf("%s", i18n.T("matrix_integer.err_snf_args"))
@@ -1513,6 +1514,7 @@ func verifySNF(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*V
 
 // verifyHNF verifies Hermite Normal Form: U * A == H, |det(U)| == 1, and H satisfies lower triangular HNF conditions
 func verifyHNF(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
+	_ = result
 	if len(fn.Args) < 1 {
 		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
 		return nil, fmt.Errorf("%s", i18n.T("matrix_integer.err_hnf_args"))
