@@ -5,6 +5,16 @@ func init() {
 	RegisterHandler("beta", handleBeta)
 	RegisterHandler("bernoulli", handleBernoulli)
 	RegisterHandler("zeta", handleZeta)
+	RegisterHandler("lambert_w", handleLambertW)
+	RegisterHandler("erf", handleErf)
+}
+
+func handleLambertW(args []Node, env *Env) (Node, error) {
+	return EvalLambertW(args, env)
+}
+
+func handleErf(args []Node, env *Env) (Node, error) {
+	return EvalErf(args, env)
 }
 
 func handleGamma(args []Node, env *Env) (Node, error) {

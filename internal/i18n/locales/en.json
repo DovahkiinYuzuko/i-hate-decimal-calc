@@ -750,6 +750,14 @@
     "err_case_pair_format": "each piecewise case must be a list containing exactly [expr, condition], got: %s",
     "err_invalid_piecewise_fsm_transition": "invalid Piecewise FSM transition: %s -> %s",
     "err_cad_domain_partition_failed": "CAD domain partitioning failed for piecewise expression: %v"
+  },
+  "transcendental": {
+    "err_invalid_fsm_transition": "invalid Transcendental FSM transition: %s -> %s",
+    "err_transcendental_not_solvable": "transcendental equation %s = 0 could not be normalized to Lambert W form",
+    "err_lambert_w_args": "lambert_w requires 1 or 2 arguments: lambert_w(z [, branch])",
+    "err_erf_args": "erf requires 1 argument: erf(z)",
+    "err_branch_must_be_integer": "lambert_w branch must be an integer, got: %s",
+    "trace_solve_lambert": "Solve transcendental equation %s = 0 via Lambert W function: %s"
   }
 }
 

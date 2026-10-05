@@ -750,5 +750,13 @@
     "err_case_pair_format": "構文エラー: 各 piecewise ケースは [式, 条件] の2要素リストである必要があります (取得値: %s)",
     "err_invalid_piecewise_fsm_transition": "状態遷移エラー: piecewise: 不正な状態遷移です (%s -> %s)",
     "err_cad_domain_partition_failed": "数理計算エラー: 区分定義式のCAD領域セル分解に失敗しました: %v"
+  },
+  "transcendental": {
+    "err_invalid_fsm_transition": "状態遷移エラー: 超越方程式FSM: 不正な状態遷移です (%s -> %s)",
+    "err_transcendental_not_solvable": "代数エラー: 超越方程式 %s = 0 を Lambert W 標準形に正規化できませんでした",
+    "err_lambert_w_args": "引数エラー: lambert_w 関数は 1 つまたは 2 つの引数が必要です: lambert_w(z [, branch])",
+    "err_erf_args": "引数エラー: erf 関数は 1 つの引数が必要です: erf(z)",
+    "err_branch_must_be_integer": "引数エラー: lambert_w の分岐枝番号は整数である必要があります (取得値: %s)",
+    "trace_solve_lambert": "ランバートW関数による初等超越方程式 %s = 0 の厳密解導出: %s"
   }
 }

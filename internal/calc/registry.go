@@ -319,6 +319,17 @@ func init() {
 		MaxArgs: 1,
 	})
 
+	RegisterFunction(FunctionSpec{
+		Name:    "lambert_w",
+		MinArgs: 1,
+		MaxArgs: 2,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "erf",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+
 	// CAS / Calculus
 	RegisterFunction(FunctionSpec{
 		Name:    "factor",

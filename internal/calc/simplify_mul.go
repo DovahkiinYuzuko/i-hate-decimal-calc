@@ -220,6 +220,51 @@ func simplifyMul(factors []Node) (Node, error) {
 		return simplifyMul(all)
 	}
 
+	// Check for Lambert W identity: lambert_w(z) * exp(lambert_w(z)) -> z
+	var wIndices []int
+	var expWIndices []int
+	for i, f := range finalFactors {
+		if fn, ok := f.(*FuncNode); ok && fn.Name == "lambert_w" && len(fn.Args) >= 1 {
+			wIndices = append(wIndices, i)
+		} else if isExpOfLambertW(f) {
+			expWIndices = append(expWIndices, i)
+		}
+	}
+	if len(wIndices) > 0 && len(expWIndices) > 0 {
+		usedW := make(map[int]bool)
+		usedExpW := make(map[int]bool)
+		var reducedZ []Node
+
+		for _, wi := range wIndices {
+			wNode := finalFactors[wi].(*FuncNode)
+			z := wNode.Args[0]
+			for _, ewi := range expWIndices {
+				if usedExpW[ewi] {
+					continue
+				}
+				if getLambertArgFromExp(finalFactors[ewi], z) {
+					usedW[wi] = true
+					usedExpW[ewi] = true
+					reducedZ = append(reducedZ, z)
+					break
+				}
+			}
+		}
+
+		if len(reducedZ) > 0 {
+			var newFactors []Node
+			for i, f := range finalFactors {
+				if usedW[i] || usedExpW[i] {
+					continue
+				}
+				newFactors = append(newFactors, f)
+			}
+			newFactors = append(newFactors, reducedZ...)
+			all := append([]Node{&RationalNode{Val: coeff}}, newFactors...)
+			return simplifyMul(all)
+		}
+	}
+
 	// Merge exp(...) factors: exp(A) * exp(B) -> exp(A + B)
 	var nonExpFactors []Node
 	var expArgs []Node
@@ -337,4 +382,35 @@ func simplifyMul(factors []Node) (Node, error) {
 	}
 
 	return realScalar, nil
+}
+
+func isExpOfLambertW(n Node) bool {
+	if fn, ok := n.(*FuncNode); ok && fn.Name == "exp" && len(fn.Args) == 1 {
+		if inner, okI := fn.Args[0].(*FuncNode); okI && inner.Name == "lambert_w" {
+			return true
+		}
+	}
+	if pn, ok := n.(*PowNode); ok {
+		if c, okC := pn.Base.(*ConstNode); okC && c.Name == "e" {
+			if inner, okI := pn.Exp.(*FuncNode); okI && inner.Name == "lambert_w" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func getLambertArgFromExp(expNode Node, targetZ Node) bool {
+	var innerW Node
+	if fn, ok := expNode.(*FuncNode); ok && fn.Name == "exp" && len(fn.Args) == 1 {
+		innerW = fn.Args[0]
+	} else if pn, ok := expNode.(*PowNode); ok {
+		if c, okC := pn.Base.(*ConstNode); okC && c.Name == "e" {
+			innerW = pn.Exp
+		}
+	}
+	if innerFn, ok := innerW.(*FuncNode); ok && innerFn.Name == "lambert_w" && len(innerFn.Args) >= 1 {
+		return innerFn.Args[0].Equal(targetZ)
+	}
+	return false
 }
