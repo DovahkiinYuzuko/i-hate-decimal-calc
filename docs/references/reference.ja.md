@@ -94,7 +94,7 @@
 | `crt` | `crt([r1, r2], [m1, m2])` | 中国剰余定理（Garner法および非互いに素な合同式を解く一般化CRT拡張） |
 | `totient` | `totient(n)` | オイラーのトーシェント関数 $\phi(n) = n \prod_{p \mid n} (1 - 1/p)$ |
 | `is_prime` | `is_prime(n)` | 決定論的素数判定（64bitはSorenson-Websterの12基底完全決定論的判定、巨大数はBaillie-PSW） |
-| `solve` | `solve(expr, var)` | 厳密代数方程式ソルバー（1次・2次・3次・4次代数方程式の代数的根号求解。カルダノ公式・フェラーリ法・チルンハウス変換・分解3次方程式レゾルベントによる厳密解、重解・複素数解対応） |
+| `solve` | `solve(expr, var)` | 厳密代数・初等超越方程式ソルバー（1次・2次・3次・4次代数方程式の代数的根号求解に加え、ランバートW関数 `lambert_w` による初等超越方程式 $f(x)e^{f(x)}=c$, $ax+b\ln x=c$, $x^x=c$, $a^x=bx$ の完全閉形式解に対応。カルダノ公式・フェラーリ法・チルンハウス変換・分解3次方程式レゾルベントによる厳密解、重解・複素数解対応） |
 | `to_poly` | `to_poly(expr, [x, y], "lex")` | 式を指定変数・単項式順序（`lex`, `grevlex`）の正規形多項式ノード `PolyNode` へ明示変換 |
 | `to_alg` | `to_alg(rep, min_poly, [var])` | 代数拡大体 $\mathbb{Q}(\alpha) \cong \mathbb{Q}[x]/\langle m(x) \rangle$ の代数数ノード `AlgNode` を構築 |
 | `alg_inv` | `alg_inv(rep, min_poly)` | 拡大ユークリッド互除法による代数数 $\beta \in \mathbb{Q}(\alpha)$ の乗法逆元 $\beta^{-1}$ 算出 |
@@ -125,8 +125,10 @@
 | 関数 | 書式・例 | 説明 |
 | :--- | :--- | :--- |
 | `diff` | `diff(sin(x)*x, x)` / `diff(x^4, x, 2)` | 厳密記号微分（積の微分・商の微分・連鎖律、任意階数 $n$ 次微分対応） |
-| `integrate` | `integrate(x^2, x)` / `integrate(sin(x), x, 0, pi)` | 厳密不定積分（原始関数導出）および区間 $[a, b]$ による厳密定積分 |
+| `integrate` | `integrate(x^2, x)` / `integrate(sin(x), x, 0, pi)` | 厳密不定積分（原始関数導出、ガウス積分 $\int e^{-a x^2} dx \to \frac{\sqrt{\pi}}{2\sqrt{a}} \operatorname{erf}(\sqrt{a}x)$ の誤差関数閉形式化、$\int W(x) dx$ 原始関数対応）および区間 $[a, b]$ による厳密定積分 |
 | `risch_integrate` | `risch_integrate(x*exp(x^2), x)` | 決定論的 Risch アルゴリズム（超越拡大体・Rothstein-Trager 法）による厳密不定積分 |
+| `lambert_w` | `lambert_w(z)` / `lambert_w(z, k)` | ランバートのW関数 $W_k(z)$（$w e^w = z$ の多価逆関数。主枝 $k=0$ をデフォルトとし、特殊引数 $W(0)=0, W(e)=1, W(-1/e)=-1$ 等の即時簡約、導関数 $\frac{d}{dz}W(z) = \frac{W(z)}{z(1+W(z))}$、原始関数 $\int W(x) dx = x W(x) - x + e^{W(x)}$、代数的等値消去 $W(z)e^{W(z)} \to z$ を提供） |
+| `erf` | `erf(z)` | ガウスの誤差関数 $\operatorname{erf}(z) = \frac{2}{\sqrt{\pi}}\int_0^z e^{-t^2} dt$（特殊値 $\operatorname{erf}(0)=0$、奇関数性 $\operatorname{erf}(-z) = -\operatorname{erf}(z)$、導関数 $\frac{d}{dz}\operatorname{erf}(z) = \frac{2}{\sqrt{\pi}} e^{-z^2}$、ガウス積分 $\int e^{-a x^2} dx$ の初等閉形式化基盤） |
 | `limit` | `limit(sin(x)/x, x, 0)` / `limit(1/x, x, 0, 1)` | 厳密記号極限（$0/0$, $\infty/\infty$ の不定形解消、因数約分、ロピタルの定理、最高次数比較、片側極限） |
 | `dsolve` | `dsolve(diff(y, x) == y, y, x)` / `dsolve(diff(y, x, 2) + 4*y == 0, y, x)` | 記号常微分方程式ソルバー（1階線形・変数分離形積分因子法、2階定数係数線形斉次・未定係数法特解による厳密求解） |
 | `rsolve` | `rsolve(a(n+1) == 2*a(n) + 1, a(n), [a(1) == 1])` / `rsolve(a(n+2) == a(n+1) + a(n), a(n), [a(0) == 0, a(1) == 1])` | 線形漸化式ソルバー（1階・2階定数係数線形斉次・非同次漸化式、特性根解析・未定係数法・初期条件線形連立解決による一般項閉形式導出） |

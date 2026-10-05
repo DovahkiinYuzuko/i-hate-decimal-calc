@@ -59,47 +59,37 @@ go build -o ihd ./cmd/ihd
 コマンドライン引数に数式を渡すだけで即座に厳密計算を実行します。
 
 ```bash
+# 基本有理数演算
 ihd "1/2 + 1/3"
 # 出力: 5/6
 
-ihd "sqrt(8) + sqrt(18)"
-# 出力: 5*√2
-
-ihd "1 == 2"
-# 出力: false（代数的同値証明・有理区間解析による真偽値決定）
-
+# 平方根の自動簡約と無理数同値性判定
 ihd "sqrt(2) + sqrt(3) == sqrt(5 + 2*sqrt(6))"
 # 出力: true（多重根号・無理数同値性の完全代数的判定）
 
-ihd "1 != 2"
-# 出力: true
-
+# 実代数不等式の厳密解（CAD / Sturm根分離）
 ihd "solve(x^2 - 4 < 0)"
-# 出力: [[-2, 2]]（CAD/Sturm根分離による実代数不等式の厳密解区間）
+# 出力: [[-2, 2]]
 
-ihd "rsolve(a(n+1) == 2*a(n) + 1, a(n), [a(1) == 1])"
-# 出力: -1 + 2^n（線形漸化式・差分方程式の厳密一般項求解）
+# 初等超越方程式の閉形式求解（Lambert W関数）
+ihd "solve(x*exp(x) == 1, x)"
+# 出力: [lambert_w(1)]
 
-ihd "qe(forall([x], x^2 + a*x + b > 0))"
-# 出力: -4*b + a^2 < 0（CAD・判別式による量化子消去・パラメータ不等式自動導出）
+# ガウス積分の初等閉形式化（誤差関数 erf）
+ihd "integrate(exp(-x^2), x)"
+# 出力: √pi/2 * erf(x)
 
-ihd "factor(x^4 + 3*x^2 + 2)"
-# 出力: (1 + x^2)*(2 + x^2)（ヘンゼル・リフティングによる高次多項式の有理既約分解）
-
+# 初等幾何学の完全自動証明（呉の方法）
 ihd "geo_prove([midpoint(M, A, B), midpoint(N, A, C)], parallel(M, N, B, C))"
-# 出力: true（呉の方法・標数集合・擬除算による中点連結定理等の初等幾何自動証明）
+# 出力: true（中点連結定理等の自動証明）
 
-ihd "galois_group(x^5 - 4*x + 2)"
-# 出力: S5（レゾルベントおよびDedekind-Frobenius正の証拠による決定論的ガロア群算定）
-
+# ガロア群算定とアーベル・ルフィニ代数的不可解性証明書
 ihd --verify "is_solvable_by_radicals(x^5 - 4*x + 2)"
-# 出力: false（アーベル・ルフィニ定理による代数的不可解性証明書 [VERIFIED: expr == false] を発行）
+# 出力: false（代数的不可解性証明書 [VERIFIED: expr == false] を発行）
 
-ihd "diff(piecewise([[x^2, x < 0], [2*x, x >= 0]], 0), x)"
-# 出力: piecewise([[2*x, x < 0], [2, x >= 0]], 0)（区分定義関数のCADセル連携領域別微分）
-
+# 素有限体上の楕円曲線位数決定（Schoof法）
 ihd "ec_p_order(1, 1, 5)"
-# 出力: 9（素有限体 F_5 上の楕円曲線 y^2 = x^3 + x + 1 のSchoof決定論的位数決定）
+# 出力: 9
 ```
 
 
@@ -240,7 +230,7 @@ ihd "plot(sin(x), [-pi, pi])"
 #### 主なカテゴリと代表関数
 - **基本代数・数論・方程式**: `sqrt`, `cbrt`, `expand`, `factor`, `apart`, `together`, `abs`, `gcd`, `lcm`, `mod`, `inv_mod`, `crt`, `totient`, `is_prime`, `cfrac`, `from_cfrac`, `rand`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `sturm`, `root_count`, `isolate_roots`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `padic_val`, `padic_norm`, `padic_expand`, `solve`
 - **三角関数・対数・複素数**: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `trig_expand`, `trig_reduce`, `exp`, `log`, `ln`, `arg`, `polar`, `polar_exp`, `rect`
-- **微積分・常微分方程式・漸化式・特殊関数・級数**: `diff`, `integrate`, `piecewise`, `risch_integrate`, `limit`, `residue`, `gamma`, `beta`, `bernoulli`, `zeta`, `dsolve`, `rsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`, `gosper_sum`, `wz_cert`, `puiseux`
+- **微積分・常微分方程式・漸化式・特殊関数・級数**: `diff`, `integrate`, `piecewise`, `risch_integrate`, `limit`, `residue`, `lambert_w`, `erf`, `gamma`, `beta`, `bernoulli`, `zeta`, `dsolve`, `rsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`, `gosper_sum`, `wz_cert`, `puiseux`
 - **線形代数・3次元ベクトル解析**: `det`, `inv`, `transpose`, `rref`, `rank`, `trace`, `eigenvals`, `eigenvects`, `lu`, `qr`, `cholesky`, `ldlt`, `pinv`, `solve_linear`, `dot`, `cross`, `norm`, `grad`, `div`, `curl`
 - **幾何学解析**: `line_intersect`, `circle_intersect`, `triangle_area`, `triangle_centers`, `geo_prove`, `collinear`, `midpoint`, `parallel`, `perpendicular`, `equal_length_sq`, `circle_concyclic`
 - **厳密離散確率・統計**: `binom`, `hyper`, `geom`, `bayes`, `expect`, `variance`, `stddev`
@@ -251,8 +241,8 @@ ihd "plot(sin(x), [-pi, pi])"
 - **ビジュアル・自己検証**: `plot`, `verify`
 
 > [!NOTE]
-> **代数方程式ソルバーと線形代数**  
-> `solve` は1次・2次・3次方程式に加え、フェラーリ（Ferrari）法・チルンハウス変換・分解3次方程式による4次代数方程式の厳密代数解（根号表示）を完全サポートしています。また、線形代数の `eigenvals` は Faddeev-LeVerrier 法により最大 4×4 行列の特性方程式から厳密固有値を導出可能です。
+> **代数・超越方程式ソルバーと線形代数**  
+> `solve` は1次・2次・3次・4次（Ferrari法）の代数方程式の根号完全閉形式解に加え、ランバートのW関数（`lambert_w`）を用いた初等超越方程式（$x e^x = c$, $x + \ln x = c$, $x^x = c$ 等）の閉形式求解をサポートしています。また、`integrate` はガウス積分 $\int e^{-a x^2} dx$ の誤差関数 `erf` による閉形式化を完備し、線形代数の `eigenvals` は最大 4×4 行列の特性方程式から厳密固有値を導出可能です。
 
 ---
 
@@ -358,38 +348,37 @@ go build -o ihd ./cmd/ihd
 Provide expressions directly as command-line arguments for instant exact evaluation:
 
 ```bash
+# Exact rational arithmetic
 ihd "1/2 + 1/3"
 # Output: 5/6
 
-ihd "sqrt(8) + sqrt(18)"
-# Output: 5*√2
+# Exact algebraic equivalence & nested radicals
+ihd "sqrt(2) + sqrt(3) == sqrt(5 + 2*sqrt(6))"
+# Output: true
 
+# Real algebraic inequality solving (CAD / Sturm root isolation)
 ihd "solve(x^2 - 4 < 0)"
-# Output: [[-2, 2]] (Exact real algebraic inequality solving via CAD/Sturm)
+# Output: [[-2, 2]]
 
-ihd "rsolve(a(n+1) == 2*a(n) + 1, a(n), [a(1) == 1])"
-# Output: -1 + 2^n (Exact linear recurrence relation and difference equation solving)
+# Elementary transcendental equation solving (Lambert W function)
+ihd "solve(x*exp(x) == 1, x)"
+# Output: [lambert_w(1)]
 
-ihd "qe(forall([x], x^2 + a*x + b > 0))"
-# Output: -4*b + a^2 < 0 (Quantifier elimination via CAD integration & discriminant)
+# Gaussian integral closed form (Error function erf)
+ihd "integrate(exp(-x^2), x)"
+# Output: √pi/2 * erf(x)
 
-ihd "factor(x^4 + 3*x^2 + 2)"
-# Output: (1 + x^2)*(2 + x^2) (Higher-degree polynomial factorization via Hensel lifting)
-
+# Automated geometric theorem proving (Wu's method)
 ihd "geo_prove([midpoint(M, A, B), midpoint(N, A, C)], parallel(M, N, B, C))"
-# Output: true (Automated geometric theorem proving via Wu's method, characteristic sets & pseudo-division)
+# Output: true
 
-ihd "galois_group(x^5 - 4*x + 2)"
-# Output: S5 (Deterministic Galois group computation via resolvents and Dedekind-Frobenius witnesses)
-
+# Abel-Ruffini algebraic insolvability verification
 ihd --verify "is_solvable_by_radicals(x^5 - 4*x + 2)"
 # Output: false (Emits Abel-Ruffini impossibility certificate [VERIFIED: expr == false])
 
-ihd "diff(piecewise([[x^2, x < 0], [2*x, x >= 0]], 0), x)"
-# Output: piecewise([[2*x, x < 0], [2, x >= 0]], 0) (Piecewise calculus integrated with CAD cell decomposition)
-
+# Elliptic curve point count over finite fields (Schoof's algorithm)
 ihd "ec_p_order(1, 1, 5)"
-# Output: 9 (Deterministic group order computation via Schoof's algorithm over F_5)
+# Output: 9
 ```
 
 
@@ -530,7 +519,7 @@ ihd "plot(sin(x), [-pi, pi])"
 #### Major Categories & Representative Functions
 - **Basic Algebra, Number Theory & Equations**: `sqrt`, `cbrt`, `expand`, `factor`, `apart`, `together`, `abs`, `gcd`, `lcm`, `mod`, `inv_mod`, `crt`, `totient`, `is_prime`, `cfrac`, `from_cfrac`, `rand`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `sturm`, `root_count`, `isolate_roots`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `padic_val`, `padic_norm`, `padic_expand`, `solve`
 - **Trigonometric, Logarithmic & Complex Functions**: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `trig_expand`, `trig_reduce`, `exp`, `log`, `ln`, `arg`, `polar`, `polar_exp`, `rect`
-- **Calculus, ODEs, Recurrences, Special Functions & Series**: `diff`, `integrate`, `piecewise`, `risch_integrate`, `limit`, `residue`, `gamma`, `beta`, `bernoulli`, `zeta`, `dsolve`, `rsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`, `gosper_sum`, `wz_cert`, `puiseux`
+- **Calculus, ODEs, Recurrences, Special Functions & Series**: `diff`, `integrate`, `piecewise`, `risch_integrate`, `limit`, `residue`, `lambert_w`, `erf`, `gamma`, `beta`, `bernoulli`, `zeta`, `dsolve`, `rsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`, `gosper_sum`, `wz_cert`, `puiseux`
 - **Linear Algebra & 3D Vector Calculus**: `det`, `inv`, `transpose`, `rref`, `rank`, `trace`, `eigenvals`, `eigenvects`, `lu`, `qr`, `cholesky`, `ldlt`, `pinv`, `solve_linear`, `dot`, `cross`, `norm`, `grad`, `div`, `curl`
 - **Computational Geometry**: `line_intersect`, `circle_intersect`, `triangle_area`, `triangle_centers`, `geo_prove`, `collinear`, `midpoint`, `parallel`, `perpendicular`, `equal_length_sq`, `circle_concyclic`
 - **Exact Discrete Probability & Statistics**: `binom`, `hyper`, `geom`, `bayes`, `expect`, `variance`, `stddev`
@@ -541,8 +530,8 @@ ihd "plot(sin(x), [-pi, pi])"
 - **Visualization & Verification Tools**: `plot`, `verify`
 
 > [!NOTE]
-> **Algebraic Equation Solver & Linear Algebra**  
-> `solve` provides exact radical solutions for linear, quadratic, cubic, and quartic polynomials (via Ferrari's method, Tschirnhaus transformation, and resolvent cubics). Furthermore, `eigenvals` derives exact radical eigenvalues for matrices up to 4×4 using the Faddeev-LeVerrier characteristic polynomial algorithm.
+> **Algebraic & Transcendental Equation Solver & Linear Algebra**  
+> `solve` provides exact radical solutions for linear, quadratic, cubic, and quartic polynomials (via Ferrari's method, Tschirnhaus transformation, and resolvent cubics), alongside exact closed-form solutions for elementary transcendental equations ($x e^x = c$, $x + \ln x = c$, $x^x = c$, etc.) via the Lambert W function (`lambert_w`). Furthermore, `integrate` incorporates Gaussian integrals $\int e^{-a x^2} dx$ in terms of the error function `erf`, and `eigenvals` derives exact radical eigenvalues for matrices up to 4×4 using the Faddeev-LeVerrier characteristic polynomial algorithm.
 
 ---
 

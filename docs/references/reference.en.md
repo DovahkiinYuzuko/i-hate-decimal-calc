@@ -94,7 +94,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `crt` | `crt([r1, r2], [m1, m2])` | Chinese Remainder Theorem (Garner's algorithm & generalized non-coprime CRT) |
 | `totient` | `totient(n)` | Euler's totient function $\phi(n) = n \prod_{p \mid n} (1 - 1/p)$ |
 | `is_prime` | `is_prime(n)` | Deterministic primality test (Sorenson & Webster 12 bases for 64-bit, Baillie-PSW for big ints) |
-| `solve` | `solve(expr, var)` | Exact algebraic equation solver for linear, quadratic, cubic, and quartic equations (exact radical solutions via Cardano's formula, Ferrari's method, Tschirnhaus transformation, and resolvent cubics; supports multiple and complex roots) |
+| `solve` | `solve(expr, var)` | Exact algebraic and elementary transcendental equation solver for linear, quadratic, cubic, and quartic polynomials (exact radical solutions via Cardano's formula, Ferrari's method, Tschirnhaus transformation, and resolvent cubics), as well as closed-form solutions for elementary transcendental equations via the Lambert W function `lambert_w` ($f(x)e^{f(x)}=c$, $ax+b\ln x=c$, $x^x=c$, $a^x=bx$); supports multiple and complex roots |
 | `to_poly` | `to_poly(expr, [x, y], "lex")` | Explicitly converts an expression to a canonical `PolyNode` under specified variables and monomial order (`lex`, `grevlex`) |
 | `to_alg` | `to_alg(rep, min_poly, [var])` | Constructs an algebraic number node `AlgNode` in field extension $\mathbb{Q}(\alpha) \cong \mathbb{Q}[x]/\langle m(x) \rangle$ |
 | `alg_inv` | `alg_inv(rep, min_poly)` | Computes multiplicative inverse $\beta^{-1} \in \mathbb{Q}(\alpha)$ via Extended Euclidean Algorithm |
@@ -125,8 +125,10 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | Function | Syntax & Example | Description |
 | :--- | :--- | :--- |
 | `diff` | `diff(sin(x)*x, x)` / `diff(x^4, x, 2)` | Exact symbolic differentiation (Product, Quotient, Chain rules, and higher-order derivatives) |
-| `integrate` | `integrate(x^2, x)` / `integrate(sin(x), x, 0, pi)` | Exact symbolic indefinite integration and definite integration over $[a, b]$ |
+| `integrate` | `integrate(x^2, x)` / `integrate(sin(x), x, 0, pi)` | Exact symbolic indefinite integration (antiderivatives, closed-form Gaussian integrals $\int e^{-a x^2} dx \to \frac{\sqrt{\pi}}{2\sqrt{a}} \operatorname{erf}(\sqrt{a}x)$, and $\int W(x) dx$) and definite integration over $[a, b]$ |
 | `risch_integrate` | `risch_integrate(x*exp(x^2), x)` | Deterministic Risch algorithm (transcendental extension & Rothstein-Trager method) for exact indefinite integration |
+| `lambert_w` | `lambert_w(z)` / `lambert_w(z, k)` | Lambert W function $W_k(z)$ (multivalued inverse of $w e^w = z$; principal branch $k=0$ by default, exact simplification for special values $W(0)=0, W(e)=1, W(-1/e)=-1$, derivative $\frac{d}{dz}W(z) = \frac{W(z)}{z(1+W(z))}$, antiderivative $\int W(x) dx = x W(x) - x + e^{W(x)}$, and algebraic identity elimination $W(z)e^{W(z)} \to z$) |
+| `erf` | `erf(z)` | Gauss error function $\operatorname{erf}(z) = \frac{2}{\sqrt{\pi}}\int_0^z e^{-t^2} dt$ (special value $\operatorname{erf}(0)=0$, odd symmetry $\operatorname{erf}(-z) = -\operatorname{erf}(z)$, derivative $\frac{d}{dz}\operatorname{erf}(z) = \frac{2}{\sqrt{\pi}} e^{-z^2}$, and closed-form evaluation of Gaussian integrals $\int e^{-a x^2} dx$) |
 | `limit` | `limit(sin(x)/x, x, 0)` / `limit(1/x, x, 0, 1)` | Exact symbolic limit computation (indeterminate forms, factoring, L'Hopital's rule, one-sided limits) |
 | `dsolve` | `dsolve(diff(y, x) == y, y, x)` / `dsolve(diff(y, x, 2) + 4*y == 0, y, x)` | Symbolic ODE solver (1st-order linear via integrating factor, 2nd-order linear with constant coefficients and undetermined coefficients) |
 | `rsolve` | `rsolve(a(n+1) == 2*a(n) + 1, a(n), [a(1) == 1])` / `rsolve(a(n+2) == a(n+1) + a(n), a(n), [a(0) == 0, a(1) == 1])` | Linear recurrence relation solver (1st and 2nd order linear recurrences with constant coefficients, characteristic roots analysis, undetermined coefficients, and linear initial condition fitting) |
