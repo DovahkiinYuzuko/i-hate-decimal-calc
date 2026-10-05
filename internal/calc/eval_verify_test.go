@@ -310,3 +310,34 @@ func TestVerificationCertificate_ToProofTrace(t *testing.T) {
 	}
 }
 
+func TestVerificationCertificate_VerifyTraceAndExplain(t *testing.T) {
+	env := NewEnv()
+	expr, err := Parse("factor(x^2 - 1)")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	evaled, err := EvalWithEnv(expr, env)
+	if err != nil {
+		t.Fatalf("eval failed: %v", err)
+	}
+
+	cert, err := VerifyComputation(expr, evaled, env)
+	if err != nil {
+		t.Fatalf("verification error: %v", err)
+	}
+
+	ok, err := cert.VerifyTrace(env)
+	if err != nil {
+		t.Fatalf("failed to verify trace: %v", err)
+	}
+	if !ok {
+		t.Fatalf("expected trace verification to succeed")
+	}
+
+	explain := cert.RenderTraceExplain("ja")
+	if explain == "" {
+		t.Fatalf("expected non-empty trace explain")
+	}
+}
+
+

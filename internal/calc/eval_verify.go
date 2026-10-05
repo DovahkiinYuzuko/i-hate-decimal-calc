@@ -70,6 +70,24 @@ func (vc *VerificationCertificate) ToProofTrace() (*ProofTrace, error) {
 	return ConvertVerificationCertificateToProofTrace(vc)
 }
 
+// VerifyTrace verifies the algebraic correctness of the certificate's proof trace via native zero check.
+func (vc *VerificationCertificate) VerifyTrace(env *Env) (bool, error) {
+	trace, err := vc.ToProofTrace()
+	if err != nil {
+		return false, err
+	}
+	return VerifyProofTrace(trace, env)
+}
+
+// RenderTraceExplain renders the certificate's proof trace as a human-readable Unicode explanation tree.
+func (vc *VerificationCertificate) RenderTraceExplain(lang string) string {
+	trace, err := vc.ToProofTrace()
+	if err != nil || trace == nil {
+		return ""
+	}
+	return trace.RenderExplain(lang)
+}
+
 // String returns the formatted certificate line for CLI display.
 func (vc *VerificationCertificate) String() string {
 	if vc == nil {
