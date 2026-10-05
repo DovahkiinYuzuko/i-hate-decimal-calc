@@ -282,3 +282,31 @@ func TestVerify_SNF_and_HNF(t *testing.T) {
 	}
 }
 
+func TestVerificationCertificate_ToProofTrace(t *testing.T) {
+	env := NewEnv()
+	expr, err := Parse("integrate(x^2, x)")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	evaled, err := EvalWithEnv(expr, env)
+	if err != nil {
+		t.Fatalf("eval failed: %v", err)
+	}
+
+	cert, err := VerifyComputation(expr, evaled, env)
+	if err != nil {
+		t.Fatalf("verification error: %v", err)
+	}
+
+	trace, err := cert.ToProofTrace()
+	if err != nil {
+		t.Fatalf("failed to convert VerificationCertificate to ProofTrace: %v", err)
+	}
+	if trace == nil {
+		t.Fatalf("expected non-nil ProofTrace")
+	}
+	if trace.StepCount() == 0 {
+		t.Fatalf("expected at least 1 step in ProofTrace")
+	}
+}
+

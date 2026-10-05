@@ -59,6 +59,17 @@ func (vc *VerificationCertificate) ToCertificateIR() Certificate {
 	}
 }
 
+// ToProofTrace converts the verification certificate or its underlying IR to a unified ProofTrace.
+func (vc *VerificationCertificate) ToProofTrace() (*ProofTrace, error) {
+	if vc == nil {
+		return nil, fmt.Errorf("cannot convert nil verification certificate")
+	}
+	if vc.CertIR != nil {
+		return ConvertCertificateToProofTrace(vc.CertIR)
+	}
+	return ConvertVerificationCertificateToProofTrace(vc)
+}
+
 // String returns the formatted certificate line for CLI display.
 func (vc *VerificationCertificate) String() string {
 	if vc == nil {
