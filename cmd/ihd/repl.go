@@ -8,7 +8,6 @@ import (
 	"io"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc"
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
@@ -23,20 +22,13 @@ func runREPL(in io.Reader, out, errOut io.Writer, ro runOptions) int {
 	fmt.Fprintln(out, i18n.T("cli.repl_exit_hint"))
 
 	if !ro.noUpdateCheck && updater.IsUpdateCheckEnabled() {
-		checkCh := make(chan *updater.UpdateInfo, 1)
-		go func() {
-			info, _ := updater.CheckUpdate(false)
-			checkCh <- info
-		}()
-		select {
-		case info := <-checkCh:
-			if info != nil {
-				fmt.Fprintln(out)
-				fmt.Fprint(out, updater.FormatNotification(info))
-			}
-		case <-time.After(200 * time.Millisecond):
-			// Non-blocking fallback: continues in background and populates cache
+		// Instant check from local cache without blocking (0ms startup)
+		if info := updater.GetCachedUpdate(); info != nil {
+			fmt.Fprintln(out)
+			fmt.Fprint(out, updater.FormatNotification(info))
 		}
+		// Refresh cache in the background if expired
+		updater.CheckUpdateAsync()
 	}
 
 	env := calc.NewEnv()

@@ -403,6 +403,54 @@ func TestCLI_VersionAndNoUpdateCheck(t *testing.T) {
 	}
 }
 
+func TestCLI_CachedUpdateNotice(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("IHD_DIR", tmpDir)
+	t.Setenv("IHD_NO_UPDATE_CHECK", "")
+
+	// Write mock cache with v99.0.0
+	cachePath := filepath.Join(tmpDir, "update_cache.json")
+	cacheJSON := `{"last_checked_at": "2026-10-06T00:00:00Z", "latest_version": "v99.0.0", "release_url": "https://example.com/v99.0.0"}`
+	_ = os.WriteFile(cachePath, []byte(cacheJSON), 0644)
+
+	// 1. REPL mode: should show notification in welcome section of out
+	outREPL := new(bytes.Buffer)
+	errOutREPL := new(bytes.Buffer)
+	codeREPL := runREPL(strings.NewReader("exit\n"), outREPL, errOutREPL, runOptions{opts: calc.FormatOptions{AsciiOnly: false}})
+	if codeREPL != 0 {
+		t.Fatalf("expected exit code 0, got %d", codeREPL)
+	}
+	if !strings.Contains(outREPL.String(), "v99.0.0") {
+		t.Errorf("expected REPL output to contain update notice for v99.0.0, got: %s", outREPL.String())
+	}
+
+	// 2. One-shot mode: stdout should strictly be "2", errOut should contain notification
+	outOneShot := new(bytes.Buffer)
+	errOutOneShot := new(bytes.Buffer)
+	codeOneShot := run([]string{"1 + 1"}, strings.NewReader(""), outOneShot, errOutOneShot)
+	if codeOneShot != 0 {
+		t.Fatalf("expected exit code 0, got %d", codeOneShot)
+	}
+	if strings.TrimSpace(outOneShot.String()) != "2" {
+		t.Errorf("expected stdout to be exactly '2', got: %q", outOneShot.String())
+	}
+	if !strings.Contains(errOutOneShot.String(), "v99.0.0") {
+		t.Errorf("expected stderr to contain update notice for v99.0.0, got: %s", errOutOneShot.String())
+	}
+
+	// 3. With --no-update-check flag: errOut should NOT contain notification
+	outDisabled := new(bytes.Buffer)
+	errOutDisabled := new(bytes.Buffer)
+	codeDisabled := run([]string{"--no-update-check", "1 + 1"}, strings.NewReader(""), outDisabled, errOutDisabled)
+	if codeDisabled != 0 {
+		t.Fatalf("expected exit code 0, got %d", codeDisabled)
+	}
+	if strings.Contains(errOutDisabled.String(), "v99.0.0") {
+		t.Errorf("expected no update notice when --no-update-check is passed, got: %s", errOutDisabled.String())
+	}
+}
+
+
 func TestCLI_LeanAndLeanFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	leanFilePath := filepath.Join(tmpDir, "proof.lean")

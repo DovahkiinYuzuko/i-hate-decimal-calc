@@ -124,7 +124,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 	if *versionFlag {
 		fmt.Fprintf(out, "ihd %s\n", updater.CurrentVersion)
 		if !*noUpdateCheckFlag && updater.IsUpdateCheckEnabled() {
-			if info, _ := updater.CheckUpdate(false); info != nil {
+			if info, _ := updater.CheckUpdate(true); info != nil {
 				fmt.Fprintln(out)
 				fmt.Fprint(out, updater.FormatNotification(info))
 			}
@@ -147,6 +147,20 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 		lean:          *leanFlag,
 		leanFile:      *leanFileFlag,
 		noUpdateCheck: *noUpdateCheckFlag,
+	}
+
+	// In non-interactive modes (one-shot, script, or pipe), notify via errOut if an update
+	// is cached, without polluting stdout or breaking pipes. Also trigger async cache refresh.
+	if !isTerminal(in) || len(exprArgs) > 0 {
+		defer func() {
+			if !ro.noUpdateCheck && updater.IsUpdateCheckEnabled() {
+				if info := updater.GetCachedUpdate(); info != nil {
+					fmt.Fprintln(errOut)
+					fmt.Fprint(errOut, updater.FormatNotification(info))
+				}
+				updater.CheckUpdateAsync()
+			}
+		}()
 	}
 
 	if len(exprArgs) > 0 {
@@ -213,6 +227,7 @@ func isTerminal(r io.Reader) bool {
 	}
 	return false
 }
+
 
 func formatOutput(node calc.Node, ro runOptions) string {
 	if ro.latex {

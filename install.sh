@@ -18,7 +18,12 @@ mkdir -p "$INSTALL_DIR"
 if [ "$LOCAL_MODE" = true ]; then
     echo "Installing ihd from local repository..."
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    (cd "$SCRIPT_DIR" && go build -ldflags="-s -w" -o "$INSTALL_DIR/ihd" ./cmd/ihd)
+    GIT_TAG=$(git describe --tags --exact-match 2>/dev/null || git describe --tags 2>/dev/null || true)
+    LDFLAGS="-s -w"
+    if [ -n "$GIT_TAG" ]; then
+        LDFLAGS="$LDFLAGS -X github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/updater.BuildVersion=$GIT_TAG"
+    fi
+    (cd "$SCRIPT_DIR" && go build -ldflags="$LDFLAGS" -o "$INSTALL_DIR/ihd" ./cmd/ihd)
     chmod +x "$INSTALL_DIR/ihd"
     if [ -d "$SCRIPT_DIR/exam" ]; then
         cp -r "$SCRIPT_DIR/exam" "$IHD_HOME/"

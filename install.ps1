@@ -21,7 +21,19 @@ if ($Local) {
     
     Push-Location $LocalRoot
     try {
-        go build -ldflags="-s -w" -o (Join-Path $InstallDir "ihd.exe") ./cmd/ihd
+        $GitTag = ""
+        try {
+            $GitTag = (git describe --tags --exact-match 2>$null)
+            if (-not $GitTag) {
+                $GitTag = (git describe --tags 2>$null)
+            }
+        } catch {}
+
+        $LdFlags = "-s -w"
+        if ($GitTag) {
+            $LdFlags += " -X github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/updater.BuildVersion=$GitTag"
+        }
+        go build -ldflags="$LdFlags" -o (Join-Path $InstallDir "ihd.exe") ./cmd/ihd
     } finally {
         Pop-Location
     }

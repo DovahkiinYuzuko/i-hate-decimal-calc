@@ -46,8 +46,8 @@ func normalizeVersion(v string) string {
 const (
 	RepoOwner      = "DovahkiinYuzuko"
 	RepoName       = "i-hate-decimal-calc"
-	CheckInterval  = 24 * time.Hour
-	RequestTimeout = 1200 * time.Millisecond
+	CheckInterval  = 6 * time.Hour
+	RequestTimeout = 1500 * time.Millisecond
 )
 
 // UpdateInfo holds details about an available newer release.
@@ -112,8 +112,42 @@ func IsUpdateCheckEnabled() bool {
 	return true
 }
 
+// GetCachedUpdate checks local cache immediately without network I/O (0ms latency).
+// It returns an *UpdateInfo if a newer version is already recorded in the cache, or nil otherwise.
+func GetCachedUpdate() *UpdateInfo {
+	if !IsUpdateCheckEnabled() {
+		return nil
+	}
+	cache, err := loadCache()
+	if err != nil || cache == nil {
+		return nil
+	}
+	if IsNewerVersion(cache.LatestVersion, CurrentVersion) {
+		return makeUpdateInfo(cache.LatestVersion, cache.ReleaseURL)
+	}
+	return nil
+}
+
+// CheckUpdateAsync spawns a detached goroutine to fetch the latest release from GitHub API
+// and quietly refresh the local cache if the cache interval has expired. It never blocks execution.
+func CheckUpdateAsync() {
+	if !IsUpdateCheckEnabled() {
+		return
+	}
+	cache, err := loadCache()
+	if err == nil && cache != nil {
+		if time.Since(cache.LastCheckedAt) < CheckInterval {
+			return // Cache is still fresh, no background fetch needed
+		}
+	}
+	go func() {
+		_, _ = CheckUpdate(false)
+	}()
+}
+
 // CheckUpdate checks whether a newer release is available.
-// When force is false, it respects the 24-hour cache interval.
+// When force is false, it respects the cache interval.
+// When force is true, it bypasses the cache and queries the GitHub API directly.
 // If an error occurs (e.g. offline, rate limit, timeout), it fails silently and returns nil, nil.
 func CheckUpdate(force bool) (*UpdateInfo, error) {
 	return checkUpdateWithClient(force, http.DefaultClient, fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", RepoOwner, RepoName))

@@ -171,3 +171,43 @@ func TestCheckUpdateWithClient_DisabledByEnv(t *testing.T) {
 		t.Errorf("expected 0 HTTP requests when disabled, got %d", requestCount)
 	}
 }
+
+func TestGetCachedUpdate(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("IHD_DIR", tmpDir)
+	t.Setenv("IHD_NO_UPDATE_CHECK", "")
+
+	// 1. When no cache exists, returns nil
+	if info := GetCachedUpdate(); info != nil {
+		t.Fatalf("expected nil when no cache exists, got %v", info)
+	}
+
+	// 2. When cache contains older or equal version, returns nil
+	_ = saveCache(&CacheData{
+		LatestVersion: "v0.1.0",
+		ReleaseURL:    "https://example.com/v0.1.0",
+	})
+	if info := GetCachedUpdate(); info != nil {
+		t.Fatalf("expected nil for older version, got %v", info)
+	}
+
+	// 3. When cache contains newer version, returns UpdateInfo
+	_ = saveCache(&CacheData{
+		LatestVersion: "v99.0.0",
+		ReleaseURL:    "https://example.com/v99.0.0",
+	})
+	info := GetCachedUpdate()
+	if info == nil {
+		t.Fatal("expected UpdateInfo for newer version, got nil")
+	}
+	if info.LatestVersion != "v99.0.0" {
+		t.Errorf("expected v99.0.0, got %s", info.LatestVersion)
+	}
+
+	// 4. When disabled by env, returns nil
+	t.Setenv("IHD_NO_UPDATE_CHECK", "1")
+	if info := GetCachedUpdate(); info != nil {
+		t.Fatalf("expected nil when disabled by env, got %v", info)
+	}
+}
+
