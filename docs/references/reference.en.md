@@ -99,6 +99,8 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `to_alg` | `to_alg(rep, min_poly, [var])` | Constructs an algebraic number node `AlgNode` in field extension $\mathbb{Q}(\alpha) \cong \mathbb{Q}[x]/\langle m(x) \rangle$ |
 | `alg_inv` | `alg_inv(rep, min_poly)` | Computes multiplicative inverse $\beta^{-1} \in \mathbb{Q}(\alpha)$ via Extended Euclidean Algorithm |
 | `min_poly` | `min_poly(rep, min_poly)` | Derives the irreducible monic minimal polynomial $m(x) \in \mathbb{Q}[x]$ of an algebraic element |
+| `solve_diophantine` | `solve_diophantine(3*x + 5*y == 7, [x, y])` | Exact Diophantine equation solver for linear Diophantine equations (via Extended Euclidean Algorithm and Bezout's identity parameterized by integer $t$) and Pythagorean triples. Supports `--verify` algebraic certificate and `--lean` formal proof generation |
+| `pell_solve` | `pell_solve(D)` / `pell_solve(D, 1)` / `pell_solve(D, -1)` | Exact solver for Pell's equation $x^2 - D y^2 = 1$ and negative Pell's equation $x^2 - D y^2 = -1$, computing fundamental integer solutions $(x_1, y_1)$ via continuous fraction expansion of $\sqrt{D}$. Supports `--verify` and `--lean` (`by decide` proof) |
 
 ---
 
