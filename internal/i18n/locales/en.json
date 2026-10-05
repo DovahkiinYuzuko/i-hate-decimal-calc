@@ -728,6 +728,8 @@
     "step_0_desc": "Expression was evaluated directly without intermediate rewrites",
     "result_header": "[Result]",
     "step_header": "[Step %d: %s]",
+    "verified_mark": "[Verified (Self-check passed)]",
+    "unverified_mark": "[Unverified]",
     "diff_power": "Power rule of differentiation: d/d%s [%s^%s] = %s",
     "solve_linear": "Solve linear equation %s = 0 by isolation and division",
     "solve_quad_repeated": "Repeated root of quadratic equation: discriminant D = 0 => %s = -b / (2a)",

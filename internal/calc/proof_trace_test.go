@@ -140,6 +140,84 @@ func TestConvertCertificateToProofTrace_Nil(t *testing.T) {
 	}
 }
 
+func TestVerifyProofTrace_Success(t *testing.T) {
+	env := NewEnv()
+	// (x - 1)*(x + 1) == x^2 - 1
+	p1, _ := Parse("(x - 1) * (x + 1)")
+	p2, _ := Parse("x^2 - 1")
+
+	trace := NewProofTrace(p1, p2)
+	trace.AddStep(ProofStep{
+		Before:          p1,
+		After:           p2,
+		Rule:            "PolynomialExpansion",
+		RuleDescription: "Difference of squares",
+	})
+
+	ok, err := VerifyProofTrace(trace, env)
+	if err != nil {
+		t.Fatalf("unexpected verification error: %v", err)
+	}
+	if !ok {
+		t.Fatalf("expected verification to succeed")
+	}
+	if !trace.Steps[0].IsSelfVerified {
+		t.Errorf("expected step to be marked as self-verified")
+	}
+}
+
+func TestVerifyProofTrace_Failure(t *testing.T) {
+	env := NewEnv()
+	p1, _ := Parse("x + 1")
+	p2, _ := Parse("x + 2") // Not equal!
+
+	trace := NewProofTrace(p1, p2)
+	trace.AddStep(ProofStep{
+		Before:          p1,
+		After:           p2,
+		Rule:            "BogusRule",
+		RuleDescription: "Invalid transformation",
+	})
+
+	ok, err := VerifyProofTrace(trace, env)
+	if err == nil {
+		t.Errorf("expected error on invalid transformation, got nil")
+	}
+	if ok {
+		t.Errorf("expected verification to fail")
+	}
+}
+
+func TestProofTrace_RenderExplain(t *testing.T) {
+	env := NewEnv()
+	p1, _ := Parse("x^2 - 1")
+	p2, _ := Parse("(x - 1)*(x + 1)")
+
+	trace := NewProofTrace(p1, p2)
+	trace.AddStep(ProofStep{
+		Before:          p1,
+		After:           p2,
+		Rule:            "Factorization",
+		RuleDescription: "Difference of squares",
+	})
+
+	_, err := VerifyProofTrace(trace, env)
+	if err != nil {
+		t.Fatalf("verify failed: %v", err)
+	}
+
+	explainJa := trace.RenderExplain("ja")
+	if !containsSubstr(explainJa, "検証済") {
+		t.Errorf("expected Japanese explain to contain '検証済', got:\n%s", explainJa)
+	}
+
+	explainEn := trace.RenderExplain("en")
+	if !containsSubstr(explainEn, "Verified") {
+		t.Errorf("expected English explain to contain 'Verified', got:\n%s", explainEn)
+	}
+}
+
 func containsSubstr(s, sub string) bool {
 	return len(s) >= len(sub) && (s == sub || len(sub) == 0 || (len(s) > 0 && len(sub) > 0 && (s[:len(sub)] == sub || containsSubstr(s[1:], sub))))
 }
+

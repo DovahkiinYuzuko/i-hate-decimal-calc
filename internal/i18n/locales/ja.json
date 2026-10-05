@@ -728,6 +728,8 @@
     "step_0_desc": "式は直接簡約されました",
     "result_header": "[Result]",
     "step_header": "[Step %d: %s]",
+    "verified_mark": "[検証済 (自己検算成功)]",
+    "unverified_mark": "[未検証]",
     "diff_power": "べき乗の微分公式: d/d%s [%s^%s] = %s",
     "solve_linear": "1次方程式 %s = 0 を移項・除算して解を導出",
     "solve_quad_repeated": "2次方程式の重解: 判別式 D = 0 より %s = -b / (2a)",

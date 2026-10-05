@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc/ast"
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
 // ProofStep represents a single atomic rewriting or deductive step in an equational reasoning chain.
@@ -313,4 +314,110 @@ func ConvertVerificationCertificateToProofTrace(vc *VerificationCertificate) (*P
 		IsSelfVerified:  vc.IsVerified,
 	})
 	return trace, nil
+}
+
+// VerifyProofTrace checks that every step in the ProofTrace is mathematically valid via native residual zero checks.
+// If all steps verify to zero residual, returns true and marks all steps with IsSelfVerified = true.
+func VerifyProofTrace(trace *ProofTrace, env *Env) (bool, error) {
+	if trace == nil {
+		return false, fmt.Errorf("cannot verify nil proof trace")
+	}
+	if len(trace.Steps) == 0 {
+		return true, nil
+	}
+
+	for i := range trace.Steps {
+		step := &trace.Steps[i]
+		if step.IsSelfVerified {
+			continue
+		}
+
+		var residual Node
+		if step.Residual != nil {
+			residual = step.Residual
+		} else if step.Before != nil && step.After != nil {
+			negAfter, _ := simplifyUnaryOp("-", step.After)
+			residual = NewAdd([]Node{step.Before, negAfter})
+		}
+
+		if residual == nil {
+			return false, fmt.Errorf("step %d (%s) has no residual or endpoints to verify", i+1, step.Rule)
+		}
+
+		if !checkIsZeroAlgebraically(residual, env) {
+			return false, fmt.Errorf("step %d (%s) failed self-verification: residual does not vanish", i+1, step.Rule)
+		}
+
+		step.IsSelfVerified = true
+	}
+
+	return true, nil
+}
+
+// RenderExplain formats the ProofTrace into a human-readable 2D Unicode tree.
+func (t *ProofTrace) RenderExplain(lang string) string {
+	if t == nil {
+		return ""
+	}
+
+	prevLocale := i18n.CurrentLocale()
+	if lang != "" {
+		i18n.SetLocale(lang)
+		defer i18n.SetLocale(prevLocale)
+	}
+
+	var b strings.Builder
+	origStr := ""
+	if t.Original != nil {
+		origStr = Format(t.Original)
+	} else if eq, ok := t.Metadata["equation"]; ok {
+		origStr = eq
+	}
+	b.WriteString(i18n.T("trace.expression_header", origStr))
+
+	if len(t.Steps) == 0 {
+		b.WriteString(fmt.Sprintf("├── [%s]\n", i18n.T("trace.step_0_title")))
+		b.WriteString(fmt.Sprintf("│   %s\n", i18n.T("trace.step_0_desc")))
+		resStr := ""
+		if t.Result != nil {
+			resStr = Format(t.Result)
+		}
+		b.WriteString(fmt.Sprintf("└── %s\n    = %s\n", i18n.T("trace.result_header"), resStr))
+		return b.String()
+	}
+
+	for i, step := range t.Steps {
+		stepNum := i + 1
+		ruleTitle := step.Rule
+		if step.RuleDescription != "" {
+			ruleTitle = fmt.Sprintf("%s (%s)", step.Rule, step.RuleDescription)
+		}
+
+		statusMark := i18n.T("trace.unverified_mark")
+		if step.IsSelfVerified {
+			statusMark = i18n.T("trace.verified_mark")
+		}
+
+		b.WriteString(fmt.Sprintf("├── %s %s\n", i18n.T("trace.step_header", stepNum, ruleTitle), statusMark))
+		if step.Before != nil && step.After != nil {
+			b.WriteString(fmt.Sprintf("│   %s  ──>  %s\n", Format(step.Before), Format(step.After)))
+		}
+		if step.Residual != nil {
+			b.WriteString(fmt.Sprintf("│   Residual: %s\n", Format(step.Residual)))
+		}
+		if i < len(t.Steps)-1 {
+			b.WriteString("│\n")
+		}
+	}
+
+	b.WriteString(fmt.Sprintf("└── %s\n", i18n.T("trace.result_header")))
+	resStr := ""
+	if t.Result != nil {
+		resStr = Format(t.Result)
+	} else if len(t.Steps) > 0 && t.Steps[len(t.Steps)-1].After != nil {
+		resStr = Format(t.Steps[len(t.Steps)-1].After)
+	}
+	b.WriteString(fmt.Sprintf("    = %s\n", resStr))
+
+	return b.String()
 }
