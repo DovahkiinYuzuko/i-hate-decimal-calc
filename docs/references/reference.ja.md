@@ -166,6 +166,12 @@
 | `ldlt` | `ldlt(A)` | 平方根フリー厳密 $LDL^T$ 分解（$L$ 単位下三角、$D$ 正の有理数対角行列） |
 | `pinv` | `pinv(A)` | RREFフルランク分解によるムーア・ペンローズ擬似逆行列 $A^+$（小数を一切使わない有理厳密解） |
 | `solve_linear` / `linsolve` | `solve_linear(A, b)` | 厳密連立一次方程式系ソルバー $Ax=b$（唯一解、不能、不定パラメータ解の厳密判別） |
+| `hnf` | `hnf(A)` | 整数行列のエルミート標準形（Hermite Normal Form: HNF）。小数を一切使わない整数初等行変形と剰余簡約により行階段形（上三角型）$H$ を導出 |
+| `hnf_transform` | `hnf_transform(A)` | エルミート標準形と単模変換行列 $[H, U]$ を同時返却（$U \in \text{GL}_m(\mathbb{Z}), U A = H$） |
+| `snf` | `snf(A)` | 整数行列のスミス標準形（Smith Normal Form: SNF）。整数初等行・列変形により主対角成分が整除鎖 $d_1 \mid d_2 \mid \dots \mid d_r$ を満たす対角行列 $D$ を導出 |
+| `snf_transform` | `snf_transform(A)` | スミス標準形と両側単模変換行列 $[D, U, V]$ を同時返却（$U \in \text{GL}_m(\mathbb{Z}), V \in \text{GL}_n(\mathbb{Z}), U A V = D$） |
+| `invariant_factors` | `invariant_factors(A)` | 整数行列の不変因子リスト $[d_1, d_2, \dots, d_r]$（スミス標準形の正の対角要素）を抽出 |
+| `abelian_group_structure` | `abelian_group_structure(A)` | 整数関係行列 $A$ が定める有限生成アーベル群 $G = \mathbb{Z}^m / \operatorname{Im}(A)$ の不変因子分解直和表現（例: `Z_2 + Z_6`、自由部分 `Z`）を同定 |
 | `dot`, `cross` | `dot(u, v)`, `cross(u, v)` | ベクトル内積および3次元外積（クロス積） |
 | `norm` | `norm(v)` | ベクトルのユークリッドノルム（$\sqrt{\sum v_i^2}$、根号自動簡約） |
 | `grad` | `grad(f, [x, y, z])` | スカラー場の勾配ベクトル（$\nabla f$） |

@@ -90,6 +90,10 @@ ihd --verify "is_solvable_by_radicals(x^5 - 4*x + 2)"
 # 素有限体上の楕円曲線位数決定（Schoof法）
 ihd "ec_p_order(1, 1, 5)"
 # 出力: 9
+
+# 整数行列標準形と有限生成アーベル群構造同定（HNF / SNF）
+ihd "abelian_group_structure([[2, 4], [4, 2]])"
+# 出力: Z_2 + Z_6
 ```
 
 
@@ -231,7 +235,7 @@ ihd "plot(sin(x), [-pi, pi])"
 - **基本代数・数論・方程式**: `sqrt`, `cbrt`, `expand`, `factor`, `apart`, `together`, `abs`, `gcd`, `lcm`, `mod`, `inv_mod`, `crt`, `totient`, `is_prime`, `cfrac`, `from_cfrac`, `rand`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `sturm`, `root_count`, `isolate_roots`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `padic_val`, `padic_norm`, `padic_expand`, `solve`
 - **三角関数・対数・複素数**: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `trig_expand`, `trig_reduce`, `exp`, `log`, `ln`, `arg`, `polar`, `polar_exp`, `rect`
 - **微積分・常微分方程式・漸化式・特殊関数・級数**: `diff`, `integrate`, `piecewise`, `risch_integrate`, `limit`, `residue`, `lambert_w`, `erf`, `gamma`, `beta`, `bernoulli`, `zeta`, `dsolve`, `rsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`, `gosper_sum`, `wz_cert`, `puiseux`
-- **線形代数・3次元ベクトル解析**: `det`, `inv`, `transpose`, `rref`, `rank`, `trace`, `eigenvals`, `eigenvects`, `lu`, `qr`, `cholesky`, `ldlt`, `pinv`, `solve_linear`, `dot`, `cross`, `norm`, `grad`, `div`, `curl`
+- **線形代数・整数標準形・3次元ベクトル解析**: `det`, `inv`, `transpose`, `rref`, `rank`, `trace`, `eigenvals`, `eigenvects`, `lu`, `qr`, `cholesky`, `ldlt`, `pinv`, `solve_linear`, `hnf`, `hnf_transform`, `snf`, `snf_transform`, `invariant_factors`, `abelian_group_structure`, `dot`, `cross`, `norm`, `grad`, `div`, `curl`
 - **幾何学解析**: `line_intersect`, `circle_intersect`, `triangle_area`, `triangle_centers`, `geo_prove`, `collinear`, `midpoint`, `parallel`, `perpendicular`, `equal_length_sq`, `circle_concyclic`
 - **厳密離散確率・統計**: `binom`, `hyper`, `geom`, `bayes`, `expect`, `variance`, `stddev`
 - **実代数幾何・数理論理・量化子消去**: `qe`, `forall`, `exists`, `cad`

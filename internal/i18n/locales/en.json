@@ -758,6 +758,19 @@
     "err_erf_args": "erf requires 1 argument: erf(z)",
     "err_branch_must_be_integer": "lambert_w branch must be an integer, got: %s",
     "trace_solve_lambert": "Solve transcendental equation %s = 0 via Lambert W function: %s"
+  },
+  "matrix_integer": {
+    "err_invalid_snf_fsm_transition": "invalid Smith Normal Form FSM transition: %s -> %s",
+    "err_matrix_expected": "matrix_integer error: expected matrix, got %s",
+    "err_integer_matrix_expected": "matrix_integer error: all matrix elements must be integers",
+    "err_empty_matrix": "matrix_integer error: matrix must not be empty",
+    "err_inconsistent_row_length": "matrix_integer error: row %d length %d differs from expected %d",
+    "err_hnf_args": "hnf requires 1 argument: hnf(matrix)",
+    "err_hnf_transform_args": "hnf_transform requires 1 argument: hnf_transform(matrix)",
+    "err_snf_args": "snf requires 1 argument: snf(matrix)",
+    "err_snf_transform_args": "snf_transform requires 1 argument: snf_transform(matrix)",
+    "err_invariant_factors_args": "invariant_factors requires 1 argument: invariant_factors(matrix)",
+    "err_abelian_group_structure_args": "abelian_group_structure requires 1 argument: abelian_group_structure(matrix)"
   }
 }
 

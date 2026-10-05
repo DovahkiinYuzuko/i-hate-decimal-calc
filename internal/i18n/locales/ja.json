@@ -758,5 +758,18 @@
     "err_erf_args": "引数エラー: erf 関数は 1 つの引数が必要です: erf(z)",
     "err_branch_must_be_integer": "引数エラー: lambert_w の分岐枝番号は整数である必要があります (取得値: %s)",
     "trace_solve_lambert": "ランバートW関数による初等超越方程式 %s = 0 の厳密解導出: %s"
+  },
+  "matrix_integer": {
+    "err_invalid_snf_fsm_transition": "状態遷移エラー: スミス標準形FSM: 不正な状態遷移です (%s -> %s)",
+    "err_matrix_expected": "引数エラー: 行列が期待されます (取得値: %s)",
+    "err_integer_matrix_expected": "引数エラー: 行列の全要素は整数である必要があります",
+    "err_empty_matrix": "引数エラー: 空の行列は指定できません",
+    "err_inconsistent_row_length": "引数エラー: 行 %d の要素数 %d は想定される列数 %d と異なります",
+    "err_hnf_args": "引数エラー: hnf 関数は 1 つの引数が必要です: hnf(matrix)",
+    "err_hnf_transform_args": "引数エラー: hnf_transform 関数は 1 つの引数が必要です: hnf_transform(matrix)",
+    "err_snf_args": "引数エラー: snf 関数は 1 つの引数が必要です: snf(matrix)",
+    "err_snf_transform_args": "引数エラー: snf_transform 関数は 1 つの引数が必要です: snf_transform(matrix)",
+    "err_invariant_factors_args": "引数エラー: invariant_factors 関数は 1 つの引数が必要です: invariant_factors(matrix)",
+    "err_abelian_group_structure_args": "引数エラー: abelian_group_structure 関数は 1 つの引数が必要です: abelian_group_structure(matrix)"
   }
 }

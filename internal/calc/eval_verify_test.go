@@ -225,3 +225,60 @@ func TestVerify_BuiltinFunction(t *testing.T) {
 		t.Fatalf("expected FAILED certificate, got %v", evalFalse)
 	}
 }
+
+func TestVerify_SNF_and_HNF(t *testing.T) {
+	env := NewEnv()
+
+	// 1. SNF verification: snf([[2, 4], [4, 2]])
+	snfExpr, err := Parse("snf([[2, 4], [4, 2]])")
+	if err != nil {
+		t.Fatalf("parse snf failed: %v", err)
+	}
+	snfEvaled, err := EvalWithEnv(snfExpr, env)
+	if err != nil {
+		t.Fatalf("eval snf failed: %v", err)
+	}
+	snfCert, err := VerifyComputation(snfExpr, snfEvaled, env)
+	if err != nil {
+		t.Fatalf("verify snf failed: %v", err)
+	}
+	if !snfCert.IsVerified {
+		t.Fatalf("expected SNF to be verified, got: %s", snfCert.String())
+	}
+	if snfCert.Domain != DomainSNF {
+		t.Errorf("expected DomainSNF, got: %s", snfCert.Domain)
+	}
+	if snfCert.CertIR == nil {
+		t.Fatalf("expected CertIR to be populated")
+	}
+	if _, ok := snfCert.CertIR.(*SmithNormalFormCertificate); !ok {
+		t.Errorf("expected SmithNormalFormCertificate, got %T", snfCert.CertIR)
+	}
+
+	// 2. HNF verification: hnf([[2, 4], [4, 2]])
+	hnfExpr, err := Parse("hnf([[2, 4], [4, 2]])")
+	if err != nil {
+		t.Fatalf("parse hnf failed: %v", err)
+	}
+	hnfEvaled, err := EvalWithEnv(hnfExpr, env)
+	if err != nil {
+		t.Fatalf("eval hnf failed: %v", err)
+	}
+	hnfCert, err := VerifyComputation(hnfExpr, hnfEvaled, env)
+	if err != nil {
+		t.Fatalf("verify hnf failed: %v", err)
+	}
+	if !hnfCert.IsVerified {
+		t.Fatalf("expected HNF to be verified, got: %s", hnfCert.String())
+	}
+	if hnfCert.Domain != DomainHNF {
+		t.Errorf("expected DomainHNF, got: %s", hnfCert.Domain)
+	}
+	if hnfCert.CertIR == nil {
+		t.Fatalf("expected CertIR to be populated")
+	}
+	if _, ok := hnfCert.CertIR.(*HermiteNormalFormCertificate); !ok {
+		t.Errorf("expected HermiteNormalFormCertificate, got %T", hnfCert.CertIR)
+	}
+}
+

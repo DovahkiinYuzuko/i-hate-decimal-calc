@@ -359,3 +359,80 @@ func TestTranspileCertificateIRToLean_SymbolicMatrix(t *testing.T) {
 		t.Errorf("expected symbolic ring tactic for matrix with variables, got: %s", code)
 	}
 }
+
+func TestTranspileCertificateIRToLean_SNF_and_HNF(t *testing.T) {
+	// 2x2 matrix test for SNF
+	matA := &MatrixNode{
+		Rows: 2,
+		Cols: 2,
+		Data: [][]Node{
+			{mustRational(2, 1), mustRational(4, 1)},
+			{mustRational(4, 1), mustRational(2, 1)},
+		},
+	}
+	matU := &MatrixNode{
+		Rows: 2,
+		Cols: 2,
+		Data: [][]Node{
+			{mustRational(1, 1), mustRational(0, 1)},
+			{mustRational(-2, 1), mustRational(1, 1)},
+		},
+	}
+	matV := &MatrixNode{
+		Rows: 2,
+		Cols: 2,
+		Data: [][]Node{
+			{mustRational(1, 1), mustRational(-2, 1)},
+			{mustRational(0, 1), mustRational(1, 1)},
+		},
+	}
+	matD := &MatrixNode{
+		Rows: 2,
+		Cols: 2,
+		Data: [][]Node{
+			{mustRational(2, 1), mustRational(0, 1)},
+			{mustRational(0, 1), mustRational(6, 1)},
+		},
+	}
+	snfCert := NewSmithNormalFormCertificate(matA, matU, matV, matD, []Node{mustRational(2, 1), mustRational(6, 1)}, mustRational(0, 1), true, "SNF verified")
+	snfCode, err := TranspileCertificateIRToLean(snfCert)
+	if err != nil {
+		t.Fatalf("unexpected error transpiling SNF: %v", err)
+	}
+	if !strings.Contains(snfCode, "Matrix (Fin 2) (Fin 2) ℚ") {
+		t.Errorf("expected Matrix (Fin 2) (Fin 2) ℚ in SNF code, got: %s", snfCode)
+	}
+	if !strings.Contains(snfCode, "by ext i j <;> fin_cases i <;> fin_cases j <;> norm_num") {
+		t.Errorf("expected ext/fin_cases/norm_num tactic, got: %s", snfCode)
+	}
+
+	// 2x3 rectangular matrix test for HNF
+	matRectA := &MatrixNode{
+		Rows: 2,
+		Cols: 3,
+		Data: [][]Node{
+			{mustRational(2, 1), mustRational(4, 1), mustRational(6, 1)},
+			{mustRational(0, 1), mustRational(1, 1), mustRational(2, 1)},
+		},
+	}
+	matRectU := &MatrixNode{
+		Rows: 2,
+		Cols: 2,
+		Data: [][]Node{
+			{mustRational(1, 1), mustRational(0, 1)},
+			{mustRational(0, 1), mustRational(1, 1)},
+		},
+	}
+	hnfCert := NewHermiteNormalFormCertificate(matRectA, matRectU, matRectA, mustRational(0, 1), true, "HNF verified")
+	hnfCode, err := TranspileCertificateIRToLean(hnfCert)
+	if err != nil {
+		t.Fatalf("unexpected error transpiling HNF: %v", err)
+	}
+	if !strings.Contains(hnfCode, "Matrix (Fin 2) (Fin 3) ℚ") {
+		t.Errorf("expected Matrix (Fin 2) (Fin 3) ℚ in rectangular HNF code, got: %s", hnfCode)
+	}
+	if !strings.Contains(hnfCode, "by ext i j <;> fin_cases i <;> fin_cases j <;> norm_num") {
+		t.Errorf("expected ext/fin_cases/norm_num tactic, got: %s", hnfCode)
+	}
+}
+
