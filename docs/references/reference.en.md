@@ -48,6 +48,21 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 
 ---
 
+## Number Literal Syntax (Multi-Radix & Repeating Decimals)
+
+`ihd` is a decimal-free exact rational CAS calculator. Number literals are parsed directly into arbitrary-precision rationals ($\mathbb{Q}$) at lexing time.
+
+| Literal Format | Example | Parsed Rational (Base 10) | Description |
+| :--- | :--- | :--- | :--- |
+| **Standard Decimal** | `42`, `1/3` | `42`, `1/3` | Standard arbitrary-precision integer and rational division |
+| **Finite & Repeating Decimals** | `0.75`, `0.(3)`, `1.1(6)` | `3/4`, `1/3`, `7/6` | Decimal and parenthesized repetend notation, expanded directly to rationals |
+| **Binary Literals** | `0b1011`, `0B0` | `11`, `0` | Prefixed binary integer notation |
+| **Octal Literals** | `0o755`, `0O10` | `493`, `8` | Prefixed octal integer notation |
+| **Hexadecimal Literals** | `0xff`, `0X1A` | `255`, `26` | Prefixed hexadecimal integer notation |
+| **Arbitrary-Radix Literals** | `2^^101`, `16^^ff`, `64^^@_` | `5`, `255`, `4031` | Mathematica-style `base^^digits` syntax ($2 \le \text{base} \le 64$. Base 64 uses Bash-compatible `@`=62, `_`=63) |
+
+---
+
 ## Reserved Constants
 
 | Identifier | Symbol | Description |
@@ -104,6 +119,11 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `to_primitive_element` / `primitive_element` | `to_primitive_element([sqrt(2), sqrt(3)])` / `to_primitive_element([x^2 - 2, x^2 - 3])` | Derives the simple extension isomorphism $\mathbb{Q}(\theta) \cong \mathbb{Q}(\alpha_1, \dots, \alpha_k)$ via the Primitive Element Theorem. Computes primitive element symbol, composite minimal polynomial $m_\theta(x)$, and generator representation polynomial list $[P_{\alpha_1}(\theta), \dots, P_{\alpha_k}(\theta)]$ using Sylvester resultants and algebraic field GCD. `primitive_element` is an alias. Supports `--verify` and `--lean` formal proof verification |
 | `fib` / `fibonacci` | `fib(n)` / `fibonacci(n)` | Fibonacci number $F_n$. Evaluated in $O(\log n)$ sub-quadratic time via the Fast Doubling algorithm. Fully supports negative integer inputs via negafibonacci relations $F_{-n} = (-1)^{n+1} F_n$ |
 | `digit_count` | `digit_count(n)` / `digit_count(n, base)` | Exact digit count of giant integers in specified `base` (default 10). Example: `digit_count(fib(10000))` $\to$ `2090` |
+| `to_base` | `to_base(n, base)` | Arbitrary-base conversion ($2 \le \text{base} \le 64$). Formats integers into positional numeral notation and rational fractions $p/q$ into repeating repetend notation via long division remainder hashing (e.g., `to_base(255, 16)` $\to$ `ff`, `to_base(1/3, 2)` $\to$ `0.(01)_2`, `to_base(1/3, 16)` $\to$ `0.(5)_16`, `to_base(4031, 64)` $\to$ `@_`) |
+| `from_base` | `from_base(str, base)` | Parses an arbitrary-base string ($2 \le \text{base} \le 64$) into an exact integer. Automatically accepts optional `0x`, `0b`, `0o` prefixes, and Base 64 `@`/`_` or `+`/`/` representations (e.g., `from_base("ff", 16)` $\to$ `255`, `from_base("@_", 64)` $\to$ `4031`) |
+| `bin` | `bin(n)` | Binary conversion shortcut with `0b` prefix (e.g., `bin(13)` $\to$ `0b1101`) |
+| `oct` | `oct(n)` | Octal conversion shortcut with `0o` prefix (e.g., `oct(63)` $\to$ `0o77`) |
+| `hex` | `hex(n)` | Hexadecimal conversion shortcut with `0x` prefix (e.g., `hex(255)` $\to$ `0xff`) |
 
 ---
 

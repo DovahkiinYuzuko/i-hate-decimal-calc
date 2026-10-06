@@ -1,7 +1,9 @@
 package calc
 
 import (
+	"fmt"
 	"math/big"
+	"strings"
 )
 
 // extGCD computes the Extended Euclidean Algorithm on a and b,
@@ -433,5 +435,276 @@ func EvalFib(nNode Node) (Node, error) {
 	}
 
 	return &RationalNode{Val: new(big.Rat).SetInt(fN)}, nil
+}
+
+// -------------------------------------------------------------------------
+// Arbitrary Radix (Base Conversion) Engine (Base 2 to 64)
+// -------------------------------------------------------------------------
+
+const base64Chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ@_"
+
+func formatIntInBase(val *big.Int, base int) string {
+	if val.Sign() == 0 {
+		return "0"
+	}
+	neg := false
+	n := new(big.Int).Set(val)
+	if n.Sign() < 0 {
+		neg = true
+		n.Abs(n)
+	}
+	var res string
+	if base <= 62 {
+		res = n.Text(base)
+	} else {
+		bigBase := big.NewInt(int64(base))
+		zero := big.NewInt(0)
+		rem := new(big.Int)
+		var runes []rune
+		for n.Cmp(zero) > 0 {
+			n.DivMod(n, bigBase, rem)
+			runes = append(runes, rune(base64Chars[rem.Int64()]))
+		}
+		for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
+			runes[i], runes[j] = runes[j], runes[i]
+		}
+		res = string(runes)
+	}
+	if neg {
+		return "-" + res
+	}
+	return res
+}
+
+func formatRatInBase(rat *big.Rat, base int) string {
+	if rat.IsInt() {
+		return formatIntInBase(rat.Num(), base)
+	}
+	neg := false
+	r := new(big.Rat).Set(rat)
+	if r.Sign() < 0 {
+		neg = true
+		r.Abs(r)
+	}
+	num := r.Num()
+	denom := r.Denom()
+
+	intPart := new(big.Int).Quo(num, denom)
+	rem := new(big.Int).Rem(num, denom)
+
+	intStr := formatIntInBase(intPart, base)
+
+	seen := make(map[string]int)
+	var digits []rune
+	bigBase := big.NewInt(int64(base))
+
+	repeatStart := -1
+
+	for rem.Sign() != 0 {
+		key := rem.String()
+		if idx, found := seen[key]; found {
+			repeatStart = idx
+			break
+		}
+		seen[key] = len(digits)
+
+		rem.Mul(rem, bigBase)
+		d := new(big.Int).Quo(rem, denom)
+		rem.Rem(rem, denom)
+
+		digits = append(digits, rune(base64Chars[d.Int64()]))
+	}
+
+	var sb strings.Builder
+	if neg {
+		sb.WriteString("-")
+	}
+	sb.WriteString(intStr)
+	sb.WriteString(".")
+
+	if repeatStart == -1 {
+		sb.WriteString(string(digits))
+	} else {
+		sb.WriteString(string(digits[:repeatStart]))
+		sb.WriteString("(")
+		sb.WriteString(string(digits[repeatStart:]))
+		sb.WriteString(")")
+	}
+	sb.WriteString(fmt.Sprintf("_%d", base))
+	return sb.String()
+}
+
+func parseBigIntInBaseRadix(s string, base int) (*big.Int, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return nil, fmt.Errorf("empty string")
+	}
+	neg := false
+	if strings.HasPrefix(s, "-") {
+		neg = true
+		s = s[1:]
+	} else if base < 63 && strings.HasPrefix(s, "+") {
+		s = s[1:]
+	}
+	if base == 2 && (strings.HasPrefix(s, "0b") || strings.HasPrefix(s, "0B")) {
+		s = s[2:]
+	} else if base == 8 && (strings.HasPrefix(s, "0o") || strings.HasPrefix(s, "0O")) {
+		s = s[2:]
+	} else if base == 16 && (strings.HasPrefix(s, "0x") || strings.HasPrefix(s, "0X")) {
+		s = s[2:]
+	}
+	if s == "" {
+		return nil, fmt.Errorf("invalid number format")
+	}
+
+	bigBase := big.NewInt(int64(base))
+	res := new(big.Int)
+	for _, r := range s {
+		var val int
+		if '0' <= r && r <= '9' {
+			val = int(r - '0')
+		} else if base <= 36 {
+			if 'a' <= r && r <= 'z' {
+				val = int(r - 'a' + 10)
+			} else if 'A' <= r && r <= 'Z' {
+				val = int(r - 'A' + 10)
+			} else {
+				return nil, fmt.Errorf("invalid digit %q for base %d", r, base)
+			}
+		} else {
+			if 'a' <= r && r <= 'z' {
+				val = int(r - 'a' + 10)
+			} else if 'A' <= r && r <= 'Z' {
+				val = int(r - 'A' + 36)
+			} else if r == '@' || r == '+' {
+				val = 62
+			} else if r == '_' || r == '/' {
+				val = 63
+			} else {
+				return nil, fmt.Errorf("invalid digit %q for base %d", r, base)
+			}
+		}
+		if val >= base {
+			return nil, fmt.Errorf("digit %q out of range for base %d", r, base)
+		}
+		res.Mul(res, bigBase)
+		res.Add(res, big.NewInt(int64(val)))
+	}
+	if neg {
+		res.Neg(res)
+	}
+	return res, nil
+}
+
+// EvalToBase converts a number (integer or rational) into a string representation in the given base (2 to 64).
+func EvalToBase(valNode, baseNode Node) (Node, error) {
+	baseRat, okB := baseNode.(*RationalNode)
+	if !okB || !baseRat.Val.IsInt() {
+		return nil, NewDomainError("", "to_base: base must be an integer, got %s", baseNode.String())
+	}
+	base := int(baseRat.Val.Num().Int64())
+	if base < 2 || base > 64 {
+		return nil, NewDomainError("", "to_base: base must be between 2 and 64, got %d", base)
+	}
+
+	valRat, okV := valNode.(*RationalNode)
+	if !okV {
+		return nil, NewDomainError("", "to_base: first argument must evaluate to a rational number, got %s", valNode.String())
+	}
+
+	if valRat.Val.IsInt() {
+		str := formatIntInBase(valRat.Val.Num(), base)
+		return NewStringNode(str), nil
+	}
+	str := formatRatInBase(valRat.Val, base)
+	return NewStringNode(str), nil
+}
+
+// EvalFromBase parses a string representation in the given base (2 to 64) back into an exact integer.
+func EvalFromBase(strNode, baseNode Node) (Node, error) {
+	baseRat, okB := baseNode.(*RationalNode)
+	if !okB || !baseRat.Val.IsInt() {
+		return nil, NewDomainError("", "from_base: base must be an integer, got %s", baseNode.String())
+	}
+	base := int(baseRat.Val.Num().Int64())
+	if base < 2 || base > 64 {
+		return nil, NewDomainError("", "from_base: base must be between 2 and 64, got %d", base)
+	}
+
+	var rawStr string
+	switch n := strNode.(type) {
+	case *StringNode:
+		rawStr = n.Value
+	case *VarNode:
+		rawStr = n.Name
+	case *RationalNode:
+		if n.Val.IsInt() {
+			rawStr = n.Val.Num().String()
+		} else {
+			return nil, NewDomainError("", "from_base: first argument cannot be a fraction: %s", strNode.String())
+		}
+	default:
+		return nil, NewDomainError("", "from_base: unsupported argument type: %s", strNode.String())
+	}
+
+	n, err := parseBigIntInBaseRadix(rawStr, base)
+	if err != nil {
+		return nil, NewDomainError("", "from_base: %v", err)
+	}
+	return &RationalNode{Val: new(big.Rat).SetInt(n)}, nil
+}
+
+// EvalBin converts an integer or rational to binary string representation.
+func EvalBin(valNode Node) (Node, error) {
+	valRat, ok := valNode.(*RationalNode)
+	if !ok {
+		return nil, NewDomainError("", "bin: argument must be a number, got %s", valNode.String())
+	}
+	if valRat.Val.IsInt() {
+		neg := valRat.Val.Num().Sign() < 0
+		absN := new(big.Int).Abs(valRat.Val.Num())
+		res := absN.Text(2)
+		if neg {
+			return NewStringNode("-0b" + res), nil
+		}
+		return NewStringNode("0b" + res), nil
+	}
+	return EvalToBase(valNode, &RationalNode{Val: new(big.Rat).SetInt64(2)})
+}
+
+// EvalOct converts an integer or rational to octal string representation.
+func EvalOct(valNode Node) (Node, error) {
+	valRat, ok := valNode.(*RationalNode)
+	if !ok {
+		return nil, NewDomainError("", "oct: argument must be a number, got %s", valNode.String())
+	}
+	if valRat.Val.IsInt() {
+		neg := valRat.Val.Num().Sign() < 0
+		absN := new(big.Int).Abs(valRat.Val.Num())
+		res := absN.Text(8)
+		if neg {
+			return NewStringNode("-0o" + res), nil
+		}
+		return NewStringNode("0o" + res), nil
+	}
+	return EvalToBase(valNode, &RationalNode{Val: new(big.Rat).SetInt64(8)})
+}
+
+// EvalHex converts an integer or rational to hexadecimal string representation.
+func EvalHex(valNode Node) (Node, error) {
+	valRat, ok := valNode.(*RationalNode)
+	if !ok {
+		return nil, NewDomainError("", "hex: argument must be a number, got %s", valNode.String())
+	}
+	if valRat.Val.IsInt() {
+		neg := valRat.Val.Num().Sign() < 0
+		absN := new(big.Int).Abs(valRat.Val.Num())
+		res := absN.Text(16)
+		if neg {
+			return NewStringNode("-0x" + res), nil
+		}
+		return NewStringNode("0x" + res), nil
+	}
+	return EvalToBase(valNode, &RationalNode{Val: new(big.Rat).SetInt64(16)})
 }
 

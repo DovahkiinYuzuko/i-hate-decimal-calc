@@ -617,6 +617,31 @@ func init() {
 		MinArgs: 1,
 		MaxArgs: 1,
 	})
+	RegisterFunction(FunctionSpec{
+		Name:    "to_base",
+		MinArgs: 2,
+		MaxArgs: 2,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "from_base",
+		MinArgs: 2,
+		MaxArgs: 2,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "bin",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "oct",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "hex",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
 
 	// Rational Functions Pack
 	RegisterFunction(FunctionSpec{

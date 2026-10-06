@@ -88,6 +88,7 @@ type (
 	PiecewiseCase       = ast.PiecewiseCase
 	PiecewiseNode       = ast.PiecewiseNode
 	IntervalNode        = ast.IntervalNode
+	StringNode          = ast.StringNode
 )
 
 var (
@@ -109,6 +110,7 @@ var (
 	NewQuantifier           = ast.NewQuantifier
 	NewPiecewiseNode        = ast.NewPiecewiseNode
 	NewIntervalNode         = ast.NewIntervalNode
+	NewStringNode           = ast.NewStringNode
 	Walk                    = ast.Walk
 	Inspect                 = ast.Inspect
 	Transform               = ast.Transform

@@ -66,7 +66,7 @@ func Walk(node Node, visitor func(Node) bool) {
 		if v.Otherwise != nil {
 			Walk(v.Otherwise, visitor)
 		}
-	case *RationalNode, *ConstNode, *VarNode, *PlotNode, *PolyNode, *AlgebraicNumberNode:
+	case *RationalNode, *ConstNode, *VarNode, *PlotNode, *PolyNode, *AlgebraicNumberNode, *StringNode:
 		// Leaf nodes: no children
 	}
 }
@@ -185,7 +185,7 @@ func Transform(node Node, transformer func(Node) Node) Node {
 			Cases:     newCases,
 			Otherwise: newOtherwise,
 		}
-	case *RationalNode, *ConstNode, *VarNode, *PlotNode, *PolyNode, *AlgebraicNumberNode:
+	case *RationalNode, *ConstNode, *VarNode, *PlotNode, *PolyNode, *AlgebraicNumberNode, *StringNode:
 		transformedChild = node
 	default:
 		transformedChild = node

@@ -4,6 +4,7 @@ import (
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"math/big"
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -142,6 +143,34 @@ func (l *Lexer) NextToken() Token {
 	case 'π':
 		tok = Token{Type: TokenIdent, Literal: "pi", Pos: startPos}
 		l.readChar()
+	case '"':
+		l.readChar() // consume opening '"'
+		var sb strings.Builder
+		for l.ch != 0 && l.ch != '"' {
+			if l.ch == '\\' {
+				l.readChar()
+				switch l.ch {
+				case '"', '\\':
+					sb.WriteRune(l.ch)
+				case 'n':
+					sb.WriteRune('\n')
+				case 't':
+					sb.WriteRune('\t')
+				default:
+					sb.WriteRune('\\')
+					sb.WriteRune(l.ch)
+				}
+			} else {
+				sb.WriteRune(l.ch)
+			}
+			l.readChar()
+		}
+		if l.ch == '"' {
+			l.readChar() // consume closing '"'
+			tok = Token{Type: TokenString, Literal: sb.String(), Pos: startPos}
+		} else {
+			tok = Token{Type: TokenIllegal, Literal: "unterminated string literal", Pos: startPos}
+		}
 	default:
 		if isDigit(l.ch) {
 			return l.readNumber(startPos)
@@ -172,6 +201,70 @@ const (
 )
 
 func (l *Lexer) readNumber(startPos int) Token {
+	// 1. Check binary, octal, hex prefixes: 0b, 0o, 0x
+	if l.ch == '0' {
+		peek := l.peekChar()
+		switch peek {
+		case 'b', 'B':
+			l.readChar() // consume '0'
+			l.readChar() // consume 'b'/'B'
+			var b strings.Builder
+			for l.ch == '0' || l.ch == '1' {
+				b.WriteRune(l.ch)
+				l.readChar()
+			}
+			if b.Len() == 0 {
+				return Token{Type: TokenIllegal, Literal: "0" + string(peek), Pos: startPos}
+			}
+			n := new(big.Int)
+			n.SetString(b.String(), 2)
+			return Token{
+				Type:    TokenNumber,
+				Literal: "0" + string(peek) + b.String(),
+				RatVal:  &ast.RationalNode{Val: new(big.Rat).SetInt(n)},
+				Pos:     startPos,
+			}
+		case 'o', 'O':
+			l.readChar() // consume '0'
+			l.readChar() // consume 'o'/'O'
+			var b strings.Builder
+			for l.ch >= '0' && l.ch <= '7' {
+				b.WriteRune(l.ch)
+				l.readChar()
+			}
+			if b.Len() == 0 {
+				return Token{Type: TokenIllegal, Literal: "0" + string(peek), Pos: startPos}
+			}
+			n := new(big.Int)
+			n.SetString(b.String(), 8)
+			return Token{
+				Type:    TokenNumber,
+				Literal: "0" + string(peek) + b.String(),
+				RatVal:  &ast.RationalNode{Val: new(big.Rat).SetInt(n)},
+				Pos:     startPos,
+			}
+		case 'x', 'X':
+			l.readChar() // consume '0'
+			l.readChar() // consume 'x'/'X'
+			var b strings.Builder
+			for isHexDigit(l.ch) {
+				b.WriteRune(l.ch)
+				l.readChar()
+			}
+			if b.Len() == 0 {
+				return Token{Type: TokenIllegal, Literal: "0" + string(peek), Pos: startPos}
+			}
+			n := new(big.Int)
+			n.SetString(b.String(), 16)
+			return Token{
+				Type:    TokenNumber,
+				Literal: "0" + string(peek) + b.String(),
+				RatVal:  &ast.RationalNode{Val: new(big.Rat).SetInt(n)},
+				Pos:     startPos,
+			}
+		}
+	}
+
 	state := stateInt
 	var intPart strings.Builder
 	var nonRepeatPart strings.Builder
@@ -184,6 +277,43 @@ func (l *Lexer) readNumber(startPos int) Token {
 			if isDigit(ch) {
 				intPart.WriteRune(ch)
 				l.readChar()
+			} else if ch == '^' && l.peekChar() == '^' {
+				// Mathematica base^^digits syntax
+				baseStr := intPart.String()
+				base, err := strconv.Atoi(baseStr)
+				if err == nil && base >= 2 && base <= 64 {
+					l.readChar() // consume first '^'
+					l.readChar() // consume second '^'
+					var digits strings.Builder
+					for isValidDigitInBase(l.ch, base) {
+						digits.WriteRune(l.ch)
+						l.readChar()
+					}
+					if digits.Len() == 0 {
+						return Token{Type: TokenIllegal, Literal: baseStr + "^^", Pos: startPos}
+					}
+					n, ok := parseBigIntInBase(digits.String(), base)
+					if !ok {
+						return Token{Type: TokenIllegal, Literal: baseStr + "^^" + digits.String(), Pos: startPos}
+					}
+					return Token{
+						Type:    TokenNumber,
+						Literal: baseStr + "^^" + digits.String(),
+						RatVal:  &ast.RationalNode{Val: new(big.Rat).SetInt(n)},
+						Pos:     startPos,
+					}
+				}
+				// If not valid base, fall through to pure integer and let '^' be operator
+				intStr := intPart.String()
+				numBig := new(big.Int)
+				numBig.SetString(intStr, 10)
+				rat := new(big.Rat).SetInt(numBig)
+				return Token{
+					Type:    TokenNumber,
+					Literal: intStr,
+					RatVal:  &ast.RationalNode{Val: rat},
+					Pos:     startPos,
+				}
 			} else if ch == '.' {
 				state = stateDot
 				l.readChar()
@@ -366,6 +496,66 @@ func isDigit(ch rune) bool {
 
 func isLetter(ch rune) bool {
 	return unicode.IsLetter(ch) || ch == '_' || ch == 'π' || ch == '√'
+}
+
+func isHexDigit(ch rune) bool {
+	return ('0' <= ch && ch <= '9') || ('a' <= ch && ch <= 'f') || ('A' <= ch && ch <= 'F')
+}
+
+func digitValInBase(r rune, base int) (int, bool) {
+	var val int
+	if '0' <= r && r <= '9' {
+		val = int(r - '0')
+	} else if base <= 36 {
+		if 'a' <= r && r <= 'z' {
+			val = int(r - 'a' + 10)
+		} else if 'A' <= r && r <= 'Z' {
+			val = int(r - 'A' + 10)
+		} else {
+			return 0, false
+		}
+	} else {
+		// base > 36
+		if 'a' <= r && r <= 'z' {
+			val = int(r - 'a' + 10)
+		} else if 'A' <= r && r <= 'Z' {
+			val = int(r - 'A' + 36)
+		} else if r == '@' {
+			val = 62
+		} else if r == '_' {
+			val = 63
+		} else {
+			return 0, false
+		}
+	}
+	if val < base {
+		return val, true
+	}
+	return 0, false
+}
+
+func isValidDigitInBase(r rune, base int) bool {
+	_, ok := digitValInBase(r, base)
+	return ok
+}
+
+func parseBigIntInBase(s string, base int) (*big.Int, bool) {
+	if base <= 62 {
+		n := new(big.Int)
+		return n.SetString(s, base)
+	}
+	// For base 63 and 64:
+	bigBase := big.NewInt(int64(base))
+	res := new(big.Int)
+	for _, r := range s {
+		val, ok := digitValInBase(r, base)
+		if !ok {
+			return nil, false
+		}
+		res.Mul(res, bigBase)
+		res.Add(res, big.NewInt(int64(val)))
+	}
+	return res, true
 }
 
 // Tokenize reads all tokens from input until TokenEOF. Returns error if TokenIllegal is encountered.

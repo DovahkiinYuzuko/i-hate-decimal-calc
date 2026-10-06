@@ -222,6 +222,9 @@ func (p *Parser) parsePrefix() (ast.Node, error) {
 	case TokenNumber:
 		return p.curTok.RatVal, nil
 
+	case TokenString:
+		return ast.NewStringNode(p.curTok.Literal), nil
+
 	case TokenIdent:
 		name := p.curTok.Literal
 		if p.peekTok.Type == TokenLParen {
@@ -424,7 +427,7 @@ func (p *Parser) parseFuncCall(name string) (ast.Node, error) {
 
 func (p *Parser) isStartOfExpression(t TokenType) bool {
 	switch t {
-	case TokenNumber, TokenIdent, TokenLParen, TokenLBracket:
+	case TokenNumber, TokenIdent, TokenLParen, TokenLBracket, TokenString:
 		return true
 	default:
 		return false
