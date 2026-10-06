@@ -55,6 +55,79 @@ func getPowerOfTen(k int) *big.Int {
 	return val
 }
 
+type srtReciprocal struct {
+	inv   *big.Int
+	shift uint
+}
+
+var (
+	srtCacheMu sync.RWMutex
+	srtCache   = make(map[int]srtReciprocal)
+)
+
+func getSRTReciprocal(k int, tenK *big.Int) srtReciprocal {
+	srtCacheMu.RLock()
+	cached, ok := srtCache[k]
+	srtCacheMu.RUnlock()
+	if ok {
+		return cached
+	}
+
+	srtCacheMu.Lock()
+	defer srtCacheMu.Unlock()
+	if cached, ok = srtCache[k]; ok {
+		return cached
+	}
+
+	shift := uint(tenK.BitLen() * 2)
+	twoToS := new(big.Int).Lsh(big.NewInt(1), shift)
+	inv := new(big.Int).Div(twoToS, tenK)
+
+	entry := srtReciprocal{inv: inv, shift: shift}
+	srtCache[k] = entry
+	return entry
+}
+
+// splitSRT implements Bouvier & Zimmermann (2014) division-free Scaled Remainder Tree splitting.
+// It computes x = Q * 10^k + R using scaled multiplication and bit shifting.
+func splitSRT(x, tenK *big.Int, k int) (*big.Int, *big.Int) {
+	if x.Cmp(tenK) < 0 {
+		return big.NewInt(0), new(big.Int).Set(x)
+	}
+
+	rec := getSRTReciprocal(k, tenK)
+
+	// Approximate quotient: Q_approx = (x * inv) >> shift
+	var prod *big.Int
+	if x.BitLen() >= 1024 && rec.inv.BitLen() >= 1024 {
+		prod = NTTMultiply(x, rec.inv)
+	} else {
+		prod = new(big.Int).Mul(x, rec.inv)
+	}
+	q := new(big.Int).Rsh(prod, rec.shift)
+
+	// Exact remainder: R = x - q * tenK
+	var qTenK *big.Int
+	if q.BitLen() >= 1024 && tenK.BitLen() >= 1024 {
+		qTenK = NTTMultiply(q, tenK)
+	} else {
+		qTenK = new(big.Int).Mul(q, tenK)
+	}
+	r := new(big.Int).Sub(x, qTenK)
+
+	// Remainder adjustment (correction loop for slight under/over-estimation)
+	for r.Cmp(tenK) >= 0 {
+		r.Sub(r, tenK)
+		q.Add(q, big.NewInt(1))
+	}
+	for r.Sign() < 0 {
+		r.Add(r, tenK)
+		q.Sub(q, big.NewInt(1))
+	}
+
+	return q, r
+}
+
 // EstimateDecimalDigits estimates the upper bound of decimal digits of val.
 // 2^bitLen has floor(bitLen * log10(2)) + 1 digits. log10(2) ~ 1233/4096.
 func EstimateDecimalDigits(val *big.Int) int {
@@ -197,9 +270,14 @@ func streamRecursive(w io.Writer, x *big.Int, exactDigits int, fsm *StreamFSM, i
 	}
 
 	// X = Q * 10^K + R
-	q := new(big.Int)
-	r := new(big.Int)
-	q.QuoRem(x, tenK, r)
+	var q, r *big.Int
+	if k >= 64 {
+		q, r = splitSRT(x, tenK, k)
+	} else {
+		q = new(big.Int)
+		r = new(big.Int)
+		q.QuoRem(x, tenK, r)
+	}
 
 	// Top half Q (depth-first)
 	if isRoot {

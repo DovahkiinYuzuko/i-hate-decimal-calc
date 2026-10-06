@@ -32,7 +32,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | Rank | Operator | Associativity | Description & Examples |
 | :---: | :---: | :---: | :--- |
 | 1 | `()` | - | Grouping parentheses |
-| 2 | `!` | Postfix Unary | Factorial of non-negative integers (e.g., `5! = 120`) |
+| 2 | `!` | Postfix Unary | Factorial of non-negative integers (e.g., `5! = 120`. Giant factorials accelerated via Legendre's formula, binary splitting tree, and NTT) |
 | 3 | `^` | **Right-associative** | Exponentiation (e.g., `2^3^2 = 2^(3^2) = 512`) |
 | 4 | `-` | Prefix Unary | Unary negation (Lower precedence than `^`: `-3^2 = -(3^2) = -9`) |
 | 5 | `*`, `/` | Left-associative | Multiplication and division (Explicit `*` required) |
@@ -102,6 +102,8 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `solve_diophantine` | `solve_diophantine(3*x + 5*y == 7, [x, y])` | Exact Diophantine equation solver for linear Diophantine equations (via Extended Euclidean Algorithm and Bezout's identity parameterized by integer $t$) and Pythagorean triples. Supports `--verify` algebraic certificate and `--lean` formal proof generation |
 | `pell_solve` | `pell_solve(D)` / `pell_solve(D, 1)` / `pell_solve(D, -1)` | Exact solver for Pell's equation $x^2 - D y^2 = 1$ and negative Pell's equation $x^2 - D y^2 = -1$, computing fundamental integer solutions $(x_1, y_1)$ via continuous fraction expansion of $\sqrt{D}$. Supports `--verify` and `--lean` (`by decide` proof) |
 | `to_primitive_element` / `primitive_element` | `to_primitive_element([sqrt(2), sqrt(3)])` / `to_primitive_element([x^2 - 2, x^2 - 3])` | Derives the simple extension isomorphism $\mathbb{Q}(\theta) \cong \mathbb{Q}(\alpha_1, \dots, \alpha_k)$ via the Primitive Element Theorem. Computes primitive element symbol, composite minimal polynomial $m_\theta(x)$, and generator representation polynomial list $[P_{\alpha_1}(\theta), \dots, P_{\alpha_k}(\theta)]$ using Sylvester resultants and algebraic field GCD. `primitive_element` is an alias. Supports `--verify` and `--lean` formal proof verification |
+| `fib` / `fibonacci` | `fib(n)` / `fibonacci(n)` | Fibonacci number $F_n$. Evaluated in $O(\log n)$ sub-quadratic time via the Fast Doubling algorithm. Fully supports negative integer inputs via negafibonacci relations $F_{-n} = (-1)^{n+1} F_n$ |
+| `digit_count` | `digit_count(n)` / `digit_count(n, base)` | Exact digit count of giant integers in specified `base` (default 10). Example: `digit_count(fib(10000))` $\to$ `2090` |
 
 ---
 
@@ -155,7 +157,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 
 | Function | Syntax & Example | Description |
 | :--- | :--- | :--- |
-| `det` | `det(A)` | Exact determinant of a matrix via division-free Laplace expansion |
+| `det` | `det(A)` | Exact determinant of a matrix via Laplace expansion, or CRT modular elimination over finite fields with Hadamard bounds to prevent intermediate coefficient explosion on integer matrices |
 | `inv` | `inv(A)` | Exact inverse matrix via adjugate matrix method |
 | `transpose` | `transpose(A)` | Matrix transpose (swaps rows and columns) |
 | `rref` | `rref(A)` | Reduced Row Echelon Form via Bareiss fraction-free elimination |

@@ -1,8 +1,10 @@
 package calc
 
 import (
-	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
+	"math/big"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
 // -------------------------------------------------------------------------
@@ -122,7 +124,30 @@ func evalDet(m *MatrixNode) (Node, error) {
 		return simplifyAdd([]Node{ad, negBC})
 	}
 
-	// n >= 3: Laplace expansion along row 0
+	// For purely integer matrices (n >= 3), compute via DetModularCRT to avoid swell
+	allInts := true
+	intMat := make([][]*big.Int, n)
+	for i := 0; i < n; i++ {
+		intMat[i] = make([]*big.Int, n)
+		for j := 0; j < n; j++ {
+			if rat, ok := m.Data[i][j].(*RationalNode); ok && rat.Val.IsInt() {
+				intMat[i][j] = rat.Val.Num()
+			} else {
+				allInts = false
+				break
+			}
+		}
+		if !allInts {
+			break
+		}
+	}
+
+	if allInts {
+		detInt := DetModularCRT(intMat)
+		return &RationalNode{Val: new(big.Rat).SetInt(detInt)}, nil
+	}
+
+	// Symbolic / general n >= 3: Laplace expansion along row 0
 	var sumTerms []Node
 	for c := 0; c < n; c++ {
 		elem := m.Data[0][c]

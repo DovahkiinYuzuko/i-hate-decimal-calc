@@ -360,3 +360,78 @@ func EvalDigitCount(nNode Node) (Node, error) {
 	digits := ComputeExactDecimalDigits(num)
 	return &RationalNode{Val: big.NewRat(int64(digits), 1)}, nil
 }
+
+// fastDoublingFib returns (F_n, F_{n+1}) for non-negative n using Fast Doubling:
+// F_{2k}   = F_k * (2*F_{k+1} - F_k)
+// F_{2k+1} = F_k^2 + F_{k+1}^2
+func fastDoublingFib(n *big.Int) (*big.Int, *big.Int) {
+	if n.Sign() == 0 {
+		return big.NewInt(0), big.NewInt(1)
+	}
+
+	a := big.NewInt(0) // F_k
+	b := big.NewInt(1) // F_{k+1}
+
+	two := big.NewInt(2)
+	twoB := new(big.Int)
+	twoBSubA := new(big.Int)
+	c := new(big.Int) // F_{2k}
+	a2 := new(big.Int)
+	b2 := new(big.Int)
+	d := new(big.Int) // F_{2k+1}
+	nextB := new(big.Int)
+
+	bitLen := n.BitLen()
+	for i := bitLen - 1; i >= 0; i-- {
+		// c = a * (2*b - a)
+		twoB.Mul(two, b)
+		twoBSubA.Sub(twoB, a)
+		c.Mul(a, twoBSubA)
+
+		// d = a^2 + b^2
+		a2.Mul(a, a)
+		b2.Mul(b, b)
+		d.Add(a2, b2)
+
+		a.Set(c)
+		b.Set(d)
+
+		if n.Bit(i) == 1 {
+			// nextA = b, nextB = a + b
+			nextB.Add(a, b)
+			a.Set(b)
+			b.Set(nextB)
+		}
+	}
+
+	return a, b
+}
+
+// EvalFib evaluates the n-th Fibonacci number using Fast Doubling.
+// Supports negative indices via negafibonacci: F_{-n} = (-1)^{n+1} F_n.
+func EvalFib(nNode Node) (Node, error) {
+	rat, ok := nNode.(*RationalNode)
+	if !ok || !rat.Val.IsInt() {
+		return nil, NewDomainError("", "fib: argument must be an integer, got %s", nNode.String())
+	}
+
+	n := rat.Val.Num()
+	if n.Sign() == 0 {
+		return &RationalNode{Val: new(big.Rat).SetInt64(0)}, nil
+	}
+
+	absN := new(big.Int).Abs(n)
+	fN, _ := fastDoublingFib(absN)
+
+	if n.Sign() < 0 {
+		// F_{-n} = (-1)^{n+1} F_n
+		// If |n| is even, (-1)^{-n+1} = -1 -> -F_n
+		// If |n| is odd,  (-1)^{-n+1} =  1 -> F_n
+		if new(big.Int).And(absN, big.NewInt(1)).Sign() == 0 {
+			fN.Neg(fN)
+		}
+	}
+
+	return &RationalNode{Val: new(big.Rat).SetInt(fN)}, nil
+}
+

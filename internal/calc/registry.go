@@ -602,6 +602,21 @@ func init() {
 		MinArgs: 1,
 		MaxArgs: 1,
 	})
+	RegisterFunction(FunctionSpec{
+		Name:    "digit_count",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "fib",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "fibonacci",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
 
 	// Rational Functions Pack
 	RegisterFunction(FunctionSpec{

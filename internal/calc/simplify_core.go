@@ -72,8 +72,8 @@ func simplifyUnaryOp(op string, expr Node) (Node, error) {
 			return &RationalNode{Val: new(big.Rat).SetInt(res)}, nil
 		}
 		var res *big.Int
-		if n >= 128 {
-			res = ParallelProductTree(1, n, 64)
+		if n >= 64 {
+			res = FactorialLegendre(n)
 		} else {
 			res = big.NewInt(1)
 			for i := int64(2); i <= n; i++ {

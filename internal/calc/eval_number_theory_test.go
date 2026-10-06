@@ -216,3 +216,91 @@ func TestExtGCD(t *testing.T) {
 		t.Errorf("gcd(240, 46) expected 2, got %s", g)
 	}
 }
+
+func TestEvalFib(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"fib(0)", "0"},
+		{"fib(1)", "1"},
+		{"fib(2)", "1"},
+		{"fib(3)", "2"},
+		{"fib(4)", "3"},
+		{"fib(5)", "5"},
+		{"fib(6)", "8"},
+		{"fib(7)", "13"},
+		{"fib(8)", "21"},
+		{"fib(9)", "34"},
+		{"fib(10)", "55"},
+		{"fib(20)", "6765"},
+		{"fib(50)", "12586269025"},
+		// Negative indices (negafibonacci: F_{-n} = (-1)^{n+1} F_n)
+		{"fib(-1)", "1"},
+		{"fib(-2)", "-1"},
+		{"fib(-3)", "2"},
+		{"fib(-4)", "-3"},
+		{"fib(-5)", "5"},
+		{"fib(-6)", "-8"},
+		// Alias fibonacci
+		{"fibonacci(10)", "55"},
+		{"fibonacci(-3)", "2"},
+	}
+
+	for _, tc := range tests {
+		res, err := EvalString(tc.input)
+		if err != nil {
+			t.Fatalf("EvalString(%q) unexpected error: %v", tc.input, err)
+		}
+		if res.String() != tc.expected {
+			t.Errorf("EvalString(%q) = %s; want %s", tc.input, res.String(), tc.expected)
+		}
+	}
+
+	// Error cases
+	errorInputs := []string{
+		"fib(1/2)",
+		"fib(1.5)",
+		"fib(1, 2)",
+	}
+	for _, inp := range errorInputs {
+		_, err := EvalString(inp)
+		if err == nil {
+			t.Errorf("EvalString(%q) expected error, got nil", inp)
+		}
+	}
+}
+
+func TestEvalFib_PropertiesAndLarge(t *testing.T) {
+	// Verify recurrence relation F_{n+2} = F_{n+1} + F_n for n in 0..100
+	var prev2, prev1 *big.Int
+	for n := int64(0); n <= 100; n++ {
+		resNode, err := EvalFib(&RationalNode{Val: new(big.Rat).SetInt64(n)})
+		if err != nil {
+			t.Fatalf("EvalFib(%d) failed: %v", n, err)
+		}
+		curr := resNode.(*RationalNode).Val.Num()
+		if n >= 2 {
+			expected := new(big.Int).Add(prev2, prev1)
+			if curr.Cmp(expected) != 0 {
+				t.Fatalf("Fibonacci recurrence failed at n=%d: got %s, want %s", n, curr.String(), expected.String())
+			}
+		}
+		prev2 = prev1
+		prev1 = curr
+	}
+
+	// Verify large n computation speed (n = 10,000)
+	largeNode, err := EvalFib(&RationalNode{Val: new(big.Rat).SetInt64(10000)})
+	if err != nil {
+		t.Fatalf("EvalFib(10000) failed: %v", err)
+	}
+	largeRat := largeNode.(*RationalNode)
+	// F_{10000} has 2090 decimal digits
+	digits := ComputeExactDecimalDigits(largeRat.Val.Num())
+	if digits != 2090 {
+		t.Errorf("digits of F_{10000} = %d; want 2090", digits)
+	}
+}
+
+
