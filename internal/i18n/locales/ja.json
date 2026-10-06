@@ -804,5 +804,27 @@
     "err_gcd_not_linear": "代数計算エラー: 拡大体上の最大公約数が生成元を復元するための1次因子になりませんでした",
     "trace_primitive_found": "原始元を検出: theta = %s + %d*%s (最小多項式: %s)",
     "trace_collapse_step": "代数拡大体の畳み込み: Q(%s, %s) -> Q(%s)"
+  },
+  "proof_trace": {
+    "rule_integer_relation": "LLL格子基底簡約による線形整数関係式 sum(c_i * alpha_i) = 0",
+    "rule_elliptic_addition": "セカント・タンジェント則による楕円曲線上の有理点加法 P1 + P2 = Sum",
+    "rule_primitive_element": "最小多項式および体上GCDによる単拡大同型写像 Q(alpha, beta) =~ Q(theta)",
+    "rule_smith_normal_form": "対角不変因子分解 U * A * V = D",
+    "rule_hermite_normal_form": "行階段三角標準形 U * A = H",
+    "rule_linear_diophantine": "不定方程式 a*x + b*y = c の特殊解",
+    "rule_matrix_inversion": "A * A^-1 = I を満たす乗法逆行列",
+    "rule_matrix_decomposition": "因子への行列分解: %s",
+    "rule_linear_solve": "A * x = b を満たすベクトル解",
+    "rule_wu_geometric": "幾何学的命題の標数集合擬剰余による機械的検証（Wu法）",
+    "rule_pell_solve": "x^2 - %s*y^2 = 1 を満たす基本解",
+    "rule_polynomial_root": "P(%s) = 0 を満たす代数的根 %s",
+    "rule_indefinite_integration": "%s の %s に関する原始関数",
+    "err_nil_certificate": "nil の証明書は変換できません",
+    "err_nil_verification_certificate": "nil の検証証明書は変換できません",
+    "err_serialize_nil_proof_trace": "nil の証明トレースは JSON にシリアライズできません",
+    "err_invalid_certificate_json": "不正な証明書 JSON です: %s",
+    "err_nil_proof_trace": "nil の証明トレースは検証できません",
+    "err_no_residual_or_endpoints": "ステップ %d (%s) に検証すべき残差または端点が存在しません",
+    "err_residual_does_not_vanish": "ステップ %d (%s) の自己検証に失敗しました: 代数的残差が0になりません"
   }
 }

@@ -3,6 +3,7 @@ package calc
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"os"
 	"path/filepath"
 	"strings"
@@ -80,7 +81,7 @@ func (t *ProofTrace) LastStep() *ProofStep {
 // and Lean 4 proof generation through a single canonical intermediate representation.
 func ConvertCertificateToProofTrace(cert Certificate) (*ProofTrace, error) {
 	if cert == nil {
-		return nil, fmt.Errorf("cannot convert nil certificate")
+		return nil, fmt.Errorf("%s", i18n.T("proof_trace.err_nil_certificate"))
 	}
 
 	switch c := cert.(type) {
@@ -117,7 +118,7 @@ func ConvertCertificateToProofTrace(cert Certificate) (*ProofTrace, error) {
 			Before:          c.Integrand,
 			After:           c.Antiderivative,
 			Rule:            "IndefiniteIntegration",
-			RuleDescription: fmt.Sprintf("Antiderivative of %s with respect to %s", Format(c.Integrand), c.Variable),
+			RuleDescription: i18n.T("proof_trace.rule_indefinite_integration", Format(c.Integrand), c.Variable),
 			Residual:        c.Residual(),
 			IsSelfVerified:  c.IsVerified(),
 		})
@@ -131,7 +132,7 @@ func ConvertCertificateToProofTrace(cert Certificate) (*ProofTrace, error) {
 			Before:          c.Matrix,
 			After:           c.Inverse,
 			Rule:            "MatrixInversion",
-			RuleDescription: "Multiplicative inverse satisfying A * A^-1 = I",
+			RuleDescription: i18n.T("proof_trace.rule_matrix_inversion"),
 			Residual:        c.Residual(),
 			IsSelfVerified:  c.IsVerified(),
 		})
@@ -149,7 +150,7 @@ func ConvertCertificateToProofTrace(cert Certificate) (*ProofTrace, error) {
 			Before:          c.Matrix,
 			After:           nil,
 			Rule:            "MatrixDecomposition",
-			RuleDescription: fmt.Sprintf("Matrix decomposition into factors: %s", strings.Join(factorStr, " * ")),
+			RuleDescription: i18n.T("proof_trace.rule_matrix_decomposition", strings.Join(factorStr, " * ")),
 			Residual:        c.Residual(),
 			IsSelfVerified:  c.IsVerified(),
 		})
@@ -163,7 +164,7 @@ func ConvertCertificateToProofTrace(cert Certificate) (*ProofTrace, error) {
 			Before:          c.Target,
 			After:           c.Solution,
 			Rule:            "LinearSolve",
-			RuleDescription: "Vector solution satisfying A * x = b",
+			RuleDescription: i18n.T("proof_trace.rule_linear_solve"),
 			Residual:        c.Residual(),
 			IsSelfVerified:  c.IsVerified(),
 		})
@@ -179,7 +180,7 @@ func ConvertCertificateToProofTrace(cert Certificate) (*ProofTrace, error) {
 			Before:          conclusionNode,
 			After:           trueNode,
 			Rule:            "WuGeometricDeduction",
-			RuleDescription: "Geometric proposition mechanically verified via characteristic set pseudo-division",
+			RuleDescription: i18n.T("proof_trace.rule_wu_geometric"),
 			Residual:        c.Residual(),
 			IsSelfVerified:  c.IsVerified(),
 		})
@@ -193,7 +194,7 @@ func ConvertCertificateToProofTrace(cert Certificate) (*ProofTrace, error) {
 			Before:          c.D,
 			After:           c.X,
 			Rule:            "PellEquationSolve",
-			RuleDescription: fmt.Sprintf("Fundamental solution (x, y) = (%s, %s) satisfying x^2 - %s*y^2 = 1", Format(c.X), Format(c.Y), Format(c.D)),
+			RuleDescription: i18n.T("proof_trace.rule_pell_solve", Format(c.D)),
 			Residual:        c.Residual(),
 			IsSelfVerified:  c.IsVerified(),
 		})
@@ -208,7 +209,7 @@ func ConvertCertificateToProofTrace(cert Certificate) (*ProofTrace, error) {
 			Before:          c.Polynomial,
 			After:           c.Root,
 			Rule:            "PolynomialRootVerification",
-			RuleDescription: fmt.Sprintf("Root %s satisfying P(%s) = 0", Format(c.Root), c.Variable),
+			RuleDescription: i18n.T("proof_trace.rule_polynomial_root", Format(c.Root), c.Variable),
 			Residual:        c.Residual(),
 			IsSelfVerified:  c.IsVerified(),
 		})
@@ -222,7 +223,7 @@ func ConvertCertificateToProofTrace(cert Certificate) (*ProofTrace, error) {
 			Before:          c.C,
 			After:           c.XSolution,
 			Rule:            "LinearDiophantineSolve",
-			RuleDescription: "Particular solution satisfying a*x + b*y = c",
+			RuleDescription: i18n.T("proof_trace.rule_linear_diophantine"),
 			Residual:        c.Residual(),
 			IsSelfVerified:  c.IsVerified(),
 		})
@@ -236,7 +237,7 @@ func ConvertCertificateToProofTrace(cert Certificate) (*ProofTrace, error) {
 			Before:          c.A,
 			After:           c.D,
 			Rule:            "SmithNormalForm",
-			RuleDescription: "Diagonal invariant factor decomposition satisfying U * A * V = D",
+			RuleDescription: i18n.T("proof_trace.rule_smith_normal_form"),
 			Residual:        c.Residual(),
 			IsSelfVerified:  c.IsVerified(),
 		})
@@ -250,7 +251,7 @@ func ConvertCertificateToProofTrace(cert Certificate) (*ProofTrace, error) {
 			Before:          c.A,
 			After:           c.H,
 			Rule:            "HermiteNormalForm",
-			RuleDescription: "Row-echelon triangular canonical form satisfying U * A = H",
+			RuleDescription: i18n.T("proof_trace.rule_hermite_normal_form"),
 			Residual:        c.Residual(),
 			IsSelfVerified:  c.IsVerified(),
 		})
@@ -284,6 +285,52 @@ func ConvertCertificateToProofTrace(cert Certificate) (*ProofTrace, error) {
 		})
 		return trace, nil
 
+	case *IntegerRelationCertificate:
+		zeroNode := &ast.RationalNode{Val: big.NewRat(0, 1)}
+		trace := NewProofTrace(nil, zeroNode)
+		trace.Metadata["domain"] = string(c.Domain())
+		trace.Metadata["equation"] = c.EquationString()
+		trace.AddStep(ProofStep{
+			Before:          nil,
+			After:           zeroNode,
+			Rule:            "IntegerRelationLLL",
+			RuleDescription: i18n.T("proof_trace.rule_integer_relation"),
+			Residual:        c.Residual(),
+			IsSelfVerified:  c.IsVerified(),
+		})
+		return trace, nil
+
+	case *EllipticPointCertificate:
+		trace := NewProofTrace(c.P1, c.Sum)
+		trace.Metadata["domain"] = string(c.Domain())
+		trace.Metadata["equation"] = c.EquationString()
+		trace.AddStep(ProofStep{
+			Before:          c.P1,
+			After:           c.Sum,
+			Rule:            "EllipticCurveAddition",
+			RuleDescription: i18n.T("proof_trace.rule_elliptic_addition"),
+			Residual:        c.Residual(),
+			IsSelfVerified:  c.IsVerified(),
+		})
+		return trace, nil
+
+	case *PrimitiveElementCertificate:
+		thetaVar := &ast.VarNode{Name: c.SymbolTheta}
+		trace := NewProofTrace(c.MinPolyTheta, thetaVar)
+		trace.Metadata["domain"] = string(c.Domain())
+		trace.Metadata["symbol_theta"] = c.SymbolTheta
+		trace.Metadata["c"] = fmt.Sprintf("%d", c.C)
+		trace.Metadata["equation"] = c.EquationString()
+		trace.AddStep(ProofStep{
+			Before:          c.MinPolyTheta,
+			After:           thetaVar,
+			Rule:            "PrimitiveElementIsomorphism",
+			RuleDescription: i18n.T("proof_trace.rule_primitive_element"),
+			Residual:        c.Residual(),
+			IsSelfVerified:  c.IsVerified(),
+		})
+		return trace, nil
+
 	default:
 		// Generic fallback for any Certificate
 		trace := NewProofTrace(nil, nil)
@@ -302,7 +349,7 @@ func ConvertCertificateToProofTrace(cert Certificate) (*ProofTrace, error) {
 // ConvertVerificationCertificateToProofTrace converts an eval_verify.go VerificationCertificate to a ProofTrace.
 func ConvertVerificationCertificateToProofTrace(vc *VerificationCertificate) (*ProofTrace, error) {
 	if vc == nil {
-		return nil, fmt.Errorf("cannot convert nil verification certificate")
+		return nil, fmt.Errorf("%s", i18n.T("proof_trace.err_nil_verification_certificate"))
 	}
 	if vc.CertIR != nil {
 		return ConvertCertificateToProofTrace(vc.CertIR)
@@ -323,7 +370,7 @@ func ConvertVerificationCertificateToProofTrace(vc *VerificationCertificate) (*P
 // If all steps verify to zero residual, returns true and marks all steps with IsSelfVerified = true.
 func VerifyProofTrace(trace *ProofTrace, env *Env) (bool, error) {
 	if trace == nil {
-		return false, fmt.Errorf("cannot verify nil proof trace")
+		return false, fmt.Errorf("%s", i18n.T("proof_trace.err_nil_proof_trace"))
 	}
 	if len(trace.Steps) == 0 {
 		return true, nil
@@ -344,11 +391,11 @@ func VerifyProofTrace(trace *ProofTrace, env *Env) (bool, error) {
 		}
 
 		if residual == nil {
-			return false, fmt.Errorf("step %d (%s) has no residual or endpoints to verify", i+1, step.Rule)
+			return false, fmt.Errorf("%s", i18n.T("proof_trace.err_no_residual_or_endpoints", i+1, step.Rule))
 		}
 
 		if !checkIsZeroAlgebraically(residual, env) {
-			return false, fmt.Errorf("step %d (%s) failed self-verification: residual does not vanish", i+1, step.Rule)
+			return false, fmt.Errorf("%s", i18n.T("proof_trace.err_residual_does_not_vanish", i+1, step.Rule))
 		}
 
 		step.IsSelfVerified = true
@@ -450,7 +497,7 @@ type ProofTraceJSON struct {
 // ToJSON serializes the ProofTrace into indented JSON bytes.
 func (t *ProofTrace) ToJSON() ([]byte, error) {
 	if t == nil {
-		return nil, fmt.Errorf("cannot serialize nil ProofTrace to JSON")
+		return nil, fmt.Errorf("%s", i18n.T("proof_trace.err_serialize_nil_proof_trace"))
 	}
 
 	origStr := ""
@@ -532,7 +579,7 @@ func LoadProofTraceFromJSON(filePath string) (*ProofTrace, error) {
 
 	var ptJSON ProofTraceJSON
 	if err := json.Unmarshal(data, &ptJSON); err != nil {
-		return nil, fmt.Errorf("invalid certificate JSON: %w", err)
+		return nil, fmt.Errorf("%s", fmt.Sprintf(i18n.T("proof_trace.err_invalid_certificate_json"), err.Error()))
 	}
 
 	var origNode ast.Node

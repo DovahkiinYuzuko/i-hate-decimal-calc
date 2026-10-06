@@ -584,3 +584,38 @@ func TestCLI_CertificateAndReplay(t *testing.T) {
 		t.Errorf("expected replay output to reference cert file, got: %s", replayOutput)
 	}
 }
+
+func TestCLI_CertificateAndReplay_MultipleDomains(t *testing.T) {
+	tempDir := t.TempDir()
+
+	testCases := []struct {
+		name string
+		expr string
+	}{
+		{"Calculus_Integrate", "integrate(exp(x), x)"},
+		{"LinearAlgebra_Inv", "inv([[1, 2], [3, 4]])"},
+		{"NumberTheory_Pell", "solve_pell(2)"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			certFile := filepath.Join(tempDir, tc.name+".json")
+
+			var out, errOut bytes.Buffer
+			code := run([]string{"--certificate", certFile, tc.expr}, strings.NewReader(""), &out, &errOut)
+			if code != 0 {
+				t.Fatalf("expected exit code 0 for %s, got %d, err: %s", tc.expr, code, errOut.String())
+			}
+
+			if _, err := os.Stat(certFile); os.IsNotExist(err) {
+				t.Fatalf("expected cert file for %s to exist", tc.expr)
+			}
+
+			var outReplay, errOutReplay bytes.Buffer
+			replayCode := run([]string{"--replay", certFile}, strings.NewReader(""), &outReplay, &errOutReplay)
+			if replayCode != 0 {
+				t.Fatalf("expected replay exit code 0 for %s, got %d, err: %s", tc.expr, replayCode, errOutReplay.String())
+			}
+		})
+	}
+}

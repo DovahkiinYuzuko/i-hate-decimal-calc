@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"fmt"
 	"math/big"
 	"path/filepath"
 	"testing"
@@ -294,5 +295,130 @@ func TestProofTrace_SaveAndLoadJSON(t *testing.T) {
 		t.Errorf("expected IsSelfVerified true")
 	}
 }
+
+func TestConvertCertificateToProofTrace_IntegerRelation(t *testing.T) {
+	el1 := &ast.VarNode{Name: "a"}
+	el2 := &ast.VarNode{Name: "b"}
+	c1 := &ast.RationalNode{Val: big.NewRat(1, 1)}
+	c2 := &ast.RationalNode{Val: big.NewRat(-1, 1)}
+	res := &ast.RationalNode{Val: big.NewRat(0, 1)}
+
+	cert := NewIntegerRelationCertificate([]ast.Node{el1, el2}, []ast.Node{c1, c2}, res, true, "Integer relation certified")
+	trace, err := ConvertCertificateToProofTrace(cert)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if trace.StepCount() != 1 {
+		t.Fatalf("expected 1 step, got %d", trace.StepCount())
+	}
+	if trace.Steps[0].Rule != "IntegerRelationLLL" {
+		t.Errorf("expected rule IntegerRelationLLL, got %s", trace.Steps[0].Rule)
+	}
+	if trace.Steps[0].RuleDescription == "" {
+		t.Errorf("expected non-empty rule description")
+	}
+}
+
+func TestConvertCertificateToProofTrace_EllipticPoint(t *testing.T) {
+	p1 := &ast.ListNode{Elements: []ast.Node{&ast.RationalNode{Val: big.NewRat(-1, 1)}, &ast.RationalNode{Val: big.NewRat(0, 1)}}}
+	p2 := &ast.ListNode{Elements: []ast.Node{&ast.RationalNode{Val: big.NewRat(0, 1)}, &ast.RationalNode{Val: big.NewRat(0, 1)}}}
+	sum := &ast.ListNode{Elements: []ast.Node{&ast.RationalNode{Val: big.NewRat(1, 1)}, &ast.RationalNode{Val: big.NewRat(0, 1)}}}
+	a := &ast.RationalNode{Val: big.NewRat(-1, 1)}
+	b := &ast.RationalNode{Val: big.NewRat(0, 1)}
+	res := &ast.RationalNode{Val: big.NewRat(0, 1)}
+
+	cert := NewEllipticPointCertificate(a, b, p1, p2, sum, res, true, "Elliptic addition certified")
+	trace, err := ConvertCertificateToProofTrace(cert)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if trace.StepCount() != 1 {
+		t.Fatalf("expected 1 step, got %d", trace.StepCount())
+	}
+	if trace.Steps[0].Rule != "EllipticCurveAddition" {
+		t.Errorf("expected rule EllipticCurveAddition, got %s", trace.Steps[0].Rule)
+	}
+}
+
+func TestConvertCertificateToProofTrace_PrimitiveElement(t *testing.T) {
+	minPolyTheta, _ := Parse("x^4 - 10*x^2 + 1")
+	minPolyAlpha, _ := Parse("x^2 - 2")
+	minPolyBeta, _ := Parse("x^2 - 3")
+	repAlpha, _ := Parse("theta^3/2 - 9/2*theta")
+	repBeta, _ := Parse("11/2*theta - theta^3/2")
+	quoG, _ := Parse("x^2 + 1")
+	quoF, _ := Parse("x^2 - 1")
+	res := &ast.RationalNode{Val: big.NewRat(0, 1)}
+
+	cert := NewPrimitiveElementCertificate(minPolyTheta, "theta", 1, repAlpha, repBeta, minPolyAlpha, minPolyBeta, quoG, quoF, res, true, "Primitive element certified")
+	trace, err := ConvertCertificateToProofTrace(cert)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if trace.StepCount() != 1 {
+		t.Fatalf("expected 1 step, got %d", trace.StepCount())
+	}
+	if trace.Steps[0].Rule != "PrimitiveElementIsomorphism" {
+		t.Errorf("expected rule PrimitiveElementIsomorphism, got %s", trace.Steps[0].Rule)
+	}
+	if trace.Metadata["symbol_theta"] != "theta" {
+		t.Errorf("expected symbol_theta 'theta', got %s", trace.Metadata["symbol_theta"])
+	}
+}
+
+func TestConvertCertificateToProofTrace_AllDomains_RoundTrip(t *testing.T) {
+	tempDir := t.TempDir()
+
+	// 1. Smith Normal Form
+	matA := &ast.MatrixNode{Data: [][]ast.Node{
+		{&ast.RationalNode{Val: big.NewRat(2, 1)}, &ast.RationalNode{Val: big.NewRat(4, 1)}},
+		{&ast.RationalNode{Val: big.NewRat(4, 1)}, &ast.RationalNode{Val: big.NewRat(2, 1)}},
+	}}
+	matD := &ast.MatrixNode{Data: [][]ast.Node{
+		{&ast.RationalNode{Val: big.NewRat(2, 1)}, &ast.RationalNode{Val: big.NewRat(0, 1)}},
+		{&ast.RationalNode{Val: big.NewRat(0, 1)}, &ast.RationalNode{Val: big.NewRat(6, 1)}},
+	}}
+	snfCert := NewSmithNormalFormCertificate(matA, matA, matA, matD, []Node{&ast.RationalNode{Val: big.NewRat(2, 1)}, &ast.RationalNode{Val: big.NewRat(6, 1)}}, &ast.RationalNode{Val: big.NewRat(0, 1)}, true, "SNF certified")
+
+	// 2. Linear Solve
+	target := &ast.ListNode{Elements: []ast.Node{&ast.RationalNode{Val: big.NewRat(5, 1)}, &ast.RationalNode{Val: big.NewRat(11, 1)}}}
+	sol := &ast.ListNode{Elements: []ast.Node{&ast.RationalNode{Val: big.NewRat(1, 1)}, &ast.RationalNode{Val: big.NewRat(2, 1)}}}
+	solveCert := NewLinearSolveCertificate(matA, sol, target, &ast.RationalNode{Val: big.NewRat(0, 1)}, true, "Linear solve certified")
+
+	// 3. Pell equation
+	dNode := &ast.RationalNode{Val: big.NewRat(2, 1)}
+	xNode := &ast.RationalNode{Val: big.NewRat(3, 1)}
+	yNode := &ast.RationalNode{Val: big.NewRat(2, 1)}
+	pellCert := NewPellCertificate(dNode, xNode, yNode, &ast.RationalNode{Val: big.NewRat(0, 1)}, true, "Pell certified")
+
+	// 4. Polynomial Root
+	poly, _ := Parse("x^2 - 2")
+	root, _ := Parse("sqrt(2)")
+	rootCert := NewPolynomialRootCertificate(poly, "x", root, &ast.RationalNode{Val: big.NewRat(0, 1)}, true, "Root certified")
+
+	certs := []Certificate{snfCert, solveCert, pellCert, rootCert}
+
+	for i, c := range certs {
+		trace, err := ConvertCertificateToProofTrace(c)
+		if err != nil {
+			t.Fatalf("[%d] ConvertCertificateToProofTrace failed: %v", i, err)
+		}
+		path := filepath.Join(tempDir, fmt.Sprintf("cert_%d.json", i))
+		if err := SaveProofTraceJSON(trace, path); err != nil {
+			t.Fatalf("[%d] SaveProofTraceJSON failed: %v", i, err)
+		}
+		loaded, err := LoadProofTraceFromJSON(path)
+		if err != nil {
+			t.Fatalf("[%d] LoadProofTraceFromJSON failed: %v", i, err)
+		}
+		if loaded.StepCount() != 1 {
+			t.Errorf("[%d] expected 1 step after roundtrip, got %d", i, loaded.StepCount())
+		}
+		if !loaded.Steps[0].IsSelfVerified {
+			t.Errorf("[%d] expected step to remain self-verified", i)
+		}
+	}
+}
+
 
 

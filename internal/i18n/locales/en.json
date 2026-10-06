@@ -804,6 +804,28 @@
     "err_gcd_not_linear": "primitive_element error: field GCD did not yield a linear factor for generator recovery",
     "trace_primitive_found": "Primitive element found: theta = %s + %d*%s with minimal polynomial: %s",
     "trace_collapse_step": "Collapsing algebraic extensions: Q(%s, %s) -> Q(%s)"
+  },
+  "proof_trace": {
+    "rule_integer_relation": "Integer relation sum(c_i * alpha_i) = 0 via LLL lattice reduction",
+    "rule_elliptic_addition": "Elliptic curve point addition P1 + P2 = Sum via chord-and-tangent",
+    "rule_primitive_element": "Simple extension isomorphism Q(alpha, beta) =~ Q(theta)",
+    "rule_smith_normal_form": "Diagonal invariant factor decomposition U * A * V = D",
+    "rule_hermite_normal_form": "Row-echelon triangular canonical form U * A = H",
+    "rule_linear_diophantine": "Particular solution satisfying a*x + b*y = c",
+    "rule_matrix_inversion": "Multiplicative inverse satisfying A * A^-1 = I",
+    "rule_matrix_decomposition": "Matrix decomposition into factors: %s",
+    "rule_linear_solve": "Vector solution satisfying A * x = b",
+    "rule_wu_geometric": "Geometric proposition mechanically verified via characteristic set pseudo-division",
+    "rule_pell_solve": "Fundamental solution satisfying x^2 - %s*y^2 = 1",
+    "rule_polynomial_root": "Root %s satisfying P(%s) = 0",
+    "rule_indefinite_integration": "Antiderivative of %s with respect to %s",
+    "err_nil_certificate": "cannot convert nil certificate",
+    "err_nil_verification_certificate": "cannot convert nil verification certificate",
+    "err_serialize_nil_proof_trace": "cannot serialize nil ProofTrace to JSON",
+    "err_invalid_certificate_json": "invalid certificate JSON: %s",
+    "err_nil_proof_trace": "cannot verify nil proof trace",
+    "err_no_residual_or_endpoints": "step %d (%s) has no residual or endpoints to verify",
+    "err_residual_does_not_vanish": "step %d (%s) failed self-verification: residual does not vanish"
   }
 }
 
