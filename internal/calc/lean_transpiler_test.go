@@ -436,3 +436,151 @@ func TestTranspileCertificateIRToLean_SNF_and_HNF(t *testing.T) {
 	}
 }
 
+func TestProofTraceToLeanCalc_Basic(t *testing.T) {
+	x := NewVar("x")
+	two := mustRational(2, 1)
+	x2 := &PowNode{Base: x, Exp: two}
+	minusOne := mustRational(-1, 1)
+	e0 := &AddNode{Terms: []Node{x2, minusOne}} // x^2 - 1
+
+	one := mustRational(1, 1)
+	one2 := &PowNode{Base: one, Exp: two}
+	negOne2, _ := simplifyUnaryOp("-", one2)
+	e1 := &AddNode{Terms: []Node{x2, negOne2}} // x^2 - 1^2
+
+	factor1 := &AddNode{Terms: []Node{x, minusOne}} // x - 1
+	factor2 := &AddNode{Terms: []Node{x, one}}      // x + 1
+	e2 := &MulNode{Factors: []Node{factor1, factor2}} // (x - 1)*(x + 1)
+
+	trace := NewProofTrace(e0, e2)
+	trace.AddStep(ProofStep{
+		Before: e0,
+		After:  e1,
+		Rule:   "RewritePower",
+	})
+	trace.AddStep(ProofStep{
+		Before: e1,
+		After:  e2,
+		Rule:   "DifferenceOfSquares",
+	})
+
+	calcStr, err := ProofTraceToLeanCalc(trace)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !strings.HasPrefix(calcStr, "calc\n") {
+		t.Errorf("expected calc block to start with 'calc\n', got: %s", calcStr)
+	}
+	if !strings.Contains(calcStr, "  (x ^ 2 - 1) = (x ^ 2 + (-1) * 1) := by ring") {
+		t.Errorf("missing first step in calc block: %s", calcStr)
+	}
+	if !strings.Contains(calcStr, "  _ = ((x - 1) * (x + 1)) := by ring") {
+		t.Errorf("missing second transitivity step in calc block: %s", calcStr)
+	}
+}
+
+func TestProofTraceToLeanCalc_NilAndEmpty(t *testing.T) {
+	_, err := ProofTraceToLeanCalc(nil)
+	if err == nil {
+		t.Error("expected error for nil trace, got nil")
+	}
+
+	// Empty trace without original/result
+	emptyTrace := &ProofTrace{}
+	_, err = ProofTraceToLeanCalc(emptyTrace)
+	if err == nil {
+		t.Error("expected error for completely empty trace, got nil")
+	}
+
+	// Trace with Original and Result but no steps (single-hop fallback)
+	x := NewVar("x")
+	singleTrace := NewProofTrace(x, x)
+	singleCalc, err := ProofTraceToLeanCalc(singleTrace)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(singleCalc, "calc\n  x = x := by ring") {
+		t.Errorf("unexpected single-hop calc block: %s", singleCalc)
+	}
+}
+
+func TestGenerateLeanSourceFromTrace(t *testing.T) {
+	x := NewVar("x")
+	two := mustRational(2, 1)
+	x2 := &PowNode{Base: x, Exp: two}
+	minusOne := mustRational(-1, 1)
+	e0 := &AddNode{Terms: []Node{x2, minusOne}} // x^2 - 1
+
+	one := mustRational(1, 1)
+	factor1 := &AddNode{Terms: []Node{x, minusOne}} // x - 1
+	factor2 := &AddNode{Terms: []Node{x, one}}      // x + 1
+	e1 := &MulNode{Factors: []Node{factor1, factor2}} // (x - 1)*(x + 1)
+
+	trace := NewProofTrace(e0, e1)
+	trace.AddStep(ProofStep{
+		Before: e0,
+		After:  e1,
+		Rule:   "PolynomialFactorization",
+	})
+
+	src, err := GenerateLeanSourceFromTrace("factor_calc_proof", trace)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !strings.Contains(src, "import Mathlib.Tactic.Ring") {
+		t.Errorf("missing Mathlib Ring import: %s", src)
+	}
+	if !strings.Contains(src, "variable (x : ℚ)") {
+		t.Errorf("missing variable declaration: %s", src)
+	}
+	if !strings.Contains(src, "theorem factor_calc_proof : (x ^ 2 - 1) = ((x - 1) * (x + 1)) := by") {
+		t.Errorf("missing theorem signature: %s", src)
+	}
+	if !strings.Contains(src, "  calc") {
+		t.Errorf("missing indented calc block: %s", src)
+	}
+	if !strings.Contains(src, "#print axioms factor_calc_proof") {
+		t.Errorf("missing #print axioms: %s", src)
+	}
+}
+
+func TestProofTraceToLeanCalc_FromCertificateAdapter(t *testing.T) {
+	x := NewVar("x")
+	two := mustRational(2, 1)
+	x2 := &PowNode{Base: x, Exp: two}
+	minusOne := mustRational(-1, 1)
+	lhs := &AddNode{Terms: []Node{x2, minusOne}} // x^2 - 1
+
+	one := mustRational(1, 1)
+	term1 := &AddNode{Terms: []Node{x, minusOne}} // x - 1
+	term2 := &AddNode{Terms: []Node{x, one}}      // x + 1
+	rhs := &MulNode{Factors: []Node{term1, term2}}
+
+	cert := &VerificationCertificate{
+		Domain:     DomainFactor,
+		Equation:   "x^2 - 1 = (x - 1)*(x + 1)",
+		Residual:   mustRational(0, 1),
+		IsVerified: true,
+		CertIR:     NewIdentityCertificate(IdentityKindFactor, lhs, rhs, mustRational(0, 1), true, "Factorization holds"),
+	}
+
+	trace, err := cert.ToProofTrace()
+	if err != nil {
+		t.Fatalf("failed to adapt certificate to proof trace: %v", err)
+	}
+
+	calcStr, err := ProofTraceToLeanCalc(trace)
+	if err != nil {
+		t.Fatalf("failed to generate calc from adapted trace: %v", err)
+	}
+	if !strings.Contains(calcStr, "calc\n") {
+		t.Errorf("expected calc block: %s", calcStr)
+	}
+	if !strings.Contains(calcStr, "by ring") {
+		t.Errorf("expected by ring tactic in calc block: %s", calcStr)
+	}
+}
+
+

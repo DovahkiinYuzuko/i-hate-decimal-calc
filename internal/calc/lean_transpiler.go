@@ -1326,3 +1326,195 @@ func transpileGeometricCertificateIR(c *GeometricCertificate, theoremName string
 	return b.String(), nil
 }
 
+// formatCalcTerm ensures the Lean expression is syntactically safe on either side of an equality in a calc line.
+// If it contains arithmetic operators or spaces and is not already fully enclosed in parentheses, it wraps it in (...).
+func formatCalcTerm(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return s
+	}
+	if isEnclosedInParens(s) {
+		return s
+	}
+	if strings.ContainsAny(s, "+-*/^ ") {
+		return "(" + s + ")"
+	}
+	return s
+}
+
+// selectTacticForStep chooses an appropriate Lean 4 tactic based on the proof step's rule and metadata.
+func selectTacticForStep(step ProofStep) string {
+	rule := strings.ToLower(strings.TrimSpace(step.Rule))
+	switch rule {
+	case "norm_num", "eval_num", "arithmetic":
+		return "by norm_num"
+	case "decide":
+		return "by decide"
+	case "simp":
+		return "by simp"
+	default:
+		return "by ring"
+	}
+}
+
+// ProofTraceToLeanCalc transforms a ProofTrace into a Lean 4 'calc' block.
+// It iterates through each atomic rewriting step, generating an equational transitivity chain:
+//
+//   calc
+//     (Before_0) = (After_0) := by ring
+//     _          = (After_1) := by ring
+//     _          = (After_n) := by ring
+func ProofTraceToLeanCalc(trace *ProofTrace) (string, error) {
+	if trace == nil {
+		return "", fmt.Errorf("%s", i18n.T("lean.err_prooftrace_is_nil"))
+	}
+
+	steps := trace.Steps
+	if len(steps) == 0 {
+		if trace.Original != nil && trace.Result != nil {
+			origStr, err := ToLeanSyntax(trace.Original)
+			if err != nil {
+				return "", err
+			}
+			resStr, err := ToLeanSyntax(trace.Result)
+			if err != nil {
+				return "", err
+			}
+			origStr = formatCalcTerm(origStr)
+			resStr = formatCalcTerm(resStr)
+			return fmt.Sprintf("calc\n  %s = %s := by ring", origStr, resStr), nil
+		}
+		return "", fmt.Errorf("%s", i18n.T("lean.err_prooftrace_has_no_steps"))
+	}
+
+	var lines []string
+	lines = append(lines, "calc")
+
+	for i, step := range steps {
+		tactic := selectTacticForStep(step)
+
+		if i == 0 {
+			beforeStr, err := ToLeanSyntax(step.Before)
+			if err != nil {
+				return "", err
+			}
+			afterStr, err := ToLeanSyntax(step.After)
+			if err != nil {
+				return "", err
+			}
+			beforeStr = formatCalcTerm(beforeStr)
+			afterStr = formatCalcTerm(afterStr)
+			lines = append(lines, fmt.Sprintf("  %s = %s := %s", beforeStr, afterStr, tactic))
+		} else {
+			afterStr, err := ToLeanSyntax(step.After)
+			if err != nil {
+				return "", err
+			}
+			afterStr = formatCalcTerm(afterStr)
+			lines = append(lines, fmt.Sprintf("  _ = %s := %s", afterStr, tactic))
+		}
+	}
+
+	return strings.Join(lines, "\n"), nil
+}
+
+// GenerateLeanSourceFromTrace generates a standalone, valid Lean 4 source file
+// directly from a ProofTrace, using a transitivity 'calc' block proof.
+func GenerateLeanSourceFromTrace(theoremName string, trace *ProofTrace) (string, error) {
+	if trace == nil {
+		return "", fmt.Errorf("%s", i18n.T("lean.err_prooftrace_is_nil"))
+	}
+	if strings.TrimSpace(theoremName) == "" {
+		theoremName = "ihd_certified_proof"
+	}
+
+	var allNodes []Node
+	if trace.Original != nil {
+		allNodes = append(allNodes, trace.Original)
+	}
+	if trace.Result != nil {
+		allNodes = append(allNodes, trace.Result)
+	}
+	for _, step := range trace.Steps {
+		if step.Before != nil {
+			allNodes = append(allNodes, step.Before)
+		}
+		if step.After != nil {
+			allNodes = append(allNodes, step.After)
+		}
+		if step.Residual != nil {
+			allNodes = append(allNodes, step.Residual)
+		}
+	}
+
+	vars := CollectFreeVariables(allNodes...)
+
+	calcBlock, err := ProofTraceToLeanCalc(trace)
+	if err != nil {
+		return "", err
+	}
+
+	// Determine equality signature
+	var origStr, resStr string
+	if trace.Original != nil {
+		origStr, _ = ToLeanSyntax(trace.Original)
+	} else if len(trace.Steps) > 0 && trace.Steps[0].Before != nil {
+		origStr, _ = ToLeanSyntax(trace.Steps[0].Before)
+	}
+	if trace.Result != nil {
+		resStr, _ = ToLeanSyntax(trace.Result)
+	} else if len(trace.Steps) > 0 && trace.Steps[len(trace.Steps)-1].After != nil {
+		resStr, _ = ToLeanSyntax(trace.Steps[len(trace.Steps)-1].After)
+	}
+	origStr = formatCalcTerm(origStr)
+	resStr = formatCalcTerm(resStr)
+
+	// Indent the calc block inside the theorem definition
+	calcLines := strings.Split(calcBlock, "\n")
+	var indentedCalc strings.Builder
+	for _, line := range calcLines {
+		indentedCalc.WriteString("  " + line + "\n")
+	}
+
+	theoremCode := fmt.Sprintf("theorem %s : %s = %s := by\n%s",
+		escapeLeanIdent(theoremName), origStr, resStr, strings.TrimRight(indentedCalc.String(), "\n"))
+
+	requiredImports := DetermineRequiredImports(nil, allNodes...)
+	// Ensure Ring tactic import is present for calc algebraic steps
+	hasRing := false
+	for _, imp := range requiredImports {
+		if imp == "Mathlib.Tactic.Ring" {
+			hasRing = true
+			break
+		}
+	}
+	if !hasRing {
+		requiredImports = append(requiredImports, "Mathlib.Tactic.Ring")
+		sort.Strings(requiredImports)
+	}
+
+	var b strings.Builder
+	b.WriteString("-- Automatically generated by ihd (i-hate-decimal-calc) Lean 4 Transpiler\n")
+	b.WriteString("-- Mathematical proof certificate certified with Skeptic's verification\n")
+	for _, imp := range requiredImports {
+		b.WriteString(fmt.Sprintf("import %s\n", imp))
+	}
+	b.WriteString("\n")
+
+	typeAnnot := "ℚ"
+	if containsRealNodes(allNodes...) {
+		typeAnnot = "ℝ"
+	}
+	if len(vars) > 0 {
+		b.WriteString(fmt.Sprintf("variable (%s : %s)\n\n", strings.Join(vars, " "), typeAnnot))
+	}
+
+	b.WriteString(theoremCode)
+	b.WriteString("\n\n#print axioms ")
+	b.WriteString(escapeLeanIdent(theoremName))
+	b.WriteString("\n")
+
+	return b.String(), nil
+}
+
+

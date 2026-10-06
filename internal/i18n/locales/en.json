@@ -796,6 +796,13 @@
     "err_gcd_not_linear": "primitive_element error: field GCD did not yield a linear factor for generator recovery",
     "trace_primitive_found": "Primitive element found: theta = %s + %d*%s with minimal polynomial: %s",
     "trace_collapse_step": "Collapsing algebraic extensions: Q(%s, %s) -> Q(%s)"
+  },
+  "lean": {
+    "err_cannot_convert_nil_node_to": "cannot convert nil node to Lean syntax",
+    "err_certificate_is_nil": "cannot transpile nil certificate",
+    "err_cannot_transpile_unverified_certificate": "cannot transpile unverified certificate: %s",
+    "err_prooftrace_is_nil": "cannot generate Lean calc proof from nil ProofTrace",
+    "err_prooftrace_has_no_steps": "ProofTrace has no rewriting steps or expressions to transpile"
   }
 }
 
