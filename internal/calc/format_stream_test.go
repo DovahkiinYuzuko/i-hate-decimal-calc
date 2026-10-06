@@ -152,3 +152,36 @@ func TestEvalDigitCountIntegration(t *testing.T) {
 	}
 }
 
+func TestSplitSRT(t *testing.T) {
+	// Test splitSRT across various powers of 10
+	kValues := []int{10, 50, 100, 500, 1000, 4096}
+	for _, k := range kValues {
+		tenK := getPowerOfTen(k)
+
+		// Test with x = 2 * 10^k + 12345
+		x1 := new(big.Int).Mul(big.NewInt(2), tenK)
+		x1.Add(x1, big.NewInt(12345))
+
+		wantQ1 := new(big.Int)
+		wantR1 := new(big.Int)
+		wantQ1.QuoRem(x1, tenK, wantR1)
+
+		gotQ1, gotR1 := splitSRT(x1, tenK, k)
+		if gotQ1.Cmp(wantQ1) != 0 || gotR1.Cmp(wantR1) != 0 {
+			t.Fatalf("splitSRT mismatch for x1 at k=%d:\ngot Q=%s, R=%s\nwant Q=%s, R=%s", k, gotQ1, gotR1, wantQ1, wantR1)
+		}
+
+		// Test with random large number x = 10^(2k) - 7
+		x2 := new(big.Int).Sub(getPowerOfTen(2*k), big.NewInt(7))
+		wantQ2 := new(big.Int)
+		wantR2 := new(big.Int)
+		wantQ2.QuoRem(x2, tenK, wantR2)
+
+		gotQ2, gotR2 := splitSRT(x2, tenK, k)
+		if gotQ2.Cmp(wantQ2) != 0 || gotR2.Cmp(wantR2) != 0 {
+			t.Fatalf("splitSRT mismatch for x2 at k=%d:\ngot Q=%s, R=%s\nwant Q=%s, R=%s", k, gotQ2, gotR2, wantQ2, wantR2)
+		}
+	}
+}
+
+

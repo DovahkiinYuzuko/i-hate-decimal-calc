@@ -172,6 +172,7 @@ func ParallelBatchSearch[T any, R any](items []T, searchFunc func(T) (*R, bool, 
 	var panicVal any
 	var hasPanic atomic.Bool
 
+searchLoop:
 	for _, item := range items {
 		if hasFound.Load() || hasErr.Load() || hasPanic.Load() {
 			break
@@ -179,7 +180,7 @@ func ParallelBatchSearch[T any, R any](items []T, searchFunc func(T) (*R, bool, 
 
 		select {
 		case <-ctx.Done():
-			break
+			break searchLoop
 		case sem <- struct{}{}:
 		}
 

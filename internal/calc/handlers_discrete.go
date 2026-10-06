@@ -21,6 +21,8 @@ func init() {
 	RegisterHandler("totient", handleTotient)
 	RegisterHandler("is_prime", handleIsPrime)
 	RegisterHandler("digit_count", handleDigitCount)
+	RegisterHandler("fib", handleFib)
+	RegisterHandler("fibonacci", handleFib)
 
 	// Complex representation
 	RegisterHandler("arg", handleArg)
@@ -301,4 +303,8 @@ func handlePlot(args []Node, env *Env) (Node, error) {
 
 func handleDigitCount(args []Node, env *Env) (Node, error) {
 	return EvalDigitCount(args[0])
+}
+
+func handleFib(args []Node, env *Env) (Node, error) {
+	return EvalFib(args[0])
 }
