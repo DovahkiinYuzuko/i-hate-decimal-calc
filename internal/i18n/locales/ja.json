@@ -577,9 +577,11 @@
     "err_verify_failed_to_evaluate_expression": "verify: 式の評価に失敗しました: %w"
   },
   "lean": {
-    "err_cannot_convert_nil_node_to": "nil ノードを Lean 構文に変換することはできません",
-    "err_certificate_is_nil": "証明書が nil です",
-    "err_cannot_transpile_unverified_certificate": "未検証の証明書を変換することはできません: %s"
+    "err_cannot_convert_nil_node_to": "nilノードをLean構文に変換できません",
+    "err_certificate_is_nil": "nil証明書をトランスパイルできません",
+    "err_cannot_transpile_unverified_certificate": "未検証の証明書をトランスパイルできません: %s",
+    "err_prooftrace_is_nil": "nilのProofTraceからLeanのcalc証明を生成できません",
+    "err_prooftrace_has_no_steps": "ProofTraceにトランスパイル対象の導出ステップまたは式が存在しません"
   },
   "parser": {
     "err_invalid_integer_part": "整数部が不正です: %s",
@@ -802,12 +804,5 @@
     "err_gcd_not_linear": "代数計算エラー: 拡大体上の最大公約数が生成元を復元するための1次因子になりませんでした",
     "trace_primitive_found": "原始元を検出: theta = %s + %d*%s (最小多項式: %s)",
     "trace_collapse_step": "代数拡大体の畳み込み: Q(%s, %s) -> Q(%s)"
-  },
-  "lean": {
-    "err_cannot_convert_nil_node_to": "nilノードをLean構文に変換できません",
-    "err_certificate_is_nil": "nil証明書をトランスパイルできません",
-    "err_cannot_transpile_unverified_certificate": "未検証の証明書をトランスパイルできません: %s",
-    "err_prooftrace_is_nil": "nilのProofTraceからLeanのcalc証明を生成できません",
-    "err_prooftrace_has_no_steps": "ProofTraceにトランスパイル対象の導出ステップまたは式が存在しません"
   }
 }

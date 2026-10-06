@@ -1473,7 +1473,9 @@ func GenerateLeanSourceFromTrace(theoremName string, trace *ProofTrace) (string,
 	calcLines := strings.Split(calcBlock, "\n")
 	var indentedCalc strings.Builder
 	for _, line := range calcLines {
-		indentedCalc.WriteString("  " + line + "\n")
+		indentedCalc.WriteString("  ")
+		indentedCalc.WriteString(line)
+		indentedCalc.WriteByte('\n')
 	}
 
 	theoremCode := fmt.Sprintf("theorem %s : %s = %s := by\n%s",
