@@ -961,14 +961,16 @@ func liftCADCells(projSets [][]Node, vars []string, env *Env, fsm *CadLifecycleF
 		levelPolys := projSets[level-1]
 		var nextLevelCells []*CadCell
 
-		for _, parent := range currentLevelCells {
+		cutoff := GetCadLiftingCutoff()
+		cellBatches, err := ParallelBatchMap(currentLevelCells, func(parent *CadCell) ([]*CadCell, error) {
+			localEnv := env.Clone()
 			var specializedPolys []*univariatePoly
 			for _, p := range levelPolys {
 				// Only consider polynomials containing targetVar for real root isolation in this level
 				if !containsVar(p, targetVar) {
 					continue
 				}
-				uPoly, isConst, err := specializePolyForCAD(p, vars[:level-1], parent.SamplePoint, targetVar, env)
+				uPoly, isConst, err := specializePolyForCAD(p, vars[:level-1], parent.SamplePoint, targetVar, localEnv)
 				if err != nil {
 					return nil, err
 				}
@@ -977,13 +979,14 @@ func liftCADCells(projSets [][]Node, vars []string, env *Env, fsm *CadLifecycleF
 				}
 			}
 
+			var liftedCells []*CadCell
 			if len(specializedPolys) == 0 {
 				// No roots in this cylinder: entire line is a single sector over parent
 				liftedSample := make([]Node, len(parent.SamplePoint)+1)
 				copy(liftedSample, parent.SamplePoint)
 				liftedSample[len(parent.SamplePoint)] = mustRational(0, 1)
 
-				nextLevelCells = append(nextLevelCells, &CadCell{
+				liftedCells = append(liftedCells, &CadCell{
 					Dimension:   parent.Dimension + 1,
 					SamplePoint: liftedSample,
 					IsSection:   false,
@@ -991,7 +994,7 @@ func liftCADCells(projSets [][]Node, vars []string, env *Env, fsm *CadLifecycleF
 					Parent:      parent,
 				})
 			} else {
-				stack1D, _, err := decompose1DCADInternal(specializedPolys, targetVar, env)
+				stack1D, _, err := decompose1DCADInternal(specializedPolys, targetVar, localEnv)
 				if err != nil {
 					return nil, err
 				}
@@ -1005,7 +1008,7 @@ func liftCADCells(projSets [][]Node, vars []string, env *Env, fsm *CadLifecycleF
 						dim++
 					}
 
-					nextLevelCells = append(nextLevelCells, &CadCell{
+					liftedCells = append(liftedCells, &CadCell{
 						Dimension:   dim,
 						SamplePoint: liftedSample,
 						IsSection:   c1D.IsSection,
@@ -1014,6 +1017,14 @@ func liftCADCells(projSets [][]Node, vars []string, env *Env, fsm *CadLifecycleF
 					})
 				}
 			}
+			return liftedCells, nil
+		}, cutoff)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, batch := range cellBatches {
+			nextLevelCells = append(nextLevelCells, batch...)
 		}
 
 		currentLevelCells = nextLevelCells
@@ -1023,7 +1034,9 @@ func liftCADCells(projSets [][]Node, vars []string, env *Env, fsm *CadLifecycleF
 
 	// 3. Evaluate SignVector for original polynomials on all cells
 	originalPolys := projSets[n-1]
-	for _, cell := range currentLevelCells {
+	cutoff := GetCadLiftingCutoff()
+	_, err := ParallelBatchMap(currentLevelCells, func(cell *CadCell) (struct{}, error) {
+		localEnv := env.Clone()
 		cell.SignVector = make(map[string]int)
 		for _, p := range originalPolys {
 			curr := p
@@ -1032,7 +1045,7 @@ func liftCADCells(projSets [][]Node, vars []string, env *Env, fsm *CadLifecycleF
 					curr = Substitute(curr, v, cell.SamplePoint[i])
 				}
 			}
-			val, err := EvalWithEnv(curr, env)
+			val, err := EvalWithEnv(curr, localEnv)
 			if err != nil {
 				val = curr
 			}
@@ -1043,6 +1056,10 @@ func liftCADCells(projSets [][]Node, vars []string, env *Env, fsm *CadLifecycleF
 				cell.SignVector[p.String()] = int(sign)
 			}
 		}
+		return struct{}{}, nil
+	}, cutoff)
+	if err != nil {
+		return nil, err
 	}
 
 	res := make([]CadCell, len(currentLevelCells))

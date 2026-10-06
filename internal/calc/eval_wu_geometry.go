@@ -101,22 +101,38 @@ func EvalGeoProve(args []Node, env *Env) (Node, error) {
 		rawHypotheses = []Node{args[0]}
 	}
 
-	var hypPolys []Node
-	var constNDGs []Node
+	type hypResult struct {
+		equations []Node
+		ndgs      []Node
+	}
 
-	for _, h := range rawHypotheses {
+	hypBatches, err := ParallelBatchMap(rawHypotheses, func(h Node) (hypResult, error) {
 		trans, err := TranslateGeometricPredicate(h)
 		if err != nil {
-			return nil, err
+			return hypResult{}, err
 		}
+		eqs := make([]Node, 0, len(trans.Equations))
 		for _, eq := range trans.Equations {
 			evalEq, err := Eval(expandNode(eq))
 			if err != nil {
 				evalEq = eq
 			}
-			hypPolys = append(hypPolys, evalEq)
+			eqs = append(eqs, evalEq)
 		}
-		constNDGs = append(constNDGs, trans.ConstructionNDGs...)
+		return hypResult{
+			equations: eqs,
+			ndgs:      trans.ConstructionNDGs,
+		}, nil
+	}, 4)
+	if err != nil {
+		return nil, err
+	}
+
+	var hypPolys []Node
+	var constNDGs []Node
+	for _, batch := range hypBatches {
+		hypPolys = append(hypPolys, batch.equations...)
+		constNDGs = append(constNDGs, batch.ndgs...)
 	}
 
 	// 2. Parse conclusion
