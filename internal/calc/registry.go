@@ -329,6 +329,11 @@ func init() {
 		MinArgs: 1,
 		MaxArgs: 1,
 	})
+	RegisterFunction(FunctionSpec{
+		Name:    "interval",
+		MinArgs: 1,
+		MaxArgs: 2,
+	})
 
 	// CAS / Calculus
 	RegisterFunction(FunctionSpec{

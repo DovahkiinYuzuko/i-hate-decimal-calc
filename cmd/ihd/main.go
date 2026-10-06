@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"math/big"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,6 +33,8 @@ type runOptions struct {
 	certFile      string
 	replayFile    string
 	noUpdateCheck bool
+	interval      bool
+	intervalEps   string
 }
 
 func run(args []string, in io.Reader, out, errOut io.Writer) int {
@@ -89,8 +92,20 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 			flagArgs = append(flagArgs, a)
 			continue
 		}
+		if a == "-interval-eps" || a == "--interval-eps" {
+			flagArgs = append(flagArgs, a)
+			if i+1 < len(args) {
+				i++
+				flagArgs = append(flagArgs, args[i])
+			}
+			continue
+		}
+		if strings.HasPrefix(a, "-interval-eps=") || strings.HasPrefix(a, "--interval-eps=") {
+			flagArgs = append(flagArgs, a)
+			continue
+		}
 		switch a {
-		case "-ascii", "--ascii", "-approx", "--approx", "-latex", "--latex", "-pretty", "--pretty", "-deg", "--deg", "-explain", "--explain", "-verify", "--verify", "-lean", "--lean", "-h", "--help", "-v", "--version", "-version", "--no-update-check", "-no-update-check":
+		case "-ascii", "--ascii", "-approx", "--approx", "-latex", "--latex", "-pretty", "--pretty", "-deg", "--deg", "-explain", "--explain", "-verify", "--verify", "-lean", "--lean", "-h", "--help", "-v", "--version", "-version", "--no-update-check", "-no-update-check", "-i", "--i", "-interval", "--interval":
 			flagArgs = append(flagArgs, a)
 		default:
 			exprArgs = append(exprArgs, a)
@@ -128,6 +143,9 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 	replayFlag := fs.String("replay", "", i18n.T("cli.flag_replay"))
 	leanFlag := fs.Bool("lean", false, i18n.T("cli.flag_lean"))
 	leanFileFlag := fs.String("lean-file", "", i18n.T("cli.flag_lean_file"))
+	intervalFlag := fs.Bool("interval", false, i18n.T("cli.flag_interval"))
+	fs.BoolVar(intervalFlag, "i", false, i18n.T("cli.flag_interval"))
+	intervalEpsFlag := fs.String("interval-eps", "", i18n.T("cli.flag_interval"))
 	versionFlag := fs.Bool("version", false, i18n.T("cli.flag_version"))
 	fs.BoolVar(versionFlag, "v", false, i18n.T("cli.flag_version"))
 	noUpdateCheckFlag := fs.Bool("no-update-check", false, i18n.T("cli.flag_no_update_check"))
@@ -177,6 +195,8 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 		lean:          *leanFlag,
 		leanFile:      *leanFileFlag,
 		noUpdateCheck: *noUpdateCheckFlag,
+		interval:      *intervalFlag,
+		intervalEps:   *intervalEpsFlag,
 	}
 
 	if ro.replayFile != "" {
@@ -264,6 +284,21 @@ func isTerminal(r io.Reader) bool {
 
 
 func formatOutput(node calc.Node, ro runOptions) string {
+	if ro.interval {
+		eps := big.NewRat(1, 1000000)
+		if ro.intervalEps != "" {
+			if parsed, ok := new(big.Rat).SetString(ro.intervalEps); ok && parsed.Sign() > 0 {
+				eps = parsed
+			}
+		}
+		interval, err := calc.AdaptiveRefineInterval(node, eps, 100)
+		if err == nil {
+			intNode := calc.NewIntervalNode(interval.Low, interval.High)
+			decEnclosure := calc.FormatDecimalEnclosure(interval, 6)
+			return fmt.Sprintf("%s ~ %s", intNode.String(), decEnclosure)
+		}
+	}
+
 	if ro.latex {
 		return calc.FormatLaTeX(node)
 	}
@@ -282,6 +317,22 @@ func formatOutput(node calc.Node, ro runOptions) string {
 }
 
 func outputNode(out io.Writer, node calc.Node, ro runOptions) error {
+	if ro.interval {
+		eps := big.NewRat(1, 1000000)
+		if ro.intervalEps != "" {
+			if parsed, ok := new(big.Rat).SetString(ro.intervalEps); ok && parsed.Sign() > 0 {
+				eps = parsed
+			}
+		}
+		interval, err := calc.AdaptiveRefineInterval(node, eps, 100)
+		if err == nil {
+			intNode := calc.NewIntervalNode(interval.Low, interval.High)
+			decEnclosure := calc.FormatDecimalEnclosure(interval, 6)
+			_, err = fmt.Fprintf(out, "%s ~ %s\n", intNode.String(), decEnclosure)
+			return err
+		}
+	}
+
 	if ro.latex {
 		_, err := fmt.Fprintln(out, calc.FormatLaTeX(node))
 		return err

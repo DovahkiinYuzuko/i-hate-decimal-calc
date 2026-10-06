@@ -57,6 +57,32 @@ func TestCLI_OneShot_Approx(t *testing.T) {
 	}
 }
 
+func TestCLI_OneShot_Interval(t *testing.T) {
+	out := new(bytes.Buffer)
+	errOut := new(bytes.Buffer)
+	code := run([]string{"-i", "sqrt(2)"}, strings.NewReader(""), out, errOut)
+
+	if code != 0 {
+		t.Fatalf("expected exit code 0, got %d. stderr: %s", code, errOut.String())
+	}
+	actual := strings.TrimSpace(out.String())
+	if !strings.Contains(actual, "width:") || !strings.Contains(actual, "1.41421") {
+		t.Errorf("expected interval output with width and 1.41421, got %q", actual)
+	}
+
+	// Test with --interval and custom eps
+	out.Reset()
+	errOut.Reset()
+	code = run([]string{"--interval", "-interval-eps", "1/1000", "pi"}, strings.NewReader(""), out, errOut)
+	if code != 0 {
+		t.Fatalf("expected exit code 0, got %d. stderr: %s", code, errOut.String())
+	}
+	actualPi := strings.TrimSpace(out.String())
+	if !strings.Contains(actualPi, "3.14") {
+		t.Errorf("expected interval output with 3.14, got %q", actualPi)
+	}
+}
+
 func TestCLI_OneShot_LaTeX(t *testing.T) {
 	out := new(bytes.Buffer)
 	errOut := new(bytes.Buffer)

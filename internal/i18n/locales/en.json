@@ -26,6 +26,7 @@
     "flag_lean": "Output calculation result and verification certificate as Lean 4 formal proof code",
     "flag_lean_file": "Save Lean 4 formal proof code to specified .lean file path",
     "flag_no_update_check": "Disable checking for newer releases",
+    "flag_interval": "Evaluate expression into certified rational interval enclosure [L, R]",
     "flag_help": "Show help",
     "cert_file_saved": "Proof certificate JSON saved to: %s",
     "replay_success": "Proof certificate verified successfully: %s",
@@ -644,7 +645,12 @@
     "err_sin_expects_1_argument": "sin expects 1 argument",
     "err_cos_expects_1_argument": "cos expects 1 argument",
     "err_sqrt_expects_1_argument": "sqrt expects 1 argument",
-    "err_unsupported_node_for_interval_evaluation": "unsupported node for interval evaluation: %s"
+    "err_unsupported_node_for_interval_evaluation": "unsupported node for interval evaluation: %s",
+    "err_invalid_epsilon": "invalid epsilon tolerance for interval: %v (must be positive rational)",
+    "err_invalid_fsm_transition": "invalid interval refiner FSM transition: %s -> %s",
+    "err_max_steps_exceeded": "interval refinement reached maximum step limit (%d), precision tolerance not fully met",
+    "format_width": "%s (width: %s)",
+    "format_decimal": "[%s, %s]"
   },
   "registry": {
     "err_function": "function %s has no evaluation handler registered",

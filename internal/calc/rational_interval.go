@@ -3,6 +3,7 @@ package calc
 import (
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
@@ -434,13 +435,13 @@ func RationalBoundSqrt(x *big.Rat, steps int) (RationalInterval, error) {
 		return NewExactRationalInterval(big.NewRat(0, 1)), nil
 	}
 
-	// Precision scale: k bits of precision (clamped to [16, 128] for guaranteed linear bit complexity)
+	// Precision scale: k bits of precision (clamped to [16, 16384] for guaranteed linear bit complexity)
 	k := steps * 4
 	if k < 16 {
 		k = 16
 	}
-	if k > 128 {
-		k = 128
+	if k > 16384 {
+		k = 16384
 	}
 
 	p := x.Num()
@@ -772,3 +773,132 @@ func EvaluateRelOpWithInterval(rel *RelOpNode) (bool, bool) {
 
 	return false, false
 }
+
+// AdaptiveRefineInterval iteratively refines a RationalInterval enclosure for AST node n
+// until the interval width (High - Low) is less than or equal to epsilon.
+// Refinement is governed by IntervalRefinerFSM to guarantee safe termination and trace history.
+func AdaptiveRefineInterval(n Node, eps *big.Rat, maxSteps int) (RationalInterval, error) {
+	if eps == nil {
+		eps = big.NewRat(1, 1000000) // Default 10^-6
+	}
+	if eps.Sign() <= 0 {
+		return RationalInterval{}, fmt.Errorf("%s", i18n.T("interval.err_invalid_epsilon", eps.RatString()))
+	}
+	if maxSteps <= 0 {
+		maxSteps = 100
+	}
+
+	fsm := NewIntervalRefinerFSM(maxSteps)
+	curSteps := 10
+
+	if err := fsm.TransitionTo(IntervalStateInitialEnclosure); err != nil {
+		return RationalInterval{}, err
+	}
+
+	interval, err := EvalNodeInterval(n, curSteps)
+	if err != nil {
+		_ = fsm.TransitionTo(IntervalStateFailed)
+		return RationalInterval{}, err
+	}
+
+	for {
+		if err := fsm.TransitionTo(IntervalStateCheckingTolerance); err != nil {
+			return interval, err
+		}
+
+		width := interval.Width()
+		if width.Cmp(eps) <= 0 {
+			if err := fsm.TransitionTo(IntervalStateConverged); err != nil {
+				return interval, err
+			}
+			return interval, nil
+		}
+
+		if curSteps >= maxSteps {
+			if err := fsm.TransitionTo(IntervalStateMaxStepsReached); err != nil {
+				return interval, err
+			}
+			return interval, nil
+		}
+
+		if err := fsm.TransitionTo(IntervalStateRefining); err != nil {
+			return interval, err
+		}
+
+		nextSteps := curSteps * 2
+		if nextSteps > maxSteps {
+			nextSteps = maxSteps
+		}
+		curSteps = nextSteps
+
+		interval, err = EvalNodeInterval(n, curSteps)
+		if err != nil {
+			_ = fsm.TransitionTo(IntervalStateFailed)
+			return RationalInterval{}, err
+		}
+	}
+}
+
+// FormatDecimalEnclosure formats a RationalInterval into a guaranteed decimal interval enclosure [L_dec, R_dec]
+// by rounding the lower bound towards -infinity (Floor) and the upper bound towards +infinity (Ceil).
+// Floating-point arithmetic is completely avoided; all calculations use big.Int Euclidean division.
+func FormatDecimalEnclosure(interval RationalInterval, decimalPlaces int) string {
+	if decimalPlaces < 1 {
+		decimalPlaces = 6
+	}
+	if decimalPlaces > 100 {
+		decimalPlaces = 100
+	}
+
+	ten := big.NewInt(10)
+	scale := new(big.Int).Exp(ten, big.NewInt(int64(decimalPlaces)), nil)
+
+	formatBound := func(r *big.Rat, isUpper bool) string {
+		p := new(big.Int).Mul(r.Num(), scale)
+		q := r.Denom()
+
+		quot := new(big.Int)
+		rem := new(big.Int)
+		quot.QuoRem(p, q, rem)
+
+		// Directed outward rounding:
+		// For lower bound (floor toward -inf):
+		// If rem != 0 and r < 0, subtract 1 from quotient.
+		// For upper bound (ceil toward +inf):
+		// If rem != 0 and r > 0, add 1 to quotient.
+		if rem.Sign() != 0 {
+			if isUpper {
+				if r.Sign() > 0 {
+					quot.Add(quot, big.NewInt(1))
+				}
+			} else {
+				if r.Sign() < 0 {
+					quot.Sub(quot, big.NewInt(1))
+				}
+			}
+		}
+
+		neg := quot.Sign() < 0
+		absQuot := new(big.Int).Abs(quot)
+		s := absQuot.String()
+
+		if len(s) <= decimalPlaces {
+			s = strings.Repeat("0", decimalPlaces-len(s)+1) + s
+		}
+
+		splitIdx := len(s) - decimalPlaces
+		intPart := s[:splitIdx]
+		fracPart := s[splitIdx:]
+
+		res := intPart + "." + fracPart
+		if neg {
+			res = "-" + res
+		}
+		return res
+	}
+
+	lowStr := formatBound(interval.Low, false)
+	highStr := formatBound(interval.High, true)
+	return fmt.Sprintf("[%s, %s]", lowStr, highStr)
+}
+

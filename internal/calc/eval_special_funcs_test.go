@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"math/big"
 	"testing"
 )
 
@@ -78,3 +79,29 @@ func TestEvalSpecialFuncs(t *testing.T) {
 		})
 	}
 }
+
+func TestEvalIntervalFunc(t *testing.T) {
+	node, err := Parse("interval(sqrt(2))")
+	if err != nil {
+		t.Fatalf("Parse error: %v", err)
+	}
+
+	env := NewEnv()
+	res, err := EvalWithEnv(node, env)
+	if err != nil {
+		t.Fatalf("EvalWithEnv error: %v", err)
+	}
+
+	intervalNode, ok := res.(*IntervalNode)
+	if !ok {
+		t.Fatalf("expected *IntervalNode, got %T (%v)", res, res)
+	}
+
+	// Width <= 10^-6
+	width := new(big.Rat).Sub(intervalNode.High, intervalNode.Low)
+	eps := big.NewRat(1, 1000000)
+	if width.Cmp(eps) > 0 {
+		t.Errorf("expected width <= %s, got %s", eps.RatString(), width.RatString())
+	}
+}
+

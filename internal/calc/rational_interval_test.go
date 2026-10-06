@@ -139,3 +139,56 @@ func TestRationalInterval_RelationalEvaluation(t *testing.T) {
 		}
 	}
 }
+
+func TestAdaptiveRefineInterval(t *testing.T) {
+	// sqrt(2) with eps = 1/10^6
+	node := &SqrtNode{Radicand: mustRational(2, 1)}
+
+	eps := big.NewRat(1, 1000000)
+	interval, err := AdaptiveRefineInterval(node, eps, 60)
+	if err != nil {
+		t.Fatalf("AdaptiveRefineInterval failed: %v", err)
+	}
+
+	width := interval.Width()
+	if width.Cmp(eps) > 0 {
+		t.Errorf("expected width <= %s, got %s", eps.RatString(), width.RatString())
+	}
+
+	// Verify enclosure: Low^2 <= 2 <= High^2
+	two := big.NewRat(2, 1)
+	lowSq := new(big.Rat).Mul(interval.Low, interval.Low)
+	highSq := new(big.Rat).Mul(interval.High, interval.High)
+	if lowSq.Cmp(two) > 0 {
+		t.Errorf("low bound squared exceeds 2: %s", lowSq.RatString())
+	}
+	if highSq.Cmp(two) < 0 {
+		t.Errorf("high bound squared is below 2: %s", highSq.RatString())
+	}
+}
+
+func TestFormatDecimalEnclosure(t *testing.T) {
+	// Test 1/3: true value ~0.333333333...
+	// Directed outward rounding with 4 digits: [0.3333, 0.3334]
+	inv3 := NewExactRationalInterval(big.NewRat(1, 3))
+	s := FormatDecimalEnclosure(inv3, 4)
+	if s != "[0.3333, 0.3334]" {
+		t.Errorf("expected [0.3333, 0.3334], got %s", s)
+	}
+
+	// Test -1/3: true value ~ -0.33333333...
+	// Lower bound floor: -0.3334, Upper bound ceil: -0.3333
+	negInv3 := NewExactRationalInterval(big.NewRat(-1, 3))
+	sNeg := FormatDecimalEnclosure(negInv3, 4)
+	if sNeg != "[-0.3334, -0.3333]" {
+		t.Errorf("expected [-0.3334, -0.3333], got %s", sNeg)
+	}
+
+	// Test exact fraction 1/2: [0.50, 0.50]
+	half := NewExactRationalInterval(big.NewRat(1, 2))
+	sHalf := FormatDecimalEnclosure(half, 2)
+	if sHalf != "[0.50, 0.50]" {
+		t.Errorf("expected [0.50, 0.50], got %s", sHalf)
+	}
+}
+

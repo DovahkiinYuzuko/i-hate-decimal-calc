@@ -1,9 +1,11 @@
 package ast
 
 import (
-	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
+	"math/big"
 	"strings"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
 // -------------------------------------------------------------------------
@@ -190,4 +192,41 @@ func (n *PiecewiseNode) Equal(other Node) bool {
 	}
 	return true
 }
+
+// -------------------------------------------------------------------------
+// IntervalNode (Certified Rational Interval Enclosure [Low, High])
+// -------------------------------------------------------------------------
+
+// IntervalNode represents a certified closed interval [Low, High] subset of Q
+// with arbitrary-precision rational endpoints guaranteeing enclosure of the true value.
+type IntervalNode struct {
+	Low  *big.Rat
+	High *big.Rat
+}
+
+// NewIntervalNode creates a new IntervalNode ensuring Low <= High.
+func NewIntervalNode(low, high *big.Rat) *IntervalNode {
+	l := new(big.Rat).Set(low)
+	h := new(big.Rat).Set(high)
+	if l.Cmp(h) > 0 {
+		l, h = h, l
+	}
+	return &IntervalNode{Low: l, High: h}
+}
+
+func (n *IntervalNode) Type() NodeType { return NodeInterval }
+
+func (n *IntervalNode) String() string {
+	width := new(big.Rat).Sub(n.High, n.Low)
+	return fmt.Sprintf("[%s, %s] (width: %s)", n.Low.RatString(), n.High.RatString(), width.RatString())
+}
+
+func (n *IntervalNode) Equal(other Node) bool {
+	o, ok := other.(*IntervalNode)
+	if !ok {
+		return false
+	}
+	return n.Low.Cmp(o.Low) == 0 && n.High.Cmp(o.High) == 0
+}
+
 
