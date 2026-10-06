@@ -294,7 +294,17 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `galois_group` | `galois_group(x^3 - 2)` / `galois_group(p, x)` | Deterministic Galois group $\mathrm{Gal}(f/\mathbb{Q})$ computation for polynomials up to degree 5 over $\mathbb{Q}$ (identifies permutation group isomorphism types such as $S_n, A_n, D_n, C_n, V_4, F_{20}$ via squarefree factorization, discriminants, cubic/sextic resolvents, and Dedekind-Frobenius cycle-type positive witnesses) |
 | `is_solvable_by_radicals` | `is_solvable_by_radicals(x^5 - 4*x + 2)` | Deterministic solvability by radicals test based on the Fundamental Theorem of Galois Theory and Abel-Ruffini Theorem. Returns `true` for solvable Galois groups and `false` for non-solvable groups ($A_5, S_5$). Under `--verify`, emits an independently verifiable Abel-Ruffini Impossibility Certificate IR; under `--lean`, generates formal Lean 4 (Mathlib4) proof code |
 
+---
 
+### 15. Self-Verifying Certificates & Formal Proof Infrastructure (ProofTrace / Explain / Verify / Lean 4)
 
-
+| Feature / Option | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `ProofTrace` | Internal Data Structure | Unified Single Source of Truth holding entire derivation step sequences (Before/After nodes, applied rule, residual expression, self-verified status). Bridges educational derivations, autonomous verification, and Lean 4 formal proofs |
+| `--explain` / `explain` / `steps` | `ihd --explain "1/(sqrt(2)+1)"` | Displays educational 2D step-by-step derivation trees for algebraic rewriting (radical denesting, rationalization, factoring, differentiation rules, etc.) powered by `ProofTrace` |
+| `--verify` / `verify` | `ihd --verify "factor(x^2 - 1)"` | Autonomously checks zero algebraic residuals ($A \cdot A^{-1} - I = 0$, $P(r) = 0$, $D \cdot F' - f = 0$, etc.) based on `ProofTrace` / Certificate IR and emits non-falsifiable algebraic proof certificates |
+| `--certificate` | `ihd --certificate [file] "factor(x^2 - 1)"` | Exports computation and rewriting sequence (`ProofTrace`) into a fully standalone, self-verifying certificate JSON (`ihd-proof-trace-v1`) to stdout or file |
+| `--replay` | `ihd --replay cert.json` | Reads an exported certificate JSON and verifies mathematical validity offline via standalone residual checks without requiring external CAS solvers |
+| `--micro-verifier` | `ihd --micro-verifier > micro_verifier.go` | Emits self-contained, zero-dependency Go source code for an ultra-lightweight micro-verifier capable of independently verifying certificate JSON files |
+| `--lean` / `--lean-file` | `ihd --lean "factor(x^2 - 1)"` / `ihd --lean-file p.lean "factor(x^2 - 1)"` | Automatically transpiles computation and proof traces into formal **Lean 4 (Mathlib4)** proof theorems (`by ring`, `by ext <;> fin_cases`, `by repeat constructor <;> norm_num`, `by simp`, etc.) |
 
