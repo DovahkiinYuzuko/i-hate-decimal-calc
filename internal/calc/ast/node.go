@@ -79,6 +79,7 @@ const (
 	NodeAlgebraicNumber
 	NodeQuantifier
 	NodePiecewise
+	NodeInterval
 )
 
 // Node represents any node in the mathematical expression tree.

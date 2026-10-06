@@ -26,6 +26,7 @@
     "flag_lean": "計算結果および検証証明書をLean 4形式証明コードとして出力",
     "flag_lean_file": "Lean 4形式証明コードを指定パスの.leanファイルへ保存",
     "flag_no_update_check": "新バージョンの自動チェックを無効化",
+    "flag_interval": "式を評価し、真値を保証する有理数閉区間 [L, R] を出力",
     "flag_help": "このヘルプメッセージを表示",
     "cert_file_saved": "代数証明書JSONを保存しました: %s",
     "replay_success": "代数証明書の再検証に成功しました: %s",
@@ -644,7 +645,12 @@
     "err_sin_expects_1_argument": "sin には1つの引数が必要です",
     "err_cos_expects_1_argument": "cos には1つの引数が必要です",
     "err_sqrt_expects_1_argument": "sqrt には1つの引数が必要です",
-    "err_unsupported_node_for_interval_evaluation": "区間評価における未対応のノード型です: %s"
+    "err_unsupported_node_for_interval_evaluation": "区間評価における未対応のノード型です: %s",
+    "err_invalid_epsilon": "区間解析の目標誤差限界が無効です: %v (正の有理数である必要があります)",
+    "err_invalid_fsm_transition": "区間適応細分化FSMの不正な状態遷移です: %s -> %s",
+    "err_max_steps_exceeded": "区間細分化が最大ステップ上限 (%d) に達しました。指定された目標精度を満たしていない可能性があります",
+    "format_width": "%s (幅: %s)",
+    "format_decimal": "[%s, %s]"
   },
   "registry": {
     "err_function": "関数 %s には評価ハンドラが登録されていません",
