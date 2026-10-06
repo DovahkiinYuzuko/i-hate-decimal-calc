@@ -303,4 +303,72 @@ func TestEvalFib_PropertiesAndLarge(t *testing.T) {
 	}
 }
 
+func TestBaseConversion(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		// Integer to_base
+		{`to_base(13, 2)`, "1101"},
+		{`to_base(255, 16)`, "ff"},
+		{`to_base(-42, 10)`, "-42"},
+		{`to_base(61, 62)`, "Z"},
+		{`to_base(4031, 64)`, "@_"},
+
+		// Rational repeating expansion in to_base
+		{`to_base(1/3, 2)`, "0.(01)_2"},
+		{`to_base(1/3, 16)`, "0.(5)_16"},
+		{`to_base(1/4, 16)`, "0.4_16"},
+		{`to_base(-1/3, 2)`, "-0.(01)_2"},
+		{`to_base(1/6, 10)`, "0.1(6)_10"},
+		{`to_base(3/4, 10)`, "0.75_10"},
+
+		// from_base
+		{`from_base("1101", 2)`, "13"},
+		{`from_base("ff", 16)`, "255"},
+		{`from_base("0xff", 16)`, "255"},
+		{`from_base("0b1011", 2)`, "11"},
+		{`from_base("@_", 64)`, "4031"},
+		{`from_base("+/", 64)`, "4031"}, // RFC 4648 compatibility
+		{`from_base(-101, 2)`, "-5"},
+
+		// bin / oct / hex shortcuts
+		{`bin(13)`, "0b1101"},
+		{`bin(-5)`, "-0b101"},
+		{`oct(63)`, "0o77"},
+		{`hex(255)`, "0xff"},
+		{`hex(-255)`, "-0xff"},
+
+		// Interaction with Multi-radix Literals
+		{`0b1011 + 0x10`, "27"},
+		{`16^^ff - 2^^101`, "250"},
+		{`64^^@_`, "4031"},
+	}
+
+	for _, tc := range tests {
+		res, err := EvalString(tc.input)
+		if err != nil {
+			t.Fatalf("EvalString(%q) unexpected error: %v", tc.input, err)
+		}
+		if res.String() != tc.expected {
+			t.Errorf("EvalString(%q) = %s; want %s", tc.input, res.String(), tc.expected)
+		}
+	}
+
+	// Error handling
+	errorInputs := []string{
+		`to_base(10, 1)`,
+		`to_base(10, 65)`,
+		`from_base("xyz", 2)`,
+		`from_base("10", 65)`,
+	}
+	for _, inp := range errorInputs {
+		_, err := EvalString(inp)
+		if err == nil {
+			t.Errorf("EvalString(%q) expected error, got nil", inp)
+		}
+	}
+}
+
+
 

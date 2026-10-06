@@ -23,6 +23,11 @@ func init() {
 	RegisterHandler("digit_count", handleDigitCount)
 	RegisterHandler("fib", handleFib)
 	RegisterHandler("fibonacci", handleFib)
+	RegisterHandler("to_base", handleToBase)
+	RegisterHandler("from_base", handleFromBase)
+	RegisterHandler("bin", handleBin)
+	RegisterHandler("oct", handleOct)
+	RegisterHandler("hex", handleHex)
 
 	// Complex representation
 	RegisterHandler("arg", handleArg)
@@ -307,4 +312,24 @@ func handleDigitCount(args []Node, env *Env) (Node, error) {
 
 func handleFib(args []Node, env *Env) (Node, error) {
 	return EvalFib(args[0])
+}
+
+func handleToBase(args []Node, env *Env) (Node, error) {
+	return EvalToBase(args[0], args[1])
+}
+
+func handleFromBase(args []Node, env *Env) (Node, error) {
+	return EvalFromBase(args[0], args[1])
+}
+
+func handleBin(args []Node, env *Env) (Node, error) {
+	return EvalBin(args[0])
+}
+
+func handleOct(args []Node, env *Env) (Node, error) {
+	return EvalOct(args[0])
+}
+
+func handleHex(args []Node, env *Env) (Node, error) {
+	return EvalHex(args[0])
 }

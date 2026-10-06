@@ -185,3 +185,59 @@ func TestLexer_NotEqualAndFactorial(t *testing.T) {
 	}
 }
 
+func TestLexer_MultiRadixLiterals(t *testing.T) {
+	testCases := []struct {
+		input       string
+		expectedVal string
+	}{
+		// Binary (0b/0B)
+		{"0b1011", "11"},
+		{"0B1101", "13"},
+		{"0b0", "0"},
+
+		// Octal (0o/0O)
+		{"0o755", "493"},
+		{"0O10", "8"},
+
+		// Hexadecimal (0x/0X)
+		{"0x1f", "31"},
+		{"0xFF", "255"},
+		{"0x0", "0"},
+
+		// Mathematica base^^digits
+		{"2^^101", "5"},
+		{"8^^77", "63"},
+		{"16^^ff", "255"},
+		{"16^^FF", "255"},
+		{"36^^z", "35"},
+		{"36^^10", "36"},
+		{"62^^Z", "61"},
+		{"62^^10", "62"},
+		{"64^^@_", "4031"},
+		{"64^^10", "64"},
+	}
+
+	for _, tc := range testCases {
+		tokens, err := Tokenize(tc.input)
+		if err != nil {
+			t.Fatalf("unexpected error tokenizing %q: %v", tc.input, err)
+		}
+		if len(tokens) != 2 || tokens[0].Type != TokenNumber {
+			t.Fatalf("input %q: expected [TokenNumber, TokenEOF], got %+v", tc.input, tokens)
+		}
+		got := tokens[0].RatVal.String()
+		if got != tc.expectedVal {
+			t.Errorf("input %q: expected value %s, got %s", tc.input, tc.expectedVal, got)
+		}
+	}
+
+	// Mixed arithmetic expression
+	tokensExpr, err := Tokenize("0x10 + 0b11")
+	if err != nil {
+		t.Fatalf("unexpected error tokenizing '0x10 + 0b11': %v", err)
+	}
+	if len(tokensExpr) != 4 || tokensExpr[0].RatVal.String() != "16" || tokensExpr[2].RatVal.String() != "3" {
+		t.Fatalf("unexpected tokens for '0x10 + 0b11': %+v", tokensExpr)
+	}
+}
+

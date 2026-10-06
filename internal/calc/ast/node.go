@@ -80,6 +80,7 @@ const (
 	NodeQuantifier
 	NodePiecewise
 	NodeInterval
+	NodeString
 )
 
 // Node represents any node in the mathematical expression tree.

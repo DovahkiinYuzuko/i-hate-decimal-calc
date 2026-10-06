@@ -200,6 +200,9 @@ func EvalWithEnv(n Node, env *Env) (Node, error) {
 	case *PiecewiseNode:
 		return NormalizePiecewise(v, env)
 
+	case *StringNode, *PlotNode, *IntervalNode:
+		return v, nil
+
 	default:
 		return nil, fmt.Errorf("%s", i18n.T("errors.err_unknown_node_type_for_evaluation", n))
 	}

@@ -229,4 +229,27 @@ func (n *IntervalNode) Equal(other Node) bool {
 	return n.Low.Cmp(o.Low) == 0 && n.High.Cmp(o.High) == 0
 }
 
+// -------------------------------------------------------------------------
+// StringNode (Arbitrary Base String / Text Literal)
+// -------------------------------------------------------------------------
+
+// StringNode represents a string value such as a base conversion representation or string literal.
+type StringNode struct {
+	Value string
+}
+
+// NewStringNode creates a new StringNode.
+func NewStringNode(val string) *StringNode {
+	return &StringNode{Value: val}
+}
+
+func (n *StringNode) Type() NodeType { return NodeString }
+func (n *StringNode) String() string { return n.Value }
+func (n *StringNode) Equal(other Node) bool {
+	if o, ok := other.(*StringNode); ok {
+		return n.Value == o.Value
+	}
+	return false
+}
+
 
