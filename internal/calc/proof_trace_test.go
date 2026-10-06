@@ -2,6 +2,7 @@ package calc
 
 import (
 	"math/big"
+	"path/filepath"
 	"testing"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc/ast"
@@ -220,4 +221,78 @@ func TestProofTrace_RenderExplain(t *testing.T) {
 func containsSubstr(s, sub string) bool {
 	return len(s) >= len(sub) && (s == sub || len(sub) == 0 || (len(s) > 0 && len(sub) > 0 && (s[:len(sub)] == sub || containsSubstr(s[1:], sub))))
 }
+
+func TestProofTrace_JSONSerialization(t *testing.T) {
+	orig, _ := Parse("x^2 - 1")
+	res, _ := Parse("(x - 1)*(x + 1)")
+
+	trace := NewProofTrace(orig, res)
+	trace.AddStep(ProofStep{
+		Before:          orig,
+		After:           res,
+		Rule:            "Factorization",
+		RuleDescription: "Difference of squares",
+		Residual:        &ast.RationalNode{Val: big.NewRat(0, 1)},
+		IsSelfVerified:  true,
+	})
+
+	jsonData, err := trace.ToJSON()
+	if err != nil {
+		t.Fatalf("ToJSON failed: %v", err)
+	}
+
+	jsonStr := string(jsonData)
+	if !containsSubstr(jsonStr, "\"version\": \"1.0\"") {
+		t.Errorf("expected version 1.0, got: %s", jsonStr)
+	}
+	if !containsSubstr(jsonStr, "\"is_verified\": true") {
+		t.Errorf("expected is_verified true, got: %s", jsonStr)
+	}
+	if !containsSubstr(jsonStr, "Factorization") {
+		t.Errorf("expected rule Factorization, got: %s", jsonStr)
+	}
+}
+
+func TestProofTrace_SaveAndLoadJSON(t *testing.T) {
+	tempDir := t.TempDir()
+	certPath := filepath.Join(tempDir, "test_cert.json")
+
+	orig, _ := Parse("x^2 - 1")
+	res, _ := Parse("(x - 1)*(x + 1)")
+
+	trace := NewProofTrace(orig, res)
+	trace.Metadata["domain"] = "algebra"
+	trace.AddStep(ProofStep{
+		Before:          orig,
+		After:           res,
+		Rule:            "Factorization",
+		RuleDescription: "Difference of squares",
+		Residual:        &ast.RationalNode{Val: big.NewRat(0, 1)},
+		IsSelfVerified:  true,
+	})
+
+	if err := SaveProofTraceJSON(trace, certPath); err != nil {
+		t.Fatalf("SaveProofTraceJSON failed: %v", err)
+	}
+
+	loadedTrace, err := LoadProofTraceFromJSON(certPath)
+	if err != nil {
+		t.Fatalf("LoadProofTraceFromJSON failed: %v", err)
+	}
+
+	if loadedTrace.StepCount() != 1 {
+		t.Fatalf("expected 1 step, got %d", loadedTrace.StepCount())
+	}
+	if loadedTrace.Metadata["domain"] != "algebra" {
+		t.Errorf("expected metadata domain 'algebra', got %s", loadedTrace.Metadata["domain"])
+	}
+	step := loadedTrace.Steps[0]
+	if step.Rule != "Factorization" {
+		t.Errorf("expected rule Factorization, got %s", step.Rule)
+	}
+	if !step.IsSelfVerified {
+		t.Errorf("expected IsSelfVerified true")
+	}
+}
+
 

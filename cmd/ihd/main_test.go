@@ -557,6 +557,30 @@ func TestCLI_LeanAndLeanFile(t *testing.T) {
 	}
 }
 
+func TestCLI_CertificateAndReplay(t *testing.T) {
+	tempDir := t.TempDir()
+	certFile := filepath.Join(tempDir, "factor_cert.json")
 
+	// 1. Generate certificate via CLI
+	var out, errOut bytes.Buffer
+	code := run([]string{"--certificate", certFile, "factor(x^2 - 1)"}, strings.NewReader(""), &out, &errOut)
+	if code != 0 {
+		t.Fatalf("expected exit code 0, got %d, err: %s", code, errOut.String())
+	}
 
+	if _, err := os.Stat(certFile); os.IsNotExist(err) {
+		t.Fatalf("expected certificate file to be created at %s", certFile)
+	}
 
+	// 2. Replay certificate via CLI
+	var outReplay, errOutReplay bytes.Buffer
+	replayCode := run([]string{"--replay", certFile}, strings.NewReader(""), &outReplay, &errOutReplay)
+	if replayCode != 0 {
+		t.Fatalf("expected replay exit code 0, got %d, err: %s", replayCode, errOutReplay.String())
+	}
+
+	replayOutput := outReplay.String()
+	if !strings.Contains(replayOutput, certFile) {
+		t.Errorf("expected replay output to reference cert file, got: %s", replayOutput)
+	}
+}

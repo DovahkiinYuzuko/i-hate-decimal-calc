@@ -29,6 +29,8 @@ type runOptions struct {
 	verify        bool
 	lean          bool
 	leanFile      string
+	certFile      string
+	replayFile    string
 	noUpdateCheck bool
 }
 
@@ -60,6 +62,30 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 			continue
 		}
 		if strings.HasPrefix(a, "-lean-file=") || strings.HasPrefix(a, "--lean-file=") {
+			flagArgs = append(flagArgs, a)
+			continue
+		}
+		if a == "-certificate" || a == "--certificate" {
+			flagArgs = append(flagArgs, a)
+			if i+1 < len(args) {
+				i++
+				flagArgs = append(flagArgs, args[i])
+			}
+			continue
+		}
+		if strings.HasPrefix(a, "-certificate=") || strings.HasPrefix(a, "--certificate=") {
+			flagArgs = append(flagArgs, a)
+			continue
+		}
+		if a == "-replay" || a == "--replay" {
+			flagArgs = append(flagArgs, a)
+			if i+1 < len(args) {
+				i++
+				flagArgs = append(flagArgs, args[i])
+			}
+			continue
+		}
+		if strings.HasPrefix(a, "-replay=") || strings.HasPrefix(a, "--replay=") {
 			flagArgs = append(flagArgs, a)
 			continue
 		}
@@ -98,6 +124,8 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 	degFlag := fs.Bool("deg", false, i18n.T("cli.flag_deg"))
 	explainFlag := fs.Bool("explain", false, i18n.T("cli.flag_explain"))
 	verifyFlag := fs.Bool("verify", false, i18n.T("cli.flag_verify"))
+	certificateFlag := fs.String("certificate", "", i18n.T("cli.flag_certificate"))
+	replayFlag := fs.String("replay", "", i18n.T("cli.flag_replay"))
 	leanFlag := fs.Bool("lean", false, i18n.T("cli.flag_lean"))
 	leanFileFlag := fs.String("lean-file", "", i18n.T("cli.flag_lean_file"))
 	versionFlag := fs.Bool("version", false, i18n.T("cli.flag_version"))
@@ -144,9 +172,15 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 		deg:           *degFlag,
 		explain:       *explainFlag,
 		verify:        *verifyFlag,
+		certFile:      *certificateFlag,
+		replayFile:    *replayFlag,
 		lean:          *leanFlag,
 		leanFile:      *leanFileFlag,
 		noUpdateCheck: *noUpdateCheckFlag,
+	}
+
+	if ro.replayFile != "" {
+		return replayCertificate(ro.replayFile, out, errOut)
 	}
 
 	// In non-interactive modes (one-shot, script, or pipe), notify via errOut if an update
@@ -356,6 +390,19 @@ func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut 
 				}
 			}
 		}
+		if ro.certFile != "" {
+			cert, _ := calc.VerifyComputation(v.Value, evaled, env)
+			if cert != nil {
+				trace, err := calc.ConvertVerificationCertificateToProofTrace(cert)
+				if err == nil && trace != nil {
+					if err := calc.SaveProofTraceJSON(trace, ro.certFile); err != nil {
+						fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), fmt.Sprintf(i18n.T("cli.err_write_file"), ro.certFile, err))
+					} else {
+						fmt.Fprintln(out, fmt.Sprintf(i18n.T("cli.cert_file_saved"), ro.certFile))
+					}
+				}
+			}
+		}
 		return nil
 
 	case calc.Node:
@@ -399,6 +446,19 @@ func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut 
 						} else {
 							fmt.Fprintln(out, fmt.Sprintf(i18n.T("cli.lean_file_saved"), ro.leanFile))
 						}
+					}
+				}
+			}
+		}
+		if ro.certFile != "" {
+			cert, _ := calc.VerifyComputation(v, evaled, env)
+			if cert != nil {
+				trace, err := calc.ConvertVerificationCertificateToProofTrace(cert)
+				if err == nil && trace != nil {
+					if err := calc.SaveProofTraceJSON(trace, ro.certFile); err != nil {
+						fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), fmt.Sprintf(i18n.T("cli.err_write_file"), ro.certFile, err))
+					} else {
+						fmt.Fprintln(out, fmt.Sprintf(i18n.T("cli.cert_file_saved"), ro.certFile))
 					}
 				}
 			}
@@ -598,4 +658,26 @@ func saveLeanProofFile(path, code string) error {
 		}
 	}
 	return os.WriteFile(path, []byte(code), 0644)
+}
+
+func replayCertificate(certPath string, out, errOut io.Writer) int {
+	trace, err := calc.LoadProofTraceFromJSON(certPath)
+	if err != nil {
+		fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), fmt.Sprintf(i18n.T("cli.err_replay_read"), certPath, err))
+		return 1
+	}
+
+	env := calc.NewEnv()
+	verified, err := calc.VerifyProofTrace(trace, env)
+	if err != nil || !verified {
+		fmt.Fprintf(errOut, "%s\n", fmt.Sprintf(i18n.T("cli.replay_failure"), certPath))
+		if err != nil {
+			fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
+		}
+		return 1
+	}
+
+	fmt.Fprintln(out, fmt.Sprintf(i18n.T("cli.replay_success"), certPath))
+	fmt.Fprint(out, trace.RenderExplain(i18n.CurrentLocale()))
+	return 0
 }

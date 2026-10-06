@@ -1,7 +1,10 @@
 package calc
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc/ast"
@@ -420,4 +423,168 @@ func (t *ProofTrace) RenderExplain(lang string) string {
 	b.WriteString(fmt.Sprintf("    = %s\n", resStr))
 
 	return b.String()
+}
+
+// ProofStepJSON represents a single rewritten step in standalone JSON schema.
+type ProofStepJSON struct {
+	StepNumber      int    `json:"step_number"`
+	Before          string `json:"before"`
+	After           string `json:"after"`
+	Rule            string `json:"rule"`
+	RuleDescription string `json:"rule_description,omitempty"`
+	Residual        string `json:"residual,omitempty"`
+	IsSelfVerified  bool   `json:"is_self_verified"`
+}
+
+// ProofTraceJSON represents the full serialized algebraic certificate.
+type ProofTraceJSON struct {
+	Version    string            `json:"version"`
+	Original   string            `json:"original"`
+	Result     string            `json:"result"`
+	IsVerified bool              `json:"is_verified"`
+	TotalSteps int               `json:"total_steps"`
+	Steps      []ProofStepJSON   `json:"steps"`
+	Metadata   map[string]string `json:"metadata,omitempty"`
+}
+
+// ToJSON serializes the ProofTrace into indented JSON bytes.
+func (t *ProofTrace) ToJSON() ([]byte, error) {
+	if t == nil {
+		return nil, fmt.Errorf("cannot serialize nil ProofTrace to JSON")
+	}
+
+	origStr := ""
+	if t.Original != nil {
+		origStr = Format(t.Original)
+	}
+	resStr := ""
+	if t.Result != nil {
+		resStr = Format(t.Result)
+	}
+
+	allVerified := true
+	if len(t.Steps) == 0 {
+		allVerified = false
+	}
+
+	stepsJSON := make([]ProofStepJSON, 0, len(t.Steps))
+	for i, s := range t.Steps {
+		if !s.IsSelfVerified {
+			allVerified = false
+		}
+		beforeStr := ""
+		if s.Before != nil {
+			beforeStr = Format(s.Before)
+		}
+		afterStr := ""
+		if s.After != nil {
+			afterStr = Format(s.After)
+		}
+		residualStr := ""
+		if s.Residual != nil {
+			residualStr = Format(s.Residual)
+		}
+		stepsJSON = append(stepsJSON, ProofStepJSON{
+			StepNumber:      i + 1,
+			Before:          beforeStr,
+			After:           afterStr,
+			Rule:            s.Rule,
+			RuleDescription: s.RuleDescription,
+			Residual:        residualStr,
+			IsSelfVerified:  s.IsSelfVerified,
+		})
+	}
+
+	ptJSON := ProofTraceJSON{
+		Version:    "1.0",
+		Original:   origStr,
+		Result:     resStr,
+		IsVerified: allVerified,
+		TotalSteps: len(t.Steps),
+		Steps:      stepsJSON,
+		Metadata:   t.Metadata,
+	}
+
+	return json.MarshalIndent(ptJSON, "", "  ")
+}
+
+// SaveProofTraceJSON writes the ProofTrace as a JSON file to the specified filePath.
+func SaveProofTraceJSON(trace *ProofTrace, filePath string) error {
+	data, err := trace.ToJSON()
+	if err != nil {
+		return err
+	}
+	dir := filepath.Dir(filePath)
+	if dir != "" && dir != "." {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return err
+		}
+	}
+	return os.WriteFile(filePath, data, 0644)
+}
+
+// LoadProofTraceFromJSON loads a ProofTrace from a JSON certificate file.
+func LoadProofTraceFromJSON(filePath string) (*ProofTrace, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	var ptJSON ProofTraceJSON
+	if err := json.Unmarshal(data, &ptJSON); err != nil {
+		return nil, fmt.Errorf("invalid certificate JSON: %w", err)
+	}
+
+	var origNode ast.Node
+	if ptJSON.Original != "" {
+		parsed, err := Parse(ptJSON.Original)
+		if err == nil {
+			origNode = parsed
+		}
+	}
+
+	var resNode ast.Node
+	if ptJSON.Result != "" {
+		parsed, err := Parse(ptJSON.Result)
+		if err == nil {
+			resNode = parsed
+		}
+	}
+
+	trace := NewProofTrace(origNode, resNode)
+	if ptJSON.Metadata != nil {
+		trace.Metadata = ptJSON.Metadata
+	}
+
+	for _, sj := range ptJSON.Steps {
+		var beforeNode ast.Node
+		if sj.Before != "" {
+			if b, err := Parse(sj.Before); err == nil {
+				beforeNode = b
+			}
+		}
+		var afterNode ast.Node
+		if sj.After != "" {
+			if a, err := Parse(sj.After); err == nil {
+				afterNode = a
+			}
+		}
+		var residualNode ast.Node
+		if sj.Residual != "" {
+			if r, err := Parse(sj.Residual); err == nil {
+				residualNode = r
+			}
+		}
+
+		trace.AddStep(ProofStep{
+			Before:          beforeNode,
+			After:           afterNode,
+			Rule:            sj.Rule,
+			RuleDescription: sj.RuleDescription,
+			Residual:        residualNode,
+			IsSelfVerified:  sj.IsSelfVerified,
+		})
+	}
+
+	return trace, nil
 }
