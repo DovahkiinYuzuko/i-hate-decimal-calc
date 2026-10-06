@@ -3,7 +3,10 @@ package galois
 import (
 	"fmt"
 	"math/big"
+	"runtime"
 	"strings"
+	"sync"
+	"sync/atomic"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
@@ -147,19 +150,7 @@ func identifyDegree4(coeffs []*big.Int, polyStr string) (*GaloisIdentificationRe
 		// Distinguish D_4 vs C_4.
 		// D_4 contains transpositions and double-transpositions (2+1+1).
 		// Fast-path via unramified primes:
-		hasTransposition := false
-		goodPrimes := []int64{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37}
-		for _, p := range goodPrimes {
-			pBig := big.NewInt(p)
-			if new(big.Int).Mod(disc, pBig).Sign() == 0 {
-				continue // Skip ramified primes
-			}
-			part := factorModP(coeffs, p)
-			if len(part) == 3 && part[0] == 2 && part[1] == 1 && part[2] == 1 {
-				hasTransposition = true
-				break
-			}
-		}
+		hasTransposition := scanTranspositionParallelDegree4(coeffs, disc)
 
 		if hasTransposition {
 			g = StandardD4()
@@ -194,73 +185,9 @@ func identifyDegree5(coeffs []*big.Int, polyStr string) (*GaloisIdentificationRe
 	disc := SylvesterDiscriminantQuintic(a4, a3, a2, a1, a0)
 	isSq := IsSquareInt(disc)
 
-	// Step 1: Dedekind-Frobenius Fast Path over unramified primes
-	// Positive witnesses:
-	// - cycle type [2, 1, 1, 1] => S5 immediately!
-	// - cycle type [3, 2] => S5 immediately!
-	// - cycle type [3, 1, 1] => A5 if disc is square, S5 if disc is not square!
-	goodPrimes := []int64{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199}
-	for _, p := range goodPrimes {
-		pBig := big.NewInt(p)
-		if new(big.Int).Mod(disc, pBig).Sign() == 0 {
-			continue // Skip ramified primes
-		}
-		part := factorModP(coeffs, p)
-		if len(part) == 4 && part[0] == 2 && part[1] == 1 && part[2] == 1 && part[3] == 1 {
-			// Transposition found!
-			g := StandardS5()
-			witness := fmt.Sprintf("Certified transposition (2, 1, 1, 1) modulo prime %d => Gal = S5 (order 120, non-solvable by Abel-Ruffini)", p)
-			return &GaloisIdentificationResult{
-				PolynomialStr:       polyStr,
-				Degree:              5,
-				Group:               g,
-				Discriminant:        disc,
-				DiscriminantIsSquare: false,
-				IsSolvable:          false,
-				ProofWitness:        witness,
-			}, nil
-		}
-		if len(part) == 2 && part[0] == 3 && part[1] == 2 {
-			// (3, 2) is an odd permutation => S5!
-			g := StandardS5()
-			witness := fmt.Sprintf("Certified cycle type (3, 2) modulo prime %d => Gal = S5 (order 120, non-solvable by Abel-Ruffini)", p)
-			return &GaloisIdentificationResult{
-				PolynomialStr:       polyStr,
-				Degree:              5,
-				Group:               g,
-				Discriminant:        disc,
-				DiscriminantIsSquare: false,
-				IsSolvable:          false,
-				ProofWitness:        witness,
-			}, nil
-		}
-		if len(part) == 3 && part[0] == 3 && part[1] == 1 && part[2] == 1 {
-			if isSq {
-				g := StandardA5()
-				witness := fmt.Sprintf("Certified 3-cycle modulo prime %d with square discriminant => Gal = A5 (order 60, non-solvable by Abel-Ruffini)", p)
-				return &GaloisIdentificationResult{
-					PolynomialStr:       polyStr,
-					Degree:              5,
-					Group:               g,
-					Discriminant:        disc,
-					DiscriminantIsSquare: true,
-					IsSolvable:          false,
-					ProofWitness:        witness,
-				}, nil
-			} else {
-				g := StandardS5()
-				witness := fmt.Sprintf("Certified 3-cycle modulo prime %d with non-square discriminant => Gal = S5 (order 120, non-solvable)", p)
-				return &GaloisIdentificationResult{
-					PolynomialStr:       polyStr,
-					Degree:              5,
-					Group:               g,
-					Discriminant:        disc,
-					DiscriminantIsSquare: false,
-					IsSolvable:          false,
-					ProofWitness:        witness,
-				}, nil
-			}
-		}
+	// Step 1: Dedekind-Frobenius Fast Path over unramified primes (Parallel Early-Exit Scan)
+	if earlyRes := scanPrimesParallelDegree5(coeffs, disc, isSq, polyStr); earlyRes != nil {
+		return earlyRes, nil
 	}
 
 	// Step 2: Resolvent Analysis (Dummit's Sextic Resolvent)
@@ -301,18 +228,7 @@ func identifyDegree5(coeffs []*big.Int, polyStr string) (*GaloisIdentificationRe
 		} else {
 			// Square discriminant solvable quintic: D5 or C5
 			// For D5, mod-p factorization shows double transpositions (2, 2, 1)
-			hasDoubleTrans := false
-			for _, p := range goodPrimes {
-				pBig := big.NewInt(p)
-				if new(big.Int).Mod(disc, pBig).Sign() == 0 {
-					continue
-				}
-				part := factorModP(coeffs, p)
-				if len(part) == 3 && part[0] == 2 && part[1] == 2 && part[2] == 1 {
-					hasDoubleTrans = true
-					break
-				}
-			}
+			hasDoubleTrans := scanDoubleTranspositionParallelDegree5(coeffs, disc)
 			if hasDoubleTrans {
 				g = StandardD5()
 				witness = "Dummit sextic has rational root, square discriminant, and (2,2,1) witness => Gal = D5 (order 10, dihedral, solvable)"
@@ -573,3 +489,230 @@ func formatPolyString(coeffs []*big.Int) string {
 	}
 	return strings.Join(parts, " + ")
 }
+
+// scanTranspositionParallelDegree4 scans unramified primes in parallel to find a transposition witness for degree 4 polynomials.
+func scanTranspositionParallelDegree4(coeffs []*big.Int, disc *big.Int) bool {
+	goodPrimes := []int64{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37}
+	workers := runtime.GOMAXPROCS(0)
+	if workers <= 1 || len(goodPrimes) < 4 {
+		for _, p := range goodPrimes {
+			pBig := big.NewInt(p)
+			if new(big.Int).Mod(disc, pBig).Sign() == 0 {
+				continue
+			}
+			part := factorModP(coeffs, p)
+			if len(part) == 3 && part[0] == 2 && part[1] == 1 && part[2] == 1 {
+				return true
+			}
+		}
+		return false
+	}
+
+	var found atomic.Bool
+	sem := make(chan struct{}, workers)
+	var wg sync.WaitGroup
+
+	for _, p := range goodPrimes {
+		if found.Load() {
+			break
+		}
+		sem <- struct{}{}
+		if found.Load() {
+			<-sem
+			break
+		}
+		wg.Add(1)
+		go func(prime int64) {
+			defer func() {
+				<-sem
+				wg.Done()
+			}()
+			if found.Load() {
+				return
+			}
+			pBig := big.NewInt(prime)
+			if new(big.Int).Mod(disc, pBig).Sign() == 0 {
+				return
+			}
+			part := factorModP(coeffs, prime)
+			if len(part) == 3 && part[0] == 2 && part[1] == 1 && part[2] == 1 {
+				found.Store(true)
+			}
+		}(p)
+	}
+	wg.Wait()
+	return found.Load()
+}
+
+// scanPrimesParallelDegree5 concurrently searches for Dedekind-Frobenius cycle type witnesses in degree 5 polynomials with early termination.
+func scanPrimesParallelDegree5(coeffs []*big.Int, disc *big.Int, isSq bool, polyStr string) *GaloisIdentificationResult {
+	goodPrimes := []int64{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199}
+	workers := runtime.GOMAXPROCS(0)
+	if workers <= 1 || len(goodPrimes) < 4 {
+		for _, p := range goodPrimes {
+			pBig := big.NewInt(p)
+			if new(big.Int).Mod(disc, pBig).Sign() == 0 {
+				continue
+			}
+			part := factorModP(coeffs, p)
+			if res := checkDegree5Witness(part, p, disc, isSq, polyStr); res != nil {
+				return res
+			}
+		}
+		return nil
+	}
+
+	var found atomic.Bool
+	var mu sync.Mutex
+	var finalResult *GaloisIdentificationResult
+
+	sem := make(chan struct{}, workers)
+	var wg sync.WaitGroup
+
+	for _, p := range goodPrimes {
+		if found.Load() {
+			break
+		}
+		sem <- struct{}{}
+		if found.Load() {
+			<-sem
+			break
+		}
+		wg.Add(1)
+		go func(prime int64) {
+			defer func() {
+				<-sem
+				wg.Done()
+			}()
+			if found.Load() {
+				return
+			}
+			pBig := big.NewInt(prime)
+			if new(big.Int).Mod(disc, pBig).Sign() == 0 {
+				return
+			}
+			part := factorModP(coeffs, prime)
+			if res := checkDegree5Witness(part, prime, disc, isSq, polyStr); res != nil {
+				mu.Lock()
+				if !found.Load() {
+					finalResult = res
+					found.Store(true)
+				}
+				mu.Unlock()
+			}
+		}(p)
+	}
+	wg.Wait()
+	return finalResult
+}
+
+func checkDegree5Witness(part []int, p int64, disc *big.Int, isSq bool, polyStr string) *GaloisIdentificationResult {
+	if len(part) == 4 && part[0] == 2 && part[1] == 1 && part[2] == 1 && part[3] == 1 {
+		g := StandardS5()
+		witness := fmt.Sprintf("Certified transposition (2, 1, 1, 1) modulo prime %d => Gal = S5 (order 120, non-solvable by Abel-Ruffini)", p)
+		return &GaloisIdentificationResult{
+			PolynomialStr:       polyStr,
+			Degree:              5,
+			Group:               g,
+			Discriminant:        disc,
+			DiscriminantIsSquare: false,
+			IsSolvable:          false,
+			ProofWitness:        witness,
+		}
+	}
+	if len(part) == 2 && part[0] == 3 && part[1] == 2 {
+		g := StandardS5()
+		witness := fmt.Sprintf("Certified cycle type (3, 2) modulo prime %d => Gal = S5 (order 120, non-solvable by Abel-Ruffini)", p)
+		return &GaloisIdentificationResult{
+			PolynomialStr:       polyStr,
+			Degree:              5,
+			Group:               g,
+			Discriminant:        disc,
+			DiscriminantIsSquare: false,
+			IsSolvable:          false,
+			ProofWitness:        witness,
+		}
+	}
+	if len(part) == 3 && part[0] == 3 && part[1] == 1 && part[2] == 1 {
+		if isSq {
+			g := StandardA5()
+			witness := fmt.Sprintf("Certified 3-cycle modulo prime %d with square discriminant => Gal = A5 (order 60, non-solvable by Abel-Ruffini)", p)
+			return &GaloisIdentificationResult{
+				PolynomialStr:       polyStr,
+				Degree:              5,
+				Group:               g,
+				Discriminant:        disc,
+				DiscriminantIsSquare: true,
+				IsSolvable:          false,
+				ProofWitness:        witness,
+			}
+		}
+		g := StandardS5()
+		witness := fmt.Sprintf("Certified 3-cycle modulo prime %d with non-square discriminant => Gal = S5 (order 120, non-solvable)", p)
+		return &GaloisIdentificationResult{
+			PolynomialStr:       polyStr,
+			Degree:              5,
+			Group:               g,
+			Discriminant:        disc,
+			DiscriminantIsSquare: false,
+			IsSolvable:          false,
+			ProofWitness:        witness,
+		}
+	}
+	return nil
+}
+
+// scanDoubleTranspositionParallelDegree5 scans unramified primes in parallel to find a double transposition (2, 2, 1) witness for D5 vs C5 determination.
+func scanDoubleTranspositionParallelDegree5(coeffs []*big.Int, disc *big.Int) bool {
+	goodPrimes := []int64{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199}
+	workers := runtime.GOMAXPROCS(0)
+	if workers <= 1 || len(goodPrimes) < 4 {
+		for _, p := range goodPrimes {
+			pBig := big.NewInt(p)
+			if new(big.Int).Mod(disc, pBig).Sign() == 0 {
+				continue
+			}
+			part := factorModP(coeffs, p)
+			if len(part) == 3 && part[0] == 2 && part[1] == 2 && part[2] == 1 {
+				return true
+			}
+		}
+		return false
+	}
+
+	var found atomic.Bool
+	sem := make(chan struct{}, workers)
+	var wg sync.WaitGroup
+
+	for _, p := range goodPrimes {
+		if found.Load() {
+			break
+		}
+		sem <- struct{}{}
+		if found.Load() {
+			<-sem
+			break
+		}
+		wg.Add(1)
+		go func(prime int64) {
+			defer func() {
+				<-sem
+				wg.Done()
+			}()
+			if found.Load() {
+				return
+			}
+			pBig := big.NewInt(prime)
+			if new(big.Int).Mod(disc, pBig).Sign() == 0 {
+				return
+			}
+			part := factorModP(coeffs, prime)
+			if len(part) == 3 && part[0] == 2 && part[1] == 2 && part[2] == 1 {
+				found.Store(true)
+			}
+		}(p)
+	}
+	wg.Wait()
+	return found.Load()
+}
+

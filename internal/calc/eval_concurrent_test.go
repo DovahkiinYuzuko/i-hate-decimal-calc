@@ -107,6 +107,61 @@ func TestParallelBatchMap(t *testing.T) {
 	}
 }
 
+func TestParallelBatchSearch(t *testing.T) {
+	items := make([]int, 100)
+	for i := range items {
+		items[i] = i
+	}
+
+	// 1. Target found with Early-Exit
+	res, found, err := ParallelBatchSearch(items, func(v int) (*int, bool, error) {
+		if v == 50 {
+			ans := v * 10
+			return &ans, true, nil
+		}
+		return nil, false, nil
+	}, 4)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !found || res == nil || *res != 500 {
+		t.Fatalf("expected found=true with val=500, got found=%v, res=%v", found, res)
+	}
+
+	// 2. Not found
+	resNone, foundNone, errNone := ParallelBatchSearch(items, func(v int) (*int, bool, error) {
+		if v == 999 {
+			return &v, true, nil
+		}
+		return nil, false, nil
+	}, 4)
+	if errNone != nil {
+		t.Fatalf("unexpected error: %v", errNone)
+	}
+	if foundNone || resNone != nil {
+		t.Fatalf("expected found=false and res=nil, got found=%v, res=%v", foundNone, resNone)
+	}
+
+	// 3. Error propagation
+	_, _, errFail := ParallelBatchSearch(items, func(v int) (*int, bool, error) {
+		if v == 10 {
+			return nil, false, errors.New("search error")
+		}
+		return nil, false, nil
+	}, 4)
+	if errFail == nil {
+		t.Fatalf("expected error from worker, got nil")
+	}
+
+	// 4. Empty slice
+	resEmpty, foundEmpty, errEmpty := ParallelBatchSearch([]int{}, func(v int) (*int, bool, error) {
+		return &v, true, nil
+	}, 4)
+	if errEmpty != nil || foundEmpty || resEmpty != nil {
+		t.Fatalf("expected nil result on empty slice")
+	}
+}
+
 func BenchmarkProductTree_Parallel(b *testing.B) {
 	for b.Loop() {
 		_ = ParallelProductTree(1, 10000, 64)
