@@ -300,11 +300,11 @@
 
 | 機能・オプション | 書式・例 | 説明 |
 | :--- | :--- | :--- |
-| `ProofTrace` | 内部データ構造 | 全計算・代数書き換え推移列（各ステップのBefore/After、適用規則、残差式、自己検証フラグ）を保持する単一の信頼源（Single Source of Truth）。教育的途中式、双対自己検証、および Lean 4 形式証明の全バックエンドを統括 |
-| `--explain` / `explain` / `steps` | `ihd --explain "1/(sqrt(2)+1)"` | `ProofTrace` の等式推移列に基づき、代数的項書き換え（二重根号分解、有理化、因数分解、微分則等）を2Dツリーとして詳細表示 |
-| `--verify` / `verify` | `ihd --verify "factor(x^2 - 1)"` | `ProofTrace` / Certificate IR に基づき、残差ゼロ代数検証（$A \cdot A^{-1} - I = 0$, $P(r) = 0$, $D \cdot F' - f = 0$ 等）を自動実行し、逆算による自己検証結果を出力 |
-| `--certificate` | `ihd --certificate [file] "factor(x^2 - 1)"` | 計算結果および等式推移列（ProofTrace）を完全独立した自己検証証明書 JSON（スキーマ `ihd-proof-trace-v1`）として出力または指定ファイルへ保存 |
-| `--replay` | `ihd --replay cert.json` | 保存された自己検証証明書 JSON を読み込み、外部ソルバーやCAS本体を介さずに残差代数検証を行い、オフライン・スタンドアロンで正当性を独立判定 |
-| `--micro-verifier` | `ihd --micro-verifier > micro_verifier.go` | 外部依存ゼロ（Go標準ライブラリのみ）で動作するスタンドアロンな超軽量マイクロ検証器コードを出力。出力されたコードは単体で証明書 JSON の残差検証を実行可能 |
-| `--lean` / `--lean-file` | `ihd --lean "factor(x^2 - 1)"` / `ihd --lean-file p.lean "factor(x^2 - 1)"` | 計算結果および等式推移列を **Lean 4（Mathlib4）** の形式証明定理コード（`by ring`, `by ext <;> fin_cases`, `by repeat constructor <;> norm_num`, `by simp` 等）として自動トランスパイル出力 |
+| `ProofTrace` | 内部データ構造 | 計算過程の各ステップ（Before/After、適用規則、残差式、検証状態）を保持するデータ構造。途中式表示、逆算検算、Lean 4 証明コード生成の共通表現として機能 |
+| `--explain` / `explain` / `steps` | `ihd --explain "1/(sqrt(2)+1)"` | 導出ステップ列に基づき、代数的項書き換え（二重根号分解、有理化、因数分解、微分則等）をツリー形式で表示 |
+| `--verify` / `verify` | `ihd --verify "factor(x^2 - 1)"` | 各ステップや結果に対し、定義式や導関数に基づく逆算検算を行い、残差が0であることを確認 |
+| `--certificate` | `ihd --certificate [file] "factor(x^2 - 1)"` | 計算結果と導出ステップ列を証明書 JSON（スキーマ `ihd-proof-trace-v1`）として出力またはファイルへ保存 |
+| `--replay` | `ihd --replay cert.json` | 保存された証明書 JSON を読み込み、各ステップの残差が0かを再検証 |
+| `--micro-verifier` | `ihd --micro-verifier > micro_verifier.go` | Go の標準ライブラリのみで動作する検証用コードを出力。証明書 JSON の残差検証を単体で実行可能 |
+| `--lean` / `--lean-file` | `ihd --lean "factor(x^2 - 1)"` / `ihd --lean-file p.lean "factor(x^2 - 1)"` | 計算結果や導出ステップを **Lean 4（Mathlib4）** の形式証明コード（`by ring`, `by ext <;> fin_cases`, `by repeat constructor <;> norm_num`, `by simp` 等）として出力 |
 

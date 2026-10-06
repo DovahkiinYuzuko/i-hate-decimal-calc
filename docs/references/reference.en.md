@@ -300,11 +300,11 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 
 | Feature / Option | Syntax & Example | Description |
 | :--- | :--- | :--- |
-| `ProofTrace` | Internal Data Structure | Unified Single Source of Truth holding entire derivation step sequences (Before/After nodes, applied rule, residual expression, self-verified status). Bridges educational derivations, autonomous verification, and Lean 4 formal proofs |
-| `--explain` / `explain` / `steps` | `ihd --explain "1/(sqrt(2)+1)"` | Displays educational 2D step-by-step derivation trees for algebraic rewriting (radical denesting, rationalization, factoring, differentiation rules, etc.) powered by `ProofTrace` |
-| `--verify` / `verify` | `ihd --verify "factor(x^2 - 1)"` | Autonomously checks zero algebraic residuals ($A \cdot A^{-1} - I = 0$, $P(r) = 0$, $D \cdot F' - f = 0$, etc.) based on `ProofTrace` / Certificate IR and emits non-falsifiable algebraic proof certificates |
-| `--certificate` | `ihd --certificate [file] "factor(x^2 - 1)"` | Exports computation and rewriting sequence (`ProofTrace`) into a fully standalone, self-verifying certificate JSON (`ihd-proof-trace-v1`) to stdout or file |
-| `--replay` | `ihd --replay cert.json` | Reads an exported certificate JSON and verifies mathematical validity offline via standalone residual checks without requiring external CAS solvers |
-| `--micro-verifier` | `ihd --micro-verifier > micro_verifier.go` | Emits self-contained, zero-dependency Go source code for an ultra-lightweight micro-verifier capable of independently verifying certificate JSON files |
+| `ProofTrace` | Internal Data Structure | Data structure storing each step of the derivation (Before/After nodes, applied rule, residual expression, verification status). Acts as a shared representation for derivations, reverse-checks, and Lean 4 code generation |
+| `--explain` / `explain` / `steps` | `ihd --explain "1/(sqrt(2)+1)"` | Displays tree-formatted step-by-step algebraic derivations (radical denesting, rationalization, factoring, differentiation rules, etc.) based on derivation step sequences |
+| `--verify` / `verify` | `ihd --verify "factor(x^2 - 1)"` | Checks algebraic correctness for steps and results against defining relations and derivatives, confirming that residuals vanish |
+| `--certificate` | `ihd --certificate [file] "factor(x^2 - 1)"` | Exports computation and rewriting sequence into a certificate JSON file (schema `ihd-proof-trace-v1`) to stdout or file |
+| `--replay` | `ihd --replay cert.json` | Reads an exported certificate JSON file and verifies that residuals vanish without invoking CAS solver algorithms |
+| `--micro-verifier` | `ihd --micro-verifier > micro_verifier.go` | Emits self-contained Go verification source code (standard library only) that can verify certificate JSON files independently |
 | `--lean` / `--lean-file` | `ihd --lean "factor(x^2 - 1)"` / `ihd --lean-file p.lean "factor(x^2 - 1)"` | Automatically transpiles computation and proof traces into formal **Lean 4 (Mathlib4)** proof theorems (`by ring`, `by ext <;> fin_cases`, `by repeat constructor <;> norm_num`, `by simp`, etc.) |
 

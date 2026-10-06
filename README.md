@@ -259,12 +259,12 @@ ihd "plot(sin(x), [-pi, pi])"
 | `--latex`            | MarkdownやTeX論文に貼り付け可能なLaTeX形式（`$$ ... $$`）で出力。<br>`ihd --latex "1/2 + sqrt(2)"` $\to$ `$$ \frac{1}{2} + \sqrt{2} $$`                                |
 | `--pretty`           | 分数線や根号を複数行アスキーアートで組版表示する2Dプリティプリント。<br>`ihd --pretty "1/2 + sqrt(2)/2"`                                                               |
 | `--deg`              | 三角関数および逆三角関数を度数法（Degree）として解釈・計算。<br>`ihd --deg "sin(30) + cos(60)"` $\to$ `1`                                                              |
-| `--explain`          | 単一の信頼源 `ProofTrace` に基づき、代数的項書き換え（有理化・二重根号・微分則・行列分解等）を教育的な途中式ツリーとして詳細表示。<br>`ihd --explain "1 / (sqrt(2) + 1)"` |
-| `--verify`           | 自己検証証明書中間表現（ProofTrace / Certificate IR）に基づき、計算結果（因数分解、逆行列/各種分解、微積分、ODE、超幾何和WZ、幾何自動証明、アーベル・ルフィニ等）に対し独立した逆算・双対検証を行い、反証不可能な代数的証明書を発行・出力。<br>`ihd --verify "integrate(1/(x^2 + 1), x)"` $\to$ `atan(x)`<br>`[VERIFIED: diff(F, x) - f == 0]` |
-| `--certificate [file]` | 計算結果および等式推移列（ProofTrace）を完全独立した自己検証証明書 JSON（`ihd-proof-trace-v1`）として出力またはファイルへ保存。<br>`ihd --certificate "factor(x^2 - 1)"`<br>`ihd --certificate cert.json "factor(x^2 - 1)"` |
-| `--replay <file>`    | 保存された自己検証証明書 JSON ファイルを読み込み、外部ソルバーやCAS本体を介さずに残差代数検証を行い、オフライン・スタンドアロンで正当性を独立判定。<br>`ihd --replay cert.json` |
-| `--micro-verifier`   | 依存関係ゼロ（標準ライブラリのみ）で動作するスタンドアロンな超軽量 Go 検証器コード（`micro_verifier.go`）を標準出力に出力。<br>`ihd --micro-verifier > micro_verifier.go` |
-| `--lean`             | 計算結果、Certificate IR、および ProofTrace 等式推移列を定理証明支援系 **Lean 4（Mathlib4）** の形式証明コード（`by ring`, `by ext <;> ring`, `by repeat constructor <;> norm_num`, `theorem ... : ¬ IsSolvable ...` 等）として自動トランスパイル出力。<br>`ihd --lean "factor(x^2 - 1)"` |
+| `--explain`          | 計算過程（有理化・二重根号・微分則・行列分解等）をツリー形式の途中式として表示。<br>`ihd --explain "1 / (sqrt(2) + 1)"` |
+| `--verify`           | 計算結果（因数分解、逆行列、微積分、ODE、幾何証明等）に対し、定義式や導関数に基づく逆算検算を行い、残差が0であることを確認。<br>`ihd --verify "integrate(1/(x^2 + 1), x)"` $\to$ `atan(x)`<br>`[VERIFIED: diff(F, x) - f == 0]` |
+| `--certificate [file]` | 計算結果と導出ステップ列を証明書 JSON（`ihd-proof-trace-v1`）として出力またはファイルへ保存。<br>`ihd --certificate "factor(x^2 - 1)"`<br>`ihd --certificate cert.json "factor(x^2 - 1)"` |
+| `--replay <file>`    | 保存された証明書 JSON ファイルを読み込み、各ステップの残差が0かを再検証。<br>`ihd --replay cert.json` |
+| `--micro-verifier`   | Go の標準ライブラリのみで動作する最小限の検証器コード（`micro_verifier.go`）を標準出力に出力。<br>`ihd --micro-verifier > micro_verifier.go` |
+| `--lean`             | 計算結果や導出ステップ列を定理証明支援系 **Lean 4（Mathlib4）** の形式証明コード（`by ring`, `by ext <;> ring`, `by repeat constructor <;> norm_num` 等）として出力。<br>`ihd --lean "factor(x^2 - 1)"` |
 | `--lean-file <path>` | 生成された Lean 4 形式証明コードをスタンドアロンな `.lean` ファイルとして指定パスへ保存。<br>`ihd --lean-file proof.lean "factor(x^2 - 1)"`                                 |
 | `--lang <code/auto>` | 表示言語（ロケール）を指定（`ja`, `en`, `auto`）。設定は `~/.ihd/config.json` に永続化され、カスタム辞書（`~/.ihd/locales/`）にも対応。<br>`ihd --lang en "1/2 + 1/3"` |
 | `-h`, `--help`       | コマンドのヘルプメッセージを表示。                                                                                                                                     |
@@ -273,7 +273,7 @@ ihd "plot(sin(x), [-pi, pi])"
 
 > [!NOTE]
 > **Lean 4 / Mathlib4 での検証について**  
-> `ihd` が生成した Lean 4 証明コードは、GitHub Actions CI 上の Lean 4 / Mathlib4 環境で継続的にコンパイル・検証されています。現在、代数恒等式・多変数4次展開・因数分解（`by ring`）、導関数計算（`by simp`）、可逆行列・連立方程式・Smith/Hermite標準形（`by ext <;> fin_cases`）、多項式の根・ペル方程式（`by norm_num` / `by decide`）、およびWu法による幾何自動証明など 33 件のテストケースが完全に通過しており、`#print axioms` により `sorry`（`sorryAx`）を含まない厳密な証明であることが保証されています。
+> `ihd` が生成した Lean 4 証明コードは、GitHub Actions CI 上の Lean 4 / Mathlib4 環境で継続的にコンパイル・検証されています。現在、代数恒等式・多変数展開・因数分解（`by ring`）、導関数計算（`by simp`）、行列・連立方程式・Smith/Hermite標準形（`by ext <;> fin_cases`）、多項式の根・ペル方程式（`by norm_num` / `by decide`）、幾何自動証明など 33 件のテストケースが通過しており、`#print axioms` により `sorry`（`sorryAx`）を含まないことを確認しています。
 
 ---
 
@@ -555,12 +555,12 @@ ihd "plot(sin(x), [-pi, pi])"
 | `--latex`            | Output expression in LaTeX format (`$$ ... $$`) ready to paste into papers.<br>`ihd --latex "1/2 + sqrt(2)"` $\to$ `$$ \frac{1}{2} + \sqrt{2} $$` |
 | `--pretty`           | Output expression in multi-line 2D pretty-printed Unicode formatting.<br>`ihd --pretty "1/2 + sqrt(2)/2"`                                         |
 | `--deg`              | Evaluate trigonometric and inverse trigonometric functions in degrees.<br>`ihd --deg "sin(30) + cos(60)"` $\to$ `1`                               |
-| `--explain`          | Educational step-by-step algebraic rewriting derivation trees powered by single-source-of-truth `ProofTrace`.<br>`ihd --explain "1 / (sqrt(2) + 1)"` |
-| `--verify`           | Autonomously reverse-verify algebraic correctness via ProofTrace / Certificate IR and emit mathematical proof certificates.<br>`ihd --verify "integrate(1/(x^2 + 1), x)"` $\to$ `atan(x)`<br>`[VERIFIED: diff(F, x) - f == 0]` |
-| `--certificate [file]` | Export calculation and rewriting trace into a fully standalone, self-verifying certificate JSON (`ihd-proof-trace-v1`).<br>`ihd --certificate "factor(x^2 - 1)"`<br>`ihd --certificate cert.json "factor(x^2 - 1)"` |
-| `--replay <file>`    | Read an exported certificate JSON and verify its mathematical correctness offline without external CAS solvers.<br>`ihd --replay cert.json`      |
-| `--micro-verifier`   | Output a self-contained zero-dependency Go micro-verifier source (`micro_verifier.go`) to stdout.<br>`ihd --micro-verifier > micro_verifier.go`    |
-| `--lean`             | Transpile calculation results, Certificate IR, and ProofTrace rewriting sequences into formal **Lean 4 (Mathlib4)** proof theorems (`by ring`, `by ext <;> ring`, `by repeat constructor <;> norm_num`, `theorem ... : ¬ IsSolvable ...`).<br>`ihd --lean "factor(x^2 - 1)"` |
+| `--explain`          | Displays step-by-step algebraic rewriting derivation trees (radical denesting, rationalization, factoring, differentiation rules, etc.).<br>`ihd --explain "1 / (sqrt(2) + 1)"` |
+| `--verify`           | Reverse-verifies algebraic correctness (factorization, matrix inverses, calculus, ODE, geometric proofs) by checking that residuals vanish.<br>`ihd --verify "integrate(1/(x^2 + 1), x)"` $\to$ `atan(x)`<br>`[VERIFIED: diff(F, x) - f == 0]` |
+| `--certificate [file]` | Exports calculation steps and residuals into a certificate JSON file (`ihd-proof-trace-v1`).<br>`ihd --certificate "factor(x^2 - 1)"`<br>`ihd --certificate cert.json "factor(x^2 - 1)"` |
+| `--replay <file>`    | Reads a certificate JSON file and verifies that residuals vanish without relying on solver logic.<br>`ihd --replay cert.json` |
+| `--micro-verifier`   | Outputs a standalone Go verifier source (standard library only) to stdout.<br>`ihd --micro-verifier > micro_verifier.go` |
+| `--lean`             | Transpiles calculation results and rewriting steps into formal **Lean 4 (Mathlib4)** proof theorems (`by ring`, `by ext <;> ring`, `by repeat constructor <;> norm_num`, etc.).<br>`ihd --lean "factor(x^2 - 1)"` |
 | `--lean-file <path>` | Save generated Lean 4 proof code as a standalone, runnable `.lean` file.<br>`ihd --lean-file proof.lean "factor(x^2 - 1)"`                         |
 | `--lang <code/auto>` | Specify display language (`ja`, `en`, `auto`). Persisted to `~/.ihd/config.json`.<br>`ihd --lang en "1/2 + 1/3"`                                  |
 | `-h`, `--help`       | Display command help message.                                                                                                                     |
@@ -569,7 +569,7 @@ ihd "plot(sin(x), [-pi, pi])"
 
 > [!NOTE]  
 > **Verification with Lean 4 / Mathlib4**  
-> Lean 4 proof code generated by `ihd` is continuously compiled and verified in GitHub Actions CI using a Lean 4 + Mathlib4 environment. Currently, all 33 benchmark test cases covering polynomial factorization, multivariate quartic expansion, calculus, invertible matrices, linear systems, Smith/Hermite normal forms, polynomial roots, Pell's equations, and Wu's method geometric proofs pass verification without relying on `sorry` (`sorryAx`), certified via `#print axioms`.
+> Lean 4 proof code generated by `ihd` is compiled and verified in GitHub Actions CI using a Lean 4 + Mathlib4 environment. Currently, 33 benchmark test cases covering polynomial factorization, algebraic identities, calculus, invertible matrices, linear systems, Smith/Hermite normal forms, polynomial roots, Pell's equations, and geometric proofs pass verification without relying on `sorry` (`sorryAx`), confirmed via `#print axioms`.
 
 ---
 
