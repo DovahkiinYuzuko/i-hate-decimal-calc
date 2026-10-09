@@ -264,6 +264,48 @@ func ToLeanSyntax(node Node) (string, error) {
 	}
 }
 
+// hasUnsupportedLeanFunc checks whether the node tree contains CAS-specific uninterpreted functions.
+func hasUnsupportedLeanFunc(n Node) bool {
+	if n == nil {
+		return false
+	}
+	switch curr := n.(type) {
+	case *FuncNode:
+		switch strings.ToLower(curr.Name) {
+		case "sin", "cos", "tan", "exp", "ln", "log", "sqrt":
+			for _, arg := range curr.Args {
+				if hasUnsupportedLeanFunc(arg) {
+					return true
+				}
+			}
+			return false
+		default:
+			return true
+		}
+	case *AddNode:
+		for _, t := range curr.Terms {
+			if hasUnsupportedLeanFunc(t) {
+				return true
+			}
+		}
+	case *MulNode:
+		for _, f := range curr.Factors {
+			if hasUnsupportedLeanFunc(f) {
+				return true
+			}
+		}
+	case *PowNode:
+		return hasUnsupportedLeanFunc(curr.Base) || hasUnsupportedLeanFunc(curr.Exp)
+	case *UnaryOpNode:
+		return hasUnsupportedLeanFunc(curr.Expr)
+	case *RelOpNode:
+		return hasUnsupportedLeanFunc(curr.LHS) || hasUnsupportedLeanFunc(curr.RHS)
+	case *SqrtNode:
+		return hasUnsupportedLeanFunc(curr.Radicand)
+	}
+	return false
+}
+
 // CollectFreeVariables gathers all unique variable names appearing in the given nodes, sorted alphabetically.
 func CollectFreeVariables(nodes ...Node) []string {
 	varMap := make(map[string]bool)
@@ -274,6 +316,9 @@ func CollectFreeVariables(nodes ...Node) []string {
 		}
 		switch curr := n.(type) {
 		case *VarNode:
+			if curr.Name == "true" || curr.Name == "false" || curr.Name == "pi" || curr.Name == "e" || curr.Name == "i" {
+				return
+			}
 			varMap[curr.Name] = true
 		case *AddNode:
 			for _, t := range curr.Terms {
@@ -333,6 +378,9 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 
 	switch c := cert.(type) {
 	case *IdentityCertificate:
+		if hasUnsupportedLeanFunc(c.LHS) || hasUnsupportedLeanFunc(c.RHS) {
+			return "", fmt.Errorf("%s", i18n.T("lean.err_unsupported_identity_for_lean"))
+		}
 		lhs, err := ToLeanSyntax(c.LHS)
 		if err != nil {
 			return "", err
@@ -662,14 +710,12 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 		}
 
 	default:
-		// Fallback to equation string or domain mapping
 		eq := cert.EquationString()
-		if eq == "" {
-			eq = "True"
-			tactic = "by decide"
-		} else {
+		if eq != "" && (cert.Domain() == CertificateDomain(DomainFactor) || cert.Domain() == CertificateDomain(DomainGeneral) || cert.Domain() == CertificateDomain(DomainRationalApart)) {
 			equalityStr = eq
 			tactic = "by ring"
+		} else {
+			return "", fmt.Errorf("%s", i18n.T("lean.err_unsupported_certificate_for_lean", cert.Domain()))
 		}
 	}
 
@@ -697,7 +743,8 @@ func TranspileCertificateToLean(cert *VerificationCertificate, inputExpr, result
 		case *IdentityCertificate, *DerivCertificate, *InvertibilityCertificate,
 			*DecompositionCertificate, *ODECertificate, *WZCertificate, *GeometricCertificate,
 			*LinearSolveCertificate, *PellCertificate, *PolynomialRootCertificate,
-			*IntegerRelationCertificate, *EllipticPointCertificate:
+			*IntegerRelationCertificate, *EllipticPointCertificate, *ImpossibilityCertificate,
+			*SmithNormalFormCertificate, *HermiteNormalFormCertificate:
 			return TranspileCertificateIRToLean(certIR)
 		}
 	}
@@ -708,6 +755,13 @@ func TranspileCertificateToLean(cert *VerificationCertificate, inputExpr, result
 
 // GenerateLeanSource generates a standalone, fully valid Lean 4 source file with Mathlib imports, variables, and theorem.
 func GenerateLeanSource(theoremName string, cert *VerificationCertificate, inputExpr, resultExpr Node) (string, error) {
+	if cert == nil {
+		return "", fmt.Errorf("%s", i18n.T("lean.err_certificate_is_nil"))
+	}
+	if !cert.IsVerified {
+		return "", fmt.Errorf("%s", i18n.T("lean.err_cannot_transpile_unverified_certificate", cert.Details))
+	}
+
 	if strings.TrimSpace(theoremName) == "" {
 		theoremName = "ihd_certified_proof"
 	}
@@ -725,6 +779,10 @@ func GenerateLeanSource(theoremName string, cert *VerificationCertificate, input
 		}
 		if ir := cert.ToCertificateIR(); ir != nil {
 			switch c := ir.(type) {
+			case *ImpossibilityCertificate:
+				if c.Problem != nil {
+					allNodes = []Node{c.Problem}
+				}
 			case *GeometricCertificate:
 				allNodes = append(allNodes, resolveGeometricAlgebraicIdentity(c))
 				if c.Conclusion != nil {
