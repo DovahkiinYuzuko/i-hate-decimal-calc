@@ -13,8 +13,8 @@ func TestEvalPuiseux_Cusp(t *testing.T) {
 	}
 
 	str := Format(res)
-	if !strings.Contains(str, "x^3/2") {
-		t.Fatalf("expected x^3/2 in result, got %s", str)
+	if !strings.Contains(str, "x^(3/2)") {
+		t.Fatalf("expected x^(3/2) in result, got %s", str)
 	}
 }
 
@@ -39,8 +39,8 @@ func TestEvalPuiseux_CubeRootBranch(t *testing.T) {
 	}
 
 	str := Format(res)
-	if !strings.Contains(str, "x^1/3") {
-		t.Fatalf("expected x^1/3 in result, got %s", str)
+	if !strings.Contains(str, "x^(1/3)") {
+		t.Fatalf("expected x^(1/3) in result, got %s", str)
 	}
 }
 

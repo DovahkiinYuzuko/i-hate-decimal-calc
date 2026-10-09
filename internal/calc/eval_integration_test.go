@@ -85,7 +85,7 @@ func TestEvalIntegration_RationalAndExp(t *testing.T) {
 		{"integrate(x^(-1), x, 1, e)", "1"},
 		// Exponential: e^x
 		{"integrate(e^x, x)", "e^x"},
-		{"integrate(e^(2*x), x)", "e^2*x/2"},
+		{"integrate(e^(2*x), x)", "e^(2*x)/2"},
 		{"integrate(e^x, x, 0, 1)", "-1 + e"},
 	}
 

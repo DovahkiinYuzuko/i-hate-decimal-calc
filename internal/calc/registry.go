@@ -449,12 +449,12 @@ func init() {
 	RegisterFunction(FunctionSpec{
 		Name:    "solve_pell",
 		MinArgs: 1,
-		MaxArgs: 1,
+		MaxArgs: 2,
 	})
 	RegisterFunction(FunctionSpec{
 		Name:    "pell",
 		MinArgs: 1,
-		MaxArgs: 1,
+		MaxArgs: 2,
 	})
 
 	// 3D Vector Calculus
@@ -1020,7 +1020,7 @@ func init() {
 	RegisterFunction(FunctionSpec{
 		Name:    "pell_solve",
 		MinArgs: 1,
-		MaxArgs: 1,
+		MaxArgs: 2,
 	})
 
 	// Primitive Element Theorem & Simple Extension Isomorphism (issue-103)
