@@ -338,9 +338,9 @@ func extractPolynomialCoeffs(expr Node, vars []string) (map[string]*big.Int, *bi
 	return monomials, constTerm, nil
 }
 
-// EvalPellSolve implements the `pell_solve(D)` CAS function.
+// EvalPellSolve implements the `pell_solve(D [, target])` CAS function.
 func EvalPellSolve(args []Node) (Node, error) {
-	if len(args) != 1 {
+	if len(args) < 1 || len(args) > 2 {
 		return nil, fmt.Errorf("%s", i18n.T("diophantine.err_pell_solve_args"))
 	}
 
@@ -350,8 +350,28 @@ func EvalPellSolve(args []Node) (Node, error) {
 		return nil, fmt.Errorf("%s", i18n.T("diophantine.err_pell_d_must_be_positive_integer", evaled.String()))
 	}
 
+	target := int64(1)
+	if len(args) == 2 {
+		evalTarget := EvalOrSelf(args[1])
+		targetRat, okTarget := evalTarget.(*RationalNode)
+		if !okTarget || !targetRat.Val.IsInt() {
+			return nil, fmt.Errorf("%s", i18n.T("diophantine.err_pell_solve_args"))
+		}
+		targetVal := targetRat.Val.Num().Int64()
+		if targetVal != 1 && targetVal != -1 {
+			return nil, fmt.Errorf("%s", i18n.T("diophantine.err_pell_solve_args"))
+		}
+		target = targetVal
+	}
+
 	d := rat.Val.Num()
-	x1, y1, err := PellSolve(d)
+	var x1, y1 *big.Int
+	var err error
+	if target == -1 {
+		x1, y1, err = PellNegativeSolve(d)
+	} else {
+		x1, y1, err = PellSolve(d)
+	}
 	if err != nil {
 		return nil, err
 	}
