@@ -438,6 +438,14 @@ func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut 
 							fmt.Fprintln(out, fmt.Sprintf(i18n.T("cli.lean_file_saved"), ro.leanFile))
 						}
 					}
+				} else {
+					fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
+				}
+			} else {
+				if cert != nil && cert.Details != "" {
+					fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), fmt.Sprintf(i18n.T("lean.err_cannot_generate_lean_unverified"), cert.Details))
+				} else {
+					fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), i18n.T("lean.err_cannot_generate_lean_no_cert"))
 				}
 			}
 		}
@@ -498,6 +506,14 @@ func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut 
 							fmt.Fprintln(out, fmt.Sprintf(i18n.T("cli.lean_file_saved"), ro.leanFile))
 						}
 					}
+				} else {
+					fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
+				}
+			} else {
+				if cert != nil && cert.Details != "" {
+					fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), fmt.Sprintf(i18n.T("lean.err_cannot_generate_lean_unverified"), cert.Details))
+				} else {
+					fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), i18n.T("lean.err_cannot_generate_lean_no_cert"))
 				}
 			}
 		}
