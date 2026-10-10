@@ -167,6 +167,14 @@ func eliminateClosedQuantifier(q *QuantifierNode, env *Env) (Node, error) {
 		if err != nil {
 			return nil, err
 		}
+		if isZero(zeroExpr) || checkIsZeroAlgebraically(zeroExpr, env) {
+			// 0 == 0 is identically true for all real values of v
+			return &VarNode{Name: "true"}, nil
+		}
+		if !containsVariable(zeroExpr, v) {
+			// c == 0 where c != 0 is identically false for all real values of v
+			return &VarNode{Name: "false"}, nil
+		}
 		roots, err := solveExactRoots(zeroExpr, v)
 		if err != nil {
 			// Fallback to Sturm real root isolation
@@ -326,6 +334,16 @@ func eliminateParametricQuantifier(q *QuantifierNode, freeVars []string, env *En
 	_ = fsm.TransitionTo(QeStateCadDecomposed)
 
 	// Hong (1992) / Brown (2001) Boundary Polynomial Analysis:
+	// Degree 0: C op 0 (does not depend on bound variable)
+	if p.degree() == 0 {
+		var constant Node = mustRational(0, 1)
+		if len(p.coeffs) > 0 {
+			constant = p.coeffs[0]
+		}
+		_ = fsm.TransitionTo(QeStateTruthEvaluated)
+		return makeRelOp(constant, relOp.Op, mustRational(0, 1), env), nil
+	}
+
 	// Degree 1: A*x + B op 0
 	if p.degree() == 1 {
 		lead := p.leadCoeff()   // A
