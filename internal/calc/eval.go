@@ -172,6 +172,19 @@ func EvalWithEnv(n Node, env *Env) (Node, error) {
 		return NewMatrix(v.Rows, v.Cols, evaledData)
 
 	case *RelOpNode:
+		if v.Op == "=" {
+			if targetVar, ok := v.LHS.(*VarNode); ok {
+				val, err := EvalWithEnv(v.RHS, env)
+				if err != nil {
+					return nil, err
+				}
+				if env != nil {
+					env.Set(targetVar.Name, val)
+				}
+				return val, nil
+			}
+		}
+
 		lhs, err := EvalWithEnv(v.LHS, env)
 		if err != nil {
 			return nil, err
