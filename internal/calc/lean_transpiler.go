@@ -773,11 +773,10 @@ func GenerateLeanSource(theoremName string, cert *VerificationCertificate, input
 	if resultExpr != nil {
 		allNodes = append(allNodes, resultExpr)
 	}
-	if cert != nil {
-		if cert.Residual != nil {
-			allNodes = append(allNodes, cert.Residual)
-		}
-		if ir := cert.ToCertificateIR(); ir != nil {
+	if cert.Residual != nil {
+		allNodes = append(allNodes, cert.Residual)
+	}
+	if ir := cert.ToCertificateIR(); ir != nil {
 			switch c := ir.(type) {
 			case *ImpossibilityCertificate:
 				if c.Problem != nil {
@@ -886,7 +885,6 @@ func GenerateLeanSource(theoremName string, cert *VerificationCertificate, input
 				}
 			}
 		}
-	}
 
 	vars := CollectFreeVariables(allNodes...)
 
@@ -898,10 +896,7 @@ func GenerateLeanSource(theoremName string, cert *VerificationCertificate, input
 	// Replace default theorem name with requested one
 	theoremCode = strings.ReplaceAll(theoremCode, "ihd_verified_proof", escapeLeanIdent(theoremName))
 
-	var certIR Certificate
-	if cert != nil {
-		certIR = cert.ToCertificateIR()
-	}
+	certIR := cert.ToCertificateIR()
 	requiredImports := DetermineRequiredImports(certIR, allNodes...)
 
 	var b strings.Builder
