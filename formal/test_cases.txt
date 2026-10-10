@@ -4,20 +4,28 @@
 # 1. Algebraic Identities & Polynomial Factorization (Ring tactics)
 factor(x^2 - 1)
 factor(x^2 - 4)
+factor(x^2 + 2*x + 1)
 factor(x^3 - 1)
 factor(x^4 - 1)
 factor(x^4 - 16)
 factor(x^6 - 1)
 factor(x^8 - 1)
+(x + 1)*(x + 2) == x^2 + 3*x + 2
+(x - 2)^2 == x^2 - 4*x + 4
 (x + y)^2 == x^2 + 2*x*y + y^2
 (x + 1)^3 == x^3 + 3*x^2 + 3*x + 1
 (x - 1)^3 == x^3 - 3*x^2 + 3*x - 1
 (x + 1)^4 == x^4 + 4*x^3 + 6*x^2 + 4*x + 1
+(x + 1)^5 == x^5 + 5*x^4 + 10*x^3 + 10*x^2 + 5*x + 1
 (x + y)*(x - y) == x^2 - y^2
 (x - y)*(x^2 + x*y + y^2) == x^3 - y^3
 (a + b + c)^2 == a^2 + b^2 + c^2 + 2*a*b + 2*b*c + 2*c*a
+(x + y + z)*(x + y - z) == (x + y)^2 - z^2
 
 # 2. Calculus / Indefinite Integration (Derivative Certificates with Simp tactic)
+integrate(x^2, x)
+integrate(x^3, x)
+integrate(1/(x + 1), x)
 integrate(exp(x), x)
 integrate(sin(x), x)
 integrate(cos(x), x)
@@ -40,16 +48,24 @@ solve_linear([[2, 1], [1, 2]], [4, 5])
 solve_pell(2)
 solve_pell(3)
 solve_pell(5)
+solve_pell(6)
+solve_pell(7)
 
 # 7. Polynomial Roots (NormNum tactic)
-solve(x^3 - 6*x^2 + 11*x - 6, x)
-solve(x^2 - 5*x + 6, x)
+solve(2*x + 4 == 0, x)
 solve(x^2 - 4, x)
 solve(x^2 - 9, x)
+solve(x^2 - 16 == 0, x)
+solve(x^2 - 5*x + 6, x)
+solve(x^3 - x == 0, x)
+solve(x^3 - 6*x^2 + 11*x - 6, x)
 
 # 8. Elliptic Curve Group Law Addition (NormNum tactic)
 ec_add(-1, 0, [-1, 0], [0, 0])
+ec_add(0, -1, [1, 0], [1, 0])
 
 # 9. Integer Matrix Normal Forms (HNF and SNF via Ext & FinCases tactics)
 hnf([[2, 4], [4, 2]])
+hnf([[3, 6], [1, 4]])
 snf([[2, 4], [4, 2]])
+snf([[3, 6], [1, 4]])
