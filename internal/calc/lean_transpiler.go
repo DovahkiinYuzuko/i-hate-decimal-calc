@@ -259,8 +259,7 @@ func ToLeanSyntax(node Node) (string, error) {
 		return fmt.Sprintf("!![%s]", strings.Join(rowStrs, "; ")), nil
 
 	default:
-		// Fallback to node's String() representation
-		return node.String(), nil
+		return "", fmt.Errorf("%s", i18n.T("lean.err_unsupported_ast_node", n))
 	}
 }
 
@@ -494,36 +493,59 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 		}
 
 	case *PellCertificate:
-		if c.X != nil && c.Y != nil && c.D != nil {
-			xStr, _ := ToLeanSyntax(c.X)
-			yStr, _ := ToLeanSyntax(c.Y)
-			dStr, _ := ToLeanSyntax(c.D)
-			equalityStr = fmt.Sprintf("((%s : ℤ)^2 - (%s : ℤ) * (%s : ℤ)^2 : ℤ) = 1", xStr, dStr, yStr)
-			tactic = "by decide"
-		} else {
-			equalityStr = "True"
-			tactic = "by decide"
+		if c.X == nil || c.Y == nil || c.D == nil {
+			return "", fmt.Errorf("%s", i18n.T("lean.err_incomplete_certificate_witness", "PellCertificate"))
 		}
+		xStr, err := ToLeanSyntax(c.X)
+		if err != nil {
+			return "", err
+		}
+		yStr, err := ToLeanSyntax(c.Y)
+		if err != nil {
+			return "", err
+		}
+		dStr, err := ToLeanSyntax(c.D)
+		if err != nil {
+			return "", err
+		}
+		equalityStr = fmt.Sprintf("((%s : ℤ)^2 - (%s : ℤ) * (%s : ℤ)^2 : ℤ) = 1", xStr, dStr, yStr)
+		tactic = "by decide"
 
 	case *LinearDiophantineCertificate:
-		if c.A != nil && c.B != nil && c.C != nil && c.XSolution != nil && c.YSolution != nil {
-			aStr, _ := ToLeanSyntax(c.A)
-			bStr, _ := ToLeanSyntax(c.B)
-			cStr, _ := ToLeanSyntax(c.C)
-			xStr, _ := ToLeanSyntax(c.XSolution)
-			yStr, _ := ToLeanSyntax(c.YSolution)
-			param := c.ParamVar
-			if param == "" {
-				param = "t"
-			}
-			equalityStr = fmt.Sprintf("∀ (%s : ℤ), ((%s : ℤ) * (%s) + (%s : ℤ) * (%s) : ℤ) = (%s : ℤ)", param, aStr, xStr, bStr, yStr, cStr)
-			tactic = fmt.Sprintf("by intro %s ; ring", param)
-		} else {
-			equalityStr = "True"
-			tactic = "by decide"
+		if c.A == nil || c.B == nil || c.C == nil || c.XSolution == nil || c.YSolution == nil {
+			return "", fmt.Errorf("%s", i18n.T("lean.err_incomplete_certificate_witness", "LinearDiophantineCertificate"))
 		}
+		aStr, err := ToLeanSyntax(c.A)
+		if err != nil {
+			return "", err
+		}
+		bStr, err := ToLeanSyntax(c.B)
+		if err != nil {
+			return "", err
+		}
+		cStr, err := ToLeanSyntax(c.C)
+		if err != nil {
+			return "", err
+		}
+		xStr, err := ToLeanSyntax(c.XSolution)
+		if err != nil {
+			return "", err
+		}
+		yStr, err := ToLeanSyntax(c.YSolution)
+		if err != nil {
+			return "", err
+		}
+		param := c.ParamVar
+		if param == "" {
+			param = "t"
+		}
+		equalityStr = fmt.Sprintf("∀ (%s : ℤ), ((%s : ℤ) * (%s) + (%s : ℤ) * (%s) : ℤ) = (%s : ℤ)", param, aStr, xStr, bStr, yStr, cStr)
+		tactic = fmt.Sprintf("by intro %s ; ring", param)
 
 	case *PolynomialRootCertificate:
+		if c.Polynomial == nil {
+			return "", fmt.Errorf("%s", i18n.T("lean.err_incomplete_certificate_witness", "PolynomialRootCertificate"))
+		}
 		varSubst := c.Variable
 		if varSubst == "" {
 			varSubst = "x"
@@ -535,19 +557,20 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 			roots = []Node{c.Root}
 		}
 
+		if len(roots) == 0 {
+			return "", fmt.Errorf("%s", i18n.T("lean.err_empty_root_certificate"))
+		}
+
 		polyType := "ℚ"
 		if containsRealNodes(c.Polynomial) || containsRealNodes(roots...) {
 			polyType = "ℝ"
 		}
 
-		if len(roots) == 0 {
-			equalityStr = "True"
-			tactic = "by decide"
-		} else if len(roots) == 1 {
+		if len(roots) == 1 {
 			substed := Substitute(c.Polynomial, varSubst, roots[0])
 			subStr, err := ToLeanSyntax(substed)
 			if err != nil {
-				subStr = "0"
+				return "", err
 			}
 			equalityStr = fmt.Sprintf("((%s : %s) = 0)", subStr, polyType)
 			if len(CollectFreeVariables(substed)) > 0 {
@@ -562,7 +585,7 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 				substed := Substitute(c.Polynomial, varSubst, r)
 				subStr, err := ToLeanSyntax(substed)
 				if err != nil {
-					subStr = "0"
+					return "", err
 				}
 				parts = append(parts, fmt.Sprintf("((%s : %s) = 0)", subStr, polyType))
 				if len(CollectFreeVariables(substed)) > 0 {
@@ -599,7 +622,7 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 		}
 		relStr, err := ToLeanSyntax(relationNode)
 		if err != nil {
-			relStr = "0"
+			return "", err
 		}
 		relType := "ℚ"
 		if containsRealNodes(relationNode) {
@@ -613,28 +636,41 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 		}
 
 	case *EllipticPointCertificate:
-		if c.Sum != nil {
-			// Check if point is at infinity [0, 1, 0] or has coords
-			if pMat, ok := c.Sum.(*MatrixNode); ok && len(pMat.Data) == 1 && len(pMat.Data[0]) >= 2 {
-				xNode := pMat.Data[0][0]
-				yNode := pMat.Data[0][1]
-				xStr, _ := ToLeanSyntax(xNode)
-				yStr, _ := ToLeanSyntax(yNode)
-				aStr, _ := ToLeanSyntax(c.CurveA)
-				bStr, _ := ToLeanSyntax(c.CurveB)
-				equalityStr = fmt.Sprintf("(%s : ℚ)^2 = (%s : ℚ)^3 + (%s : ℚ) * (%s : ℚ) + (%s : ℚ)", yStr, xStr, aStr, xStr, bStr)
-				if len(CollectFreeVariables(xNode)) > 0 || len(CollectFreeVariables(yNode)) > 0 || len(CollectFreeVariables(c.CurveA)) > 0 || len(CollectFreeVariables(c.CurveB)) > 0 {
-					tactic = "by ring"
-				} else {
-					tactic = "by norm_num"
-				}
-			} else {
-				equalityStr = "True"
-				tactic = "by decide"
-			}
+		if c.Sum == nil || c.CurveA == nil || c.CurveB == nil {
+			return "", fmt.Errorf("%s", i18n.T("lean.err_incomplete_certificate_witness", "EllipticPointCertificate"))
+		}
+		var xNode, yNode Node
+		if pMat, ok := c.Sum.(*MatrixNode); ok && len(pMat.Data) == 1 && len(pMat.Data[0]) >= 2 {
+			xNode = pMat.Data[0][0]
+			yNode = pMat.Data[0][1]
+		} else if pList, ok := c.Sum.(*ListNode); ok && len(pList.Elements) >= 2 {
+			xNode = pList.Elements[0]
+			yNode = pList.Elements[1]
+		}
+		if xNode == nil || yNode == nil {
+			return "", fmt.Errorf("%s", i18n.T("lean.err_incomplete_certificate_witness", "EllipticPointCertificate"))
+		}
+		xStr, err := ToLeanSyntax(xNode)
+		if err != nil {
+			return "", err
+		}
+		yStr, err := ToLeanSyntax(yNode)
+		if err != nil {
+			return "", err
+		}
+		aStr, err := ToLeanSyntax(c.CurveA)
+		if err != nil {
+			return "", err
+		}
+		bStr, err := ToLeanSyntax(c.CurveB)
+		if err != nil {
+			return "", err
+		}
+		equalityStr = fmt.Sprintf("(%s : ℚ)^2 = (%s : ℚ)^3 + (%s : ℚ) * (%s : ℚ) + (%s : ℚ)", yStr, xStr, aStr, xStr, bStr)
+		if len(CollectFreeVariables(xNode)) > 0 || len(CollectFreeVariables(yNode)) > 0 || len(CollectFreeVariables(c.CurveA)) > 0 || len(CollectFreeVariables(c.CurveB)) > 0 {
+			tactic = "by ring"
 		} else {
-			equalityStr = "True"
-			tactic = "by decide"
+			tactic = "by norm_num"
 		}
 
 	case *SmithNormalFormCertificate:

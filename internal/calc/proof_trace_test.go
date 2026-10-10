@@ -420,5 +420,93 @@ func TestConvertCertificateToProofTrace_AllDomains_RoundTrip(t *testing.T) {
 	}
 }
 
+func TestVerifyProofTrace_EmptyStepsRejected(t *testing.T) {
+	env := NewEnv()
+	orig, _ := Parse("x + 1")
+	res, _ := Parse("x + 1")
+	trace := NewProofTrace(orig, res)
+	// 0 steps trace must be rejected
+	ok, err := VerifyProofTrace(trace, env)
+	if ok || err == nil {
+		t.Fatalf("expected empty trace to be rejected, got ok=%v, err=%v", ok, err)
+	}
+}
 
+func TestVerifyProofTrace_ForgedStatusIgnored(t *testing.T) {
+	env := NewEnv()
+	orig, _ := Parse("x + 1")
+	res, _ := Parse("x + 2")
+	trace := NewProofTrace(orig, res)
+	// Adversarial step with forged IsSelfVerified=true but invalid non-zero residual
+	trace.AddStep(ProofStep{
+		Before:          orig,
+		After:           res,
+		Rule:            "ForgedStep",
+		RuleDescription: "Malicious step claiming 1 == 2",
+		Residual:        &ast.RationalNode{Val: big.NewRat(1, 1)}, // non-zero!
+		IsSelfVerified:  true,                                    // forged flag!
+	})
 
+	ok, err := VerifyProofTrace(trace, env)
+	if ok || err == nil {
+		t.Fatalf("expected forged IsSelfVerified step to be rejected, got ok=%v, err=%v", ok, err)
+	}
+}
+
+func TestVerifyProofTrace_BrokenChainRejected(t *testing.T) {
+	env := NewEnv()
+	orig, _ := Parse("x")
+	res, _ := Parse("x + 2")
+	trace := NewProofTrace(orig, res)
+
+	step1Before, _ := Parse("x")
+	step1After, _ := Parse("x + 1")
+	step2Before, _ := Parse("x + 10") // Discrepancy! Broken chain from x+1 to x+10
+	step2After, _ := Parse("x + 2")
+
+	trace.AddStep(ProofStep{
+		Before:   step1Before,
+		After:    step1After,
+		Rule:     "Step1",
+		Residual: &ast.RationalNode{Val: big.NewRat(0, 1)},
+	})
+	trace.AddStep(ProofStep{
+		Before:   step2Before,
+		After:    step2After,
+		Rule:     "Step2",
+		Residual: &ast.RationalNode{Val: big.NewRat(0, 1)},
+	})
+
+	ok, err := VerifyProofTrace(trace, env)
+	if ok || err == nil {
+		t.Fatalf("expected broken chain to be rejected, got ok=%v, err=%v", ok, err)
+	}
+}
+
+func TestVerifyProofTrace_EndpointMismatchRejected(t *testing.T) {
+	env := NewEnv()
+	orig, _ := Parse("x")
+	res, _ := Parse("y") // Endpoint discrepancy! Trace claims Result is y, but step produces x
+	trace := NewProofTrace(orig, res)
+
+	stepBefore, _ := Parse("x")
+	stepAfter, _ := Parse("x")
+	trace.AddStep(ProofStep{
+		Before:   stepBefore,
+		After:    stepAfter,
+		Rule:     "Identity",
+		Residual: &ast.RationalNode{Val: big.NewRat(0, 1)},
+	})
+
+	ok, err := VerifyProofTrace(trace, env)
+	if ok || err == nil {
+		t.Fatalf("expected endpoint mismatch to be rejected, got ok=%v, err=%v", ok, err)
+	}
+}
+
+func TestCheckIsZeroAlgebraically_NilNodeReturnsFalse(t *testing.T) {
+	env := NewEnv()
+	if checkIsZeroAlgebraically(nil, env) {
+		t.Fatalf("checkIsZeroAlgebraically(nil) MUST return false, but returned true (VERIFY-007 vulnerability)")
+	}
+}

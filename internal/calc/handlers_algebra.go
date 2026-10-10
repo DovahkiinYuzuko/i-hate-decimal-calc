@@ -23,6 +23,15 @@ func init() {
 	RegisterHandler("cad", handleCAD)
 	RegisterHandler("lll", HandleLLL)
 	RegisterHandler("find_min_poly", HandleFindMinPoly)
+	RegisterHandler("minimal_polynomial", func(args []Node, env *Env) (Node, error) {
+		if len(args) == 1 {
+			return FindMinimalPolynomial(args[0], 4, env)
+		}
+		if len(args) == 2 {
+			return HandleFindMinPoly(args, env)
+		}
+		return nil, fmt.Errorf("%s", i18n.T("errors.func_args_between", "minimal_polynomial", 1, 2, len(args)))
+	})
 	RegisterHandler("to_primitive_element", EvalToPrimitiveElement)
 	RegisterHandler("primitive_element", EvalToPrimitiveElement)
 }

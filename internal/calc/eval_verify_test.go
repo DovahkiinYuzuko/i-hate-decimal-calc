@@ -340,4 +340,142 @@ func TestVerificationCertificate_VerifyTraceAndExplain(t *testing.T) {
 	}
 }
 
+func TestVerifySolve_IncompleteRootsRejected(t *testing.T) {
+	env := NewEnv()
+	expr, err := Parse("solve(x^2 - 1 == 0, x)")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	// 1. Partial root list [1] (missing -1)
+	partialRoots, err := Parse("[1]")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	certPartial, err := VerifyComputation(expr, partialRoots, env)
+	if err != nil {
+		t.Fatalf("verification returned unexpected error: %v", err)
+	}
+	if certPartial.IsVerified {
+		t.Fatalf("expected partial roots [1] for x^2 - 1 to be REJECTED, but got IsVerified=true")
+	}
+
+	// 2. Empty root list []
+	emptyRoots, err := Parse("[]")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	certEmpty, err := VerifyComputation(expr, emptyRoots, env)
+	if err != nil {
+		t.Fatalf("verification returned unexpected error: %v", err)
+	}
+	if certEmpty.IsVerified {
+		t.Fatalf("expected empty roots [] for x^2 - 1 to be REJECTED, but got IsVerified=true")
+	}
+}
+
+func TestVerifyMinimalPolynomial_ReducibleOrNonMonicRejected(t *testing.T) {
+	env := NewEnv()
+	expr, err := Parse("minimal_polynomial(sqrt(2))")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	// 1. Non-monic polynomial 2*x^2 - 4 (leading coeff is 2 != 1)
+	nonMonic, err := Parse("2*x^2 - 4")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	certNonMonic, err := VerifyComputation(expr, nonMonic, env)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if certNonMonic.IsVerified {
+		t.Fatalf("expected non-monic polynomial to be REJECTED, but got IsVerified=true")
+	}
+
+	// 2. Reducible polynomial x^4 - 4 = (x^2 - 2)(x^2 + 2) (degree is not minimal)
+	reducible, err := Parse("x^4 - 4")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	certReducible, err := VerifyComputation(expr, reducible, env)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if certReducible.IsVerified {
+		t.Fatalf("expected reducible polynomial x^4 - 4 to be REJECTED, but got IsVerified=true")
+	}
+}
+
+func TestVerifyEllipticAdd_WrongPointOnCurveRejected(t *testing.T) {
+	env := NewEnv()
+	// Curve: y^2 = x^3 - x (a = -1, b = 0)
+	// Point addition: ec_add(-1, 0, [0, 0], [1, 0])
+	// In the group law on y^2 = x^3 - x, (0, 0) + (1, 0) = (-1, 0).
+	expr, err := Parse("ec_add(-1, 0, [0, 0], [1, 0])")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	// Adversarial forged point: [0, 0]
+	// Lies on the curve 0^2 == 0^3 - 0, but is NOT the sum of (0,0) and (1,0)!
+	forgedPoint, err := Parse("[0, 0]")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	cert, err := VerifyComputation(expr, forgedPoint, env)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cert.IsVerified {
+		t.Fatalf("expected forged point on curve to be REJECTED by group law, but got IsVerified=true")
+	}
+}
+
+func TestVerifySNF_ForgedResultMatricesRejected(t *testing.T) {
+	env := NewEnv()
+	expr, err := Parse("snf([[1, 2], [3, 4]])")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	// Forged result where U * A * V != D (e.g. Identity D = [[99, 0], [0, 99]])
+	forgedResult, err := Parse("[[[99, 0], [0, 99]], [[1, 0], [0, 1]], [[1, 0], [0, 1]]]")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	cert, err := VerifyComputation(expr, forgedResult, env)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cert.IsVerified {
+		t.Fatalf("expected forged SNF result to be REJECTED, but got IsVerified=true")
+	}
+}
+
+func TestVerifyHNF_ForgedResultMatricesRejected(t *testing.T) {
+	env := NewEnv()
+	expr, err := Parse("hnf([[1, 2], [3, 4]])")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	// Forged result where U * A != H
+	forgedResult, err := Parse("[[[99, 99], [0, 99]], [[1, 0], [0, 1]]]")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	cert, err := VerifyComputation(expr, forgedResult, env)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cert.IsVerified {
+		t.Fatalf("expected forged HNF result to be REJECTED, but got IsVerified=true")
+	}
+}
+
 

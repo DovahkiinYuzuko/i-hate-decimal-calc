@@ -366,21 +366,64 @@ func ConvertVerificationCertificateToProofTrace(vc *VerificationCertificate) (*P
 	return trace, nil
 }
 
+// matchNodesAlgebraically checks if two AST nodes are structurally or algebraically identical.
+func matchNodesAlgebraically(a, b Node, env *Env) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	if a.Equal(b) {
+		return true
+	}
+	negB, _ := simplifyUnaryOp("-", b)
+	diff := NewAdd([]Node{a, negB})
+	return checkIsZeroAlgebraically(diff, env)
+}
+
 // VerifyProofTrace checks that every step in the ProofTrace is mathematically valid via native residual zero checks.
-// If all steps verify to zero residual, returns true and marks all steps with IsSelfVerified = true.
+// It structurally enforces a complete Chain of Trust and rejects empty or tampered traces.
 func VerifyProofTrace(trace *ProofTrace, env *Env) (bool, error) {
 	if trace == nil {
 		return false, fmt.Errorf("%s", i18n.T("proof_trace.err_nil_proof_trace"))
 	}
 	if len(trace.Steps) == 0 {
-		return true, nil
+		return false, fmt.Errorf("%s", i18n.T("proof_trace.err_empty_steps"))
 	}
 
+	// 1. Chain of trust validation:
+	// - If Original is specified, it must bind algebraically to Step[0].Before
+	if trace.Original != nil {
+		if trace.Steps[0].Before == nil || !matchNodesAlgebraically(trace.Original, trace.Steps[0].Before, env) {
+			return false, fmt.Errorf("%s", i18n.T("proof_trace.err_origin_mismatch"))
+		}
+	}
+
+	// - Adjacent steps must chain: Step[i].After == Step[i+1].Before
+	for i := 0; i < len(trace.Steps)-1; i++ {
+		currAfter := trace.Steps[i].After
+		nextBefore := trace.Steps[i+1].Before
+		if currAfter != nil && nextBefore != nil {
+			if !matchNodesAlgebraically(currAfter, nextBefore, env) {
+				return false, fmt.Errorf("%s", i18n.T("proof_trace.err_broken_chain", i+1, i+2))
+			}
+		} else if (currAfter == nil) != (nextBefore == nil) {
+			return false, fmt.Errorf("%s", i18n.T("proof_trace.err_broken_chain", i+1, i+2))
+		}
+	}
+
+	// - If Result is specified, it must bind algebraically to Step[last].After
+	lastStep := trace.Steps[len(trace.Steps)-1]
+	if trace.Result != nil {
+		if lastStep.After == nil || !matchNodesAlgebraically(lastStep.After, trace.Result, env) {
+			return false, fmt.Errorf("%s", i18n.T("proof_trace.err_result_mismatch"))
+		}
+	}
+
+	// 2. Validate all steps from scratch (never trust serialized IsSelfVerified flags)
 	for i := range trace.Steps {
 		step := &trace.Steps[i]
-		if step.IsSelfVerified {
-			continue
-		}
 
 		var residual Node
 		if step.Residual != nil {

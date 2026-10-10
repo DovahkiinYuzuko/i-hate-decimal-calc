@@ -167,6 +167,14 @@ func eliminateClosedQuantifier(q *QuantifierNode, env *Env) (Node, error) {
 		if err != nil {
 			return nil, err
 		}
+		if isZero(zeroExpr) || checkIsZeroAlgebraically(zeroExpr, env) {
+			// 0 == 0 is identically true for all real values of v
+			return &VarNode{Name: "true"}, nil
+		}
+		if !containsVariable(zeroExpr, v) {
+			// c == 0 where c != 0 is identically false for all real values of v
+			return &VarNode{Name: "false"}, nil
+		}
 		roots, err := solveExactRoots(zeroExpr, v)
 		if err != nil {
 			// Fallback to Sturm real root isolation
@@ -326,6 +334,16 @@ func eliminateParametricQuantifier(q *QuantifierNode, freeVars []string, env *En
 	_ = fsm.TransitionTo(QeStateCadDecomposed)
 
 	// Hong (1992) / Brown (2001) Boundary Polynomial Analysis:
+	// Degree 0: C op 0 (does not depend on bound variable)
+	if p.degree() == 0 {
+		var constant Node = mustRational(0, 1)
+		if len(p.coeffs) > 0 {
+			constant = p.coeffs[0]
+		}
+		_ = fsm.TransitionTo(QeStateTruthEvaluated)
+		return makeRelOp(constant, relOp.Op, mustRational(0, 1), env), nil
+	}
+
 	// Degree 1: A*x + B op 0
 	if p.degree() == 1 {
 		lead := p.leadCoeff()   // A
@@ -382,64 +400,223 @@ func eliminateParametricQuantifier(q *QuantifierNode, freeVars []string, env *En
 
 		_ = fsm.TransitionTo(QeStateTruthEvaluated)
 
-		// Forall x, A*x^2 + B*x + C > 0
-		// Condition: (A > 0 and D < 0)
+		zeroNode := mustRational(0, 1)
+
+		// Forall x, A*x^2 + B*x + C op 0
 		if q.Kind == QuantifierForall {
 			switch relOp.Op {
+			case "==":
+				// Identically zero polynomial: A == 0 and B == 0 and C == 0
+				return mustFunc("and",
+					makeRelOp(lead, "==", zeroNode, env),
+					mustFunc("and",
+						makeRelOp(bCoeff, "==", zeroNode, env),
+						makeRelOp(cCoeff, "==", zeroNode, env),
+					),
+				), nil
+			case "!=":
+				// No real roots: (A > 0 and D < 0) or (A < 0 and D < 0) or (A == 0 and B == 0 and C != 0)
+				condD := makeRelOp(disc, "<", zeroNode, env)
+				if isPositiveConst(lead) || isNegativeConst(lead) {
+					return condD, nil
+				}
+				condPos := mustFunc("and", makeRelOp(lead, ">", zeroNode, env), condD)
+				condNeg := mustFunc("and", makeRelOp(lead, "<", zeroNode, env), condD)
+				condDeg := mustFunc("and",
+					makeRelOp(lead, "==", zeroNode, env),
+					mustFunc("and",
+						makeRelOp(bCoeff, "==", zeroNode, env),
+						makeRelOp(cCoeff, "!=", zeroNode, env),
+					),
+				)
+				return mustFunc("or", condPos, mustFunc("or", condNeg, condDeg)), nil
 			case ">":
-				condD := makeRelOp(disc, "<", mustRational(0, 1), env)
+				// Condition: (A > 0 and D < 0) or (A == 0 and B == 0 and C > 0)
+				condD := makeRelOp(disc, "<", zeroNode, env)
 				if isPositiveConst(lead) {
 					return condD, nil
 				}
-				condA := makeRelOp(lead, ">", mustRational(0, 1), env)
-				return mustFunc("and", condA, condD), nil
+				condA := makeRelOp(lead, ">", zeroNode, env)
+				caseA := mustFunc("and", condA, condD)
+				caseDeg := mustFunc("and",
+					makeRelOp(lead, "==", zeroNode, env),
+					mustFunc("and",
+						makeRelOp(bCoeff, "==", zeroNode, env),
+						makeRelOp(cCoeff, ">", zeroNode, env),
+					),
+				)
+				return mustFunc("or", caseA, caseDeg), nil
 			case ">=":
-				condD := makeRelOp(disc, "<=", mustRational(0, 1), env)
+				// Condition: (A > 0 and D <= 0) or (A == 0 and B == 0 and C >= 0)
+				condD := makeRelOp(disc, "<=", zeroNode, env)
 				if isPositiveConst(lead) {
 					return condD, nil
 				}
-				condA := makeRelOp(lead, ">", mustRational(0, 1), env)
-				return mustFunc("and", condA, condD), nil
+				condA := makeRelOp(lead, ">", zeroNode, env)
+				caseA := mustFunc("and", condA, condD)
+				caseDeg := mustFunc("and",
+					makeRelOp(lead, "==", zeroNode, env),
+					mustFunc("and",
+						makeRelOp(bCoeff, "==", zeroNode, env),
+						makeRelOp(cCoeff, ">=", zeroNode, env),
+					),
+				)
+				return mustFunc("or", caseA, caseDeg), nil
 			case "<":
-				condD := makeRelOp(disc, "<", mustRational(0, 1), env)
+				// Condition: (A < 0 and D < 0) or (A == 0 and B == 0 and C < 0)
+				condD := makeRelOp(disc, "<", zeroNode, env)
 				if isNegativeConst(lead) {
 					return condD, nil
 				}
-				condA := makeRelOp(lead, "<", mustRational(0, 1), env)
-				return mustFunc("and", condA, condD), nil
+				condA := makeRelOp(lead, "<", zeroNode, env)
+				caseA := mustFunc("and", condA, condD)
+				caseDeg := mustFunc("and",
+					makeRelOp(lead, "==", zeroNode, env),
+					mustFunc("and",
+						makeRelOp(bCoeff, "==", zeroNode, env),
+						makeRelOp(cCoeff, "<", zeroNode, env),
+					),
+				)
+				return mustFunc("or", caseA, caseDeg), nil
 			case "<=":
-				condD := makeRelOp(disc, "<=", mustRational(0, 1), env)
+				// Condition: (A < 0 and D <= 0) or (A == 0 and B == 0 and C <= 0)
+				condD := makeRelOp(disc, "<=", zeroNode, env)
 				if isNegativeConst(lead) {
 					return condD, nil
 				}
-				condA := makeRelOp(lead, "<", mustRational(0, 1), env)
-				return mustFunc("and", condA, condD), nil
+				condA := makeRelOp(lead, "<", zeroNode, env)
+				caseA := mustFunc("and", condA, condD)
+				caseDeg := mustFunc("and",
+					makeRelOp(lead, "==", zeroNode, env),
+					mustFunc("and",
+						makeRelOp(bCoeff, "==", zeroNode, env),
+						makeRelOp(cCoeff, "<=", zeroNode, env),
+					),
+				)
+				return mustFunc("or", caseA, caseDeg), nil
 			}
 		}
 
-		// Exists x, A*x^2 + B*x + C == 0
-		// Condition: (A != 0 and D >= 0) or (A == 0 and B != 0) or (A == 0 and B == 0 and C == 0)
+		// Exists x, A*x^2 + B*x + C op 0
 		if q.Kind == QuantifierExists {
 			switch relOp.Op {
 			case "==":
-				condD := makeRelOp(disc, ">=", mustRational(0, 1), env)
+				// Condition: (A != 0 and D >= 0) or (A == 0 and B != 0) or (A == 0 and B == 0 and C == 0)
+				condD := makeRelOp(disc, ">=", zeroNode, env)
 				if isNonZeroConst(lead) {
 					return condD, nil
 				}
-				condA := makeRelOp(lead, "!=", mustRational(0, 1), env)
+				condA := makeRelOp(lead, "!=", zeroNode, env)
 				case1 := mustFunc("and", condA, condD)
 				case2 := mustFunc("and",
-					makeRelOp(lead, "==", mustRational(0, 1), env),
-					makeRelOp(bCoeff, "!=", mustRational(0, 1), env),
+					makeRelOp(lead, "==", zeroNode, env),
+					makeRelOp(bCoeff, "!=", zeroNode, env),
 				)
-				return mustFunc("or", case1, case2), nil
-			case ">", ">=":
-				// Exists x (f(x) > 0) is true unless (A < 0 and D <= 0) or identically <= 0
-				condD := makeRelOp(disc, ">", mustRational(0, 1), env)
+				case3 := mustFunc("and",
+					makeRelOp(lead, "==", zeroNode, env),
+					mustFunc("and",
+						makeRelOp(bCoeff, "==", zeroNode, env),
+						makeRelOp(cCoeff, "==", zeroNode, env),
+					),
+				)
+				return mustFunc("or", case1, mustFunc("or", case2, case3)), nil
+			case "!=":
+				// Not identically zero: A != 0 or B != 0 or C != 0
+				if isNonZeroConst(lead) {
+					return &VarNode{Name: "true"}, nil
+				}
+				condA := makeRelOp(lead, "!=", zeroNode, env)
+				condB := makeRelOp(bCoeff, "!=", zeroNode, env)
+				condC := makeRelOp(cCoeff, "!=", zeroNode, env)
+				return mustFunc("or", condA, mustFunc("or", condB, condC)), nil
+			case ">":
+				// Condition: A > 0 or (A < 0 and D > 0) or (A == 0 and B != 0) or (A == 0 and B == 0 and C > 0)
+				condD := makeRelOp(disc, ">", zeroNode, env)
 				if isPositiveConst(lead) {
 					return &VarNode{Name: "true"}, nil
 				}
-				return condD, nil
+				if isNegativeConst(lead) {
+					return condD, nil
+				}
+				caseApos := makeRelOp(lead, ">", zeroNode, env)
+				caseAneg := mustFunc("and", makeRelOp(lead, "<", zeroNode, env), condD)
+				caseLin := mustFunc("and",
+					makeRelOp(lead, "==", zeroNode, env),
+					makeRelOp(bCoeff, "!=", zeroNode, env),
+				)
+				caseConst := mustFunc("and",
+					makeRelOp(lead, "==", zeroNode, env),
+					mustFunc("and",
+						makeRelOp(bCoeff, "==", zeroNode, env),
+						makeRelOp(cCoeff, ">", zeroNode, env),
+					),
+				)
+				return mustFunc("or", caseApos, mustFunc("or", caseAneg, mustFunc("or", caseLin, caseConst))), nil
+			case ">=":
+				// Condition: A > 0 or (A < 0 and D >= 0) or (A == 0 and B != 0) or (A == 0 and B == 0 and C >= 0)
+				condD := makeRelOp(disc, ">=", zeroNode, env)
+				if isPositiveConst(lead) {
+					return &VarNode{Name: "true"}, nil
+				}
+				if isNegativeConst(lead) {
+					return condD, nil
+				}
+				caseApos := makeRelOp(lead, ">", zeroNode, env)
+				caseAneg := mustFunc("and", makeRelOp(lead, "<", zeroNode, env), condD)
+				caseLin := mustFunc("and",
+					makeRelOp(lead, "==", zeroNode, env),
+					makeRelOp(bCoeff, "!=", zeroNode, env),
+				)
+				caseConst := mustFunc("and",
+					makeRelOp(lead, "==", zeroNode, env),
+					mustFunc("and",
+						makeRelOp(bCoeff, "==", zeroNode, env),
+						makeRelOp(cCoeff, ">=", zeroNode, env),
+					),
+				)
+				return mustFunc("or", caseApos, mustFunc("or", caseAneg, mustFunc("or", caseLin, caseConst))), nil
+			case "<":
+				// If leading coeff is constant, delegate to CAD for canonical cell boundaries
+				if isPositiveConst(lead) || isNegativeConst(lead) {
+					break
+				}
+				// Condition: A < 0 or (A > 0 and D > 0) or (A == 0 and B != 0) or (A == 0 and B == 0 and C < 0)
+				condD := makeRelOp(disc, ">", zeroNode, env)
+				caseAneg := makeRelOp(lead, "<", zeroNode, env)
+				caseApos := mustFunc("and", makeRelOp(lead, ">", zeroNode, env), condD)
+				caseLin := mustFunc("and",
+					makeRelOp(lead, "==", zeroNode, env),
+					makeRelOp(bCoeff, "!=", zeroNode, env),
+				)
+				caseConst := mustFunc("and",
+					makeRelOp(lead, "==", zeroNode, env),
+					mustFunc("and",
+						makeRelOp(bCoeff, "==", zeroNode, env),
+						makeRelOp(cCoeff, "<", zeroNode, env),
+					),
+				)
+				return mustFunc("or", caseAneg, mustFunc("or", caseApos, mustFunc("or", caseLin, caseConst))), nil
+			case "<=":
+				// If leading coeff is constant, delegate to CAD for canonical cell boundaries
+				if isPositiveConst(lead) || isNegativeConst(lead) {
+					break
+				}
+				// Condition: A < 0 or (A > 0 and D >= 0) or (A == 0 and B != 0) or (A == 0 and B == 0 and C <= 0)
+				condD := makeRelOp(disc, ">=", zeroNode, env)
+				caseAneg := makeRelOp(lead, "<", zeroNode, env)
+				caseApos := mustFunc("and", makeRelOp(lead, ">", zeroNode, env), condD)
+				caseLin := mustFunc("and",
+					makeRelOp(lead, "==", zeroNode, env),
+					makeRelOp(bCoeff, "!=", zeroNode, env),
+				)
+				caseConst := mustFunc("and",
+					makeRelOp(lead, "==", zeroNode, env),
+					mustFunc("and",
+						makeRelOp(bCoeff, "==", zeroNode, env),
+						makeRelOp(cCoeff, "<=", zeroNode, env),
+					),
+				)
+				return mustFunc("or", caseAneg, mustFunc("or", caseApos, mustFunc("or", caseLin, caseConst))), nil
 			}
 		}
 	}
