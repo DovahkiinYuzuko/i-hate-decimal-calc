@@ -577,11 +577,12 @@ func (mv *Multivector) String() string {
 		}
 		bladeName := strings.Join(basisNames, "^")
 
-		if coeffStr == "1" {
+		switch coeffStr {
+		case "1":
 			parts = append(parts, bladeName)
-		} else if coeffStr == "-1" {
+		case "-1":
 			parts = append(parts, "-"+bladeName)
-		} else {
+		default:
 			parts = append(parts, fmt.Sprintf("%s*%s", coeffStr, bladeName))
 		}
 	}
