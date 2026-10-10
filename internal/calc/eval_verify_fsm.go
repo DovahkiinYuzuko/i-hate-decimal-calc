@@ -17,6 +17,7 @@ const (
 	VerifyStateCertified                VerifyState = 4
 	VerifyStateRefuted                  VerifyState = 5
 	VerifyStateUnsupportedDomain        VerifyState = 6
+	VerifyStateUnknown                  VerifyState = 7
 )
 
 func (s VerifyState) String() string {
@@ -35,6 +36,8 @@ func (s VerifyState) String() string {
 		return "Refuted"
 	case VerifyStateUnsupportedDomain:
 		return "UnsupportedDomain"
+	case VerifyStateUnknown:
+		return "Unknown"
 	default:
 		return fmt.Sprintf("VerifyState(%d)", int(s))
 	}
@@ -74,10 +77,10 @@ func (fsm *VerifyLifecycleFSM) TransitionTo(target VerifyState) error {
 	case VerifyStateTargetClassified:
 		valid = (target == VerifyStateResidualConstructed || target == VerifyStateUnsupportedDomain)
 	case VerifyStateResidualConstructed:
-		valid = (target == VerifyStateSimplificationEvaluated || target == VerifyStateRefuted)
+		valid = (target == VerifyStateSimplificationEvaluated || target == VerifyStateRefuted || target == VerifyStateUnknown)
 	case VerifyStateSimplificationEvaluated:
-		valid = (target == VerifyStateCertified || target == VerifyStateRefuted)
-	case VerifyStateCertified, VerifyStateRefuted, VerifyStateUnsupportedDomain:
+		valid = (target == VerifyStateCertified || target == VerifyStateRefuted || target == VerifyStateUnknown)
+	case VerifyStateCertified, VerifyStateRefuted, VerifyStateUnsupportedDomain, VerifyStateUnknown:
 		valid = false // Terminal states
 	}
 

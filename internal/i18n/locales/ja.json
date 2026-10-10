@@ -666,12 +666,16 @@
     "err_variance_requires_at_least_1": "variance には少なくとも1つの引数が必要です"
   },
   "proof_trace": {
+    "err_broken_chain": "ステップ %d の変形後式とステップ %d の変形前式が一致しません (証明鎖切断)",
+    "err_empty_steps": "証明トレースにステップが存在しません (空トレース拒絶)",
     "err_invalid_certificate_json": "不正な証明書 JSON です: %s",
     "err_nil_certificate": "nil の証明書は変換できません",
     "err_nil_proof_trace": "nil の証明トレースは検証できません",
     "err_nil_verification_certificate": "nil の検証証明書は変換できません",
     "err_no_residual_or_endpoints": "ステップ %d (%s) に検証すべき残差または端点が存在しません",
+    "err_origin_mismatch": "初期式 Original と第1ステップの変形前式 Before が一致しません",
     "err_residual_does_not_vanish": "ステップ %d (%s) の自己検証に失敗しました: 代数的残差が0になりません",
+    "err_result_mismatch": "最終ステップの変形後式 After と結果 Result が一致しません",
     "err_serialize_nil_proof_trace": "nil の証明トレースは JSON にシリアライズできません",
     "rule_elliptic_addition": "セカント・タンジェント則による楕円曲線上の有理点加法 P1 + P2 = Sum",
     "rule_hermite_normal_form": "行階段三角標準形 U * A = H",

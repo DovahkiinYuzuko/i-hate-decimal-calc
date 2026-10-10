@@ -27,6 +27,15 @@ const (
 	CertDomainGeneral       CertificateDomain = "general"
 )
 
+// VerificationStatus represents the 4-valued verification conclusion.
+type VerificationStatus string
+
+const (
+	StatusVerified   VerificationStatus = "VERIFIED"
+	StatusRefuted    VerificationStatus = "REFUTED"
+	StatusUnknown    VerificationStatus = "UNKNOWN"
+	StatusUnsupported VerificationStatus = "UNSUPPORTED"
+)
 
 // Certificate represents a certified mathematical proof of correctness.
 // It serves as an immutable intermediate representation (IR) between the CAS solver,
@@ -45,6 +54,7 @@ type Certificate interface {
 type BaseCertificate struct {
 	DomainVal       CertificateDomain
 	Verified        bool
+	Status          VerificationStatus
 	ResidualNode    Node
 	Conditions      []Node
 	DetailsMsg      string
@@ -88,6 +98,12 @@ func (b *BaseCertificate) String() string {
 	}
 	if b.Verified {
 		return fmt.Sprintf("[VERIFIED: %s]", b.EquationStr)
+	}
+	if b.Status == StatusUnsupported {
+		return fmt.Sprintf("[UNVERIFIED: %s] %s", b.EquationStr, b.DetailsMsg)
+	}
+	if b.Status == StatusUnknown {
+		return fmt.Sprintf("[UNKNOWN: %s] %s", b.EquationStr, b.DetailsMsg)
 	}
 	return fmt.Sprintf("[FAILED VERIFICATION: %s] %s", b.EquationStr, b.DetailsMsg)
 }

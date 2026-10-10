@@ -99,6 +99,9 @@ func (vc *VerificationCertificate) String() string {
 	if vc.State == VerifyStateUnsupportedDomain {
 		return fmt.Sprintf("[UNVERIFIED: %s] %s", vc.Equation, vc.Details)
 	}
+	if vc.State == VerifyStateUnknown {
+		return fmt.Sprintf("[UNKNOWN: %s] %s", vc.Equation, vc.Details)
+	}
 	return fmt.Sprintf("[FAILED VERIFICATION: %s] %s", vc.Equation, vc.Details)
 }
 
@@ -947,7 +950,7 @@ func verifyGeneral(expr, result Node, env *Env, fsm *VerifyLifecycleFSM) (*Verif
 // checkIsZeroAlgebraically thoroughly verifies if node simplifies to 0 using multiple CAS techniques.
 func checkIsZeroAlgebraically(node Node, env *Env) bool {
 	if node == nil {
-		return true
+		return false
 	}
 	if isZero(node) {
 		return true

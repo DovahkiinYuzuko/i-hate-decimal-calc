@@ -666,12 +666,16 @@
     "err_variance_requires_at_least_1": "variance requires at least 1 argument"
   },
   "proof_trace": {
+    "err_broken_chain": "step %d after-expr and step %d before-expr do not match (broken proof chain)",
+    "err_empty_steps": "proof trace has no steps (empty trace rejected)",
     "err_invalid_certificate_json": "invalid certificate JSON: %s",
     "err_nil_certificate": "cannot convert nil certificate",
     "err_nil_proof_trace": "cannot verify nil proof trace",
     "err_nil_verification_certificate": "cannot convert nil verification certificate",
     "err_no_residual_or_endpoints": "step %d (%s) has no residual or endpoints to verify",
+    "err_origin_mismatch": "original expression and step 1 before-expr do not match",
     "err_residual_does_not_vanish": "step %d (%s) failed self-verification: residual does not vanish",
+    "err_result_mismatch": "last step after-expr and trace result do not match",
     "err_serialize_nil_proof_trace": "cannot serialize nil ProofTrace to JSON",
     "rule_elliptic_addition": "Elliptic curve point addition P1 + P2 = Sum via chord-and-tangent",
     "rule_hermite_normal_form": "Row-echelon triangular canonical form U * A = H",
