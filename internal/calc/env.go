@@ -1,6 +1,9 @@
 package calc
 
-import "sync"
+import (
+	"fmt"
+	"sync"
+)
 
 // Env represents a symbol table mapping variable names to AST nodes and assumptions.
 type Env struct {
@@ -115,6 +118,53 @@ func (e *Env) Set(name string, val Node) {
 	defer e.mu.Unlock()
 	e.vars[name] = val
 }
+
+// Delete removes a variable binding from the environment.
+func (e *Env) Delete(name string) {
+	if e == nil {
+		return
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	delete(e.vars, name)
+}
+
+// WithScopedVar executes fn within a dynamically scoped context where name is temporarily
+// bound to initialVal. The callback setVar can be called during iteration to update the variable in-place.
+// Upon return (or panic/error), the previous binding of name is guaranteed to be restored.
+func (e *Env) WithScopedVar(name string, initialVal Node, fn func(setVar func(Node)) error) error {
+	if e == nil {
+		return fmt.Errorf("nil environment")
+	}
+
+	e.mu.Lock()
+	if e.vars == nil {
+		e.vars = make(map[string]Node)
+	}
+	prevVal, existed := e.vars[name]
+	e.vars[name] = initialVal
+	e.mu.Unlock()
+
+	defer func() {
+		e.mu.Lock()
+		if existed {
+			e.vars[name] = prevVal
+		} else {
+			delete(e.vars, name)
+		}
+		prevVal = nil
+		e.mu.Unlock()
+	}()
+
+	setVar := func(next Node) {
+		e.mu.Lock()
+		e.vars[name] = next
+		e.mu.Unlock()
+	}
+
+	return fn(setVar)
+}
+
 
 // All returns a shallow copy of all variable bindings.
 func (e *Env) All() map[string]Node {

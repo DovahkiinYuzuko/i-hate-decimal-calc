@@ -207,6 +207,9 @@
   "err_unknown_node_type_for_evaluation": "unknown node type for evaluation: %T",
   "errors": {
     "arg_must_be_var": "%s error: %s argument must be a variable name, got %s",
+    "iteration_arg_must_be_var": "%s error: iterator argument must be a variable name, got %s",
+    "iteration_bounds_eval": "%s error: failed to evaluate bounds: %v",
+    "iteration_step_zero": "%s error: step size cannot be zero",
     "arg_zero_undefined": "argument of zero is undefined",
     "assume_args_count": "assume requires 1 or 2 arguments",
     "assume_inconsistent": "inconsistent assumption for variable '%s'",

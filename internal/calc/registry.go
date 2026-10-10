@@ -396,6 +396,24 @@ func init() {
 		MaxArgs: 4,
 	})
 	RegisterFunction(FunctionSpec{
+		Name:     "table",
+		MinArgs:  4,
+		MaxArgs:  5,
+		LazyArgs: true,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:     "product",
+		MinArgs:  4,
+		MaxArgs:  5,
+		LazyArgs: true,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:     "for",
+		MinArgs:  4,
+		MaxArgs:  5,
+		LazyArgs: true,
+	})
+	RegisterFunction(FunctionSpec{
 		Name:    "limit",
 		MinArgs: 3,
 		MaxArgs: 4,

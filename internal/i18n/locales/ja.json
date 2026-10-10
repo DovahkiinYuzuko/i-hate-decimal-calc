@@ -207,6 +207,9 @@
   "err_unknown_node_type_for_evaluation": "評価対象の未知のノード型です: %T",
   "errors": {
     "arg_must_be_var": "%s エラー: 第%s引数は変数名である必要があります (%s)",
+    "iteration_arg_must_be_var": "%s エラー: イテレータ引数は変数名である必要があります (%s)",
+    "iteration_bounds_eval": "%s エラー: 反復範囲の評価に失敗しました: %v",
+    "iteration_step_zero": "%s エラー: 刻み幅に0は指定できません",
     "arg_zero_undefined": "0の偏角は未定義です",
     "assume_args_count": "assume には 1 または 2 個の引数が必要です",
     "assume_inconsistent": "変数 '%s' に対する前提条件に矛盾があります",
