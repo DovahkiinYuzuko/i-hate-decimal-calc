@@ -193,3 +193,66 @@ func TestQEGeneralCAD(t *testing.T) {
 	}
 }
 
+func TestQEParametricDegeneracy(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "exists quadratic root covers a=0 linear and zero polynomial",
+			input:    "qe(exists([x], a*x^2 + b*x + c == 0))",
+			expected: "or(and(a != 0, -4*a*c + b^2 >= 0), or(and(a == 0, b != 0), and(a == 0, and(b == 0, c == 0))))",
+		},
+		{
+			name:     "forall quadratic geq zero covers a=0 degenerate",
+			input:    "qe(forall([x], a*x^2 + b*x + c >= 0))",
+			expected: "or(and(a > 0, -4*a*c + b^2 <= 0), and(a == 0, and(b == 0, c >= 0)))",
+		},
+		{
+			name:     "forall quadratic gt zero covers a=0 degenerate",
+			input:    "qe(forall([x], a*x^2 + b*x + c > 0))",
+			expected: "or(and(a > 0, -4*a*c + b^2 < 0), and(a == 0, and(b == 0, c > 0)))",
+		},
+		{
+			name:     "forall quadratic leq zero covers a=0 degenerate",
+			input:    "qe(forall([x], a*x^2 + b*x + c <= 0))",
+			expected: "or(and(a < 0, -4*a*c + b^2 <= 0), and(a == 0, and(b == 0, c <= 0)))",
+		},
+		{
+			name:     "forall quadratic lt zero covers a=0 degenerate",
+			input:    "qe(forall([x], a*x^2 + b*x + c < 0))",
+			expected: "or(and(a < 0, -4*a*c + b^2 < 0), and(a == 0, and(b == 0, c < 0)))",
+		},
+		{
+			name:     "exists quadratic gt zero covers a=0 and discriminant",
+			input:    "qe(exists([x], a*x^2 + b*x + c > 0))",
+			expected: "or(a > 0, or(and(a < 0, -4*a*c + b^2 > 0), or(and(a == 0, b != 0), and(a == 0, and(b == 0, c > 0)))))",
+		},
+		{
+			name:     "exists quadratic geq zero covers a=0 and discriminant",
+			input:    "qe(exists([x], a*x^2 + b*x + c >= 0))",
+			expected: "or(a > 0, or(and(a < 0, -4*a*c + b^2 >= 0), or(and(a == 0, b != 0), and(a == 0, and(b == 0, c >= 0)))))",
+		},
+		{
+			name:     "forall quadratic identically zero",
+			input:    "qe(forall([x], a*x^2 + b*x + c == 0))",
+			expected: "and(a == 0, and(b == 0, c == 0))",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res, err := EvalString(tt.input)
+			if err != nil {
+				t.Fatalf("EvalString(%q) returned error: %v", tt.input, err)
+			}
+			got := Format(res)
+			if got != tt.expected {
+				t.Errorf("EvalString(%q) = %q, expected %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+
