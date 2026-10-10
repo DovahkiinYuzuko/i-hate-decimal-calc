@@ -495,8 +495,11 @@
     "err_cannot_generate_lean_unverified": "cannot generate Lean proof for unverified computation: %s",
     "err_cannot_transpile_unverified_certificate": "cannot transpile unverified certificate to Lean: %s",
     "err_certificate_is_nil": "cannot transpile nil certificate to Lean",
+    "err_empty_root_certificate": "cannot transpile polynomial root certificate with empty roots to Lean",
+    "err_incomplete_certificate_witness": "incomplete witness fields for certificate '%s'",
     "err_prooftrace_has_no_steps": "ProofTrace has no rewriting steps or expressions to transpile",
     "err_prooftrace_is_nil": "cannot generate Lean calc proof from nil ProofTrace",
+    "err_unsupported_ast_node": "unsupported AST node type '%T' for Lean 4 transpilation",
     "err_unsupported_certificate_for_lean": "unsupported certificate domain '%s' for Lean 4 formal proof",
     "err_unsupported_function": "transpiler does not support formal proof generation for function '%s'",
     "err_unsupported_identity_for_lean": "cannot transpile identity with uninterpreted functions to Lean 'by ring'"
