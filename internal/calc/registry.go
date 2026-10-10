@@ -1046,18 +1046,45 @@ func init() {
 		MaxArgs: 2,
 	})
 
-	// Primitive Element Theorem & Simple Extension Isomorphism (issue-103)
+	// Clifford Geometric Algebra & Quantum Circuit Equivalence (issue-108)
 	RegisterFunction(FunctionSpec{
-		Name:    "to_primitive_element",
-		MinArgs: 1,
-		MaxArgs: 10,
+		Name:     "clifford",
+		MinArgs:  3,
+		MaxArgs:  4,
+		LazyArgs: true,
 	})
 	RegisterFunction(FunctionSpec{
-		Name:    "primitive_element",
-		MinArgs: 1,
-		MaxArgs: 10,
+		Name:     "clifford_wedge",
+		MinArgs:  4,
+		MaxArgs:  5,
+		LazyArgs: true,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:     "clifford_contract",
+		MinArgs:  5,
+		MaxArgs:  6,
+		LazyArgs: true,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:     "clifford_dual",
+		MinArgs:  3,
+		MaxArgs:  4,
+		LazyArgs: true,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:     "quantum_equiv",
+		MinArgs:  2,
+		MaxArgs:  3,
+		LazyArgs: true,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:     "quantum_eval",
+		MinArgs:  1,
+		MaxArgs:  2,
+		LazyArgs: true,
 	})
 }
+
 
 
 
