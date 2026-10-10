@@ -1,7 +1,6 @@
 package main
 
 import (
-	"regexp"
 	"strings"
 	"unicode"
 
@@ -31,27 +30,29 @@ type TokenSpan struct {
 	Depth int
 }
 
-// RainbowMatcher implements the Pattern interface required by readline.Highlight:
+// FSMHighlightMatcher implements the Pattern interface required by readline.Highlight:
 // interface{ FindAllStringIndex(string, int) [][]int }
-type RainbowMatcher struct {
-	TargetDepth int // 0..3 for rainbow depths; -1 for bracket mismatch
+// It drives highlight ranges entirely through the lexical FSM without regular expressions.
+type FSMHighlightMatcher struct {
+	TargetType  TokenType
+	TargetDepth int // 0..3 for rainbow depths; -1 for bracket mismatch; 0 for other tokens
 }
 
-// FindAllStringIndex scans the input string using LexerHighlightFSM and returns
-// matched byte index ranges for the targeted bracket depth or mismatch.
-func (m *RainbowMatcher) FindAllStringIndex(str string, n int) [][]int {
+// FindAllStringIndex scans the input string using TokenizeHighlightFSM and returns
+// matched byte index ranges for the targeted token category or bracket depth.
+func (m *FSMHighlightMatcher) FindAllStringIndex(str string, n int) [][]int {
 	spans := TokenizeHighlightFSM(str)
 	var matches [][]int
 	for _, s := range spans {
-		if m.TargetDepth == -1 {
-			if s.Type == TokenMismatch {
-				matches = append(matches, []int{s.Start, s.End})
-			}
-		} else {
-			if s.Type == TokenRainbow && (s.Depth%4) == m.TargetDepth {
-				matches = append(matches, []int{s.Start, s.End})
+		if s.Type != m.TargetType {
+			continue
+		}
+		if m.TargetType == TokenRainbow {
+			if (s.Depth % 4) != m.TargetDepth {
+				continue
 			}
 		}
+		matches = append(matches, []int{s.Start, s.End})
 		if n > 0 && len(matches) >= n {
 			break
 		}
@@ -110,7 +111,7 @@ func TokenizeHighlightFSM(input string) []TokenSpan {
 			continue
 		}
 
-		// 2. Delimiters & Brackets
+		// 2. Delimiters & Brackets (Only () and [] are supported CAS mathematical delimiters)
 		if isOpeningBracket(r) {
 			depth := len(bracketStack)
 			bracketStack = append(bracketStack, bracketFrame{
@@ -212,7 +213,7 @@ func TokenizeHighlightFSM(input string) []TokenSpan {
 			continue
 		}
 
-		// Whitespace or unknown characters
+		// Whitespace or unknown characters (e.g. { })
 		i++
 	}
 
@@ -220,17 +221,16 @@ func TokenizeHighlightFSM(input string) []TokenSpan {
 }
 
 func isOpeningBracket(r rune) bool {
-	return r == '(' || r == '[' || r == '{'
+	return r == '(' || r == '['
 }
 
 func isClosingBracket(r rune) bool {
-	return r == ')' || r == ']' || r == '}'
+	return r == ')' || r == ']'
 }
 
 func matchesBracket(open, close rune) bool {
 	return (open == '(' && close == ')') ||
-		(open == '[' && close == ']') ||
-		(open == '{' && close == '}')
+		(open == '[' && close == ']')
 }
 
 func isOperatorRune(r rune) bool {
@@ -261,13 +261,13 @@ func BuildREPLHighlights(theme string) []readline.Highlight {
 
 	isLight := themeLower == "light"
 
-	// ANSI Palette Definitions
+	// High-contrast, transparent-terminal-safe ANSI Palette Definitions
 	var (
 		seqRainbow0 string
 		seqRainbow1 string
 		seqRainbow2 string
 		seqRainbow3 string
-		seqMismatch string = "\x1B[97;41m" // White on red background
+		seqMismatch string = "\x1B[97;41m" // White on red background (error alert)
 		seqFunc     string
 		seqCmd      string
 		seqNumber   string
@@ -277,100 +277,70 @@ func BuildREPLHighlights(theme string) []readline.Highlight {
 
 	if isLight {
 		// Light Theme (Optimized for white / bright backgrounds)
-		seqRainbow0 = "\x1B[34;1m" // Bold Blue
-		seqRainbow1 = "\x1B[35;1m" // Bold Magenta
-		seqRainbow2 = "\x1B[36;1m" // Bold Cyan
-		seqRainbow3 = "\x1B[32;1m" // Bold Green
+		seqRainbow0 = "\x1B[34;1m" // Bold Dark Blue
+		seqRainbow1 = "\x1B[35;1m" // Bold Dark Magenta
+		seqRainbow2 = "\x1B[32;1m" // Bold Dark Green
+		seqRainbow3 = "\x1B[36;1m" // Bold Dark Cyan
 		seqFunc = "\x1B[34m"       // Dark Blue
-		seqCmd = "\x1B[36m"        // Dark Cyan
-		seqNumber = "\x1B[31m"     // Dark Red / Brick
+		seqCmd = "\x1B[35m"        // Dark Magenta
+		seqNumber = "\x1B[31;1m"   // Bold Brick Red (Completely separated from rainbow blue/cyan)
 		seqString = "\x1B[32m"     // Dark Green
-		seqOp = "\x1B[30;1m"       // Dark Charcoal / Dim
+		seqOp = "\x1B[30m"         // Solid Black
 	} else {
-		// Dark Theme (Optimized for black / dark purple backgrounds)
-		seqRainbow0 = "\x1B[93m" // Bright Yellow
-		seqRainbow1 = "\x1B[95m" // Bright Magenta
-		seqRainbow2 = "\x1B[96m" // Bright Cyan
-		seqRainbow3 = "\x1B[92m" // Bright Green
-		seqFunc = "\x1B[94m"     // Bright Blue
-		seqCmd = "\x1B[36m"      // Cyan
-		seqNumber = "\x1B[33m"   // Amber / Yellow
-		seqString = "\x1B[32m"   // Green
-		seqOp = "\x1B[90m"       // Gray / Dim
+		// Dark Theme (Optimized for dark backgrounds and transparent photo terminals)
+		// Brackets rotate through Cyan, Magenta, Green, Blue
+		seqRainbow0 = "\x1B[96m"   // Bright Cyan
+		seqRainbow1 = "\x1B[95m"   // Bright Magenta
+		seqRainbow2 = "\x1B[92m"   // Bright Green
+		seqRainbow3 = "\x1B[94m"   // Bright Blue
+		seqFunc = "\x1B[94;1m"     // Bold Bright Blue
+		seqCmd = "\x1B[36;1m"      // Bold Cyan
+		seqNumber = "\x1B[93m"     // Bright Yellow (Completely separated from rainbow cyan/magenta)
+		seqString = "\x1B[32m"     // Green
+		seqOp = "\x1B[37m"         // Bright White (Clear & readable on dark / transparent backgrounds)
 	}
 
-	highlights := []readline.Highlight{
-		// 1. String Literals
+	// Order of highlights: operators, numbers, strings, commands, funcs, rainbow, mismatch
+	return []readline.Highlight{
 		{
-			Pattern:  regexp.MustCompile(`"([^"\\]|\\.)*"`),
-			Sequence: seqString,
-		},
-		// 2. CLI Commands
-		{
-			Pattern:  regexp.MustCompile(`\b(?i)(vars|exit|quit|help|theme|highlight|color)\b`),
-			Sequence: seqCmd,
-		},
-		// 3. Numbers (Standard & Radix e.g. 16^^FF, 0x1A, 3.14)
-		{
-			Pattern:  regexp.MustCompile(`\b\d+(\^\^[0-9a-zA-Z]+|\.\d+|[xXoObB][0-9a-fA-F]+)?\b`),
-			Sequence: seqNumber,
-		},
-		// 4. Operators
-		{
-			Pattern:  regexp.MustCompile(`[+\-*/^=<>!%&|~:]+`),
+			Pattern:  &FSMHighlightMatcher{TargetType: TokenOp},
 			Sequence: seqOp,
 		},
-		// 5. Rainbow Delimiters (Depth 0..3)
 		{
-			Pattern:  &RainbowMatcher{TargetDepth: 0},
+			Pattern:  &FSMHighlightMatcher{TargetType: TokenNumber},
+			Sequence: seqNumber,
+		},
+		{
+			Pattern:  &FSMHighlightMatcher{TargetType: TokenString},
+			Sequence: seqString,
+		},
+		{
+			Pattern:  &FSMHighlightMatcher{TargetType: TokenCmd},
+			Sequence: seqCmd,
+		},
+		{
+			Pattern:  &FSMHighlightMatcher{TargetType: TokenFunc},
+			Sequence: seqFunc,
+		},
+		{
+			Pattern:  &FSMHighlightMatcher{TargetType: TokenRainbow, TargetDepth: 0},
 			Sequence: seqRainbow0,
 		},
 		{
-			Pattern:  &RainbowMatcher{TargetDepth: 1},
+			Pattern:  &FSMHighlightMatcher{TargetType: TokenRainbow, TargetDepth: 1},
 			Sequence: seqRainbow1,
 		},
 		{
-			Pattern:  &RainbowMatcher{TargetDepth: 2},
+			Pattern:  &FSMHighlightMatcher{TargetType: TokenRainbow, TargetDepth: 2},
 			Sequence: seqRainbow2,
 		},
 		{
-			Pattern:  &RainbowMatcher{TargetDepth: 3},
+			Pattern:  &FSMHighlightMatcher{TargetType: TokenRainbow, TargetDepth: 3},
 			Sequence: seqRainbow3,
 		},
-		// 6. Bracket Mismatches (Errors)
 		{
-			Pattern:  &RainbowMatcher{TargetDepth: -1},
+			Pattern:  &FSMHighlightMatcher{TargetType: TokenMismatch, TargetDepth: -1},
 			Sequence: seqMismatch,
 		},
 	}
-
-	// 7. Built-in Function Names (Case-insensitive matching)
-	funcPattern := buildReservedFuncRegex()
-	if funcPattern != nil {
-		// Insert function regex right after commands
-		highlights = append([]readline.Highlight{
-			highlights[0],
-			highlights[1],
-			{Pattern: funcPattern, Sequence: seqFunc},
-		}, highlights[2:]...)
-	}
-
-	return highlights
-}
-
-func buildReservedFuncRegex() *regexp.Regexp {
-	// Sample key built-ins for efficient regex pattern
-	funcs := []string{
-		"sin", "cos", "tan", "asin", "acos", "atan", "sinh", "cosh", "tanh",
-		"solve", "diff", "integrate", "limit", "dsolve", "taylor", "series",
-		"matrix", "det", "inv", "eigenvalues", "eigenvectors",
-		"gcd", "lcm", "factor", "prime", "groebner", "cad", "qe",
-		"to_base", "from_base", "table", "for", "product", "sum", "plot",
-	}
-	pattern := `\b(?i)(` + strings.Join(funcs, "|") + `)\b`
-	re, err := regexp.Compile(pattern)
-	if err != nil {
-		return nil
-	}
-	return re
 }

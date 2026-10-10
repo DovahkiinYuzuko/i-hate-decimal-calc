@@ -64,19 +64,23 @@ func runREPL(in io.Reader, out, errOut io.Writer, ro runOptions) int {
 		PromptWriter: func(w io.Writer) (int, error) {
 			return fmt.Fprint(w, i18n.T("cli.prompt"))
 		},
-		History:   history,
-		Writer:    out,
-		Highlight: BuildREPLHighlights(currentTheme),
+		History:    history,
+		Writer:     out,
+		Highlight:  BuildREPLHighlights(currentTheme),
+		ResetColor: "\x1B[0m",
 	}
 
 	for {
 		line, err := editor.ReadLine(context.Background())
+		// Ensure any active terminal attributes or background colors are cleanly reset immediately
+		fmt.Fprint(out, "\x1B[0m")
 		if err != nil {
 			if errors.Is(err, io.EOF) || errors.Is(err, readline.CtrlC) {
 				fmt.Fprintln(out)
 				fmt.Fprintln(out, i18n.T("cli.repl_exit"))
 				break
 			}
+			fmt.Fprint(errOut, "\x1B[0m")
 			fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
 			continue
 		}
@@ -117,9 +121,9 @@ func runREPL(in io.Reader, out, errOut io.Writer, ro runOptions) int {
 
 		if lowerLine == "highlight" || lowerLine == "color" {
 			if highlightEnabled && editor.Highlight != nil {
-				fmt.Fprintf(out, i18n.T("cli.repl_theme_current")+"\n", currentTheme)
+				fmt.Fprintf(out, i18n.T("cli.repl_highlight_status_on")+"\n", currentTheme)
 			} else {
-				fmt.Fprintln(out, i18n.T("cli.repl_highlight_off"))
+				fmt.Fprintln(out, i18n.T("cli.repl_highlight_status_off"))
 			}
 			continue
 		}
@@ -202,9 +206,9 @@ func runScannerREPL(in io.Reader, out, errOut io.Writer, ro runOptions, env *cal
 		}
 		if lowerLine == "highlight" || lowerLine == "color" {
 			if highlightEnabled {
-				fmt.Fprintf(out, i18n.T("cli.repl_theme_current")+"\n", currentTheme)
+				fmt.Fprintf(out, i18n.T("cli.repl_highlight_status_on")+"\n", currentTheme)
 			} else {
-				fmt.Fprintln(out, i18n.T("cli.repl_highlight_off"))
+				fmt.Fprintln(out, i18n.T("cli.repl_highlight_status_off"))
 			}
 			continue
 		}

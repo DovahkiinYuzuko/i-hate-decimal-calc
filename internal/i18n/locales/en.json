@@ -121,6 +121,8 @@
     "repl_exit_hint": "Type 'exit' or 'quit' to exit.",
     "repl_highlight_off": "Syntax highlighting disabled.",
     "repl_highlight_on": "Syntax highlighting enabled.",
+    "repl_highlight_status_off": "Syntax highlighting: disabled",
+    "repl_highlight_status_on": "Syntax highlighting: enabled (theme: %s)",
     "repl_lang_label": "Language: %s [%s]",
     "repl_theme_current": "Current theme: %s",
     "repl_theme_invalid": "Invalid theme. Options: dark, light, none",

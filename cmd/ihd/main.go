@@ -309,7 +309,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 		if lowerLine == "highlight" || lowerLine == "color" {
 			cfg, _ := i18n.LoadConfig()
 			if (cfg != nil && cfg.SyntaxHighlight != nil && !*cfg.SyntaxHighlight) || ro.noColor {
-				fmt.Fprintln(out, i18n.T("cli.repl_highlight_off"))
+				fmt.Fprintln(out, i18n.T("cli.repl_highlight_status_off"))
 			} else {
 				currentTheme := "dark"
 				if cfg != nil && cfg.Theme != "" {
@@ -318,7 +318,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 				if ro.theme != "" {
 					currentTheme = ro.theme
 				}
-				fmt.Fprintf(out, i18n.T("cli.repl_theme_current")+"\n", currentTheme)
+				fmt.Fprintf(out, i18n.T("cli.repl_highlight_status_on")+"\n", currentTheme)
 			}
 			continue
 		}

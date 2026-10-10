@@ -121,6 +121,8 @@
     "repl_exit_hint": "終了するには 'exit' または 'quit' と入力してください。",
     "repl_highlight_off": "シンタックスハイライトを無効化しました。",
     "repl_highlight_on": "シンタックスハイライトを有効化しました。",
+    "repl_highlight_status_off": "シンタックスハイライト: 無効",
+    "repl_highlight_status_on": "シンタックスハイライト: 有効 (テーマ: %s)",
     "repl_lang_label": "言語: %s [%s]",
     "repl_theme_current": "現在のテーマ: %s",
     "repl_theme_invalid": "無効なテーマです。選択肢: dark, light, none",
