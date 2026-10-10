@@ -561,4 +561,78 @@ func TestCAD_SolutionReconstruction_Disconnected(t *testing.T) {
 	_ = sol
 }
 
+func TestCAD_SectionCommonRootGCDSignZero(t *testing.T) {
+	env := NewEnv()
+	p1Node, err := Parse("x^2 - 2")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	p2Node, err := Parse("x^4 - 4")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	poly1, ok1 := extractPoly(p1Node, "x")
+	poly2, ok2 := extractPoly(p2Node, "x")
+	if !ok1 || !ok2 {
+		t.Fatalf("extractPoly failed")
+	}
+
+	cells, err := Decompose1DCAD([]*univariatePoly{poly1, poly2}, "x", env)
+	if err != nil {
+		t.Fatalf("Decompose1DCAD failed: %v", err)
+	}
+
+	var sectionCount int
+	for _, c := range cells {
+		if c.IsSection {
+			sectionCount++
+			sign1 := c.SignVector[polyKey(poly1)]
+			sign2 := c.SignVector[polyKey(poly2)]
+			// Both polynomials share the roots sqrt(2) and -sqrt(2).
+			// Therefore, in every Section cell corresponding to these roots,
+			// BOTH signs must algebraically evaluate to 0!
+			if sign1 != 0 {
+				t.Errorf("expected sign of %s in section to be 0, got %d", polyKey(poly1), sign1)
+			}
+			if sign2 != 0 {
+				t.Errorf("expected sign of %s in section to be 0 via algebraic GCD, but got %d", polyKey(poly2), sign2)
+			}
+		}
+	}
+
+	if sectionCount != 2 {
+		t.Fatalf("expected exactly 2 section cells for common roots +-sqrt(2), got %d", sectionCount)
+	}
+}
+
+func TestCAD_SectionDisjointRootSignRefined(t *testing.T) {
+	env := NewEnv()
+	p1Node, _ := Parse("x^2 - 2")
+	p2Node, _ := Parse("x - 2")
+
+	poly1, _ := extractPoly(p1Node, "x")
+	poly2, _ := extractPoly(p2Node, "x")
+
+	cells, err := Decompose1DCAD([]*univariatePoly{poly1, poly2}, "x", env)
+	if err != nil {
+		t.Fatalf("Decompose1DCAD failed: %v", err)
+	}
+
+	foundSqrt2 := false
+	for _, c := range cells {
+		if c.IsSection {
+			sign1 := c.SignVector[polyKey(poly1)]
+			sign2 := c.SignVector[polyKey(poly2)]
+			if sign1 == 0 && sign2 == -1 {
+				foundSqrt2 = true
+			}
+		}
+	}
+
+	if !foundSqrt2 {
+		t.Errorf("failed to find section cell with sign(x^2 - 2)=0 and sign(x - 2)=-1")
+	}
+}
+
 

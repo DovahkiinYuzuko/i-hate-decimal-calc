@@ -418,7 +418,53 @@ func sortCadRoots(roots []cad1DRoot) {
 	})
 }
 
+func areRootsIdentical(a, b cad1DRoot) bool {
+	if a.node != nil && b.node != nil && a.node.Equal(b.node) {
+		return true
+	}
+	overlapLow := new(big.Rat).Set(a.low)
+	if b.low.Cmp(overlapLow) > 0 {
+		overlapLow.Set(b.low)
+	}
+	overlapHigh := new(big.Rat).Set(a.high)
+	if b.high.Cmp(overlapHigh) < 0 {
+		overlapHigh.Set(b.high)
+	}
+	if overlapLow.Cmp(overlapHigh) > 0 {
+		return false
+	}
+
+	if a.poly != nil && b.poly != nil {
+		if polyKey(a.poly) == polyKey(b.poly) {
+			return true
+		}
+		gcdPoly, err := polyGCD1D(a.poly, b.poly)
+		if err == nil && gcdPoly != nil && gcdPoly.degree() >= 1 {
+			sturmChain, errSturm := buildPrimitiveSturmSequence(gcdPoly)
+			if errSturm == nil && len(sturmChain) > 0 {
+				vL, errL := countSignVariationsAtPoint(sturmChain, overlapLow)
+				vH, errH := countSignVariationsAtPoint(sturmChain, overlapHigh)
+				if errL == nil && errH == nil && vL > vH {
+					return true
+				}
+				valL, errVL := evalPolyAtRat(gcdPoly, overlapLow)
+				if errVL == nil && valL.Sign() == 0 {
+					return true
+				}
+				valH, errVH := evalPolyAtRat(gcdPoly, overlapHigh)
+				if errVH == nil && valH.Sign() == 0 {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 func compareCadRoots(a, b cad1DRoot) int {
+	if areRootsIdentical(a, b) {
+		return 0
+	}
 	if a.high.Cmp(b.low) < 0 {
 		return -1
 	}
@@ -452,7 +498,14 @@ func deduplicateCadRoots(roots []cad1DRoot) []cad1DRoot {
 	for i := 1; i < len(roots); i++ {
 		prev := dedup[len(dedup)-1]
 		curr := roots[i]
-		if compareCadRoots(prev, curr) == 0 {
+		if areRootsIdentical(prev, curr) {
+			// Merge/tighten isolating bounds to their intersection
+			if curr.low.Cmp(dedup[len(dedup)-1].low) > 0 {
+				dedup[len(dedup)-1].low.Set(curr.low)
+			}
+			if curr.high.Cmp(dedup[len(dedup)-1].high) < 0 {
+				dedup[len(dedup)-1].high.Set(curr.high)
+			}
 			continue
 		}
 		dedup = append(dedup, curr)
@@ -462,15 +515,37 @@ func deduplicateCadRoots(roots []cad1DRoot) []cad1DRoot {
 
 func refineRootIntervals(roots []cad1DRoot) {
 	for i := 0; i+1 < len(roots); i++ {
-		// If high[i] >= low[i+1], shrink them
-		if roots[i].high.Cmp(roots[i+1].low) >= 0 {
-			mid := new(big.Rat).Add(roots[i].high, roots[i+1].low)
-			mid.Quo(mid, big.NewRat(2, 1))
-			delta := new(big.Rat).Sub(roots[i+1].high, roots[i].low)
-			if delta.Sign() > 0 {
-				delta.Quo(delta, big.NewRat(16, 1))
-				roots[i].high = new(big.Rat).Sub(mid, delta)
-				roots[i+1].low = new(big.Rat).Add(mid, delta)
+		// If high[i] >= low[i+1], refine both using their respective Sturm sequences
+		for iter := 0; iter < 30 && roots[i].high.Cmp(roots[i+1].low) >= 0; iter++ {
+			// Bisect root[i]
+			if roots[i].poly != nil {
+				chainI, errI := buildPrimitiveSturmSequence(roots[i].poly)
+				if errI == nil && len(chainI) > 0 {
+					midI := new(big.Rat).Add(roots[i].low, roots[i].high)
+					midI.Quo(midI, big.NewRat(2, 1))
+					vL, _ := countSignVariationsAtPoint(chainI, roots[i].low)
+					vM, _ := countSignVariationsAtPoint(chainI, midI)
+					if vL > vM {
+						roots[i].high = midI
+					} else {
+						roots[i].low = midI
+					}
+				}
+			}
+			// Bisect root[i+1]
+			if roots[i+1].poly != nil {
+				chainNext, errNext := buildPrimitiveSturmSequence(roots[i+1].poly)
+				if errNext == nil && len(chainNext) > 0 {
+					midNext := new(big.Rat).Add(roots[i+1].low, roots[i+1].high)
+					midNext.Quo(midNext, big.NewRat(2, 1))
+					vL, _ := countSignVariationsAtPoint(chainNext, roots[i+1].low)
+					vM, _ := countSignVariationsAtPoint(chainNext, midNext)
+					if vL > vM {
+						roots[i+1].high = midNext
+					} else {
+						roots[i+1].low = midNext
+					}
+				}
 			}
 		}
 	}
@@ -518,6 +593,86 @@ func makeCadSectorCell(samplePoint []Node, sampleRat *big.Rat, polys []*univaria
 	return cell
 }
 
+// evaluatePolySignAtSection determines the exact algebraic sign of poly q at the real algebraic root defined by root (poly p in [low, high]).
+func evaluatePolySignAtSection(root cad1DRoot, q *univariatePoly) int {
+	if q == nil || len(q.coeffs) == 0 {
+		return 0
+	}
+	p := root.poly
+	if p == nil {
+		mid := new(big.Rat).Add(root.low, root.high)
+		mid.Quo(mid, big.NewRat(2, 1))
+		if val, err := evalPolyAtRat(q, mid); err == nil {
+			return val.Sign()
+		}
+		return 0
+	}
+
+	if polyKey(p) == polyKey(q) {
+		return 0
+	}
+
+	// 1. Compute algebraic GCD(P, Q)
+	gcdPoly, err := polyGCD1D(p, q)
+	if err == nil && gcdPoly != nil && gcdPoly.degree() >= 1 {
+		sturmChain, errSturm := buildPrimitiveSturmSequence(gcdPoly)
+		if errSturm == nil && len(sturmChain) > 0 {
+			vLow, errL := countSignVariationsAtPoint(sturmChain, root.low)
+			vHigh, errH := countSignVariationsAtPoint(sturmChain, root.high)
+			if errL == nil && errH == nil && vLow > vHigh {
+				// GCD vanishes at the root alpha: sign is strictly 0!
+				return 0
+			}
+			valL, errVL := evalPolyAtRat(gcdPoly, root.low)
+			if errVL == nil && valL.Sign() == 0 {
+				return 0
+			}
+			valH, errVH := evalPolyAtRat(gcdPoly, root.high)
+			if errVH == nil && valH.Sign() == 0 {
+				return 0
+			}
+		}
+	}
+
+	// 2. Q does not vanish at alpha. Refine [low, high] via Sturm bisection on P
+	// until Q has constant non-zero sign on the isolating interval.
+	curLow := new(big.Rat).Set(root.low)
+	curHigh := new(big.Rat).Set(root.high)
+
+	pChain, errPChain := buildPrimitiveSturmSequence(p)
+	for iter := 0; iter < 30; iter++ {
+		valL, errL := evalPolyAtRat(q, curLow)
+		valH, errH := evalPolyAtRat(q, curHigh)
+		if errL == nil && errH == nil && valL.Sign() != 0 && valL.Sign() == valH.Sign() {
+			return valL.Sign()
+		}
+
+		if errPChain != nil || len(pChain) == 0 {
+			break
+		}
+
+		// Bisect [curLow, curHigh] using P's Sturm chain to keep alpha inside
+		mid := new(big.Rat).Add(curLow, curHigh)
+		mid.Quo(mid, big.NewRat(2, 1))
+
+		vCurLow, errVL := countSignVariationsAtPoint(pChain, curLow)
+		vMid, errVM := countSignVariationsAtPoint(pChain, mid)
+		if errVL == nil && errVM == nil && vCurLow > vMid {
+			curHigh = mid
+		} else {
+			curLow = mid
+		}
+	}
+
+	// Fallback to midpoint evaluation if interval is already ultra-tight
+	mid := new(big.Rat).Add(curLow, curHigh)
+	mid.Quo(mid, big.NewRat(2, 1))
+	if val, err := evalPolyAtRat(q, mid); err == nil {
+		return val.Sign()
+	}
+	return 0
+}
+
 func makeCadSectionCell(samplePoint []Node, root cad1DRoot, polys []*univariatePoly) CadCell {
 	cell := CadCell{
 		Dimension:   0,
@@ -529,16 +684,7 @@ func makeCadSectionCell(samplePoint []Node, root cad1DRoot, polys []*univariateP
 		if p == nil {
 			continue
 		}
-		if root.poly == p {
-			cell.SignVector[polyKey(p)] = 0
-		} else {
-			// Evaluate at mid of isolating interval
-			mid := new(big.Rat).Add(root.low, root.high)
-			mid.Quo(mid, big.NewRat(2, 1))
-			if val, err := evalPolyAtRat(p, mid); err == nil {
-				cell.SignVector[polyKey(p)] = val.Sign()
-			}
-		}
+		cell.SignVector[polyKey(p)] = evaluatePolySignAtSection(root, p)
 	}
 	return cell
 }
