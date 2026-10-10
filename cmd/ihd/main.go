@@ -35,6 +35,8 @@ type runOptions struct {
 	noUpdateCheck bool
 	interval      bool
 	intervalEps   string
+	noColor       bool
+	theme         string
 }
 
 func run(args []string, in io.Reader, out, errOut io.Writer) int {
@@ -104,8 +106,20 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 			flagArgs = append(flagArgs, a)
 			continue
 		}
+		if a == "-theme" || a == "--theme" {
+			flagArgs = append(flagArgs, a)
+			if i+1 < len(args) {
+				i++
+				flagArgs = append(flagArgs, args[i])
+			}
+			continue
+		}
+		if strings.HasPrefix(a, "-theme=") || strings.HasPrefix(a, "--theme=") {
+			flagArgs = append(flagArgs, a)
+			continue
+		}
 		switch a {
-		case "-ascii", "--ascii", "-approx", "--approx", "-latex", "--latex", "-pretty", "--pretty", "-deg", "--deg", "-explain", "--explain", "-verify", "--verify", "-lean", "--lean", "-h", "--help", "-v", "--version", "-version", "--no-update-check", "-no-update-check", "-i", "--i", "-interval", "--interval":
+		case "-ascii", "--ascii", "-approx", "--approx", "-latex", "--latex", "-pretty", "--pretty", "-deg", "--deg", "-explain", "--explain", "-verify", "--verify", "-lean", "--lean", "-h", "--help", "-v", "--version", "-version", "--no-update-check", "-no-update-check", "-i", "--i", "-interval", "--interval", "-no-color", "--no-color":
 			flagArgs = append(flagArgs, a)
 		default:
 			exprArgs = append(exprArgs, a)
@@ -146,11 +160,14 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 	intervalFlag := fs.Bool("interval", false, i18n.T("cli.flag_interval"))
 	fs.BoolVar(intervalFlag, "i", false, i18n.T("cli.flag_interval"))
 	intervalEpsFlag := fs.String("interval-eps", "", i18n.T("cli.flag_interval"))
+	noColorFlag := fs.Bool("no-color", false, i18n.T("cli.flag_no_color"))
+	themeFlag := fs.String("theme", "", i18n.T("cli.flag_theme"))
 	versionFlag := fs.Bool("version", false, i18n.T("cli.flag_version"))
 	fs.BoolVar(versionFlag, "v", false, i18n.T("cli.flag_version"))
 	noUpdateCheckFlag := fs.Bool("no-update-check", false, i18n.T("cli.flag_no_update_check"))
 	helpFlag := fs.Bool("help", false, i18n.T("cli.flag_help"))
 	fs.BoolVar(helpFlag, "h", false, i18n.T("cli.flag_help"))
+
 
 	if err := fs.Parse(flagArgs); err != nil {
 		return 1
@@ -197,6 +214,8 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 		noUpdateCheck: *noUpdateCheckFlag,
 		interval:      *intervalFlag,
 		intervalEps:   *intervalEpsFlag,
+		noColor:       *noColorFlag,
+		theme:         *themeFlag,
 	}
 
 	if ro.replayFile != "" {
@@ -257,6 +276,63 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
+		if strings.EqualFold(line, "exit") || strings.EqualFold(line, "quit") {
+			break
+		}
+		if strings.EqualFold(line, "vars") {
+			printVars(env, ro, out)
+			continue
+		}
+		lowerLine := strings.ToLower(line)
+		if lowerLine == "theme" {
+			cfg, _ := i18n.LoadConfig()
+			currentTheme := "dark"
+			if cfg != nil && cfg.Theme != "" {
+				currentTheme = cfg.Theme
+			}
+			if ro.theme != "" {
+				currentTheme = ro.theme
+			}
+			fmt.Fprintf(out, i18n.T("cli.repl_theme_current")+"\n", currentTheme)
+			continue
+		}
+		if strings.HasPrefix(lowerLine, "theme ") {
+			target := strings.TrimSpace(lowerLine[6:])
+			if target == "dark" || target == "light" || target == "none" {
+				_ = i18n.SaveConfigTheme(target)
+				fmt.Fprintf(out, i18n.T("cli.repl_theme_set")+"\n", target)
+			} else {
+				fmt.Fprintln(out, i18n.T("cli.repl_theme_invalid"))
+			}
+			continue
+		}
+		if lowerLine == "highlight" || lowerLine == "color" {
+			cfg, _ := i18n.LoadConfig()
+			if (cfg != nil && cfg.SyntaxHighlight != nil && !*cfg.SyntaxHighlight) || ro.noColor {
+				fmt.Fprintln(out, i18n.T("cli.repl_highlight_off"))
+			} else {
+				currentTheme := "dark"
+				if cfg != nil && cfg.Theme != "" {
+					currentTheme = cfg.Theme
+				}
+				if ro.theme != "" {
+					currentTheme = ro.theme
+				}
+				fmt.Fprintf(out, i18n.T("cli.repl_theme_current")+"\n", currentTheme)
+			}
+			continue
+		}
+		if lowerLine == "highlight on" || lowerLine == "color on" {
+			_ = i18n.SaveConfigHighlight(true)
+			fmt.Fprintln(out, i18n.T("cli.repl_highlight_on"))
+			continue
+		}
+		if lowerLine == "highlight off" || lowerLine == "color off" {
+			_ = i18n.SaveConfigHighlight(false)
+			fmt.Fprintln(out, i18n.T("cli.repl_highlight_off"))
+			continue
+		}
+
 		if err := evaluateLineWithEnv(line, ro, env, out, errOut); err != nil {
 			hadError = true
 		}
