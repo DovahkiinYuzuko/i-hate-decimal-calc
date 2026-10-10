@@ -583,4 +583,79 @@ func TestProofTraceToLeanCalc_FromCertificateAdapter(t *testing.T) {
 	}
 }
 
+type dummyUnsupportedNode struct{}
+
+func (d *dummyUnsupportedNode) Type() NodeType        { return NodeType(9999) }
+func (d *dummyUnsupportedNode) String() string        { return "unsupported_dummy" }
+func (d *dummyUnsupportedNode) Equal(other Node) bool { return false }
+
+func TestLeanClaimFidelityAndMutation(t *testing.T) {
+	// 1. Empty root certificate must be rejected with error, NOT become "True"
+	emptyRootCert := &PolynomialRootCertificate{
+		BaseCertificate: BaseCertificate{Verified: true},
+		Polynomial:      &AddNode{Terms: []Node{NewVar("x"), mustRational(-1, 1)}},
+		Variable:        "x",
+		Root:            &ListNode{Elements: []Node{}},
+	}
+	_, err := TranspileCertificateIRToLean(emptyRootCert)
+	if err == nil {
+		t.Fatalf("expected error for empty root certificate, got nil (True fallback prohibited)")
+	}
+
+	// 2. Incomplete witness fields must be rejected, NOT become "True"
+	pellCert := &PellCertificate{
+		BaseCertificate: BaseCertificate{Verified: true},
+		D:               mustRational(2, 1),
+		X:               nil, // missing X
+		Y:               mustRational(1, 1),
+	}
+	_, err = TranspileCertificateIRToLean(pellCert)
+	if err == nil {
+		t.Fatalf("expected error for PellCertificate with nil X, got nil")
+	}
+
+	linearDiophCert := &LinearDiophantineCertificate{
+		BaseCertificate: BaseCertificate{Verified: true},
+		A:               mustRational(2, 1),
+		B:               mustRational(3, 1),
+		C:               mustRational(5, 1),
+		XSolution:       nil, // missing
+		YSolution:       mustRational(1, 1),
+	}
+	_, err = TranspileCertificateIRToLean(linearDiophCert)
+	if err == nil {
+		t.Fatalf("expected error for LinearDiophantineCertificate with nil XSolution, got nil")
+	}
+
+	ellipticCert := &EllipticPointCertificate{
+		BaseCertificate: BaseCertificate{Verified: true},
+		CurveA:          mustRational(0, 1),
+		CurveB:          mustRational(7, 1),
+		Sum:             nil, // missing
+	}
+	_, err = TranspileCertificateIRToLean(ellipticCert)
+	if err == nil {
+		t.Fatalf("expected error for EllipticPointCertificate with nil Sum, got nil")
+	}
+
+	// 3. Unknown AST node must be rejected, NOT fallback to node.String()
+	_, err = ToLeanSyntax(&dummyUnsupportedNode{})
+	if err == nil {
+		t.Fatalf("expected error for dummyUnsupportedNode in ToLeanSyntax, got nil")
+	}
+
+	// 4. MR-14 Failure path invariance: unverified certificate must always fail
+	unverifiedCert := &VerificationCertificate{
+		Domain:     DomainFactor,
+		Equation:   "x^2 - 1 = (x - 1)*(x + 1)",
+		IsVerified: false,
+		Details:    "verification incomplete",
+	}
+	_, err = TranspileCertificateToLean(unverifiedCert, nil, nil)
+	if err == nil {
+		t.Fatalf("expected error for unverified certificate in TranspileCertificateToLean, got nil")
+	}
+}
+
+
 

@@ -495,8 +495,11 @@
     "err_cannot_generate_lean_unverified": "未検証の計算に対して Lean 証明を生成することはできません: %s",
     "err_cannot_transpile_unverified_certificate": "未検証の証明書を Lean に変換することはできません: %s",
     "err_certificate_is_nil": "nil 証明書を Lean に変換することはできません",
+    "err_empty_root_certificate": "空の根リストを持つ多項式求根証明書を Lean に変換することはできません",
+    "err_incomplete_certificate_witness": "証明書 '%s' の証拠フィールドが不完全です",
     "err_prooftrace_has_no_steps": "ProofTrace にトランスパイル対象の書換ステップまたは式が存在しません",
     "err_prooftrace_is_nil": "nil の ProofTrace から Lean 計算証明を生成することはできません",
+    "err_unsupported_ast_node": "AST ノード型 '%T' の Lean 4 トランスパイルは未対応です",
     "err_unsupported_certificate_for_lean": "ドメイン '%s' の証明書に対する Lean 4 形式証明は未対応です",
     "err_unsupported_function": "関数 '%s' に対する形式証明コード生成は未対応です",
     "err_unsupported_identity_for_lean": "未解釈関数を含む恒等式を Lean 'by ring' に変換することはできません"
