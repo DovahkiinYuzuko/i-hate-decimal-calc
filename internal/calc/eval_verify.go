@@ -372,6 +372,45 @@ func verifySolve(fn *FuncNode, rootsResult Node, env *Env, fsm *VerifyLifecycleF
 		}
 	}
 
+	// Completeness validation for polynomial equations
+	if allRootsSatisfied {
+		expandedZero := expandNode(zeroExpr)
+		coeffs, errCoeffs := extractPolyCoeffs(expandedZero, varName)
+		if errCoeffs == nil && len(coeffs) > 0 {
+			maxDeg := 0
+			for d := range coeffs {
+				if d > maxDeg {
+					maxDeg = d
+				}
+			}
+			if maxDeg >= 1 {
+				if len(roots) == 0 {
+					// Empty roots for degree >= 1 polynomial is incomplete
+					allRootsSatisfied = false
+					failedRoot = &ConstNode{Name: "empty_set"}
+					lastResidual = expandedZero
+				} else {
+					// Build reconstructed polynomial: a_N * \prod (x - r_i)
+					aN := coeffs[maxDeg]
+					var factors []Node = []Node{aN}
+					for _, r := range roots {
+						negR, _ := simplifyUnaryOp("-", r)
+						factors = append(factors, NewAdd([]Node{&VarNode{Name: varName}, negR}))
+					}
+					reconPoly := &MulNode{Factors: factors}
+					expandedRecon := expandNode(reconPoly)
+					negRecon, _ := simplifyUnaryOp("-", expandedRecon)
+					diff := NewAdd([]Node{expandedZero, negRecon})
+					if !checkIsZeroAlgebraically(diff, env) {
+						allRootsSatisfied = false
+						failedRoot = &ConstNode{Name: "incomplete_solution_set"}
+						lastResidual, _ = Eval(diff)
+					}
+				}
+			}
+		}
+	}
+
 	_ = fsm.TransitionTo(VerifyStateSimplificationEvaluated)
 	eqStr := fmt.Sprintf("eq[%s -> roots] == 0", varName)
 	if allRootsSatisfied {
@@ -390,7 +429,12 @@ func verifySolve(fn *FuncNode, rootsResult Node, env *Env, fsm *VerifyLifecycleF
 	}
 
 	_ = fsm.TransitionTo(VerifyStateRefuted)
-	details := fmt.Sprintf("root %s did not satisfy equation (residual = %s)", failedRoot.String(), lastResidual.String())
+	var details string
+	if failedRoot != nil && lastResidual != nil {
+		details = fmt.Sprintf("root %s did not satisfy equation (residual = %s)", failedRoot.String(), lastResidual.String())
+	} else {
+		details = i18n.T("verify.err_incomplete_roots")
+	}
 	certIR := NewPolynomialRootCertificate(zeroExpr, varName, rootsResult, lastResidual, false, details)
 	return &VerificationCertificate{
 		Domain:     DomainSolve,
@@ -1316,10 +1360,55 @@ func verifyMinimalPolynomial(fn *FuncNode, polyResult Node, env *Env, fsm *Verif
 	_ = fsm.TransitionTo(VerifyStateSimplificationEvaluated)
 	holds := checkIsZeroAlgebraically(subbed, env)
 
+	// Check Monic and Irreducibility
+	isMonic := false
+	isIrreducible := true
+	expandedP := expandNode(polyResult)
+	coeffs, errCoeffs := extractPolyCoeffs(expandedP, varName)
+	if errCoeffs == nil && len(coeffs) > 0 {
+		maxDeg := 0
+		for d := range coeffs {
+			if d > maxDeg {
+				maxDeg = d
+			}
+		}
+		if maxDeg >= 1 {
+			// Leading coefficient must be exactly 1
+			leadingCoeff := coeffs[maxDeg]
+			if rat, ok := leadingCoeff.(*RationalNode); ok && rat.Val.Cmp(big.NewRat(1, 1)) == 0 {
+				isMonic = true
+			}
+		}
+	}
+
+	// Irreducibility check via factor
+	if holds && isMonic {
+		factored, errFact := Factor(polyResult)
+		if errFact == nil {
+			if mul, ok := factored.(*MulNode); ok && len(mul.Factors) > 1 {
+				polyFactorCount := 0
+				for _, f := range mul.Factors {
+					freeVars := ExtractFreeVariables(f)
+					for _, v := range freeVars {
+						if v == varName {
+							polyFactorCount++
+							break
+						}
+					}
+				}
+				if polyFactorCount > 1 {
+					isIrreducible = false
+				}
+			}
+		}
+	}
+
+	holds = holds && isMonic && isIrreducible
+
 	eqStr := "P(alpha) == 0"
 	if holds {
 		_ = fsm.TransitionTo(VerifyStateCertified)
-		details := "minimal polynomial root relation holds"
+		details := i18n.T("verify.min_poly_holds")
 		certIR := NewPolynomialRootCertificate(polyResult, varName, alpha, mustRational(0, 1), true, details)
 		return &VerificationCertificate{
 			Domain:     DomainPolynomialRoot,
@@ -1334,7 +1423,14 @@ func verifyMinimalPolynomial(fn *FuncNode, polyResult Node, env *Env, fsm *Verif
 
 	_ = fsm.TransitionTo(VerifyStateRefuted)
 	evalRes, _ := Eval(subbed)
-	details := "polynomial does not vanish at alpha"
+	var details string
+	if !isMonic {
+		details = i18n.T("verify.err_min_poly_not_monic")
+	} else if !isIrreducible {
+		details = i18n.T("verify.err_min_poly_reducible")
+	} else {
+		details = i18n.T("verify.err_min_poly_does_not_vanish")
+	}
 	certIR := NewPolynomialRootCertificate(polyResult, varName, alpha, evalRes, false, details)
 	return &VerificationCertificate{
 		Domain:     DomainPolynomialRoot,
@@ -1345,6 +1441,16 @@ func verifyMinimalPolynomial(fn *FuncNode, polyResult Node, env *Env, fsm *Verif
 		State:      VerifyStateRefuted,
 		CertIR:     certIR,
 	}, nil
+}
+
+func extractPointCoords(p Node) (x Node, y Node, isInfinity bool) {
+	if pMat, ok := p.(*MatrixNode); ok && len(pMat.Data) == 1 && len(pMat.Data[0]) >= 2 {
+		return pMat.Data[0][0], pMat.Data[0][1], false
+	}
+	if pList, ok := p.(*ListNode); ok && len(pList.Elements) >= 2 {
+		return pList.Elements[0], pList.Elements[1], false
+	}
+	return nil, nil, true
 }
 
 func verifyEllipticAdd(fn *FuncNode, p3Result Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
@@ -1359,51 +1465,104 @@ func verifyEllipticAdd(fn *FuncNode, p3Result Node, env *Env, fsm *VerifyLifecyc
 
 	_ = fsm.TransitionTo(VerifyStateResidualConstructed)
 
-	// Check if p3Result satisfies y^2 == x^3 + a*x + b
+	x1, y1, inf1 := extractPointCoords(p1)
+	x2, y2, inf2 := extractPointCoords(p2)
+	xRes, yRes, infRes := extractPointCoords(p3Result)
+
+	var expX, expY Node
+	expInf := false
+
+	if inf1 {
+		expX, expY, expInf = x2, y2, inf2
+	} else if inf2 {
+		expX, expY, expInf = x1, y1, inf1
+	} else {
+		negX2, _ := simplifyUnaryOp("-", x2)
+		diffX := NewAdd([]Node{x1, negX2})
+		isSameX := checkIsZeroAlgebraically(diffX, env)
+
+		negY2, _ := simplifyUnaryOp("-", y2)
+		diffY := NewAdd([]Node{y1, negY2})
+		isSameY := checkIsZeroAlgebraically(diffY, env)
+
+		sumY := NewAdd([]Node{y1, y2})
+		isOppositeY := checkIsZeroAlgebraically(sumY, env)
+		negY1, _ := simplifyUnaryOp("-", y1)
+
+		if isSameX && isOppositeY {
+			expInf = true
+		} else if isSameX && isSameY {
+			// Doubling: lambda = (3*x1^2 + a) / (2*y1)
+			if checkIsZeroAlgebraically(y1, env) {
+				expInf = true
+			} else {
+				threeX1Sq := &MulNode{Factors: []Node{mustRational(3, 1), &PowNode{Base: x1, Exp: mustRational(2, 1)}}}
+				num := &AddNode{Terms: []Node{threeX1Sq, a}}
+				den := &MulNode{Factors: []Node{mustRational(2, 1), y1}}
+				invDen, _ := simplifyPow(den, mustRational(-1, 1))
+				lam := &MulNode{Factors: []Node{num, invDen}}
+
+				// x3 = lam^2 - 2*x1
+				lamSq := &PowNode{Base: lam, Exp: mustRational(2, 1)}
+				twoX1 := &MulNode{Factors: []Node{mustRational(2, 1), x1}}
+				negTwoX1, _ := simplifyUnaryOp("-", twoX1)
+				expX = &AddNode{Terms: []Node{lamSq, negTwoX1}}
+
+				// y3 = lam*(x1 - x3) - y1
+				negExpX, _ := simplifyUnaryOp("-", expX)
+				xDiff := &AddNode{Terms: []Node{x1, negExpX}}
+				lamXDiff := &MulNode{Factors: []Node{lam, xDiff}}
+				expY = &AddNode{Terms: []Node{lamXDiff, negY1}}
+			}
+		} else {
+			// Distinct points: lambda = (y2 - y1) / (x2 - x1)
+			num := &AddNode{Terms: []Node{y2, negY1}}
+			negX1, _ := simplifyUnaryOp("-", x1)
+			den := &AddNode{Terms: []Node{x2, negX1}}
+			invDen, _ := simplifyPow(den, mustRational(-1, 1))
+			lam := &MulNode{Factors: []Node{num, invDen}}
+
+			// x3 = lam^2 - x1 - x2
+			lamSq := &PowNode{Base: lam, Exp: mustRational(2, 1)}
+			negX2b, _ := simplifyUnaryOp("-", x2)
+			expX = &AddNode{Terms: []Node{lamSq, negX1, negX2b}}
+
+			// y3 = lam*(x1 - x3) - y1
+			negExpX, _ := simplifyUnaryOp("-", expX)
+			xDiff := &AddNode{Terms: []Node{x1, negExpX}}
+			lamXDiff := &MulNode{Factors: []Node{lam, xDiff}}
+			expY = &AddNode{Terms: []Node{lamXDiff, negY1}}
+		}
+	}
+
+	_ = fsm.TransitionTo(VerifyStateSimplificationEvaluated)
 	holds := false
 	var resNode Node = mustRational(0, 1)
 
-	if pMat, ok := p3Result.(*MatrixNode); ok && len(pMat.Data) == 1 && len(pMat.Data[0]) >= 2 {
-		x := pMat.Data[0][0]
-		y := pMat.Data[0][1]
-
-		y2 := &PowNode{Base: y, Exp: mustRational(2, 1)}
-		x3 := &PowNode{Base: x, Exp: mustRational(3, 1)}
-		ax := &MulNode{Factors: []Node{a, x}}
-		rhs := &AddNode{Terms: []Node{x3, ax, b}}
-		negRHS, _ := simplifyUnaryOp("-", rhs)
-		diff := &AddNode{Terms: []Node{y2, negRHS}}
-
-		_ = fsm.TransitionTo(VerifyStateSimplificationEvaluated)
-		holds = checkIsZeroAlgebraically(diff, env)
+	if expInf {
+		holds = infRes
 		if !holds {
-			resNode, _ = Eval(diff)
+			resNode = mustRational(1, 1)
 		}
-	} else if pList, ok := p3Result.(*ListNode); ok && len(pList.Elements) >= 2 {
-		x := pList.Elements[0]
-		y := pList.Elements[1]
+	} else if !infRes && expX != nil && expY != nil {
+		negExpX, _ := simplifyUnaryOp("-", expX)
+		resX := &AddNode{Terms: []Node{xRes, negExpX}}
 
-		y2 := &PowNode{Base: y, Exp: mustRational(2, 1)}
-		x3 := &PowNode{Base: x, Exp: mustRational(3, 1)}
-		ax := &MulNode{Factors: []Node{a, x}}
-		rhs := &AddNode{Terms: []Node{x3, ax, b}}
-		negRHS, _ := simplifyUnaryOp("-", rhs)
-		diff := &AddNode{Terms: []Node{y2, negRHS}}
+		negExpY, _ := simplifyUnaryOp("-", expY)
+		resY := &AddNode{Terms: []Node{yRes, negExpY}}
 
-		_ = fsm.TransitionTo(VerifyStateSimplificationEvaluated)
-		holds = checkIsZeroAlgebraically(diff, env)
+		zeroX := checkIsZeroAlgebraically(resX, env)
+		zeroY := checkIsZeroAlgebraically(resY, env)
+		holds = zeroX && zeroY
 		if !holds {
-			resNode, _ = Eval(diff)
+			resNode, _ = Eval(resX)
 		}
-	} else {
-		// Point at infinity is always valid
-		holds = true
 	}
 
-	eqStr := "y^2 == x^3 + a*x + b"
+	eqStr := "P3 == P1 + P2 (Weierstrass group law)"
 	if holds {
 		_ = fsm.TransitionTo(VerifyStateCertified)
-		details := "elliptic curve group law addition holds"
+		details := i18n.T("verify.elliptic_add_holds")
 		certIR := NewEllipticPointCertificate(a, b, p1, p2, p3Result, mustRational(0, 1), true, details)
 		return &VerificationCertificate{
 			Domain:     DomainElliptic,
@@ -1417,7 +1576,7 @@ func verifyEllipticAdd(fn *FuncNode, p3Result Node, env *Env, fsm *VerifyLifecyc
 	}
 
 	_ = fsm.TransitionTo(VerifyStateRefuted)
-	details := "result point does not lie on curve"
+	details := i18n.T("verify.err_elliptic_add_mismatch")
 	certIR := NewEllipticPointCertificate(a, b, p1, p2, p3Result, resNode, false, details)
 	return &VerificationCertificate{
 		Domain:     DomainElliptic,
@@ -1432,7 +1591,6 @@ func verifyEllipticAdd(fn *FuncNode, p3Result Node, env *Env, fsm *VerifyLifecyc
 
 // verifySNF verifies Smith Normal Form: U * A * V == D, |det(U)| == 1, |det(V)| == 1, and d_i | d_{i+1}
 func verifySNF(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
-	_ = result
 	if len(fn.Args) < 1 {
 		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
 		return nil, fmt.Errorf("%s", i18n.T("matrix_integer.err_snf_args"))
@@ -1449,29 +1607,45 @@ func verifySNF(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*V
 		return nil, err
 	}
 
-	rawD, rawU, rawV, err := ComputeSNF(intMat)
-	if err != nil {
+	var D, U, V *MatrixNode
+	if list, ok := result.(*ListNode); ok && len(list.Elements) >= 3 {
+		dMat, okD := list.Elements[0].(*MatrixNode)
+		uMat, okU := list.Elements[1].(*MatrixNode)
+		vMat, okV := list.Elements[2].(*MatrixNode)
+		if okD && okU && okV {
+			D, U, V = dMat, uMat, vMat
+		}
+	} else if dMat, ok := result.(*MatrixNode); ok {
+		D = dMat
+		_, rawU, rawV, errSNF := ComputeSNF(intMat)
+		if errSNF != nil {
+			_ = fsm.TransitionTo(VerifyStateRefuted)
+			return nil, errSNF
+		}
+		U, _ = buildMatrixNode(rawU)
+		V, _ = buildMatrixNode(rawV)
+	}
+
+	if D == nil || U == nil || V == nil {
 		_ = fsm.TransitionTo(VerifyStateRefuted)
-		return nil, err
+		return &VerificationCertificate{
+			Domain:     DomainSNF,
+			Equation:   "U * A * V == D",
+			Residual:   mustRational(1, 1),
+			IsVerified: false,
+			Details:    i18n.T("verify.err_snf_matrices_invalid"),
+			State:      VerifyStateRefuted,
+		}, nil
 	}
 
-	D, err := buildMatrixNode(rawD)
-	if err != nil {
-		return nil, err
-	}
-	U, err := buildMatrixNode(rawU)
-	if err != nil {
-		return nil, err
-	}
-	V, err := buildMatrixNode(rawV)
-	if err != nil {
-		return nil, err
-	}
-
-	factors := ExtractInvariantFactors(rawD)
+	rawD, errD := extractIntegerMatrix(D)
 	var invFactors []Node
-	for _, f := range factors {
-		invFactors = append(invFactors, NewRationalFromBigRat(new(big.Rat).SetInt(&f)))
+	var factors []big.Int
+	if errD == nil {
+		factors = ExtractInvariantFactors(rawD)
+		for _, f := range factors {
+			invFactors = append(invFactors, NewRationalFromBigRat(new(big.Rat).SetInt(&f)))
+		}
 	}
 
 	_ = fsm.TransitionTo(VerifyStateResidualConstructed)
@@ -1563,7 +1737,6 @@ func verifySNF(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*V
 
 // verifyHNF verifies Hermite Normal Form: U * A == H, |det(U)| == 1, and H satisfies lower triangular HNF conditions
 func verifyHNF(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
-	_ = result
 	if len(fn.Args) < 1 {
 		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
 		return nil, fmt.Errorf("%s", i18n.T("matrix_integer.err_hnf_args"))
@@ -1580,19 +1753,33 @@ func verifyHNF(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*V
 		return nil, err
 	}
 
-	rawH, rawU, err := ComputeHNF(intMat)
-	if err != nil {
-		_ = fsm.TransitionTo(VerifyStateRefuted)
-		return nil, err
+	var H, U *MatrixNode
+	if list, ok := result.(*ListNode); ok && len(list.Elements) >= 2 {
+		hMat, okH := list.Elements[0].(*MatrixNode)
+		uMat, okU := list.Elements[1].(*MatrixNode)
+		if okH && okU {
+			H, U = hMat, uMat
+		}
+	} else if hMat, ok := result.(*MatrixNode); ok {
+		H = hMat
+		_, rawU, errHNF := ComputeHNF(intMat)
+		if errHNF != nil {
+			_ = fsm.TransitionTo(VerifyStateRefuted)
+			return nil, errHNF
+		}
+		U, _ = buildMatrixNode(rawU)
 	}
 
-	H, err := buildMatrixNode(rawH)
-	if err != nil {
-		return nil, err
-	}
-	U, err := buildMatrixNode(rawU)
-	if err != nil {
-		return nil, err
+	if H == nil || U == nil {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		return &VerificationCertificate{
+			Domain:     DomainHNF,
+			Equation:   "U * A == H",
+			Residual:   mustRational(1, 1),
+			IsVerified: false,
+			Details:    i18n.T("verify.err_hnf_matrices_invalid"),
+			State:      VerifyStateRefuted,
+		}, nil
 	}
 
 	_ = fsm.TransitionTo(VerifyStateResidualConstructed)
