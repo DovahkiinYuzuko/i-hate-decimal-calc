@@ -96,6 +96,9 @@ func (vc *VerificationCertificate) String() string {
 	if vc.IsVerified {
 		return fmt.Sprintf("[VERIFIED: %s]", vc.Equation)
 	}
+	if vc.State == VerifyStateUnsupportedDomain {
+		return fmt.Sprintf("[UNVERIFIED: %s] %s", vc.Equation, vc.Details)
+	}
 	return fmt.Sprintf("[FAILED VERIFICATION: %s] %s", vc.Equation, vc.Details)
 }
 
@@ -174,6 +177,20 @@ func VerifyComputation(expr, result Node, env *Env) (*VerificationCertificate, e
 		case "hnf", "hnf_transform":
 			_ = fsm.TransitionTo(VerifyStateTargetClassified)
 			return verifyHNF(fn, result, env, fsm)
+
+		case "is_solvable_by_radicals":
+			_ = fsm.TransitionTo(VerifyStateTargetClassified)
+			if env != nil && env.LastCert != nil && env.LastCert.Domain == DomainImpossibility {
+				return env.LastCert, nil
+			}
+			_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+			return &VerificationCertificate{
+				Domain:     DomainImpossibility,
+				Equation:   fmt.Sprintf("%s == %s", fn.String(), result.String()),
+				IsVerified: false,
+				Details:    i18n.T("verify.err_no_independent_verifier"),
+				State:      VerifyStateUnsupportedDomain,
+			}, nil
 		}
 
 	case *RelOpNode:
@@ -712,23 +729,43 @@ func verifyODE(fn *FuncNode, ySol Node, env *Env, fsm *VerifyLifecycleFSM) (*Ver
 		diffEq = eq
 	}
 
+	// Extract actual solution RHS if ySol is y == ...
+	actualSol := ySol
+	if bin, ok := ySol.(*RelOpNode); ok && bin.Op == "==" {
+		actualSol = bin.RHS
+	}
+
 	// Substitute y, y', y'' into diffEq
 	// In i-hate-decimal-calc ODE, y is typically represented as a variable or function
 	// Compute y' = diff(ySol, x) and y'' = diff(y', x)
-	dySol, err := differentiate(ySol, xName)
+	dySol, err := differentiate(actualSol, xName)
 	if err != nil {
 		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
-		return nil, err
+		return &VerificationCertificate{
+			Domain:     DomainODE,
+			Equation:   fmt.Sprintf("%s == %s", eq.String(), ySol.String()),
+			Residual:   nil,
+			IsVerified: false,
+			Details:    err.Error(),
+			State:      VerifyStateUnsupportedDomain,
+		}, nil
 	}
 	d2ySol, err := differentiate(dySol, xName)
 	if err != nil {
 		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
-		return nil, err
+		return &VerificationCertificate{
+			Domain:     DomainODE,
+			Equation:   fmt.Sprintf("%s == %s", eq.String(), ySol.String()),
+			Residual:   nil,
+			IsVerified: false,
+			Details:    err.Error(),
+			State:      VerifyStateUnsupportedDomain,
+		}, nil
 	}
 
 	// Replace derivatives and y in diffEq
 	// We do AST replacement for y'', y', y
-	substituted := substituteODE(diffEq, ySol, dySol, d2ySol)
+	substituted := substituteODE(diffEq, actualSol, dySol, d2ySol)
 
 	_ = fsm.TransitionTo(VerifyStateSimplificationEvaluated)
 	isZeroRes := checkIsZeroAlgebraically(substituted, env)
@@ -883,43 +920,23 @@ func VerifyAlgebraicEquivalence(lhs, rhs Node, env *Env) (*VerificationCertifica
 	}, nil
 }
 
-// verifyGeneral verifies if expr simplifies to result: expr - result == 0.
+// verifyGeneral handles expressions without dedicated independent asymmetric verifiers.
+// Under strict verification governance, identical-engine re-evaluation (Eval(expr - result) == 0)
+// is recognized as circular verification and strictly rejected.
+// It safely transitions to VerifyStateUnsupportedDomain and returns an unverified certificate.
 func verifyGeneral(expr, result Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
-	_ = fsm.TransitionTo(VerifyStateResidualConstructed)
-	negRes, _ := simplifyUnaryOp("-", result)
-	diff := NewAdd([]Node{expr, negRes})
-
-	_ = fsm.TransitionTo(VerifyStateSimplificationEvaluated)
-	isZeroRes := checkIsZeroAlgebraically(diff, env)
-
-	eqStr := fmt.Sprintf("expr == %s", result.String())
-	if isZeroRes {
-		_ = fsm.TransitionTo(VerifyStateCertified)
-		details := i18n.T("verify.general_holds")
-		certIR := NewIdentityCertificate(IdentityKindGeneral, expr, result, mustRational(0, 1), true, details)
-		return &VerificationCertificate{
-			Domain:     DomainGeneral,
-			Equation:   eqStr,
-			Residual:   mustRational(0, 1),
-			IsVerified: true,
-			Details:    details,
-			State:      VerifyStateCertified,
-			CertIR:     certIR,
-		}, nil
-	}
-
-	_ = fsm.TransitionTo(VerifyStateRefuted)
-	evalDiff, _ := Eval(diff)
-	details := fmt.Sprintf(i18n.T("verify.refuted_residual"), evalDiff.String())
-	certIR := NewIdentityCertificate(IdentityKindGeneral, expr, result, evalDiff, false, details)
+	_ = env
+	_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+	eqStr := fmt.Sprintf("%s == %s", expr.String(), result.String())
+	details := i18n.T("verify.err_no_independent_verifier")
 	return &VerificationCertificate{
 		Domain:     DomainGeneral,
 		Equation:   eqStr,
-		Residual:   evalDiff,
+		Residual:   nil,
 		IsVerified: false,
 		Details:    details,
-		State:      VerifyStateRefuted,
-		CertIR:     certIR,
+		State:      VerifyStateUnsupportedDomain,
+		CertIR:     nil,
 	}, nil
 }
 

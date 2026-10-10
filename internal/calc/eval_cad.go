@@ -11,12 +11,47 @@ import (
 
 // CadCell represents a decomposed cylindrical cell in R^k.
 type CadCell struct {
-	Dimension   int
-	SamplePoint []Node
-	IsSection   bool
-	SignVector  map[string]int // string of poly -> sign (-1, 0, 1)
-	Satisfied   bool
-	Parent      *CadCell // Pointer to parent cell in R^{k-1} (Cylindrical Ancestry)
+	Dimension    int
+	SamplePoint  []Node
+	IsSection    bool
+	DefiningPoly Node
+	SignVector   map[string]int // string of poly -> sign (-1, 0, 1)
+	Satisfied    bool
+	Parent       *CadCell // Pointer to parent cell in R^{k-1} (Cylindrical Ancestry)
+}
+
+// toRationalSampleNode converts an interval node or irrational node to a rational midpoint sample point.
+func toRationalSampleNode(n Node) Node {
+	if n == nil {
+		return mustRational(0, 1)
+	}
+	if r, ok := n.(*RationalNode); ok {
+		return r
+	}
+	if list, ok := n.(*ListNode); ok && len(list.Elements) == 2 {
+		rLow, okL := list.Elements[0].(*RationalNode)
+		rHigh, okH := list.Elements[1].(*RationalNode)
+		if okL && okH {
+			mid := new(big.Rat).Add(rLow.Val, rHigh.Val)
+			mid.Quo(mid, big.NewRat(2, 1))
+			return NewRationalFromBigRat(mid)
+		}
+	}
+	low, high, ok := getExactRootBounds(n)
+	if ok && low != nil && high != nil {
+		mid := new(big.Rat).Add(low, high)
+		mid.Quo(mid, big.NewRat(2, 1))
+		return NewRationalFromBigRat(mid)
+	}
+	return n
+}
+
+func toRationalSamplePoint(sample []Node) []Node {
+	res := make([]Node, len(sample))
+	for i, pt := range sample {
+		res[i] = toRationalSampleNode(pt)
+	}
+	return res
 }
 
 // CadState refers to the CAD lifecycle phase defined in eval_cad_fsm.go.
@@ -231,10 +266,6 @@ func isRealNode(n Node) bool {
 	if containsVar(n, "i") {
 		return false
 	}
-	s := n.String()
-	if strings.Contains(s, "*i") || strings.Contains(s, "+ i") || strings.Contains(s, "- i") {
-		return false
-	}
 	return true
 }
 
@@ -259,22 +290,29 @@ func decompose1DCADInternal(polys []*univariatePoly, varName string, env *Env) (
 			continue
 		}
 
-		// 1. Try finding exact symbolic roots first
-		exactRoots, err := solveExactRoots(pTrimmed.toNode(), varName)
-		if err == nil && len(exactRoots) > 0 {
-			for _, r := range exactRoots {
-				low, high, ok := getExactRootBounds(r)
-				if ok {
-					allRoots = append(allRoots, cad1DRoot{
-						node: r,
-						low:  low,
-						high: high,
-						poly: pTrimmed,
-					})
+		// 1. Try finding exact symbolic roots for degree <= 2 (rationals, square roots)
+		var foundExact bool
+		if pTrimmed.degree() <= 2 {
+			exactRoots, err := solveExactRoots(pTrimmed.toNode(), varName)
+			if err == nil && len(exactRoots) > 0 {
+				for _, r := range exactRoots {
+					low, high, ok := getExactRootBounds(r)
+					if ok {
+						allRoots = append(allRoots, cad1DRoot{
+							node: r,
+							low:  low,
+							high: high,
+							poly: pTrimmed,
+						})
+						foundExact = true
+					}
 				}
 			}
-		} else {
-			// 2. Fallback to Sturm real root isolation
+		}
+
+		if !foundExact {
+			// 2. For degree >= 3 or when exact roots are not cleanly isolated in R,
+			// strictly use Sturm real root isolation (Collins 1975, Brown 2001)
 			isolations, err := EvalIsolateRoots(pTrimmed.toNode(), varName, nil, nil, env)
 			if err == nil {
 				if list, ok := isolations.(*ListNode); ok {
@@ -340,7 +378,11 @@ func decompose1DCADInternal(polys []*univariatePoly, varName string, env *Env) (
 	for i := 0; i < m; i++ {
 		root := dedupRoots[i]
 		// Section i+1: {alpha_{i+1}}
-		cells[2*i+1] = makeCadSectionCell([]Node{root.node}, root, polys)
+		secCell := makeCadSectionCell([]Node{root.node}, root, polys)
+		if root.poly != nil {
+			secCell.DefiningPoly = root.poly.toNode()
+		}
+		cells[2*i+1] = secCell
 
 		// Sector i+1: (alpha_{i+1}, alpha_{i+2}) or (alpha_m, +inf)
 		if i+1 < m {
@@ -689,20 +731,34 @@ func evaluateFormulaOnCell(formula Node, cell *CadCell, vars []string, env *Env)
 		key := zeroExpr.String()
 		sign, ok := cell.SignVector[key]
 		if !ok {
-			curr := zeroExpr
-			for i, v := range vars {
-				if i < len(cell.SamplePoint) {
-					curr = Substitute(curr, v, cell.SamplePoint[i])
+			isZeroPoly := false
+			for curr := cell; curr != nil; curr = curr.Parent {
+				if curr.IsSection && curr.DefiningPoly != nil {
+					if curr.DefiningPoly.String() == key || curr.DefiningPoly.Equal(zeroExpr) {
+						isZeroPoly = true
+						break
+					}
 				}
 			}
-			val, err := EvalWithEnv(curr, env)
-			if err != nil {
-				val = curr
-			}
-			if r, ok := val.(*RationalNode); ok {
-				sign = r.Val.Sign()
+			if isZeroPoly {
+				sign = 0
 			} else {
-				sign = int(exactSignEval(val, 0))
+				ratSample := toRationalSamplePoint(cell.SamplePoint)
+				curr := zeroExpr
+				for i, v := range vars {
+					if i < len(ratSample) {
+						curr = Substitute(curr, v, ratSample[i])
+					}
+				}
+				val, err := EvalWithEnv(curr, env)
+				if err != nil {
+					val = curr
+				}
+				if r, ok := val.(*RationalNode); ok {
+					sign = r.Val.Sign()
+				} else {
+					sign = int(exactSignEval(val, 0))
+				}
 			}
 		}
 		return evalRelationalSign(sign, node.Op), nil
@@ -792,8 +848,9 @@ func extractFactors(n Node) []Node {
 // If the polynomial vanishes identically (isZero), it returns a degree-0 zero polynomial.
 func specializePolyForCAD(p Node, vars []string, samplePoint []Node, targetVar string, env *Env) (*univariatePoly, bool, error) {
 	curr := p
-	for i := 0; i < len(samplePoint); i++ {
-		curr = Substitute(curr, vars[i], samplePoint[i])
+	ratSample := toRationalSamplePoint(samplePoint)
+	for i := 0; i < len(ratSample); i++ {
+		curr = Substitute(curr, vars[i], ratSample[i])
 	}
 	simplified, err := EvalWithEnv(curr, env)
 	if err == nil {
@@ -965,6 +1022,7 @@ func liftCADCells(projSets [][]Node, vars []string, env *Env, fsm *CadLifecycleF
 		cellBatches, err := ParallelBatchMap(currentLevelCells, func(parent *CadCell) ([]*CadCell, error) {
 			localEnv := env.Clone()
 			var specializedPolys []*univariatePoly
+			polySourceMap := make(map[*univariatePoly]Node)
 			for _, p := range levelPolys {
 				// Only consider polynomials containing targetVar for real root isolation in this level
 				if !containsVar(p, targetVar) {
@@ -976,6 +1034,7 @@ func liftCADCells(projSets [][]Node, vars []string, env *Env, fsm *CadLifecycleF
 				}
 				if !isConst && uPoly != nil && uPoly.degree() > 0 {
 					specializedPolys = append(specializedPolys, uPoly)
+					polySourceMap[uPoly] = p
 				}
 			}
 
@@ -994,26 +1053,34 @@ func liftCADCells(projSets [][]Node, vars []string, env *Env, fsm *CadLifecycleF
 					Parent:      parent,
 				})
 			} else {
-				stack1D, _, err := decompose1DCADInternal(specializedPolys, targetVar, localEnv)
+				stack1D, roots1D, err := decompose1DCADInternal(specializedPolys, targetVar, localEnv)
 				if err != nil {
 					return nil, err
 				}
+				secIdx := 0
 				for _, c1D := range stack1D {
 					liftedSample := make([]Node, len(parent.SamplePoint)+len(c1D.SamplePoint))
 					copy(liftedSample, parent.SamplePoint)
 					copy(liftedSample[len(parent.SamplePoint):], c1D.SamplePoint)
 
 					dim := parent.Dimension
+					var defPoly Node
 					if !c1D.IsSection {
 						dim++
+					} else {
+						if secIdx < len(roots1D) {
+							defPoly = polySourceMap[roots1D[secIdx].poly]
+							secIdx++
+						}
 					}
 
 					liftedCells = append(liftedCells, &CadCell{
-						Dimension:   dim,
-						SamplePoint: liftedSample,
-						IsSection:   c1D.IsSection,
-						SignVector:  make(map[string]int),
-						Parent:      parent,
+						Dimension:    dim,
+						SamplePoint:  liftedSample,
+						IsSection:    c1D.IsSection,
+						DefiningPoly: defPoly,
+						SignVector:   make(map[string]int),
+						Parent:       parent,
 					})
 				}
 			}
@@ -1038,11 +1105,33 @@ func liftCADCells(projSets [][]Node, vars []string, env *Env, fsm *CadLifecycleF
 	_, err := ParallelBatchMap(currentLevelCells, func(cell *CadCell) (struct{}, error) {
 		localEnv := env.Clone()
 		cell.SignVector = make(map[string]int)
+
+		// Check if polynomial is defining zero polynomial on this section or any cylindrical ancestor
+		isZeroOnCell := func(target Node) bool {
+			targetStr := target.String()
+			for curr := cell; curr != nil; curr = curr.Parent {
+				if curr.IsSection && curr.DefiningPoly != nil {
+					if curr.DefiningPoly.String() == targetStr || curr.DefiningPoly.Equal(target) {
+						return true
+					}
+				}
+			}
+			return false
+		}
+
+		ratSample := toRationalSamplePoint(cell.SamplePoint)
+
 		for _, p := range originalPolys {
+			pStr := p.String()
+			if isZeroOnCell(p) {
+				cell.SignVector[pStr] = 0
+				continue
+			}
+
 			curr := p
 			for i, v := range vars {
-				if i < len(cell.SamplePoint) {
-					curr = Substitute(curr, v, cell.SamplePoint[i])
+				if i < len(ratSample) {
+					curr = Substitute(curr, v, ratSample[i])
 				}
 			}
 			val, err := EvalWithEnv(curr, localEnv)
@@ -1050,10 +1139,10 @@ func liftCADCells(projSets [][]Node, vars []string, env *Env, fsm *CadLifecycleF
 				val = curr
 			}
 			if r, ok := val.(*RationalNode); ok {
-				cell.SignVector[p.String()] = r.Val.Sign()
+				cell.SignVector[pStr] = r.Val.Sign()
 			} else {
 				sign := exactSignEval(val, 0)
-				cell.SignVector[p.String()] = int(sign)
+				cell.SignVector[pStr] = int(sign)
 			}
 		}
 		return struct{}{}, nil

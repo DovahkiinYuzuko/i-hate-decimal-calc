@@ -175,7 +175,11 @@ func (n *MulNode) String() string {
 	}
 	strs := make([]string, len(n.Factors))
 	for i, f := range n.Factors {
-		strs[i] = f.String()
+		s := f.String()
+		if _, isAdd := f.(*AddNode); isAdd {
+			s = fmt.Sprintf("(%s)", s)
+		}
+		strs[i] = s
 	}
 	return strings.Join(strs, " * ")
 }

@@ -125,15 +125,15 @@ func TestPolarExp(t *testing.T) {
 	}{
 		{
 			"polar_exp(1 + i)",
-			[]string{"√2", "e^i*1/4*π"},
+			[]string{"√2", "e^(i*1/4*π)"},
 		},
 		{
 			"polar_exp(2*i)",
-			[]string{"2", "e^i*1/2*π"},
+			[]string{"2", "e^(i*1/2*π)"},
 		},
 		{
 			"polar_exp(-3)",
-			[]string{"3", "e^i*π"},
+			[]string{"3", "e^(i*π)"},
 		},
 	}
 
