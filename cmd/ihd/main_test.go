@@ -645,3 +645,118 @@ func TestCLI_CertificateAndReplay_MultipleDomains(t *testing.T) {
 		})
 	}
 }
+
+func TestCLI_CliffordGeometricAlgebra(t *testing.T) {
+	testCases := []struct {
+		expr     string
+		expected string
+	}{
+		{"clifford(e0 * e1 + e1 * e0, 3, 0)", "0"},
+		{"clifford(e0 * e0, 3, 0)", "1"},
+		{"clifford(e1 * e1, 1, 3)", "-1"},
+		{"clifford(e3 * e3, 3, 0, 1)", "0"},
+		{"clifford_wedge(e0, e1, 3, 0)", "e0^e1"},
+		{"clifford_contract(e0, e0, \"left\", 3, 0)", "1"},
+		{"clifford_dual(e3, 3, 0, 1)", "-e0^e1^e2"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.expr, func(t *testing.T) {
+			out := new(bytes.Buffer)
+			errOut := new(bytes.Buffer)
+			code := run([]string{tc.expr}, strings.NewReader(""), out, errOut)
+			if code != 0 {
+				t.Fatalf("expected exit code 0 for %s, got %d. stderr: %s", tc.expr, code, errOut.String())
+			}
+			actual := strings.TrimSpace(out.String())
+			if actual != tc.expected {
+				t.Errorf("expr %s: expected %q, got %q", tc.expr, tc.expected, actual)
+			}
+		})
+	}
+}
+
+func TestCLI_QuantumCircuitEquivalence(t *testing.T) {
+	testCases := []struct {
+		name     string
+		expr     string
+		expected string
+	}{
+		{
+			name:     "H H identity",
+			expr:     "quantum_equiv([[\"H\", 0], [\"H\", 0]], [])",
+			expected: "[1, 0, -1]",
+		},
+		{
+			name:     "X Z equivalent to Y up to global phase omega^2",
+			expr:     "quantum_equiv([[\"X\", 0], [\"Z\", 0]], [[\"Y\", 0]])",
+			expected: "[1, 2, -1]",
+		},
+		{
+			name:     "X Z strict equivalence to Y fails",
+			expr:     "quantum_equiv([[\"X\", 0], [\"Z\", 0]], [[\"Y\", 0]], true)",
+			expected: "[0, 2, 0]",
+		},
+		{
+			name:     "Pauli X evaluation",
+			expr:     "quantum_eval([[\"X\", 0]])",
+			expected: "[[0, 1], [1, 0]]",
+		},
+		{
+			name:     "CNOT commutativity refutation with counterexample",
+			expr:     "quantum_equiv([[\"CNOT\", 0, 1]], [[\"CNOT\", 1, 0]])",
+			expected: "[0, -1, 1]",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			out := new(bytes.Buffer)
+			errOut := new(bytes.Buffer)
+			code := run([]string{tc.expr}, strings.NewReader(""), out, errOut)
+			if code != 0 {
+				t.Fatalf("expected exit code 0 for %s, got %d. stderr: %s", tc.expr, code, errOut.String())
+			}
+			actual := strings.TrimSpace(out.String())
+			if actual != tc.expected {
+				t.Errorf("expr %s: expected %q, got %q", tc.expr, tc.expected, actual)
+			}
+		})
+	}
+}
+
+func TestCLI_Clifford_Quantum_Adversarial(t *testing.T) {
+	errorCases := []struct {
+		name string
+		expr string
+	}{
+		{
+			name: "PGA singular blade inverse division",
+			expr: "clifford(1 / e3, 3, 0, 1)",
+		},
+		{
+			name: "Unknown quantum gate",
+			expr: "quantum_equiv([[\"FOOBAR\", 0]], [])",
+		},
+		{
+			name: "CNOT target equals control",
+			expr: "quantum_equiv([[\"CNOT\", 0, 0]], [])",
+		},
+		{
+			name: "Out of range qubit count (> 6)",
+			expr: "quantum_eval([[\"H\", 7]])",
+		},
+	}
+
+	for _, tc := range errorCases {
+		t.Run(tc.name, func(t *testing.T) {
+			out := new(bytes.Buffer)
+			errOut := new(bytes.Buffer)
+			code := run([]string{tc.expr}, strings.NewReader(""), out, errOut)
+			if code == 0 {
+				t.Errorf("expected error exit code != 0 for adversarial case %s, got 0. stdout: %s", tc.expr, out.String())
+			}
+		})
+	}
+}
+
