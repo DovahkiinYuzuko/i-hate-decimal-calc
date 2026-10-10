@@ -85,7 +85,8 @@ func (fsm *CadLifecycleFSM) TransitionTo(target CadState) error {
 	case CadStateSampled:
 		valid = (target == CadStateLifted || target == CadStateDecided || target == CadStateUnsupported)
 	case CadStateLifted:
-		valid = (target == CadStateDecided || target == CadStateUnsupported)
+		// Can transition to Decided, Unsupported, or loop back to Projected (upon WellOrientednessViolation fallback)
+		valid = (target == CadStateDecided || target == CadStateUnsupported || target == CadStateProjected)
 	case CadStateDecided, CadStateUnsupported:
 		valid = false // Terminal states
 	}

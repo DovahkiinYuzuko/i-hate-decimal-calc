@@ -598,6 +598,24 @@ func (t *ProofTrace) ToJSON() ([]byte, error) {
 	return json.MarshalIndent(ptJSON, "", "  ")
 }
 
+// ToCanonicalJSON serializes the ProofTrace into an RFC 8785 (JCS) canonical JSON byte slice.
+func (t *ProofTrace) ToCanonicalJSON() ([]byte, error) {
+	raw, err := t.ToJSON()
+	if err != nil {
+		return nil, err
+	}
+	return CanonicalizeJSON(raw)
+}
+
+// ComputeProofHash computes the deterministic SHA-256 hex digest of the canonical RFC 8785 certificate.
+func (t *ProofTrace) ComputeProofHash() (string, error) {
+	raw, err := t.ToJSON()
+	if err != nil {
+		return "", err
+	}
+	return CanonicalHashSHA256(raw)
+}
+
 // SaveProofTraceJSON writes the ProofTrace as a JSON file to the specified filePath.
 func SaveProofTraceJSON(trace *ProofTrace, filePath string) error {
 	data, err := trace.ToJSON()

@@ -1138,6 +1138,170 @@ func computeBrownMcCallumProjection(polys []Node, vars []string, env *Env) ([][]
 	return projSets, nil
 }
 
+// WellOrientednessViolationError indicates that a polynomial violated McCallum's well-orientedness condition.
+type WellOrientednessViolationError struct {
+	Poly  Node
+	Cell  *CadCell
+	Level int
+}
+
+func (e *WellOrientednessViolationError) Error() string {
+	return fmt.Sprintf("McCallum well-orientedness violation at level %d for poly %s", e.Level, e.Poly)
+}
+
+// checkCellWellOrientedness inspects whether polynomial p satisfies McCallum's well-orientedness condition
+// over cell (i.e. neither vanishes identically nor suffers leading coefficient vanishing that violates delineability).
+func checkCellWellOrientedness(p Node, cell *CadCell, vars []string, targetVar string, env *Env) (bool, error) {
+	if p == nil || cell == nil {
+		return true, nil
+	}
+	polyObj, ok := extractPoly(p, targetVar)
+	if !ok || polyObj.degree() <= 0 {
+		return true, nil
+	}
+
+	// 1. Check if leading coefficient vanishes on cell
+	lc := polyObj.leadCoeff()
+	if !isConstantNode(lc) {
+		curr := lc
+		ratSample := toRationalSamplePoint(cell.SamplePoint)
+		for i := 0; i < len(ratSample) && i < len(vars); i++ {
+			curr = Substitute(curr, vars[i], ratSample[i])
+		}
+		val, err := EvalWithEnv(curr, env)
+		if err == nil {
+			curr = val
+		}
+		if isZero(curr) {
+			return false, nil
+		}
+
+		// Also check algebraically if cell is a section defined by polynomial
+		if cell.IsSection && cell.DefiningPoly != nil && len(vars) > 0 {
+			lastVar := vars[len(vars)-1]
+			if pDef, okDef := extractPoly(cell.DefiningPoly, lastVar); okDef && isRationalPoly(pDef) {
+				if pLC, okLC := extractPoly(lc, lastVar); okLC && isRationalPoly(pLC) {
+					gcdP, errG := polyGCD1D(trimPoly(pDef), trimPoly(pLC))
+					if errG == nil && gcdP != nil && gcdP.degree() >= 1 {
+						return false, nil
+					}
+				}
+			}
+		}
+	}
+
+	// 2. Check if all coefficients vanish (complete nullification)
+	allZero := true
+	for _, coeff := range polyObj.coeffs {
+		curr := coeff
+		ratSample := toRationalSamplePoint(cell.SamplePoint)
+		for i := 0; i < len(ratSample) && i < len(vars); i++ {
+			curr = Substitute(curr, vars[i], ratSample[i])
+		}
+		val, err := EvalWithEnv(curr, env)
+		if err == nil {
+			curr = val
+		}
+		if !isZero(curr) {
+			allZero = false
+			break
+		}
+	}
+	if allZero {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+// computeCollinsHongProjection constructs complete projection factor sets P_1, P_2, ..., P_n
+// per Collins (1975) and Hong (1990) by including ALL coefficients coeff(p), discriminants disc(p),
+// and pairwise resultants res(p, q), guaranteeing order- and sign-invariance even on singular varieties.
+func computeCollinsHongProjection(polys []Node, vars []string, env *Env) ([][]Node, error) {
+	n := len(vars)
+	projSets := make([][]Node, n)
+	projSets[n-1] = polys
+
+	currentSet := polys
+	for k := n - 1; k >= 1; k-- {
+		elimVar := vars[k]
+		var nextSet []Node
+		seen := make(map[string]bool)
+
+		for i, p := range currentSet {
+			polyObj, ok := extractPoly(p, elimVar)
+			if !ok || polyObj.degree() <= 0 {
+				if !isConstantNode(p) {
+					sP := p.String()
+					if !seen[sP] {
+						seen[sP] = true
+						nextSet = append(nextSet, p)
+					}
+				}
+				continue
+			}
+
+			// 1. ALL coefficients coeff(p, elimVar)
+			for _, coeff := range polyObj.coeffs {
+				if !isConstantNode(coeff) && !isZero(coeff) {
+					sC := coeff.String()
+					if !seen[sC] {
+						seen[sC] = true
+						nextSet = append(nextSet, coeff)
+					}
+				}
+			}
+
+			// 2. Discriminant via resultant with derivative
+			if polyObj.degree() > 1 {
+				dp, err := differentiate(p, elimVar)
+				if err == nil {
+					res, err := EvalResultant(p, dp, elimVar, env)
+					if err == nil && !isConstantNode(res) && !isZero(res) {
+						sRes := res.String()
+						if !seen[sRes] {
+							seen[sRes] = true
+							nextSet = append(nextSet, res)
+						}
+					}
+				}
+			}
+
+			// 3. Pairwise resultants res(p, q)
+			for j := i + 1; j < len(currentSet); j++ {
+				q := currentSet[j]
+				res, err := EvalResultant(p, q, elimVar, env)
+				if err == nil && !isConstantNode(res) {
+					if isZero(res) {
+						g, err := EvalPolyGCD(p, q, elimVar, env)
+						if err == nil && !isConstantNode(g) && !isZero(g) {
+							sG := g.String()
+							if !seen[sG] {
+								seen[sG] = true
+								nextSet = append(nextSet, g)
+							}
+						}
+						continue
+					}
+					sRes := res.String()
+					if !seen[sRes] {
+						seen[sRes] = true
+						nextSet = append(nextSet, res)
+					}
+				}
+			}
+		}
+
+		if len(nextSet) == 0 {
+			nextSet = append(nextSet, mustRational(1, 1))
+		}
+		projSets[k-1] = nextSet
+		currentSet = nextSet
+	}
+
+	return projSets, nil
+}
+
 func isConstantNode(n Node) bool {
 	if _, ok := n.(*RationalNode); ok {
 		return true
@@ -1147,6 +1311,10 @@ func isConstantNode(n Node) bool {
 
 // liftCADCells recursively lifts cells from R^1 up to R^n over projection factor sets.
 func liftCADCells(projSets [][]Node, vars []string, env *Env, fsm *CadLifecycleFSM) ([]CadCell, error) {
+	return liftCADCellsOpt(projSets, vars, env, fsm, false)
+}
+
+func liftCADCellsOpt(projSets [][]Node, vars []string, env *Env, fsm *CadLifecycleFSM, isFallback bool) ([]CadCell, error) {
 	n := len(vars)
 	if n == 0 {
 		return nil, fmt.Errorf("%s", i18n.T("cad.err_no_variables_specified"))
@@ -1202,6 +1370,11 @@ func liftCADCells(projSets [][]Node, vars []string, env *Env, fsm *CadLifecycleF
 				// Only consider polynomials containing targetVar for real root isolation in this level
 				if !containsVar(p, targetVar) {
 					continue
+				}
+				if !isFallback {
+					if isOriented, _ := checkCellWellOrientedness(p, parent, vars[:level-1], targetVar, localEnv); !isOriented {
+						return nil, &WellOrientednessViolationError{Poly: p, Cell: parent, Level: level}
+					}
 				}
 				uPoly, isConst, err := specializePolyForCAD(p, vars[:level-1], parent.SamplePoint, targetVar, localEnv)
 				if err != nil {
@@ -1372,18 +1545,34 @@ func CADDecomposeCells(polys []Node, vars []string, env *Env) ([]CadCell, error)
 	fsm := NewCadLifecycleFSM()
 	_ = fsm.TransitionTo(CadStateNormalized)
 
+	// 1. Primary path: Brown-McCallum projection
 	projSets, err := computeBrownMcCallumProjection(polys, vars, env)
-	if err != nil {
-		_ = fsm.TransitionTo(CadStateUnsupported)
-		return nil, err
+	if err == nil {
+		_ = fsm.TransitionTo(CadStateProjected)
+		_ = fsm.TransitionTo(CadStateValidated)
+		cells, errLift := liftCADCellsOpt(projSets, vars, env, fsm, false)
+		if errLift == nil {
+			_ = fsm.TransitionTo(CadStateDecided)
+			return cells, nil
+		}
+		// If well-orientedness violated, fall back to Collins/Hong complete projection
+		if _, ok := errLift.(*WellOrientednessViolationError); !ok {
+			return nil, errLift
+		}
 	}
 
+	// 2. Fallback path: Collins/Hong complete projection
 	_ = fsm.TransitionTo(CadStateProjected)
+	chProjSets, errCH := computeCollinsHongProjection(polys, vars, env)
+	if errCH != nil {
+		_ = fsm.TransitionTo(CadStateUnsupported)
+		return nil, errCH
+	}
 	_ = fsm.TransitionTo(CadStateValidated)
-
-	cells, err := liftCADCells(projSets, vars, env, fsm)
-	if err != nil {
-		return nil, err
+	cells, errLift := liftCADCellsOpt(chProjSets, vars, env, fsm, true)
+	if errLift != nil {
+		_ = fsm.TransitionTo(CadStateUnsupported)
+		return nil, errLift
 	}
 
 	_ = fsm.TransitionTo(CadStateDecided)
@@ -1497,7 +1686,16 @@ func CADSolveFormulaCells(formula Node, vars []string, env *Env) (Node, []CadCel
 		}
 	}
 
-	// Case D: Multivariate Solution Samples / Points
+	// Case D: Multivariate Solution Boundary Formula Reconstruction (Phase 3)
+	caf, err := ConstructCylindricalAlgebraicFormula(satisfiedCells, vars)
+	if err == nil && caf != nil {
+		simplified, errSimp := SimplifyCylindricalFormula(caf)
+		if errSimp == nil && simplified != nil {
+			return simplified, satisfiedCells, nil
+		}
+		return caf, satisfiedCells, nil
+	}
+
 	var samples []Node
 	for _, sc := range satisfiedCells {
 		samples = append(samples, &ListNode{Elements: sc.SamplePoint})

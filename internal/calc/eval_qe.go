@@ -2,6 +2,7 @@ package calc
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
@@ -947,4 +948,244 @@ func isNonZeroConst(n Node) bool {
 func mustFunc(name string, args ...Node) *FuncNode {
 	return &FuncNode{Name: name, Args: args}
 }
+
+// ConstructCylindricalAlgebraicFormula builds a recursive Cylindrical Algebraic Formula (CAF)
+// directly from satisfied CAD cells.
+func ConstructCylindricalAlgebraicFormula(cells []CadCell, vars []string) (Node, error) {
+	if len(cells) == 0 {
+		return &VarNode{Name: "false"}, nil
+	}
+
+	var cellFormulas []Node
+	for _, c := range cells {
+		var conds []Node
+		// Walk cylindrical ancestry from leaf up to root
+		curr := &c
+		var ancestry []*CadCell
+		for curr != nil {
+			ancestry = append([]*CadCell{curr}, ancestry...)
+			curr = curr.Parent
+		}
+
+		for i, ancestor := range ancestry {
+			if i >= len(vars) {
+				break
+			}
+			vName := vars[i]
+			if ancestor.IsSection && ancestor.DefiningPoly != nil {
+				conds = append(conds, &RelOpNode{LHS: ancestor.DefiningPoly, Op: "==", RHS: mustRational(0, 1)})
+			} else if len(ancestor.SignVector) > 0 {
+				for pStr, s := range ancestor.SignVector {
+					if strings.Contains(pStr, vName) {
+						if pNode, err := Parse(pStr); err == nil && !isConstantNode(pNode) {
+							if s > 0 {
+								conds = append(conds, &RelOpNode{LHS: pNode, Op: ">", RHS: mustRational(0, 1)})
+							} else if s < 0 {
+								conds = append(conds, &RelOpNode{LHS: pNode, Op: "<", RHS: mustRational(0, 1)})
+							} else if s == 0 {
+								conds = append(conds, &RelOpNode{LHS: pNode, Op: "==", RHS: mustRational(0, 1)})
+							}
+						}
+					}
+				}
+			}
+		}
+
+		if len(conds) == 0 {
+			for i, v := range vars {
+				if i < len(c.SamplePoint) {
+					conds = append(conds, &RelOpNode{LHS: &VarNode{Name: v}, Op: ">", RHS: c.SamplePoint[i]})
+				}
+			}
+		}
+
+		if len(conds) == 0 {
+			continue
+		}
+
+		dedupConds := deduplicateConditions(conds)
+		if len(dedupConds) == 1 {
+			cellFormulas = append(cellFormulas, dedupConds[0])
+		} else if len(dedupConds) > 1 {
+			cellFormulas = append(cellFormulas, &FuncNode{Name: "and", Args: dedupConds})
+		}
+	}
+
+	if len(cellFormulas) == 0 {
+		return &VarNode{Name: "true"}, nil
+	}
+	if len(cellFormulas) == 1 {
+		return cellFormulas[0], nil
+	}
+	return &FuncNode{Name: "or", Args: cellFormulas}, nil
+}
+
+func deduplicateConditions(conds []Node) []Node {
+	seen := make(map[string]bool)
+	var res []Node
+	for _, c := range conds {
+		s := Format(c)
+		if !seen[s] {
+			seen[s] = true
+			res = append(res, c)
+		}
+	}
+	return res
+}
+
+// SimplifyCylindricalFormula simplifies CAF expressions by merging sibling intervals and eliminating subsumed conditions.
+func SimplifyCylindricalFormula(formula Node) (Node, error) {
+	if formula == nil {
+		return nil, nil
+	}
+	fn, ok := formula.(*FuncNode)
+	if !ok {
+		return formula, nil
+	}
+
+	name := strings.ToLower(fn.Name)
+	if name == "or" {
+		var simplifiedArgs []Node
+		for _, arg := range fn.Args {
+			sArg, _ := SimplifyCylindricalFormula(arg)
+			if sArg != nil {
+				if innerFn, ok := sArg.(*FuncNode); ok && strings.ToLower(innerFn.Name) == "or" {
+					simplifiedArgs = append(simplifiedArgs, innerFn.Args...)
+				} else {
+					simplifiedArgs = append(simplifiedArgs, sArg)
+				}
+			}
+		}
+		coalesced := coalesceSiblingIntervals(simplifiedArgs)
+		if len(coalesced) == 1 {
+			return coalesced[0], nil
+		}
+		return &FuncNode{Name: "or", Args: coalesced}, nil
+	}
+
+	if name == "and" {
+		var simplifiedArgs []Node
+		for _, arg := range fn.Args {
+			sArg, _ := SimplifyCylindricalFormula(arg)
+			if sArg != nil {
+				if innerFn, ok := sArg.(*FuncNode); ok && strings.ToLower(innerFn.Name) == "and" {
+					simplifiedArgs = append(simplifiedArgs, innerFn.Args...)
+				} else {
+					simplifiedArgs = append(simplifiedArgs, sArg)
+				}
+			}
+		}
+		dedup := deduplicateConditions(simplifiedArgs)
+		if len(dedup) == 1 {
+			return dedup[0], nil
+		}
+		return &FuncNode{Name: "and", Args: dedup}, nil
+	}
+
+	return formula, nil
+}
+
+// coalesceSiblingIntervals detects adjacent open intervals separated by an isolated point boundary (x == b)
+// and coalesces them into a single continuous interval.
+func coalesceSiblingIntervals(args []Node) []Node {
+	if len(args) <= 1 {
+		return args
+	}
+
+	type intervalStruct struct {
+		varName string
+		low     Node
+		high    Node
+		node    Node
+	}
+
+	var intervals []intervalStruct
+	var points []intervalStruct
+	var others []Node
+
+	for _, a := range args {
+		// Check for x == b
+		if rel, ok := a.(*RelOpNode); ok && rel.Op == "==" {
+			if v, okV := rel.LHS.(*VarNode); okV {
+				points = append(points, intervalStruct{varName: v.Name, low: rel.RHS, high: rel.RHS, node: a})
+				continue
+			}
+		}
+		// Check for low < x and x < high
+		if fn, ok := a.(*FuncNode); ok && strings.ToLower(fn.Name) == "and" && len(fn.Args) == 2 {
+			rel1, ok1 := fn.Args[0].(*RelOpNode)
+			rel2, ok2 := fn.Args[1].(*RelOpNode)
+			if ok1 && ok2 && rel1.Op == "<" && rel2.Op == "<" {
+				if v1, okV1 := rel1.RHS.(*VarNode); okV1 {
+					if v2, okV2 := rel2.LHS.(*VarNode); okV2 && v1.Name == v2.Name {
+						intervals = append(intervals, intervalStruct{
+							varName: v1.Name,
+							low:     rel1.LHS,
+							high:    rel2.RHS,
+							node:    a,
+						})
+						continue
+					}
+				}
+			}
+		}
+		others = append(others, a)
+	}
+
+	// Try coalescing adjacent intervals via intermediate points
+	consumedPoints := make(map[int]bool)
+	consumedIntervals := make(map[int]bool)
+
+	for pIdx, pt := range points {
+		leftIdx := -1
+		rightIdx := -1
+		for iIdx, iv := range intervals {
+			if consumedIntervals[iIdx] || iv.varName != pt.varName {
+				continue
+			}
+			if iv.high.Equal(pt.low) {
+				leftIdx = iIdx
+			}
+			if iv.low.Equal(pt.high) {
+				rightIdx = iIdx
+			}
+		}
+		if leftIdx != -1 && rightIdx != -1 {
+			// Merge left and right!
+			consumedPoints[pIdx] = true
+			consumedIntervals[leftIdx] = true
+			consumedIntervals[rightIdx] = true
+			mergedLow := intervals[leftIdx].low
+			mergedHigh := intervals[rightIdx].high
+			mergedNode := &FuncNode{
+				Name: "and",
+				Args: []Node{
+					&RelOpNode{LHS: mergedLow, Op: "<", RHS: &VarNode{Name: pt.varName}},
+					&RelOpNode{LHS: &VarNode{Name: pt.varName}, Op: "<", RHS: mergedHigh},
+				},
+			}
+			intervals = append(intervals, intervalStruct{
+				varName: pt.varName,
+				low:     mergedLow,
+				high:    mergedHigh,
+				node:    mergedNode,
+			})
+		}
+	}
+
+	var res []Node
+	for i, iv := range intervals {
+		if !consumedIntervals[i] {
+			res = append(res, iv.node)
+		}
+	}
+	for pIdx, pt := range points {
+		if !consumedPoints[pIdx] {
+			res = append(res, pt.node)
+		}
+	}
+	res = append(res, others...)
+	return res
+}
+
 

@@ -435,23 +435,30 @@ func TestCAD_SolutionReconstruction_2D_CircleInterior(t *testing.T) {
 		t.Fatalf("parse failed: %v", err)
 	}
 
-	sol, err := CADSolveFormula(expr, []string{"x", "y"}, env)
+	sol, cells, err := CADSolveFormulaCells(expr, []string{"x", "y"}, env)
 	if err != nil {
-		t.Fatalf("CADSolveFormula failed: %v", err)
+		t.Fatalf("CADSolveFormulaCells failed: %v", err)
 	}
 
-	list, ok := sol.(*ListNode)
-	if !ok || len(list.Elements) == 0 {
-		t.Fatalf("expected non-empty ListNode for circle interior, got %v", sol)
+	// In Phase 3, sol must be a reconstructed CAF boundary formula
+	if sol == nil {
+		t.Fatalf("expected non-nil formula for circle interior")
+	}
+	sForm := Format(sol)
+	if !strings.Contains(sForm, "< 0") && !strings.Contains(sForm, "and") {
+		t.Errorf("expected boundary inequality formula, got: %s", sForm)
 	}
 
-	// Must include origin [0, 0] as satisfying sample
+	if len(cells) == 0 {
+		t.Fatalf("expected non-empty satisfied cells for circle interior")
+	}
+
+	// Must include origin [0, 0] as satisfying sample cell
 	foundOrigin := false
-	for _, elem := range list.Elements {
-		pair, ok := elem.(*ListNode)
-		if ok && len(pair.Elements) == 2 {
-			xRat, xOk := pair.Elements[0].(*RationalNode)
-			yRat, yOk := pair.Elements[1].(*RationalNode)
+	for _, c := range cells {
+		if len(c.SamplePoint) == 2 {
+			xRat, xOk := c.SamplePoint[0].(*RationalNode)
+			yRat, yOk := c.SamplePoint[1].(*RationalNode)
 			if xOk && yOk && xRat.Val.Sign() == 0 && yRat.Val.Sign() == 0 {
 				foundOrigin = true
 				break
@@ -634,5 +641,91 @@ func TestCAD_SectionDisjointRootSignRefined(t *testing.T) {
 		t.Errorf("failed to find section cell with sign(x^2 - 2)=0 and sign(x - 2)=-1")
 	}
 }
+
+func TestCheckCellWellOrientedness_Nullification(t *testing.T) {
+	env := NewEnv()
+	// p(x, y) = x*y + 1. Over x = 0 (section x=0), the leading coeff of y (which is x) vanishes.
+	pNode, err := Parse("x * y + 1")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	// Create section cell at x = 0 in R^1
+	zeroRat := mustRational(0, 1)
+	cellXZero := &CadCell{
+		Dimension:   0,
+		SamplePoint: []Node{zeroRat},
+		IsSection:   true,
+		DefiningPoly: &VarNode{Name: "x"},
+	}
+
+	// Well-orientedness check: for x*y+1 with main variable y over cell x=0
+	isWellOriented, err := checkCellWellOrientedness(pNode, cellXZero, []string{"x"}, "y", env)
+	if err != nil {
+		t.Fatalf("checkCellWellOrientedness failed: %v", err)
+	}
+	// At x=0, leading coefficient vanishes. For positive dimensional cells or when it threatens delineability, it is flagged.
+	if isWellOriented {
+		t.Errorf("expected well-orientedness violation for x*y+1 over x=0")
+	}
+}
+
+func TestComputeCollinsHongProjection_IncludesAllCoeffs(t *testing.T) {
+	env := NewEnv()
+	// p = x*y^2 + (x-1)*y + (x+2)
+	pNode, err := Parse("x * y^2 + (x - 1) * y + (x + 2)")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	projSets, err := computeCollinsHongProjection([]Node{pNode}, []string{"x", "y"}, env)
+	if err != nil {
+		t.Fatalf("computeCollinsHongProjection failed: %v", err)
+	}
+	if len(projSets) != 2 {
+		t.Fatalf("expected 2 projection levels, got %d", len(projSets))
+	}
+
+	// Level 1 (in variable x) must include all coefficients of y: x, x-1, x+2 as well as discriminant
+	level1 := projSets[0]
+	foundLead := false
+	foundMid := false
+	foundConst := false
+	for _, n := range level1 {
+		s := n.String()
+		if s == "x" {
+			foundLead = true
+		}
+		if s == "x - 1" || strings.Contains(s, "x - 1") || strings.Contains(s, "-1 + x") {
+			foundMid = true
+		}
+		if s == "x + 2" || strings.Contains(s, "x + 2") || strings.Contains(s, "2 + x") {
+			foundConst = true
+		}
+	}
+	if !foundLead || !foundMid || !foundConst {
+		t.Errorf("Collins/Hong projection must contain all coefficients: lead=%v, mid=%v, const=%v (level1: %v)", foundLead, foundMid, foundConst, level1)
+	}
+}
+
+func TestCAD_SingularLeadingCoeffFallback(t *testing.T) {
+	env := NewEnv()
+	// x*y + 1 > 0 with variables [x, y]
+	// When x = 0, 1 > 0 holds for all y.
+	// McCallum encounters leading coeff vanishing at x=0; fallback must handle it soundly.
+	expr, err := Parse("x * y + 1 > 0")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	sol, err := CADSolveFormula(expr, []string{"x", "y"}, env)
+	if err != nil {
+		t.Fatalf("CADSolveFormula failed with singular leading coeff: %v", err)
+	}
+	if sol == nil {
+		t.Fatalf("expected non-nil solution")
+	}
+}
+
 
 

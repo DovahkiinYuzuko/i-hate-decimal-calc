@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -254,5 +255,76 @@ func TestQEParametricDegeneracy(t *testing.T) {
 		})
 	}
 }
+
+func TestConstructCylindricalAlgebraicFormula_2D(t *testing.T) {
+	// Satisfied cell: sector x in (0, 2), sector y in (0, 3)
+	cell := CadCell{
+		Dimension:   2,
+		SamplePoint: []Node{mustRational(1, 1), mustRational(1, 1)},
+		IsSection:   false,
+	}
+
+	caf, err := ConstructCylindricalAlgebraicFormula([]CadCell{cell}, []string{"x", "y"})
+	if err != nil {
+		t.Fatalf("ConstructCylindricalAlgebraicFormula failed: %v", err)
+	}
+	if caf == nil {
+		t.Fatalf("expected non-nil CAF")
+	}
+	s := Format(caf)
+	if s == "" {
+		t.Errorf("expected non-empty formula string")
+	}
+}
+
+func TestSimplifyCylindricalFormula_SiblingMerge(t *testing.T) {
+	// Formula: and(0 < x, x < 1) or (x == 1) or and(1 < x, x < 2)
+	p1, err1 := Parse("and(0 < x, x < 1)")
+	if err1 != nil {
+		t.Fatalf("parse p1 failed: %v", err1)
+	}
+	p2, err2 := Parse("x == 1")
+	if err2 != nil {
+		t.Fatalf("parse p2 failed: %v", err2)
+	}
+	p3, err3 := Parse("and(1 < x, x < 2)")
+	if err3 != nil {
+		t.Fatalf("parse p3 failed: %v", err3)
+	}
+	orNode := &FuncNode{Name: "or", Args: []Node{p1, p2, p3}}
+
+	simplified, err := SimplifyCylindricalFormula(orNode)
+	if err != nil {
+		t.Fatalf("SimplifyCylindricalFormula failed: %v", err)
+	}
+	s := Format(simplified)
+	if strings.Contains(s, "x == 1") {
+		t.Errorf("expected x == 1 to be absorbed into merged interval, got: %s", s)
+	}
+}
+
+func TestCADSolveFormula_MultivariateBoundaryFormula(t *testing.T) {
+	env := NewEnv()
+	// and(x > 1, y > 2)
+	expr, err := Parse("and(x > 1, y > 2)")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	sol, err := CADSolveFormula(expr, []string{"x", "y"}, env)
+	if err != nil {
+		t.Fatalf("CADSolveFormula failed: %v", err)
+	}
+	if sol == nil {
+		t.Fatalf("expected non-nil solution")
+	}
+
+	// In Phase 3, solution must NOT be a raw list of sample points [[1, 2], ...],
+	// but a reconstructed formula (FuncNode or RelOpNode or VarNode)
+	if _, isList := sol.(*ListNode); isList {
+		t.Errorf("multivariate QE must return a boundary formula, not a raw ListNode sample point list: %v", sol)
+	}
+}
+
 
 
