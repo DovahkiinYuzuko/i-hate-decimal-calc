@@ -729,23 +729,43 @@ func verifyODE(fn *FuncNode, ySol Node, env *Env, fsm *VerifyLifecycleFSM) (*Ver
 		diffEq = eq
 	}
 
+	// Extract actual solution RHS if ySol is y == ...
+	actualSol := ySol
+	if bin, ok := ySol.(*RelOpNode); ok && bin.Op == "==" {
+		actualSol = bin.RHS
+	}
+
 	// Substitute y, y', y'' into diffEq
 	// In i-hate-decimal-calc ODE, y is typically represented as a variable or function
 	// Compute y' = diff(ySol, x) and y'' = diff(y', x)
-	dySol, err := differentiate(ySol, xName)
+	dySol, err := differentiate(actualSol, xName)
 	if err != nil {
 		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
-		return nil, err
+		return &VerificationCertificate{
+			Domain:     DomainODE,
+			Equation:   fmt.Sprintf("%s == %s", eq.String(), ySol.String()),
+			Residual:   nil,
+			IsVerified: false,
+			Details:    err.Error(),
+			State:      VerifyStateUnsupportedDomain,
+		}, nil
 	}
 	d2ySol, err := differentiate(dySol, xName)
 	if err != nil {
 		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
-		return nil, err
+		return &VerificationCertificate{
+			Domain:     DomainODE,
+			Equation:   fmt.Sprintf("%s == %s", eq.String(), ySol.String()),
+			Residual:   nil,
+			IsVerified: false,
+			Details:    err.Error(),
+			State:      VerifyStateUnsupportedDomain,
+		}, nil
 	}
 
 	// Replace derivatives and y in diffEq
 	// We do AST replacement for y'', y', y
-	substituted := substituteODE(diffEq, ySol, dySol, d2ySol)
+	substituted := substituteODE(diffEq, actualSol, dySol, d2ySol)
 
 	_ = fsm.TransitionTo(VerifyStateSimplificationEvaluated)
 	isZeroRes := checkIsZeroAlgebraically(substituted, env)
@@ -905,8 +925,9 @@ func VerifyAlgebraicEquivalence(lhs, rhs Node, env *Env) (*VerificationCertifica
 // is recognized as circular verification and strictly rejected.
 // It safely transitions to VerifyStateUnsupportedDomain and returns an unverified certificate.
 func verifyGeneral(expr, result Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
+	_ = env
 	_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
-	eqStr := fmt.Sprintf("expr == %s", result.String())
+	eqStr := fmt.Sprintf("%s == %s", expr.String(), result.String())
 	details := i18n.T("verify.err_no_independent_verifier")
 	return &VerificationCertificate{
 		Domain:     DomainGeneral,
