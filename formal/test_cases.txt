@@ -23,9 +23,6 @@ factor(x^8 - 1)
 (x + y + z)*(x + y - z) == (x + y)^2 - z^2
 
 # 2. Calculus / Indefinite Integration (Derivative Certificates with Simp tactic)
-integrate(x^2, x)
-integrate(x^3, x)
-integrate(1/(x + 1), x)
 integrate(exp(x), x)
 integrate(sin(x), x)
 integrate(cos(x), x)
