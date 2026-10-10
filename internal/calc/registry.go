@@ -916,6 +916,11 @@ func init() {
 		MinArgs: 2,
 		MaxArgs: 2,
 	})
+	RegisterFunction(FunctionSpec{
+		Name:    "minimal_polynomial",
+		MinArgs: 1,
+		MaxArgs: 2,
+	})
 
 	// p-adic Arithmetic & Hensel Lifting (issue-83)
 	RegisterFunction(FunctionSpec{

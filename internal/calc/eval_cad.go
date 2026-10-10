@@ -876,6 +876,24 @@ func evaluateFormulaOnCell(formula Node, cell *CadCell, vars []string, env *Env)
 		}
 		key := zeroExpr.String()
 		sign, ok := cell.SignVector[key]
+		if !ok && len(vars) > 0 {
+			if p, okP := extractPoly(zeroExpr, vars[0]); okP && isRationalPoly(p) {
+				uKey := polyKey(trimPoly(p))
+				sign, ok = cell.SignVector[uKey]
+			}
+		}
+		if !ok {
+			for k, s := range cell.SignVector {
+				if kNode, errK := Parse(k); errK == nil {
+					diff, _ := simplifyAdd([]Node{zeroExpr, &UnaryOpNode{Op: "-", Expr: kNode}})
+					if checkIsZeroAlgebraically(diff, env) {
+						sign = s
+						ok = true
+						break
+					}
+				}
+			}
+		}
 		if !ok {
 			isZeroPoly := false
 			for curr := cell; curr != nil; curr = curr.Parent {
@@ -883,6 +901,17 @@ func evaluateFormulaOnCell(formula Node, cell *CadCell, vars []string, env *Env)
 					if curr.DefiningPoly.String() == key || curr.DefiningPoly.Equal(zeroExpr) {
 						isZeroPoly = true
 						break
+					}
+					// Exact algebraic GCD vanishing check on Section
+					if len(vars) > 0 {
+						if pDef, okDef := extractPoly(curr.DefiningPoly, vars[0]); okDef && isRationalPoly(pDef) {
+							if pZero, okZ := extractPoly(zeroExpr, vars[0]); okZ && isRationalPoly(pZero) {
+								if gcdP, errG := polyGCD1D(trimPoly(pDef), trimPoly(pZero)); errG == nil && gcdP != nil && gcdP.degree() >= 1 {
+									isZeroPoly = true
+									break
+								}
+							}
+						}
 					}
 				}
 			}
@@ -1250,6 +1279,7 @@ func liftCADCells(projSets [][]Node, vars []string, env *Env, fsm *CadLifecycleF
 	cutoff := GetCadLiftingCutoff()
 	_, err := ParallelBatchMap(currentLevelCells, func(cell *CadCell) (struct{}, error) {
 		localEnv := env.Clone()
+		existingSignVector := cell.SignVector
 		cell.SignVector = make(map[string]int)
 
 		// Check if polynomial is defining zero polynomial on this section or any cylindrical ancestor
@@ -1259,6 +1289,16 @@ func liftCADCells(projSets [][]Node, vars []string, env *Env, fsm *CadLifecycleF
 				if curr.IsSection && curr.DefiningPoly != nil {
 					if curr.DefiningPoly.String() == targetStr || curr.DefiningPoly.Equal(target) {
 						return true
+					}
+					// Exact algebraic GCD vanishing check on Section
+					if len(vars) > 0 {
+						if pDef, okDef := extractPoly(curr.DefiningPoly, vars[0]); okDef && isRationalPoly(pDef) {
+							if pZero, okZ := extractPoly(target, vars[0]); okZ && isRationalPoly(pZero) {
+								if gcdP, errG := polyGCD1D(trimPoly(pDef), trimPoly(pZero)); errG == nil && gcdP != nil && gcdP.degree() >= 1 {
+									return true
+								}
+							}
+						}
 					}
 				}
 			}
@@ -1272,6 +1312,22 @@ func liftCADCells(projSets [][]Node, vars []string, env *Env, fsm *CadLifecycleF
 			if isZeroOnCell(p) {
 				cell.SignVector[pStr] = 0
 				continue
+			}
+
+			// If existing sign vector already has exact sign (e.g. from 1D section root evaluation)
+			if existingSignVector != nil {
+				if s, ok := existingSignVector[pStr]; ok {
+					cell.SignVector[pStr] = s
+					continue
+				}
+				if len(vars) > 0 {
+					if uP, okU := extractPoly(p, vars[0]); okU && isRationalPoly(uP) {
+						if s, ok := existingSignVector[polyKey(trimPoly(uP))]; ok {
+							cell.SignVector[pStr] = s
+							continue
+						}
+					}
+				}
 			}
 
 			curr := p
