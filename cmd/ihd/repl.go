@@ -66,7 +66,7 @@ func runREPL(in io.Reader, out, errOut io.Writer, ro runOptions) int {
 		},
 		History:    history,
 		Writer:     out,
-		Highlight:  BuildREPLHighlights(currentTheme),
+		Highlight:  BuildREPLHighlights(currentTheme, env),
 		ResetColor: "\x1B[0m",
 	}
 
@@ -110,7 +110,7 @@ func runREPL(in io.Reader, out, errOut io.Writer, ro runOptions) int {
 			target := strings.TrimSpace(lowerLine[6:])
 			if target == "dark" || target == "light" || target == "none" {
 				currentTheme = target
-				editor.Highlight = BuildREPLHighlights(currentTheme)
+				editor.Highlight = BuildREPLHighlights(currentTheme, env)
 				_ = i18n.SaveConfigTheme(currentTheme)
 				fmt.Fprintf(out, i18n.T("cli.repl_theme_set")+"\n", currentTheme)
 			} else {
@@ -132,7 +132,7 @@ func runREPL(in io.Reader, out, errOut io.Writer, ro runOptions) int {
 			if currentTheme == "none" || currentTheme == "" {
 				currentTheme = "dark"
 			}
-			editor.Highlight = BuildREPLHighlights(currentTheme)
+			editor.Highlight = BuildREPLHighlights(currentTheme, env)
 			_ = i18n.SaveConfigHighlight(true)
 			fmt.Fprintln(out, i18n.T("cli.repl_highlight_on"))
 			continue

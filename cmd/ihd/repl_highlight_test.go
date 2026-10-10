@@ -1,14 +1,17 @@
 package main
 
 import (
+	"math/big"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc"
 )
 
 func TestLexerHighlightFSM_RainbowBrackets(t *testing.T) {
 	input := "((((x))))"
-	spans := TokenizeHighlightFSM(input)
+	spans := TokenizeHighlightFSM(input, nil)
 
 	// Expected depths:
 	// pos 0: '(', depth 0
@@ -42,7 +45,7 @@ func TestLexerHighlightFSM_ParenthesesAndSquareBracketsOnly(t *testing.T) {
 	// () and [] are supported delimiters in CAS.
 	// {} is NOT a valid CAS mathematical delimiter and MUST NOT be treated as a rainbow bracket.
 	input := "([ x ]) { y }"
-	spans := TokenizeHighlightFSM(input)
+	spans := TokenizeHighlightFSM(input, nil)
 
 	bracketDepths := make(map[int]int)
 	for _, s := range spans {
@@ -74,7 +77,7 @@ func TestLexerHighlightFSM_ParenthesesAndSquareBracketsOnly(t *testing.T) {
 
 func TestLexerHighlightFSM_StringExclusionAndEscapes(t *testing.T) {
 	input := `"hello (world) [1]" + "escaped \"(paren)\""`
-	spans := TokenizeHighlightFSM(input)
+	spans := TokenizeHighlightFSM(input, nil)
 
 	// None of the brackets inside quotes should be TokenRainbow
 	for _, s := range spans {
@@ -97,7 +100,7 @@ func TestLexerHighlightFSM_StringExclusionAndEscapes(t *testing.T) {
 
 func TestLexerHighlightFSM_BracketMismatch(t *testing.T) {
 	input := "(1 + 2] + )"
-	spans := TokenizeHighlightFSM(input)
+	spans := TokenizeHighlightFSM(input, nil)
 
 	var mismatches []int
 	for _, s := range spans {
@@ -118,7 +121,7 @@ func TestLexerHighlightFSM_TokensAndAllReservedFunctions(t *testing.T) {
 	// Verify that functions beyond the previous hardcoded 33 (e.g. clifford, groebner)
 	// are accurately identified as TokenFunc via calc.IsReservedFunc
 	input := "groebner(clifford(16^^FF + 3.14 * x)) == vars"
-	spans := TokenizeHighlightFSM(input)
+	spans := TokenizeHighlightFSM(input, nil)
 
 	type check struct {
 		start, end int
@@ -150,16 +153,54 @@ func TestLexerHighlightFSM_TokensAndAllReservedFunctions(t *testing.T) {
 	}
 }
 
-func TestFSMHighlightMatcher_FindAllStringIndex(t *testing.T) {
-	matcherDepth0 := &FSMHighlightMatcher{TargetType: TokenRainbow, TargetDepth: 0}
-	matcherMismatch := &FSMHighlightMatcher{TargetType: TokenMismatch, TargetDepth: -1}
-	matcherFunc := &FSMHighlightMatcher{TargetType: TokenFunc}
-	matcherNum := &FSMHighlightMatcher{TargetType: TokenNumber}
+func TestLexerHighlightFSM_CustomVariableHybridHighlight(t *testing.T) {
+	env := calc.NewEnv()
+	env.Set("my_var", &calc.RationalNode{Val: big.NewRat(42, 1)})
 
-	input := "groebner(cos(114514)) + ]"
-	// Depth 0 brackets: '(' at 8, ')' at 20
+	// In "sin(my_var + x)":
+	// - sin: TokenFunc
+	// - my_var: TokenCustomVar (because it exists in env)
+	// - x: TokenNone (unbound algebraic symbol remains uncolored default text)
+	input := "sin(my_var + x)"
+	spans := TokenizeHighlightFSM(input, env)
+
+	var hasCustomVar, hasUnboundVar bool
+	for _, s := range spans {
+		if s.Start == 4 && s.End == 10 { // my_var
+			if s.Type == TokenCustomVar {
+				hasCustomVar = true
+			} else {
+				t.Errorf("expected my_var to be TokenCustomVar, got %v", s.Type)
+			}
+		}
+		if s.Start == 13 && s.End == 14 { // x
+			hasUnboundVar = true
+			t.Errorf("unbound symbol x must remain TokenNone, but found token span: %v", s)
+		}
+	}
+
+	if !hasCustomVar {
+		t.Errorf("expected TokenCustomVar for defined variable 'my_var', but not found")
+	}
+	if hasUnboundVar {
+		t.Errorf("unbound symbol x should not produce a colored token span")
+	}
+}
+
+func TestFSMHighlightMatcher_FindAllStringIndex(t *testing.T) {
+	env := calc.NewEnv()
+	env.Set("target_var", &calc.RationalNode{Val: big.NewRat(100, 1)})
+
+	matcherDepth0 := &FSMHighlightMatcher{TargetType: TokenRainbow, TargetDepth: 0, Env: env}
+	matcherMismatch := &FSMHighlightMatcher{TargetType: TokenMismatch, TargetDepth: -1, Env: env}
+	matcherFunc := &FSMHighlightMatcher{TargetType: TokenFunc, Env: env}
+	matcherNum := &FSMHighlightMatcher{TargetType: TokenNumber, Env: env}
+	matcherCustom := &FSMHighlightMatcher{TargetType: TokenCustomVar, Env: env}
+
+	input := "groebner(cos(114514 + target_var + x)) + ]"
+	// Depth 0 brackets: '(' at 8, ')' at 37
 	idx0 := matcherDepth0.FindAllStringIndex(input, -1)
-	expected0 := [][]int{{8, 9}, {20, 21}}
+	expected0 := [][]int{{8, 9}, {37, 38}}
 	if !reflect.DeepEqual(idx0, expected0) {
 		t.Errorf("matcher depth 0: expected %v, got %v", expected0, idx0)
 	}
@@ -178,22 +219,30 @@ func TestFSMHighlightMatcher_FindAllStringIndex(t *testing.T) {
 		t.Errorf("matcher num: expected %v, got %v", expectedNum, idxNum)
 	}
 
-	// Mismatched bracket: ']' at 24..25
+	// Custom variable: 'target_var' at 22..32
+	idxCustom := matcherCustom.FindAllStringIndex(input, -1)
+	expectedCustom := [][]int{{22, 32}}
+	if !reflect.DeepEqual(idxCustom, expectedCustom) {
+		t.Errorf("matcher custom var: expected %v, got %v", expectedCustom, idxCustom)
+	}
+
+	// Mismatched bracket: ']' at 41..42
 	idxErr := matcherMismatch.FindAllStringIndex(input, -1)
-	expectedErr := [][]int{{24, 25}}
+	expectedErr := [][]int{{41, 42}}
 	if !reflect.DeepEqual(idxErr, expectedErr) {
 		t.Errorf("matcher mismatch: expected %v, got %v", expectedErr, idxErr)
 	}
 }
 
 func TestBuildREPLHighlights_ThemeSequencesAndColorSeparation(t *testing.T) {
-	darkHighlights := BuildREPLHighlights("dark")
+	env := calc.NewEnv()
+	darkHighlights := BuildREPLHighlights("dark", env)
 	if len(darkHighlights) == 0 {
 		t.Fatalf("expected non-empty dark highlights")
 	}
 
 	// Ensure Bracket Depth 0 color and Number color are strictly different
-	var darkDepth0Seq, darkNumSeq string
+	var darkDepth0Seq, darkNumSeq, darkCustomVarSeq string
 	for _, h := range darkHighlights {
 		if m, ok := h.Pattern.(*FSMHighlightMatcher); ok {
 			if m.TargetType == TokenRainbow && m.TargetDepth == 0 {
@@ -202,10 +251,13 @@ func TestBuildREPLHighlights_ThemeSequencesAndColorSeparation(t *testing.T) {
 			if m.TargetType == TokenNumber {
 				darkNumSeq = h.Sequence
 			}
+			if m.TargetType == TokenCustomVar {
+				darkCustomVarSeq = h.Sequence
+			}
 		}
 	}
-	if darkDepth0Seq == "" || darkNumSeq == "" {
-		t.Fatalf("expected both depth 0 and number highlights configured, got depth0=%q, num=%q", darkDepth0Seq, darkNumSeq)
+	if darkDepth0Seq == "" || darkNumSeq == "" || darkCustomVarSeq == "" {
+		t.Fatalf("expected depth 0, number, and custom var highlights configured, got depth0=%q, num=%q, var=%q", darkDepth0Seq, darkNumSeq, darkCustomVarSeq)
 	}
 	if darkDepth0Seq == darkNumSeq {
 		t.Errorf("bracket depth 0 color (%q) MUST NOT match number color (%q)", darkDepth0Seq, darkNumSeq)
@@ -220,12 +272,12 @@ func TestBuildREPLHighlights_ThemeSequencesAndColorSeparation(t *testing.T) {
 		}
 	}
 
-	lightHighlights := BuildREPLHighlights("light")
+	lightHighlights := BuildREPLHighlights("light", env)
 	if len(lightHighlights) == 0 {
 		t.Fatalf("expected non-empty light highlights")
 	}
 
-	noneHighlights := BuildREPLHighlights("none")
+	noneHighlights := BuildREPLHighlights("none", env)
 	if len(noneHighlights) != 0 {
 		t.Errorf("expected empty highlights for theme 'none', got %d", len(noneHighlights))
 	}

@@ -20,6 +20,7 @@ const (
 	TokenOp
 	TokenRainbow
 	TokenMismatch
+	TokenCustomVar
 )
 
 // TokenSpan records the byte slice range, category, and bracket depth of a token.
@@ -36,12 +37,13 @@ type TokenSpan struct {
 type FSMHighlightMatcher struct {
 	TargetType  TokenType
 	TargetDepth int // 0..3 for rainbow depths; -1 for bracket mismatch; 0 for other tokens
+	Env         *calc.Env
 }
 
 // FindAllStringIndex scans the input string using TokenizeHighlightFSM and returns
 // matched byte index ranges for the targeted token category or bracket depth.
 func (m *FSMHighlightMatcher) FindAllStringIndex(str string, n int) [][]int {
-	spans := TokenizeHighlightFSM(str)
+	spans := TokenizeHighlightFSM(str, m.Env)
 	var matches [][]int
 	for _, s := range spans {
 		if s.Type != m.TargetType {
@@ -67,8 +69,8 @@ type bracketFrame struct {
 }
 
 // TokenizeHighlightFSM executes a lexical finite-state machine over the input line,
-// tracking strings, numbers, identifiers, operators, and a bracket stack for rainbow delimiters.
-func TokenizeHighlightFSM(input string) []TokenSpan {
+// tracking strings, numbers, identifiers, operators, custom variables, and a bracket stack.
+func TokenizeHighlightFSM(input string, env *calc.Env) []TokenSpan {
 	var spans []TokenSpan
 	runes := []rune(input)
 	n := len(runes)
@@ -174,7 +176,7 @@ func TokenizeHighlightFSM(input string) []TokenSpan {
 			continue
 		}
 
-		// 4. Identifiers (Functions, Commands, Variables)
+		// 4. Identifiers (Functions, Commands, Defined Custom Variables, or Unbound Symbols)
 		if unicode.IsLetter(r) || r == '_' {
 			startIdx := i
 			for i < n && (unicode.IsLetter(runes[i]) || unicode.IsDigit(runes[i]) || runes[i] == '_') {
@@ -187,6 +189,11 @@ func TokenizeHighlightFSM(input string) []TokenSpan {
 				tokType = TokenCmd
 			} else if calc.IsReservedFunc(lower) {
 				tokType = TokenFunc
+			} else if env != nil {
+				if _, ok := env.Get(ident); ok {
+					// Defined custom variable in active environment (semantic highlight)
+					tokType = TokenCustomVar
+				}
 			}
 
 			if tokType != TokenNone {
@@ -252,8 +259,8 @@ func isCommand(cmd string) bool {
 }
 
 // BuildREPLHighlights constructs a slice of readline.Highlight configurations
-// customized for the specified color theme ("dark", "light", or "none").
-func BuildREPLHighlights(theme string) []readline.Highlight {
+// customized for the specified color theme ("dark", "light", or "none") and environment.
+func BuildREPLHighlights(theme string, env *calc.Env) []readline.Highlight {
 	themeLower := strings.ToLower(strings.TrimSpace(theme))
 	if themeLower == "none" || themeLower == "off" {
 		return nil
@@ -263,16 +270,17 @@ func BuildREPLHighlights(theme string) []readline.Highlight {
 
 	// High-contrast, transparent-terminal-safe ANSI Palette Definitions
 	var (
-		seqRainbow0 string
-		seqRainbow1 string
-		seqRainbow2 string
-		seqRainbow3 string
-		seqMismatch string = "\x1B[97;41m" // White on red background (error alert)
-		seqFunc     string
-		seqCmd      string
-		seqNumber   string
-		seqString   string
-		seqOp       string
+		seqRainbow0   string
+		seqRainbow1   string
+		seqRainbow2   string
+		seqRainbow3   string
+		seqMismatch   string = "\x1B[97;41m" // White on red background (error alert)
+		seqFunc       string
+		seqCmd        string
+		seqNumber     string
+		seqString     string
+		seqOp         string
+		seqCustomVar  string
 	)
 
 	if isLight {
@@ -286,6 +294,7 @@ func BuildREPLHighlights(theme string) []readline.Highlight {
 		seqNumber = "\x1B[31;1m"   // Bold Brick Red (Completely separated from rainbow blue/cyan)
 		seqString = "\x1B[32m"     // Dark Green
 		seqOp = "\x1B[30m"         // Solid Black
+		seqCustomVar = "\x1B[36m"  // Teal / Cyan (Semantic defined variable)
 	} else {
 		// Dark Theme (Optimized for dark backgrounds and transparent photo terminals)
 		// Brackets rotate through Cyan, Magenta, Green, Blue
@@ -298,48 +307,53 @@ func BuildREPLHighlights(theme string) []readline.Highlight {
 		seqNumber = "\x1B[93m"     // Bright Yellow (Completely separated from rainbow cyan/magenta)
 		seqString = "\x1B[32m"     // Green
 		seqOp = "\x1B[37m"         // Bright White (Clear & readable on dark / transparent backgrounds)
+		seqCustomVar = "\x1B[96;2m" // Soft Cyan / Mint (Semantic defined variable; unbound symbols remain white)
 	}
 
-	// Order of highlights: operators, numbers, strings, commands, funcs, rainbow, mismatch
+	// Order of highlights: operators, numbers, strings, commands, funcs, custom variables, rainbow, mismatch
 	return []readline.Highlight{
 		{
-			Pattern:  &FSMHighlightMatcher{TargetType: TokenOp},
+			Pattern:  &FSMHighlightMatcher{TargetType: TokenOp, Env: env},
 			Sequence: seqOp,
 		},
 		{
-			Pattern:  &FSMHighlightMatcher{TargetType: TokenNumber},
+			Pattern:  &FSMHighlightMatcher{TargetType: TokenNumber, Env: env},
 			Sequence: seqNumber,
 		},
 		{
-			Pattern:  &FSMHighlightMatcher{TargetType: TokenString},
+			Pattern:  &FSMHighlightMatcher{TargetType: TokenString, Env: env},
 			Sequence: seqString,
 		},
 		{
-			Pattern:  &FSMHighlightMatcher{TargetType: TokenCmd},
+			Pattern:  &FSMHighlightMatcher{TargetType: TokenCmd, Env: env},
 			Sequence: seqCmd,
 		},
 		{
-			Pattern:  &FSMHighlightMatcher{TargetType: TokenFunc},
+			Pattern:  &FSMHighlightMatcher{TargetType: TokenFunc, Env: env},
 			Sequence: seqFunc,
 		},
 		{
-			Pattern:  &FSMHighlightMatcher{TargetType: TokenRainbow, TargetDepth: 0},
+			Pattern:  &FSMHighlightMatcher{TargetType: TokenCustomVar, Env: env},
+			Sequence: seqCustomVar,
+		},
+		{
+			Pattern:  &FSMHighlightMatcher{TargetType: TokenRainbow, TargetDepth: 0, Env: env},
 			Sequence: seqRainbow0,
 		},
 		{
-			Pattern:  &FSMHighlightMatcher{TargetType: TokenRainbow, TargetDepth: 1},
+			Pattern:  &FSMHighlightMatcher{TargetType: TokenRainbow, TargetDepth: 1, Env: env},
 			Sequence: seqRainbow1,
 		},
 		{
-			Pattern:  &FSMHighlightMatcher{TargetType: TokenRainbow, TargetDepth: 2},
+			Pattern:  &FSMHighlightMatcher{TargetType: TokenRainbow, TargetDepth: 2, Env: env},
 			Sequence: seqRainbow2,
 		},
 		{
-			Pattern:  &FSMHighlightMatcher{TargetType: TokenRainbow, TargetDepth: 3},
+			Pattern:  &FSMHighlightMatcher{TargetType: TokenRainbow, TargetDepth: 3, Env: env},
 			Sequence: seqRainbow3,
 		},
 		{
-			Pattern:  &FSMHighlightMatcher{TargetType: TokenMismatch, TargetDepth: -1},
+			Pattern:  &FSMHighlightMatcher{TargetType: TokenMismatch, TargetDepth: -1, Env: env},
 			Sequence: seqMismatch,
 		},
 	}
