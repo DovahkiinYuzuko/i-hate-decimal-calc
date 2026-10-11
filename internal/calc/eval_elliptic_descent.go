@@ -531,9 +531,33 @@ func IsQuarticOddPrimeSoluble(d1, c, d2 *big.Int, p *big.Int) bool {
 	return false
 }
 
-// -------------------------------------------------------------------------
-// Selmer Group Dimension & Rank Upper Bound
-// -------------------------------------------------------------------------
+// QuarticLocalSolvabilityStatus describes the local solvability of a 2-covering quartic.
+type QuarticLocalSolvabilityStatus string
+
+const (
+	LocalStatusUnresolved QuarticLocalSolvabilityStatus = "UNRESOLVED"
+	LocalStatusSoluble    QuarticLocalSolvabilityStatus = "SOLUBLE"
+	LocalStatusObstructed QuarticLocalSolvabilityStatus = "OBSTRUCTED"
+)
+
+// QuarticPointSearchStatus describes the status of rational point sieve on a 2-covering quartic.
+type QuarticPointSearchStatus string
+
+const (
+	PointStatusNotFoundWithinBounds QuarticPointSearchStatus = "NOT_FOUND_WITHIN_BOUNDS"
+	PointStatusFound                QuarticPointSearchStatus = "FOUND"
+)
+
+// QuarticCoveringState tracks the descent data and resolution status of a 2-covering.
+type QuarticCoveringState struct {
+	D1           *big.Int
+	D2           *big.Int
+	C            *big.Int
+	Isogeny      string // "phi" or "psi"
+	LocalStatus  QuarticLocalSolvabilityStatus
+	SearchStatus QuarticPointSearchStatus
+	FoundPoint   *EllipticPoint
+}
 
 // TwoDescentResult holds Mordell-Weil rank bounds and generators.
 type TwoDescentResult struct {
@@ -543,6 +567,8 @@ type TwoDescentResult struct {
 	SelmerPhiDim   int
 	SelmerPsiDim   int
 	Generators     []EllipticPoint
+	Sha2Possible   bool
+	Coverings      []QuarticCoveringState
 }
 
 // generateSquarefreeDivisors generates all signed squarefree divisor classes mod squares.
@@ -740,16 +766,36 @@ func ComputeTwoDescentRankBound(aRat, bRat *big.Rat, fsm *EllipticDescentLifecyc
 		return nil, err
 	}
 
+	var coverings []QuarticCoveringState
+	type covKey struct {
+		isogeny string
+		d1      string
+	}
+	covMap := make(map[covKey]*QuarticCoveringState)
+
 	// 5. Test local solvability for phi-Selmer candidates (divisors of d)
 	var phiSelmer []*big.Int
 	for _, d1 := range divsD {
 		d2 := new(big.Int).Div(d, d1)
+		cov := QuarticCoveringState{
+			D1:           new(big.Int).Set(d1),
+			D2:           new(big.Int).Set(d2),
+			C:            new(big.Int).Set(c),
+			Isogeny:      "phi",
+			LocalStatus:  LocalStatusObstructed,
+			SearchStatus: PointStatusNotFoundWithinBounds,
+		}
+
 		// Check real
 		if !IsQuarticRealSoluble(d1, c, d2) {
+			coverings = append(coverings, cov)
+			covMap[covKey{isogeny: "phi", d1: d1.String()}] = &coverings[len(coverings)-1]
 			continue
 		}
 		// Check 2-adic
 		if !IsQuarticTwoAdicSoluble(d1, c, d2) {
+			coverings = append(coverings, cov)
+			covMap[covKey{isogeny: "phi", d1: d1.String()}] = &coverings[len(coverings)-1]
 			continue
 		}
 		// Check odd bad primes
@@ -764,20 +810,36 @@ func ComputeTwoDescentRankBound(aRat, bRat *big.Rat, fsm *EllipticDescentLifecyc
 			}
 		}
 		if solubleOdd {
+			cov.LocalStatus = LocalStatusSoluble
 			phiSelmer = append(phiSelmer, d1)
 		}
+		coverings = append(coverings, cov)
+		covMap[covKey{isogeny: "phi", d1: d1.String()}] = &coverings[len(coverings)-1]
 	}
 
 	// 6. Test local solvability for psi-Selmer candidates (divisors of d')
 	var psiSelmer []*big.Int
 	for _, dPrime1 := range divsDPrime {
 		dPrime2 := new(big.Int).Div(dPrime, dPrime1)
+		cov := QuarticCoveringState{
+			D1:           new(big.Int).Set(dPrime1),
+			D2:           new(big.Int).Set(dPrime2),
+			C:            new(big.Int).Set(cPrime),
+			Isogeny:      "psi",
+			LocalStatus:  LocalStatusObstructed,
+			SearchStatus: PointStatusNotFoundWithinBounds,
+		}
+
 		// Check real
 		if !IsQuarticRealSoluble(dPrime1, cPrime, dPrime2) {
+			coverings = append(coverings, cov)
+			covMap[covKey{isogeny: "psi", d1: dPrime1.String()}] = &coverings[len(coverings)-1]
 			continue
 		}
 		// Check 2-adic
 		if !IsQuarticTwoAdicSoluble(dPrime1, cPrime, dPrime2) {
+			coverings = append(coverings, cov)
+			covMap[covKey{isogeny: "psi", d1: dPrime1.String()}] = &coverings[len(coverings)-1]
 			continue
 		}
 		// Check odd bad primes
@@ -792,8 +854,11 @@ func ComputeTwoDescentRankBound(aRat, bRat *big.Rat, fsm *EllipticDescentLifecyc
 			}
 		}
 		if solubleOdd {
+			cov.LocalStatus = LocalStatusSoluble
 			psiSelmer = append(psiSelmer, dPrime1)
 		}
+		coverings = append(coverings, cov)
+		covMap[covKey{isogeny: "psi", d1: dPrime1.String()}] = &coverings[len(coverings)-1]
 	}
 
 	if err := fsm.TransitionTo(StateDescentSelmerSolved); err != nil {
@@ -825,8 +890,14 @@ func ComputeTwoDescentRankBound(aRat, bRat *big.Rat, fsm *EllipticDescentLifecyc
 			for _, d1 := range phiSelmer {
 				d2 := new(big.Int).Div(d, d1)
 				pts := SearchQuarticRationalPoints(d1, c, d2, 50)
+				cEntry := covMap[covKey{isogeny: "phi", d1: d1.String()}]
 				for _, pt := range pts {
 					origPt := unshiftAndUnscalePoint(pt, chosenRoot, scaleD)
+					if cEntry != nil && cEntry.SearchStatus != PointStatusFound {
+						cEntry.SearchStatus = PointStatusFound
+						ptCopy := origPt
+						cEntry.FoundPoint = &ptCopy
+					}
 					if IsOnCurve(origPt, aRat, bRat) && !IsPointTorsion(origPt, aRat, bRat) {
 						candidates = append(candidates, origPt)
 					}
@@ -837,12 +908,18 @@ func ComputeTwoDescentRankBound(aRat, bRat *big.Rat, fsm *EllipticDescentLifecyc
 			for _, dPrime1 := range psiSelmer {
 				dPrime2 := new(big.Int).Div(dPrime, dPrime1)
 				pts := SearchQuarticRationalPoints(dPrime1, cPrime, dPrime2, 50)
+				cEntry := covMap[covKey{isogeny: "psi", d1: dPrime1.String()}]
 				for _, pt := range pts {
 					mappedPt, err := MapDualPointToCurve(pt, dPrime)
 					if err != nil {
 						continue
 					}
 					origPt := unshiftAndUnscalePoint(mappedPt, chosenRoot, scaleD)
+					if cEntry != nil && cEntry.SearchStatus != PointStatusFound {
+						cEntry.SearchStatus = PointStatusFound
+						ptCopy := origPt
+						cEntry.FoundPoint = &ptCopy
+					}
 					if IsOnCurve(origPt, aRat, bRat) && !IsPointTorsion(origPt, aRat, bRat) {
 						candidates = append(candidates, origPt)
 					}
@@ -859,6 +936,8 @@ func ComputeTwoDescentRankBound(aRat, bRat *big.Rat, fsm *EllipticDescentLifecyc
 		return nil, err
 	}
 
+	sha2Possible := (rankUpper > rankLower)
+
 	res := &TwoDescentResult{
 		RankLowerBound: rankLower,
 		RankUpperBound: rankUpper,
@@ -866,6 +945,8 @@ func ComputeTwoDescentRankBound(aRat, bRat *big.Rat, fsm *EllipticDescentLifecyc
 		SelmerPhiDim:   phiDim,
 		SelmerPsiDim:   psiDim,
 		Generators:     gens,
+		Sha2Possible:   sha2Possible,
+		Coverings:      coverings,
 	}
 
 	return res, nil
