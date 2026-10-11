@@ -654,6 +654,16 @@ func factorIntPrimes(n *big.Int) []primeExp {
 		if IsDeterministicPrime(val) {
 			break
 		}
+		// Perfect square fast path: if val is r^2, factor r and double exponents
+		r := new(big.Int).Sqrt(val)
+		if new(big.Int).Mul(r, r).Cmp(val) == 0 {
+			rFactors := factorIntPrimes(r)
+			for _, rf := range rFactors {
+				factors = append(factors, primeExp{prime: rf.prime, exp: rf.exp * 2})
+			}
+			val.SetInt64(1)
+			break
+		}
 		count := 0
 		for {
 			rem.Mod(val, d)

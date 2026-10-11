@@ -1760,7 +1760,7 @@ func verifyEllipticGenerators(fn *FuncNode, result Node, env *Env, fsm *VerifyLi
 			}, nil
 		}
 
-		if isPointTorsion(pt, aRat, bRat) {
+		if IsPointTorsion(pt, aRat, bRat) {
 			_ = fsm.TransitionTo(VerifyStateRefuted)
 			details := i18n.T("verify.err_elliptic_generators_mismatch")
 			return &VerificationCertificate{
