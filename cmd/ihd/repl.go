@@ -67,7 +67,8 @@ func runREPL(in io.Reader, out, errOut io.Writer, ro runOptions) int {
 		History:    history,
 		Writer:     out,
 		Highlight:  BuildREPLHighlights(currentTheme, env),
-		ResetColor: "\x1B[0m",
+		ResetColor:   "\x1B[0m",
+		DefaultColor: "\x1B[0m",
 	}
 
 	for {

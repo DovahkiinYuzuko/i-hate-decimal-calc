@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc"
+	"github.com/nyaosorg/go-readline-ny"
 )
 
 // colorName returns a human-readable description of known ANSI sequences for clear logging.
@@ -174,7 +175,40 @@ func TestREPLColorTrace_Keystrokes(t *testing.T) {
 		t.Errorf("pos 4 (']'): expected mismatch alert \x1B[97;41m, got %q", colorMapErr[4])
 	}
 
-	logBuf.WriteString("  [Reset Guard]: Editor.ResetColor = \"\\x1B[0m\" による行末リセット確認完了\n\n")
+	// =========================================================================
+	// シナリオ 4: 空白なし 'sin(x+a)' における DefaultColor リセットと色漏洩防止検証
+	// =========================================================================
+	logBuf.WriteString("[シナリオ 4] 空白なし 'sin(x+a)' での DefaultColor による直前色漏洩防止検証\n")
+	logBuf.WriteString(strings.Repeat("-", 60) + "\n")
+
+	// readline.HighlightToColorSequence を直接呼び出して端末セル色を検証
+	highlightsDark := BuildREPLHighlights("dark", nil)
+	hlSeq := readline.HighlightToColorSequence("sin(x+a)", "\x1B[0m", "\x1B[0m", highlightsDark, -1)
+
+	// 各文字のセル色シーケンスを取得
+	inputTight := "sin(x+a)"
+	var tightOutput strings.Builder
+	var lastColor readline.ColorInterface
+	for i, r := range inputTight {
+		c := hlSeq.Next(r)
+		if lastColor == nil || !c.Equals(lastColor) {
+			lastColor = c
+			_, _ = c.WriteTo(&tightOutput)
+		}
+		tightOutput.WriteRune(r)
+		fmt.Fprintf(&logBuf, "  pos %d: %q -> ColorSeq: %v\n", i, r, c)
+	}
+
+	// 括弧 '(' (pos 3) の直後の 'x' (pos 4) の直前で、確実に \x1B[0m が送出されていることを検証
+	renderedStr := tightOutput.String()
+	logBuf.WriteString(fmt.Sprintf("\n  端末レンダリング結果シーケンス: %q\n", renderedStr))
+
+	// 'x' の直前にリセットシーケンス \x1B[0m が存在することを確認（シアン色の漏洩を防止）
+	if !strings.Contains(renderedStr, "(\x1B[0mx") {
+		t.Errorf("括弧直後の 'x' の前に \\x1B[0m が出力されていません (色漏洩の危険): %q", renderedStr)
+	}
+
+	logBuf.WriteString("  [Bleed Guard]: '(' 直後の 'x' に対する DefaultColor: \"\\x1B[0m\" 送出確認完了\n\n")
 	logBuf.WriteString(separator)
 	logBuf.WriteString("  全キーストローク・カラーダンプ検証 SUCCESS\n")
 	logBuf.WriteString(separator)
