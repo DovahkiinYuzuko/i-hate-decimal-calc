@@ -1913,7 +1913,7 @@ func verifyHNF(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*V
 	}, nil
 }
 
-func verifyIdealDecomposition(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
+func verifyIdealDecomposition(fn *FuncNode, result Node, _ *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
 	_ = fsm.TransitionTo(VerifyStateResidualConstructed)
 
 	if len(fn.Args) < 2 {
