@@ -1083,7 +1083,20 @@ func init() {
 		MaxArgs:  2,
 		LazyArgs: true,
 	})
+
+	// Primitive Element Theorem & Simple Extension Isomorphism
+	RegisterFunction(FunctionSpec{
+		Name:    "to_primitive_element",
+		MinArgs: 1,
+		MaxArgs: -1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "primitive_element",
+		MinArgs: 1,
+		MaxArgs: -1,
+	})
 }
+
 
 
 
