@@ -760,3 +760,52 @@ func TestCLI_Clifford_Quantum_Adversarial(t *testing.T) {
 	}
 }
 
+func TestCLI_ThemeAndNoColorFlags(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("IHD_DIR", tmpDir)
+
+	// 1. One-shot evaluation with --theme and --no-color flags
+	out1 := new(bytes.Buffer)
+	errOut1 := new(bytes.Buffer)
+	code1 := run([]string{"--theme", "light", "1 + 1"}, strings.NewReader(""), out1, errOut1)
+	if code1 != 0 {
+		t.Fatalf("expected code 0, got %d", code1)
+	}
+	if strings.TrimSpace(out1.String()) != "2" {
+		t.Errorf("expected '2', got %q", out1.String())
+	}
+
+	out2 := new(bytes.Buffer)
+	errOut2 := new(bytes.Buffer)
+	code2 := run([]string{"--no-color", "2 * 3"}, strings.NewReader(""), out2, errOut2)
+	if code2 != 0 {
+		t.Fatalf("expected code 0, got %d", code2)
+	}
+	if strings.TrimSpace(out2.String()) != "6" {
+		t.Errorf("expected '6', got %q", out2.String())
+	}
+
+	// 2. Interactive REPL via run with --theme=light
+	outREPL := new(bytes.Buffer)
+	errOutREPL := new(bytes.Buffer)
+	codeREPL := run([]string{"--theme=light"}, strings.NewReader("theme\nexit\n"), outREPL, errOutREPL)
+	if codeREPL != 0 {
+		t.Fatalf("expected code 0, got %d", codeREPL)
+	}
+	if !strings.Contains(outREPL.String(), "light") {
+		t.Errorf("expected REPL output to reflect light theme, got: %s", outREPL.String())
+	}
+
+	// 3. Piped stdin has zero ANSI escape codes
+	outPipe := new(bytes.Buffer)
+	errOutPipe := new(bytes.Buffer)
+	codePipe := run([]string{}, strings.NewReader("sin(0)\nexit\n"), outPipe, errOutPipe)
+	if codePipe != 0 {
+		t.Fatalf("expected code 0, got %d", codePipe)
+	}
+	if strings.Contains(outPipe.String(), "\x1B[") {
+		t.Errorf("piped output should not contain ANSI escape codes: %q", outPipe.String())
+	}
+}
+
+

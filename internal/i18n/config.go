@@ -8,8 +8,10 @@ import (
 
 // Config represents persistent user configuration for ihd.
 type Config struct {
-	Locale       string `json:"locale,omitempty"`
-	CheckUpdates *bool  `json:"check_updates,omitempty"`
+	Locale          string `json:"locale,omitempty"`
+	CheckUpdates    *bool  `json:"check_updates,omitempty"`
+	Theme           string `json:"theme,omitempty"`
+	SyntaxHighlight *bool  `json:"syntax_highlight,omitempty"`
 }
 
 // GetIhdDir returns the path to the ~/.ihd directory.
@@ -72,3 +74,24 @@ func SaveConfigLocale(locale string) error {
 	cfg.Locale = locale
 	return SaveConfig(cfg)
 }
+
+// SaveConfigTheme updates the theme entry in ~/.ihd/config.json.
+func SaveConfigTheme(theme string) error {
+	cfg, _ := LoadConfig()
+	if cfg == nil {
+		cfg = &Config{}
+	}
+	cfg.Theme = theme
+	return SaveConfig(cfg)
+}
+
+// SaveConfigHighlight updates the syntax_highlight entry in ~/.ihd/config.json.
+func SaveConfigHighlight(enabled bool) error {
+	cfg, _ := LoadConfig()
+	if cfg == nil {
+		cfg = &Config{}
+	}
+	cfg.SyntaxHighlight = &enabled
+	return SaveConfig(cfg)
+}
+
