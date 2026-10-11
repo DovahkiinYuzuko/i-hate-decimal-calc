@@ -746,6 +746,167 @@ func TestMordellWeilIndependenceAndLean4Scope(t *testing.T) {
 	}
 }
 
+func TestAdversarialStressSuite(t *testing.T) {
+	// -------------------------------------------------------------
+	// Category 1: SageMath 2-isogeny benchmark rank regressions
+	// -------------------------------------------------------------
+	t.Run("SageBenchmark_Rank0", func(t *testing.T) {
+		// c = 13, d = 128 -> A = 215/3, B = -10582/27 -> rank = 0
+		aRat := big.NewRat(215, 3)
+		bRat := big.NewRat(-10582, 27)
+		res, err := ComputeTwoDescentRankBound(aRat, bRat, nil)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if res.RankUpperBound != 0 || res.RankLowerBound != 0 || !res.IsExact {
+			t.Errorf("expected rank 0 exact, got [%d, %d, %v]", res.RankLowerBound, res.RankUpperBound, res.IsExact)
+		}
+	})
+
+	t.Run("SageBenchmark_Rank1", func(t *testing.T) {
+		// c = 1, d = -16 -> A = -49/3, B = 146/27 -> rank = 1
+		aRat := big.NewRat(-49, 3)
+		bRat := big.NewRat(146, 27)
+		res, err := ComputeTwoDescentRankBound(aRat, bRat, nil)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if res.RankUpperBound < 1 || res.RankLowerBound < 1 {
+			t.Errorf("expected rank bounds >= 1, got [%d, %d]", res.RankLowerBound, res.RankUpperBound)
+		}
+	})
+
+	t.Run("SageBenchmark_Rank2", func(t *testing.T) {
+		// c = 10, d = 8 -> A = -76/3, B = 1280/27 -> rank = 2
+		aRat := big.NewRat(-76, 3)
+		bRat := big.NewRat(1280, 27)
+		res, err := ComputeTwoDescentRankBound(aRat, bRat, nil)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if res.RankUpperBound < 2 {
+			t.Errorf("expected upper bound >= 2, got %d", res.RankUpperBound)
+		}
+	})
+
+	t.Run("SageBenchmark_Rank3", func(t *testing.T) {
+		// c = 85, d = 320 -> A = -6265/3, B = 983450/27 -> rank = 3
+		aRat := big.NewRat(-6265, 3)
+		bRat := big.NewRat(983450, 27)
+		res, err := ComputeTwoDescentRankBound(aRat, bRat, nil)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if res.RankUpperBound < 3 {
+			t.Errorf("expected upper bound >= 3, got %d", res.RankUpperBound)
+		}
+	})
+
+	// -------------------------------------------------------------
+	// Category 2: Torsion stress suite
+	// -------------------------------------------------------------
+	t.Run("Torsion_2x8_Isolation", func(t *testing.T) {
+		// TORSION-2x8: y^2 = x^3 + 337x^2 + 20736x
+		// A = -51361/3, B = 13653218/27
+		// Must not confuse order-8 torsion point with infinite order generator
+		aRat := big.NewRat(-51361, 3)
+		bRat := big.NewRat(13653218, 27)
+		res, err := ComputeTwoDescentRankBound(aRat, bRat, nil)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		for _, g := range res.Generators {
+			if IsPointTorsion(g, aRat, bRat) {
+				t.Errorf("torsion point erroneously included in generators: %v", g)
+			}
+		}
+	})
+
+	t.Run("Torsion_Full_TwoTorsion", func(t *testing.T) {
+		// y^2 = x^3 - x (3 rational 2-torsion points, rank 0)
+		aRat := big.NewRat(-1, 1)
+		bRat := big.NewRat(0, 1)
+		res, err := ComputeTwoDescentRankBound(aRat, bRat, nil)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if res.RankUpperBound != 0 || res.RankLowerBound != 0 {
+			t.Errorf("expected rank 0, got [%d, %d]", res.RankLowerBound, res.RankUpperBound)
+		}
+		if len(res.Generators) != 0 {
+			t.Errorf("expected 0 generators for rank 0 curve, got %d", len(res.Generators))
+		}
+	})
+
+	t.Run("Congruent_Numbers_5_and_6", func(t *testing.T) {
+		// n = 5: y^2 = x^3 - 25x -> rank 1
+		res5, err5 := ComputeTwoDescentRankBound(big.NewRat(-25, 1), big.NewRat(0, 1), nil)
+		if err5 != nil || res5.RankLowerBound != 1 || res5.RankUpperBound != 1 {
+			t.Errorf("n=5 failed: err=%v, res=%v", err5, res5)
+		}
+
+		// n = 6: y^2 = x^3 - 36x -> rank 1
+		res6, err6 := ComputeTwoDescentRankBound(big.NewRat(-36, 1), big.NewRat(0, 1), nil)
+		if err6 != nil || res6.RankLowerBound != 1 || res6.RankUpperBound != 1 {
+			t.Errorf("n=6 failed: err=%v, res=%v", err6, res6)
+		}
+	})
+
+	// -------------------------------------------------------------
+	// Category 3: Singular & input validation guards
+	// -------------------------------------------------------------
+	t.Run("Singular_Cusp_y2_equals_x3", func(t *testing.T) {
+		_, err := ComputeTwoDescentRankBound(big.NewRat(0, 1), big.NewRat(0, 1), nil)
+		if err == nil {
+			t.Errorf("expected error for singular cusp y^2 = x^3, got nil")
+		}
+	})
+
+	t.Run("Singular_Node_y2_equals_x3_minus_3x_plus_2", func(t *testing.T) {
+		// 4*(-3)^3 + 27*(2)^2 = -108 + 108 = 0
+		_, err := ComputeTwoDescentRankBound(big.NewRat(-3, 1), big.NewRat(2, 1), nil)
+		if err == nil {
+			t.Errorf("expected error for singular node y^2 = x^3 - 3x + 2, got nil")
+		}
+	})
+
+	t.Run("Unsupported_NoRational2Torsion", func(t *testing.T) {
+		// y^2 = x^3 + x + 1 (no rational roots)
+		_, err := ComputeTwoDescentRankBound(big.NewRat(1, 1), big.NewRat(1, 1), nil)
+		if err == nil {
+			t.Errorf("expected unsupported error for curve without rational 2-torsion, got nil")
+		}
+	})
+
+	// -------------------------------------------------------------
+	// Category 4: BigInt scale invariance (p = 100000000000000000039)
+	// -------------------------------------------------------------
+	t.Run("BigInt_Scale_Invariance_Rank1", func(t *testing.T) {
+		pStr := "100000000000000000039"
+		p, ok := new(big.Int).SetString(pStr, 10)
+		if !ok {
+			t.Fatalf("failed to parse prime p")
+		}
+		p2 := new(big.Int).Mul(p, p)
+		p4 := new(big.Int).Mul(p2, p2)
+
+		// E_scaled: y^2 = x^3 - 25*p^4 * x
+		aScaled := new(big.Int).Mul(big.NewInt(-25), p4)
+		aRat := new(big.Rat).SetInt(aScaled)
+		bRat := big.NewRat(0, 1)
+
+		res, err := ComputeTwoDescentRankBound(aRat, bRat, nil)
+		if err != nil {
+			t.Fatalf("unexpected error for scaled curve: %v", err)
+		}
+		// The 2-Selmer rank upper bound must be invariant under rational scaling!
+		if res.RankUpperBound != 1 {
+			t.Errorf("expected RankUpperBound = 1 for scaled curve, got %d", res.RankUpperBound)
+		}
+	})
+}
+
+
 
 
 

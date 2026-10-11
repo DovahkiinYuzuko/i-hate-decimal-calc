@@ -1123,13 +1123,6 @@ func IsPointTorsion(p EllipticPoint, aRat, bRat *big.Rat) bool {
 	return false
 }
 
-func isPointTorsion(p EllipticPoint, aRat, bRat *big.Rat) bool {
-	return IsPointTorsion(p, aRat, bRat)
-}
-
-func mapDualPointToCurve(q EllipticPoint, dPrime *big.Int) (EllipticPoint, error) {
-	return MapDualPointToCurve(q, dPrime)
-}
 
 // computeSquarefreePart computes the squarefree integer part of n.
 func computeSquarefreePart(n *big.Int) *big.Int {
