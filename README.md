@@ -221,6 +221,12 @@ ihd "plot(sin(x), [-pi, pi])"
 * Domain:            x ∈ [-π, π], y ∈ [-1, 1]
 ```
 
+#### 4. REPL 構文ハイライト & レインボー括弧
+外部依存ライブラリを使用せず、単一レキシカル有限状態機械（FSM）により入力文字列の色分け表示を行います。
+- **ネスト深度別レインボー括弧**: 括弧 `()` および角括弧 `[]` のネスト深度（4色循環）に応じたハイライト。括弧の不整合（ミスマッチ）はエラー警告色（赤背景）で表示。
+- **カスタム変数ハイライト**: 未束縛の記号（$x, y$ 等）は標準色を維持し、現在のセッション環境に定義された変数のみを識別して着色（Darkテーマ時は淡いシアン）。
+- **テーマ設定 & 永続化**: `dark`（暗め背景向け）および `light`（明るめ背景向け）テーマに対応。REPL 内コマンド（`theme dark` / `theme light`）で切り替え可能で、設定は `~/.ihd/config.json` に保存。
+
 ---
 
 ### 構文・演算子・関数リファレンス
@@ -241,12 +247,14 @@ ihd "plot(sin(x), [-pi, pi])"
 - **実代数幾何・数理論理・量化子消去**: `qe`, `forall`, `exists`, `cad`
 - **ガロア理論・代数的根号可解性**: `galois_group`, `is_solvable_by_radicals`
 - **楕円曲線代数・数論幾何**: `ec_add`, `ec_mul`, `ec_torsion`, `ec_p_order`, `ec_p_trace`, `ec_p_add`, `ec_p_mul`
+- **クリフォード代数・幾何代数 & 厳密量子回路等価性検証**: `clifford`, `clifford_wedge`, `clifford_contract`, `clifford_dual`, `quantum_equiv`, `quantum_eval`
+- **CAS反復制御 & 任意基数進数変換**: `table`, `product`, `for`, `to_base`, `from_base`, `bin`, `oct`, `hex`
 - **前提条件システム（仮定）**: `assume`, `unassume`, `assumptions`, `clear_assumptions`
 - **ビジュアル・自己検証**: `plot`, `verify`
 
 > [!NOTE]
-> **代数・超越方程式ソルバーと線形代数**  
-> `solve` は1次・2次・3次・4次（Ferrari法）の代数方程式の根号完全閉形式解に加え、ランバートのW関数（`lambert_w`）を用いた初等超越方程式（$x e^x = c$, $x + \ln x = c$, $x^x = c$ 等）の閉形式求解をサポートしています。また、`integrate` はガウス積分 $\int e^{-a x^2} dx$ の誤差関数 `erf` による閉形式化を完備し、線形代数の `eigenvals` は最大 4×4 行列の特性方程式から厳密固有値を導出可能です。
+> **代数・超越方程式ソルバー、線形代数、およびクリフォード代数・量子回路検証**  
+> `solve` は1次・2次・3次・4次（Ferrari法）の代数方程式の根号完全閉形式解に加え、ランバートのW関数（`lambert_w`）を用いた初等超越方程式（$x e^x = c$, $x + \ln x = c$, $x^x = c$ 等）の閉形式求解をサポートしています。また、`integrate` はガウス積分 $\int e^{-a x^2} dx$ の誤差関数 `erf` による閉形式化を完備し、線形代数の `eigenvals` は最大 4×4 行列の特性方程式から厳密固有値を導出可能です。さらに、`clifford` は直交対角計量 $(p, q, r)$ の幾何積・外積・縮約・双対ブレードを代数展開し、`quantum_equiv` は小数を一切排除した二進円分環 $\mathbb{Z}[1/\sqrt{2}, i]$ 上で Clifford+T 量子回路の厳密等価性判定および反例基底状態の抽出を実行します。
 
 ---
 
@@ -254,6 +262,8 @@ ihd "plot(sin(x), [-pi, pi])"
 
 | オプション           | 説明・使用例                                                                                                                                                           |
 | :------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--theme <dark\|light\|none>` | REPLのカラーテーマを指定（`dark`: 暗め背景、`light`: 明るめ背景、`none`: ハイライト無効）。設定は `~/.ihd/config.json` に永続化。<br>`ihd --theme light`                 |
+| `--no-color`         | ANSIエスケープシーケンスによるカラー出力を完全に無効化（環境変数 `NO_COLOR=1` にも準拠）。                                                                             |
 | `--ascii`            | 数学記号（`√`, `π`）をASCII文字列（`sqrt`, `pi`）にフォールバックして出力。<br>`ihd --ascii "sqrt(2) + pi"` $\to$ `sqrt(2) + pi`                                       |
 | `--approx`           | 厳密解の横に参考用の浮動小数点小数近似値（float64、15〜17桁）を併記。<br>`ihd --approx "sqrt(2)"` $\to$ `√2 (≈ 1.4142135623730951)`                                    |
 | `--latex`            | MarkdownやTeX論文に貼り付け可能なLaTeX形式（`$$ ... $$`）で出力。<br>`ihd --latex "1/2 + sqrt(2)"` $\to$ `$$ \frac{1}{2} + \sqrt{2} $$`                                |
@@ -530,6 +540,12 @@ ihd "plot(sin(x), [-pi, pi])"
 * Domain:            x ∈ [-π, π], y ∈ [-1, 1]
 ```
 
+#### 4. REPL Syntax Highlighting & Rainbow Delimiters
+Lexical syntax highlighting powered by a finite-state machine (FSM):
+- **Rainbow Nested Delimiters**: Delimiter depths across parentheses `()` and brackets `[]` rotate through 4 cyclic colors. Bracket mismatches are highlighted with an error background.
+- **Custom Variable Highlighting**: Unbound symbols ($x, y$) retain the neutral base text color, while user-defined custom variables in the active session environment are highlighted.
+- **Dual Themes & Persistence**: Supports `dark` and `light` themes. Configurable inside the REPL (`theme dark` / `theme light`), persisted to `~/.ihd/config.json`.
+
 ---
 
 ### Syntax & Functions Reference
@@ -550,12 +566,14 @@ ihd "plot(sin(x), [-pi, pi])"
 - **Real Algebraic Geometry & Quantifier Elimination**: `qe`, `forall`, `exists`, `cad`
 - **Galois Theory & Solvability by Radicals**: `galois_group`, `is_solvable_by_radicals`
 - **Elliptic Curves & Arithmetic Geometry**: `ec_add`, `ec_mul`, `ec_torsion`, `ec_p_order`, `ec_p_trace`, `ec_p_add`, `ec_p_mul`
+- **Clifford Geometric Algebra & Quantum Circuit Equivalence**: `clifford`, `clifford_wedge`, `clifford_contract`, `clifford_dual`, `quantum_equiv`, `quantum_eval`
+- **CAS Iteration Control & Multi-Radix Arithmetic**: `table`, `product`, `for`, `to_base`, `from_base`, `bin`, `oct`, `hex`
 - **Symbolic Assumptions System**: `assume`, `unassume`, `assumptions`, `clear_assumptions`
 - **Visualization & Verification Tools**: `plot`, `verify`
 
 > [!NOTE]
-> **Algebraic & Transcendental Equation Solver & Linear Algebra**  
-> `solve` provides exact radical solutions for linear, quadratic, cubic, and quartic polynomials (via Ferrari's method, Tschirnhaus transformation, and resolvent cubics), alongside exact closed-form solutions for elementary transcendental equations ($x e^x = c$, $x + \ln x = c$, $x^x = c$, etc.) via the Lambert W function (`lambert_w`). Furthermore, `integrate` incorporates Gaussian integrals $\int e^{-a x^2} dx$ in terms of the error function `erf`, and `eigenvals` derives exact radical eigenvalues for matrices up to 4×4 using the Faddeev-LeVerrier characteristic polynomial algorithm.
+> **Algebraic & Transcendental Equation Solver, Linear Algebra, Clifford Algebra & Quantum Verification**  
+> `solve` provides exact radical solutions for linear, quadratic, cubic, and quartic polynomials (via Ferrari's method, Tschirnhaus transformation, and resolvent cubics), alongside exact closed-form solutions for elementary transcendental equations ($x e^x = c$, $x + \ln x = c$, $x^x = c$, etc.) via the Lambert W function (`lambert_w`). Furthermore, `integrate` incorporates Gaussian integrals $\int e^{-a x^2} dx$ in terms of the error function `erf`, and `eigenvals` derives exact radical eigenvalues for matrices up to 4×4. Additionally, `clifford` algebraically expands and canonicalizes multivector expressions (geometric product, exterior wedge, left/right contraction, Poincaré dual) under orthogonal diagonal signatures $(p, q, r)$, and `quantum_equiv` performs zero-decimal Clifford+T quantum circuit equivalence verification and witness extraction over the binary cyclotomic ring $\mathbb{Z}[1/\sqrt{2}, i]$.
 
 ---
 
@@ -563,6 +581,8 @@ ihd "plot(sin(x), [-pi, pi])"
 
 | Option               | Description & Examples                                                                                                                            |
 | :------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--theme <dark\|light\|none>` | Specify REPL color theme (`dark`, `light`, or `none`). Persisted to `~/.ihd/config.json`.<br>`ihd --theme light`                                  |
+| `--no-color`         | Disables all ANSI terminal colors and escape sequences (respects `NO_COLOR=1`).                                                                   |
 | `--ascii`            | Output using standard ASCII strings (`sqrt`, `pi`) instead of Unicode symbols.<br>`ihd --ascii "sqrt(2) + pi"` $\to$ `sqrt(2) + pi`               |
 | `--approx`           | Display approximate floating-point decimal value alongside the exact form.<br>`ihd --approx "sqrt(2)"` $\to$ `√2 (≈ 1.4142135623730951)`          |
 | `--latex`            | Output expression in LaTeX format (`$$ ... $$`) ready to paste into papers.<br>`ihd --latex "1/2 + sqrt(2)"` $\to$ `$$ \frac{1}{2} + \sqrt{2} $$` |

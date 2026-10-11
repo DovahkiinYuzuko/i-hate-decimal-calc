@@ -22,6 +22,10 @@ Complete language specification and built-in function reference for `ihd` (i-hat
   - [12. p-adic Arithmetic, Local Algebra & Hensel Lifting](#12-p-adic-arithmetic-local-algebra--hensel-lifting)
   - [13. Local Algebraic Series & Singularities (Puiseux Series)](#13-local-algebraic-series--singularities-puiseux-series)
   - [14. Galois Theory, Solvability by Radicals & Abel-Ruffini Certificates](#14-galois-theory-solvability-by-radicals--abel-ruffini-certificates)
+  - [15. Self-Verifying Certificates & Formal Proof Infrastructure (ProofTrace / Explain / Verify / Lean 4)](#15-self-verifying-certificates--formal-proof-infrastructure-prooftrace--explain--verify--lean-4)
+  - [16. Clifford Geometric Algebra & Binary Cyclotomic Quantum Circuit Verification](#16-clifford-geometric-algebra--binary-cyclotomic-quantum-circuit-verification)
+  - [17. CAS Iteration Control & Multi-Radix Arithmetic](#17-cas-iteration-control--multi-radix-arithmetic)
+  - [18. REPL Syntax Highlighting, Themes & Interactive Commands](#18-repl-syntax-highlighting-themes--interactive-commands)
 
 ---
 
@@ -329,4 +333,54 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `--replay` | `ihd --replay cert.json` | Reads an exported certificate JSON file and verifies that residuals vanish without invoking CAS solver algorithms |
 | `--micro-verifier` | `ihd --micro-verifier > micro_verifier.go` | Emits self-contained Go verification source code (standard library only) that can verify certificate JSON files independently |
 | `--lean` / `--lean-file` | `ihd --lean "factor(x^2 - 1)"` / `ihd --lean-file p.lean "factor(x^2 - 1)"` | Automatically transpiles computation and proof traces into formal **Lean 4 (Mathlib4)** proof theorems (`by ring`, `by ext <;> fin_cases`, `by repeat constructor <;> norm_num`, `by simp`, etc.) |
+
+---
+
+### 16. Clifford Geometric Algebra & Binary Cyclotomic Quantum Circuit Verification
+
+Supports real Clifford geometric algebras $\mathrm{Cl}(p, q, r)$ equipped with orthogonal diagonal signatures $(p, q, r)$ ($p$ positive basis vectors $e_i^2 = +1$, $q$ negative basis vectors $e_i^2 = -1$, and $r$ degenerate/null basis vectors $e_i^2 = 0$), alongside zero-decimal Clifford+T quantum circuit equivalence verification over the binary cyclotomic ring $\mathbb{Z}[1/\sqrt{2}, i]$.
+
+| Function | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `clifford` | `clifford(e0 * e1 + e1 * e0, 3, 0)` / `clifford(e0 * e0, 3, 0)` | Computes the Clifford geometric product and simplifies multivector expressions canonically under signature $(p, q, [r])$ (basis squaring and anti-commutation reduction). Basis generator symbols are `e0`, `e1`, `e2` ... |
+| `clifford_wedge` | `clifford_wedge(e0, e1, 3, 0)` | Grassmann exterior product (wedge product) $A \wedge B$. Evaluates completely anti-symmetrized graded blades under metric $(p, q, [r])$ |
+| `clifford_contract` | `clifford_contract(e0, e0, "left", 3, 0)` | Left/Right contractions (inner product extensions). The 3rd argument selects contraction direction (`"left"`: left contraction $\lrcorner$, `"right"`: right contraction $\llcorner$) |
+| `clifford_dual` | `clifford_dual(e3, 3, 0, 1)` | Poincaré complement dual. Computes the dual multivector via contraction with the unit pseudoscalar blade $I$ (fully supports degenerate metrics $r > 0$) |
+| `quantum_equiv` | `quantum_equiv(c1, c2, n, [k])` | Strictly verifies algebraic equivalence between two $n$-qubit Clifford+T circuits $c1, c2$ over the binary cyclotomic ring $\mathbb{Z}[1/\sqrt{2}, i]$ up to global phase $\omega^k$ ($\omega = e^{i\pi/4}$). If inequivalent, extracts a concrete refuting witness basis state |
+| `quantum_eval` | `quantum_eval(circuit, numQubits)` | Exactly simulates and computes the symbolic unitary matrix of a Clifford+T quantum circuit over binary cyclotomic ring coefficients |
+
+---
+
+### 17. CAS Iteration Control & Multi-Radix Arithmetic
+
+Provides list comprehension, discrete products, procedural loops, and multi-radix (bases 2 through 64) integer/rational literals and conversion functions.
+
+| Function / Syntax | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `table` | `table(x^2, x, 1, 5)` / `table(i + j, i, 1, 3, 1, j, 1, 2)` | Mathematica-style list comprehension. Evaluates `table(expr, var, start, end, [step])` under automatic dynamic scope protection |
+| `product` | `product(k, k, 1, 5)` / `product(2*k + 1, k, 0, 4)` | Discrete product computation ($\prod_{k=\text{start}}^{\text{end}} \text{expr}$) with dynamic scope protection and zero-short-circuiting |
+| `for` | `for(i, 1, 5, s = s + i)` | Procedural iteration loop with syntax `for(var, start, end, [step], body)`. Returns the evaluation result of the final iteration |
+| `to_base` | `to_base(255, 16)` / `to_base(1/3, 2)` | Converts an integer or exact rational into a string representation in the specified base (2 to 64), outputting repeating fractional digits when periodic |
+| `from_base` | `from_base("FF", 16)` / `from_base("101.1", 2)` | Parses a base-$N$ string representation back into an exact arbitrary-precision rational or integer |
+| `bin`, `oct`, `hex` | `bin(42)`, `oct(42)`, `hex(255)` | Convenience aliases for standard binary, octal, and hexadecimal radix conversions |
+| Radix Literals | `16^^FF`, `2^^1011`, `0x1A`, `0b101` | Lexer support for arbitrary-radix literal constants ($2 \le \text{base} \le 64$) |
+
+---
+
+### 18. REPL Syntax Highlighting, Themes & Interactive Commands
+
+Interactive control commands, high-contrast color themes, and real-time lexical syntax highlighting features available inside the REPL.
+
+| Command / Option | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `theme` | `theme` | Displays the currently active syntax highlight color theme (`dark`, `light`, or `none`) |
+| `theme dark` | `theme dark` | Switches to the dark-background palette (cyan/magenta/green/blue rainbow delimiters, yellow numbers, bright white operators), persisted to `~/.ihd/config.json` |
+| `theme light` | `theme light` | Switches to the light-background palette (bold blue/magenta/green/cyan delimiters, red numbers, black operators), persisted to configuration |
+| `highlight` | `highlight` / `color` | Shows current syntax highlight status (enabled / disabled) |
+| `highlight on` / `off` | `highlight on` / `highlight off` | Toggles real-time lexical highlighting and nested rainbow delimiters dynamically |
+| `vars` | `vars` | Displays all currently bound user variables in the active environment |
+| `help` | `help` | Prints concise built-in help and a summary of interactive commands |
+| `exit` / `quit` | `exit` / `quit` / `Ctrl+D` | Exits the interactive REPL session cleanly |
+| CLI Options | `ihd --theme light` / `--no-color` | CLI startup flags to set initial color theme or disable ANSI coloring completely |
+
 
