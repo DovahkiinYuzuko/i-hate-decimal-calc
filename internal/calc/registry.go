@@ -752,6 +752,38 @@ func init() {
 		MaxArgs: 3,
 	})
 
+	// Primary Decomposition of Multivariate Polynomial Ideals (issue-107)
+	RegisterFunction(FunctionSpec{
+		Name:    "primary_decomposition",
+		MinArgs: 2,
+		MaxArgs: 3,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "ideal_radical",
+		MinArgs: 2,
+		MaxArgs: 3,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "ideal_dimension",
+		MinArgs: 2,
+		MaxArgs: 3,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "ideal_intersection",
+		MinArgs: 3,
+		MaxArgs: 4,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "ideal_colon",
+		MinArgs: 3,
+		MaxArgs: 4,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "ideal_saturation",
+		MinArgs: 3,
+		MaxArgs: 4,
+	})
+
 	// Exact Matrix Decompositions Pack (issue-59)
 	RegisterFunction(FunctionSpec{
 		Name:    "lu",

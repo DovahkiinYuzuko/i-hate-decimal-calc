@@ -24,7 +24,8 @@ const (
 	CertDomainRoot          CertificateDomain = "root"
 	CertDomainLattice       CertificateDomain = "lattice"
 	CertDomainAlgebraicExtension CertificateDomain = "algebraic_extension"
-	CertDomainGeneral       CertificateDomain = "general"
+	CertDomainIdeal              CertificateDomain = "ideal"
+	CertDomainGeneral            CertificateDomain = "general"
 )
 
 // VerificationStatus represents the 4-valued verification conclusion.

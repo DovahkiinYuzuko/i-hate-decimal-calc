@@ -359,6 +359,58 @@ func polyReduce(f *MPoly, basis []*MPoly, order MonomialOrder) *MPoly {
 	return &MPoly{Terms: remTerms, Sugar: f.Sugar}
 }
 
+// polyDivisionWithQuotients divides f by basis = [g_1, ..., g_s] using Cox-Little-O'Shea division algorithm.
+// It returns quotients [q_1, ..., q_s] and remainder r such that f = sum q_i * g_i + r.
+func polyDivisionWithQuotients(f *MPoly, basis []*MPoly, order MonomialOrder) ([]*MPoly, *MPoly) {
+	numVars := polyNumVars(f)
+	for _, g := range basis {
+		if n := polyNumVars(g); n > numVars {
+			numVars = n
+		}
+	}
+	qs := make([]*MPoly, len(basis))
+	for i := range qs {
+		qs[i] = NewZeroMPoly(numVars)
+	}
+	if f.IsZero() {
+		return qs, NewZeroMPoly(numVars)
+	}
+
+	var remTerms []Term
+	p := f.Clone()
+
+	for !p.IsZero() {
+		ltP := p.LeadingTerm()
+		divided := false
+
+		for i, g := range basis {
+			if g.IsZero() {
+				continue
+			}
+			ltG := g.LeadingTerm()
+			if ltG.Mon.Divides(ltP.Mon) {
+				qMon := ltP.Mon.Div(ltG.Mon)
+				qCoeff := new(big.Rat).Quo(ltP.Coeff, ltG.Coeff)
+				qTerm := Term{Coeff: qCoeff, Mon: qMon}
+
+				qs[i] = qs[i].Add(&MPoly{Terms: []Term{qTerm}, Sugar: qMon.TotalDeg}, order)
+
+				sub := g.MulTerm(qTerm, order)
+				p = p.Sub(sub, order)
+				divided = true
+				break
+			}
+		}
+
+		if !divided {
+			remTerms = append(remTerms, ltP)
+			p.Terms = p.Terms[1:]
+		}
+	}
+
+	return qs, &MPoly{Terms: remTerms, Sugar: f.Sugar}
+}
+
 // sPolynomial computes S(f, g) = (LCM / LT(f)) * f - (LCM / LT(g)) * g.
 func sPolynomial(f, g *MPoly, order MonomialOrder) *MPoly {
 	ltF := f.LeadingTerm()
@@ -459,12 +511,10 @@ func updatePairsGebauerMoller(G []*MPoly, pairs []critPair, newElem *MPoly, newI
 			if lcmB.Divides(lcmA) {
 				if !lcmB.Equal(lcmA) {
 					keep = false
-					processed[critPairKey(idxI, newIdx)] = true
 					break
 				}
 				if b < a {
 					keep = false
-					processed[critPairKey(idxI, newIdx)] = true
 					break
 				}
 			}
@@ -852,50 +902,44 @@ func mpolyToNode(p *MPoly, vars []string) Node {
 // Top-Level Public Interface
 // -------------------------------------------------------------------------
 
-// EvalGroebner computes the reduced Gröbner basis for a set of polynomials.
-// Syntax: groebner([p1, p2, ...], [x, y, ...], [order])
-func EvalGroebner(polysNode, varsNode, orderOpt Node, env *Env) (Node, error) {
+// parseMPolyInputArgs parses polynomial list, variable list, and optional monomial order.
+func parseMPolyInputArgs(polysNode, varsNode, orderOpt Node) ([]*MPoly, []string, MonomialOrder, error) {
 	if polysNode == nil || varsNode == nil {
-		return nil, fmt.Errorf("%s", i18n.T("errors.groebner_missing_args"))
+		return nil, nil, OrderGRevLex, fmt.Errorf("%s", i18n.T("errors.groebner_missing_args"))
 	}
 
-	// 1. Extract polynomials
 	pList, ok := polysNode.(*ListNode)
 	if !ok {
-		// Single polynomial wrapped
 		pList = NewList([]Node{polysNode})
 	}
 
-	// 2. Extract variable list
 	var varNames []string
 	if vList, ok := varsNode.(*ListNode); ok {
 		for _, vElem := range vList.Elements {
 			if vn, ok := vElem.(*VarNode); ok {
 				varNames = append(varNames, vn.Name)
 			} else {
-				return nil, fmt.Errorf("%s", i18n.T("errors.groebner_var_list_identifiers", vElem.String()))
+				return nil, nil, OrderGRevLex, fmt.Errorf("%s", i18n.T("errors.groebner_var_list_identifiers", vElem.String()))
 			}
 		}
 	} else if vn, ok := varsNode.(*VarNode); ok {
 		varNames = []string{vn.Name}
 	} else {
-		return nil, fmt.Errorf("%s", i18n.T("errors.groebner_second_arg_var_list", varsNode.String()))
+		return nil, nil, OrderGRevLex, fmt.Errorf("%s", i18n.T("errors.groebner_second_arg_var_list", varsNode.String()))
 	}
 
 	if len(varNames) == 0 {
-		return nil, fmt.Errorf("%s", i18n.T("errors.groebner_var_list_empty"))
+		return nil, nil, OrderGRevLex, fmt.Errorf("%s", i18n.T("errors.groebner_var_list_empty"))
 	}
 
-	// Check duplicates
 	varMap := make(map[string]int)
 	for i, name := range varNames {
 		if _, exists := varMap[name]; exists {
-			return nil, fmt.Errorf("%s", i18n.T("errors.groebner_duplicate_var", name))
+			return nil, nil, OrderGRevLex, fmt.Errorf("%s", i18n.T("errors.groebner_duplicate_var", name))
 		}
 		varMap[name] = i
 	}
 
-	// 3. Parse monomial ordering
 	order := OrderGRevLex
 	if orderOpt != nil {
 		str := strings.ToLower(orderOpt.String())
@@ -906,11 +950,10 @@ func EvalGroebner(polysNode, varsNode, orderOpt Node, env *Env) (Node, error) {
 		case "grevlex", "degrevlex", "gradedreverselexicographic":
 			order = OrderGRevLex
 		default:
-			return nil, fmt.Errorf("%s", i18n.T("errors.groebner_unsupported_order", str))
+			return nil, nil, OrderGRevLex, fmt.Errorf("%s", i18n.T("errors.groebner_unsupported_order", str))
 		}
 	}
 
-	// 4. Convert input polynomials to MPoly
 	var polys []*MPoly
 	for _, pe := range pList.Elements {
 		evalP, err := Eval(expandNode(pe))
@@ -919,9 +962,20 @@ func EvalGroebner(polysNode, varsNode, orderOpt Node, env *Env) (Node, error) {
 		}
 		mp, err := nodeToMPoly(evalP, varMap, len(varNames), order)
 		if err != nil {
-			return nil, err
+			return nil, nil, OrderGRevLex, err
 		}
 		polys = append(polys, mp)
+	}
+
+	return polys, varNames, order, nil
+}
+
+// EvalGroebner computes the reduced Gröbner basis for a set of polynomials.
+// Syntax: groebner([p1, p2, ...], [x, y, ...], [order])
+func EvalGroebner(polysNode, varsNode, orderOpt Node, env *Env) (Node, error) {
+	polys, varNames, order, err := parseMPolyInputArgs(polysNode, varsNode, orderOpt)
+	if err != nil {
+		return nil, err
 	}
 
 	// 5. Run Buchberger algorithm

@@ -657,5 +657,55 @@ func TestLeanClaimFidelityAndMutation(t *testing.T) {
 	}
 }
 
+func TestGenerateLeanSource_IdealDecomposition(t *testing.T) {
+	x := NewVar("x")
+	one := mustRational(1, 1)
+	xMinus1, _ := simplifyAdd([]Node{x, mustRational(-1, 1)})
+	xPlus1, _ := simplifyAdd([]Node{x, one})
+	x2Minus1, _ := simplifyAdd([]Node{&PowNode{Base: x, Exp: mustRational(2, 1)}, mustRational(-1, 1)})
+
+	syz := IdealSyzygyRelation{
+		TargetNode: x2Minus1,
+		CombCoeffs: []Node{xPlus1},
+		Gens:       []Node{xMinus1},
+	}
+
+	cert := NewIdealDecompositionCertificate(
+		[]Node{x2Minus1},
+		[][]Node{{xMinus1}, {xPlus1}},
+		[][]Node{{xMinus1}, {xPlus1}},
+		0,
+		[]IdealSyzygyRelation{syz},
+		nil,
+		nil,
+		mustRational(0, 1),
+		true,
+		"Primary decomposition verified",
+	)
+
+	vCert := &VerificationCertificate{
+		Domain:     DomainIdeal,
+		Equation:   cert.EquationString(),
+		IsVerified: true,
+		CertIR:     cert,
+	}
+
+	src, err := GenerateLeanSource("ideal_decomp_proof", vCert, x2Minus1, x2Minus1)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !strings.Contains(src, "import Mathlib.Tactic.Ring") {
+		t.Errorf("missing Mathlib.Tactic.Ring import: %s", src)
+	}
+	if !strings.Contains(src, "theorem ideal_decomp_proof") {
+		t.Errorf("missing theorem declaration: %s", src)
+	}
+	if !strings.Contains(src, "by ring") {
+		t.Errorf("missing by ring tactic: %s", src)
+	}
+}
+
+
 
 

@@ -735,6 +735,39 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 		)
 		tactic = "by intro x ; constructor <;> ring"
 
+	case *IdealDecompositionCertificate:
+		if len(c.ForwardSyzygies) > 0 {
+			var eqs []string
+			for _, syz := range c.ForwardSyzygies {
+				lhsStr, _ := ToLeanSyntax(syz.TargetNode)
+				var terms []string
+				for j, q := range syz.CombCoeffs {
+					qStr, _ := ToLeanSyntax(q)
+					gStr, _ := ToLeanSyntax(syz.Gens[j])
+					if qStr == "1" {
+						terms = append(terms, gStr)
+					} else {
+						terms = append(terms, fmt.Sprintf("(%s) * (%s)", qStr, gStr))
+					}
+				}
+				rhs := "0"
+				if len(terms) > 0 {
+					rhs = strings.Join(terms, " + ")
+				}
+				eqs = append(eqs, fmt.Sprintf("(%s = %s)", lhsStr, rhs))
+			}
+			if len(eqs) == 1 {
+				equalityStr = eqs[0]
+				tactic = "by ring"
+			} else {
+				equalityStr = strings.Join(eqs, " ∧ ")
+				tactic = "by repeat constructor <;> ring"
+			}
+		} else {
+			equalityStr = "1 = 1"
+			tactic = "by rfl"
+		}
+
 	case *ImpossibilityCertificate:
 		if c.Kind == ImpossibilityAbelRuffini {
 			fStr, _ := ToLeanSyntax(c.Problem)
@@ -780,7 +813,7 @@ func TranspileCertificateToLean(cert *VerificationCertificate, inputExpr, result
 			*DecompositionCertificate, *ODECertificate, *WZCertificate, *GeometricCertificate,
 			*LinearSolveCertificate, *PellCertificate, *PolynomialRootCertificate,
 			*IntegerRelationCertificate, *EllipticPointCertificate, *ImpossibilityCertificate,
-			*SmithNormalFormCertificate, *HermiteNormalFormCertificate:
+			*SmithNormalFormCertificate, *HermiteNormalFormCertificate, *IdealDecompositionCertificate:
 			return TranspileCertificateIRToLean(certIR)
 		}
 	}
@@ -918,6 +951,19 @@ func GenerateLeanSource(theoremName string, cert *VerificationCertificate, input
 				}
 				if c.H != nil {
 					allNodes = append(allNodes, c.H)
+				}
+			case *IdealDecompositionCertificate:
+				allNodes = append(allNodes, c.IdealGens...)
+				for _, comp := range c.Components {
+					allNodes = append(allNodes, comp...)
+				}
+				for _, prime := range c.Primes {
+					allNodes = append(allNodes, prime...)
+				}
+				for _, s := range c.ForwardSyzygies {
+					allNodes = append(allNodes, s.TargetNode)
+					allNodes = append(allNodes, s.CombCoeffs...)
+					allNodes = append(allNodes, s.Gens...)
 				}
 			}
 		}

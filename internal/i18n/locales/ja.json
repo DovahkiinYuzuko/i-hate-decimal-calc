@@ -717,7 +717,8 @@
     "rule_polynomial_root": "P(%s) = 0 を満たす代数的根 %s",
     "rule_primitive_element": "最小多項式および体上GCDによる単拡大同型写像 Q(alpha, beta) =~ Q(theta)",
     "rule_smith_normal_form": "対角不変因子分解 U * A * V = D",
-    "rule_wu_geometric": "幾何学的命題の標数集合擬剰余による機械的検証（Wu法）"
+    "rule_wu_geometric": "幾何学的命題の標数集合擬剰余による機械的検証（Wu法）",
+    "rule_primary_decomposition_gtz": "Gianni-Trager-Zachariasアルゴリズムによる次元 %d イデアルの準素分解: %s"
   },
   "puiseux": {
     "err_arg_must_be_variable": "入力エラー: puiseux: 変数名である必要があります (取得値: %s)",

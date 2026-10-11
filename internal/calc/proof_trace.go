@@ -257,6 +257,21 @@ func ConvertCertificateToProofTrace(cert Certificate) (*ProofTrace, error) {
 		})
 		return trace, nil
 
+	case *IdealDecompositionCertificate:
+		trace := NewProofTrace(nil, nil)
+		trace.Metadata["domain"] = string(c.Domain())
+		trace.Metadata["equation"] = c.EquationString()
+		trace.Metadata["dimension"] = fmt.Sprintf("%d", c.Dimension)
+		trace.AddStep(ProofStep{
+			Before:          nil,
+			After:           nil,
+			Rule:            "PrimaryDecompositionGTZ",
+			RuleDescription: i18n.T("proof_trace.rule_primary_decomposition_gtz", c.Dimension, c.EquationString()),
+			Residual:        c.Residual(),
+			IsSelfVerified:  c.IsVerified(),
+		})
+		return trace, nil
+
 	case *ODECertificate:
 		trace := NewProofTrace(c.ODE, c.Solution)
 		trace.Metadata["domain"] = string(c.Domain())

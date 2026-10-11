@@ -717,7 +717,8 @@
     "rule_polynomial_root": "Root %s satisfying P(%s) = 0",
     "rule_primitive_element": "Simple extension isomorphism Q(alpha, beta) =~ Q(theta)",
     "rule_smith_normal_form": "Diagonal invariant factor decomposition U * A * V = D",
-    "rule_wu_geometric": "Geometric proposition mechanically verified via characteristic set pseudo-division"
+    "rule_wu_geometric": "Geometric proposition mechanically verified via characteristic set pseudo-division",
+    "rule_primary_decomposition_gtz": "Primary decomposition of dimension %d ideal via Gianni-Trager-Zacharias algorithm: %s"
   },
   "puiseux": {
     "err_arg_must_be_variable": "puiseux: argument must be a variable, got %s",

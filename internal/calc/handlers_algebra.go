@@ -34,6 +34,12 @@ func init() {
 	})
 	RegisterHandler("to_primitive_element", EvalToPrimitiveElement)
 	RegisterHandler("primitive_element", EvalToPrimitiveElement)
+	RegisterHandler("primary_decomposition", handlePrimaryDecomposition)
+	RegisterHandler("ideal_radical", handleIdealRadical)
+	RegisterHandler("ideal_dimension", handleIdealDimension)
+	RegisterHandler("ideal_intersection", handleIdealIntersection)
+	RegisterHandler("ideal_colon", handleIdealColon)
+	RegisterHandler("ideal_saturation", handleIdealSaturation)
 }
 
 func handlePolyGCD(args []Node, env *Env) (Node, error) {
@@ -78,6 +84,54 @@ func handleGroebner(args []Node, env *Env) (Node, error) {
 		orderOpt = args[2]
 	}
 	return EvalGroebner(args[0], args[1], orderOpt, env)
+}
+
+func handlePrimaryDecomposition(args []Node, env *Env) (Node, error) {
+	var orderOpt Node
+	if len(args) >= 3 {
+		orderOpt = args[2]
+	}
+	return EvalPrimaryDecomposition(args[0], args[1], orderOpt, env)
+}
+
+func handleIdealRadical(args []Node, env *Env) (Node, error) {
+	var orderOpt Node
+	if len(args) >= 3 {
+		orderOpt = args[2]
+	}
+	return EvalIdealRadical(args[0], args[1], orderOpt, env)
+}
+
+func handleIdealDimension(args []Node, env *Env) (Node, error) {
+	var orderOpt Node
+	if len(args) >= 3 {
+		orderOpt = args[2]
+	}
+	return EvalIdealDimension(args[0], args[1], orderOpt, env)
+}
+
+func handleIdealIntersection(args []Node, env *Env) (Node, error) {
+	var orderOpt Node
+	if len(args) >= 4 {
+		orderOpt = args[3]
+	}
+	return EvalIdealIntersection(args[0], args[1], args[2], orderOpt, env)
+}
+
+func handleIdealColon(args []Node, env *Env) (Node, error) {
+	var orderOpt Node
+	if len(args) >= 4 {
+		orderOpt = args[3]
+	}
+	return EvalIdealColon(args[0], args[1], args[2], orderOpt, env)
+}
+
+func handleIdealSaturation(args []Node, env *Env) (Node, error) {
+	var orderOpt Node
+	if len(args) >= 4 {
+		orderOpt = args[3]
+	}
+	return EvalIdealSaturation(args[0], args[1], args[2], orderOpt, env)
 }
 
 func handleSturm(args []Node, env *Env) (Node, error) {
