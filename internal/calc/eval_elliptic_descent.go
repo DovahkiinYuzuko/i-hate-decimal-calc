@@ -568,9 +568,10 @@ type TwoDescentResult struct {
 	SelmerPhiDim   int
 	SelmerPsiDim   int
 	Generators     []EllipticPoint
-	Sha2Possible   bool
-	Coverings      []QuarticCoveringState
-	IsSaturated    bool
+	Sha2Possible        bool
+	LargeHeightPossible bool
+	Coverings           []QuarticCoveringState
+	IsSaturated         bool
 }
 
 // generateSquarefreeDivisors generates all signed squarefree divisor classes mod squares.
@@ -939,17 +940,27 @@ func ComputeTwoDescentRankBound(aRat, bRat *big.Rat, fsm *EllipticDescentLifecyc
 	}
 
 	sha2Possible := (rankUpper > rankLower)
+	largeHeightPossible := false
+	if rankUpper > rankLower {
+		for _, cov := range coverings {
+			if cov.LocalStatus == LocalStatusSoluble && cov.SearchStatus == PointStatusNotFoundWithinBounds {
+				largeHeightPossible = true
+				break
+			}
+		}
+	}
 
 	res := &TwoDescentResult{
-		RankLowerBound: rankLower,
-		RankUpperBound: rankUpper,
-		IsExact:        (rankLower == rankUpper),
-		SelmerPhiDim:   phiDim,
-		SelmerPsiDim:   psiDim,
-		Generators:     gens,
-		Sha2Possible:   sha2Possible,
-		Coverings:      coverings,
-		IsSaturated:    false,
+		RankLowerBound:      rankLower,
+		RankUpperBound:      rankUpper,
+		IsExact:             (rankLower == rankUpper),
+		SelmerPhiDim:        phiDim,
+		SelmerPsiDim:        psiDim,
+		Generators:          gens,
+		Sha2Possible:        sha2Possible,
+		LargeHeightPossible: largeHeightPossible,
+		Coverings:           coverings,
+		IsSaturated:         false,
 	}
 
 	return res, nil
@@ -1208,36 +1219,36 @@ func FilterIndependentGeneratorsKummer(candidates []EllipticPoint, aRat, bRat *b
 			continue
 		}
 
-		// 2. Direct group law small linear combinations with existing generators
+		// 2. Direct group law linear combinations with existing generators
+		// Check for linear dependence modulo torsion: k1*cand +/- k2*g in E(Q)_tors.
+		// This mathematically eliminates multiples, integer relations, and 2-torsion translations (cand - g = T).
 		dependent := false
-		candNeg := NewEllipticPoint(cand.X, new(big.Rat).Neg(cand.Y))
 		for _, g := range gens {
-			if cand.Equal(g) || candNeg.Equal(g) {
-				dependent = true
-				break
-			}
-			for k := int64(1); k <= 4; k++ {
-				// k*cand == +/- g
-				kCand, err := ScalarMulEllipticPoint(cand, big.NewInt(k), aRat, bRat)
-				if err == nil && (g.Equal(kCand) || g.Equal(NewEllipticPoint(kCand.X, new(big.Rat).Neg(kCand.Y)))) {
-					dependent = true
-					break
+			for k1 := int64(1); k1 <= 3; k1++ {
+				k1Cand, err := ScalarMulEllipticPoint(cand, big.NewInt(k1), aRat, bRat)
+				if err != nil {
+					continue
 				}
-				// k*g == +/- cand
-				kG, err := ScalarMulEllipticPoint(g, big.NewInt(k), aRat, bRat)
-				if err == nil && (cand.Equal(kG) || candNeg.Equal(kG)) {
-					dependent = true
-					break
+				for k2 := int64(1); k2 <= 3; k2++ {
+					k2G, err := ScalarMulEllipticPoint(g, big.NewInt(k2), aRat, bRat)
+					if err != nil {
+						continue
+					}
+					// k1*cand + k2*g is torsion?
+					candPlusKG, err1 := AddEllipticPoints(k1Cand, k2G, aRat, bRat)
+					if err1 == nil && IsPointTorsion(candPlusKG, aRat, bRat) {
+						dependent = true
+						break
+					}
+					// k1*cand - k2*g is torsion?
+					k2GNeg := NewEllipticPoint(k2G.X, new(big.Rat).Neg(k2G.Y))
+					candMinusKG, err2 := AddEllipticPoints(k1Cand, k2GNeg, aRat, bRat)
+					if err2 == nil && IsPointTorsion(candMinusKG, aRat, bRat) {
+						dependent = true
+						break
+					}
 				}
-				// cand +/- k*g is torsion?
-				candPlusKG, err1 := AddEllipticPoints(cand, kG, aRat, bRat)
-				if err1 == nil && IsPointTorsion(candPlusKG, aRat, bRat) {
-					dependent = true
-					break
-				}
-				candMinusKG, err2 := AddEllipticPoints(cand, NewEllipticPoint(kG.X, new(big.Rat).Neg(kG.Y)), aRat, bRat)
-				if err2 == nil && IsPointTorsion(candMinusKG, aRat, bRat) {
-					dependent = true
+				if dependent {
 					break
 				}
 			}
@@ -1250,7 +1261,11 @@ func FilterIndependentGeneratorsKummer(candidates []EllipticPoint, aRat, bRat *b
 		}
 
 		// 3. Kummer map across all rational 2-torsion roots
-		if len(roots) > 0 {
+		// CRITICAL: The full Kummer map lands in (Q*/(Q*)^2)^2 only when all 3 roots are rational.
+		// If len(roots) < 3, the generic Kummer map requires quadratic field extension arithmetic.
+		// Applying F_2 Gaussian elimination to a single rational root component is incomplete.
+		// Thus, we only run the multi-root F_2 Kummer sieve when len(roots) == 3.
+		if len(roots) == 3 {
 			allSquare := true
 			var candRow []int
 

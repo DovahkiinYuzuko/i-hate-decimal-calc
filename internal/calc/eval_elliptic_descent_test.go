@@ -906,6 +906,126 @@ func TestAdversarialStressSuite(t *testing.T) {
 	})
 }
 
+// TestAdversarialSuite_NamazuReview tests the 5 adversarial curves proposed by Namazu (Sakana AI).
+func TestAdversarialSuite_NamazuReview(t *testing.T) {
+	// -------------------------------------------------------------
+	// ADV-001: Sha[2] nontrivial with rank 1 (n=34 congruent number stress)
+	// y^2 = x^3 - 1156x
+	// -------------------------------------------------------------
+	t.Run("ADV-001_Congruent_n34_Sha2Possible", func(t *testing.T) {
+		aRat := big.NewRat(-1156, 1)
+		bRat := big.NewRat(0, 1)
+
+		res, err := ComputeTwoDescentRankBound(aRat, bRat, nil)
+		if err != nil {
+			t.Fatalf("unexpected error on ADV-001: %v", err)
+		}
+
+		// Mathematical truth: rank = 1, 2-Selmer rank = 3, upper bound = 2
+		// The pipeline must never claim exact rank 2, and must flag Sha2Possible if gap exists.
+		if res.RankUpperBound != 2 {
+			t.Errorf("ADV-001: expected RankUpperBound = 2, got %d", res.RankUpperBound)
+		}
+		if res.RankLowerBound > res.RankUpperBound {
+			t.Errorf("ADV-001: rank lower bound %d exceeds upper bound %d", res.RankLowerBound, res.RankUpperBound)
+		}
+		if res.RankLowerBound < res.RankUpperBound && !res.Sha2Possible {
+			t.Errorf("ADV-001: expected Sha2Possible=true for rank gap [%d, %d]", res.RankLowerBound, res.RankUpperBound)
+		}
+	})
+
+	// -------------------------------------------------------------
+	// ADV-002: Large canonical height generator (Bremner-Cassels)
+	// y^2 = x^3 + 877x
+	// -------------------------------------------------------------
+	t.Run("ADV-002_BremnerCassels_LargeHeightPossible", func(t *testing.T) {
+		aRat := big.NewRat(877, 1)
+		bRat := big.NewRat(0, 1)
+
+		res, err := ComputeTwoDescentRankBound(aRat, bRat, nil)
+		if err != nil {
+			t.Fatalf("unexpected error on ADV-002: %v", err)
+		}
+
+		// Mathematical truth: rank = 1, 2-Selmer rank = 1
+		// Sieve bound 50 cannot find 42-digit generator, so RankLowerBound = 0.
+		// Upper bound must be exactly 1!
+		if res.RankUpperBound != 1 {
+			t.Errorf("ADV-002: expected RankUpperBound = 1, got %d", res.RankUpperBound)
+		}
+		if res.RankLowerBound != 0 {
+			t.Errorf("ADV-002: expected RankLowerBound = 0 within sieve bound 50, got %d", res.RankLowerBound)
+		}
+		if !res.LargeHeightPossible {
+			t.Errorf("ADV-002: expected LargeHeightPossible = true due to sieve limit on soluble quartic")
+		}
+	})
+
+	// -------------------------------------------------------------
+	// ADV-003: Full rational 2-torsion with wild 2-adic reduction (v2(Delta)=20)
+	// y^2 = x^3 - 64x = x(x-8)(x+8)
+	// -------------------------------------------------------------
+	t.Run("ADV-003_Wild_TwoAdic_Reduction_Delta_2_to_20", func(t *testing.T) {
+		aRat := big.NewRat(-64, 1)
+		bRat := big.NewRat(0, 1)
+
+		res, err := ComputeTwoDescentRankBound(aRat, bRat, nil)
+		if err != nil {
+			t.Fatalf("unexpected error on ADV-003: %v", err)
+		}
+
+		// Mathematical truth: true rank = 0
+		if res.RankLowerBound != 0 {
+			t.Errorf("ADV-003: expected RankLowerBound = 0, got %d", res.RankLowerBound)
+		}
+		if res.RankUpperBound > 1 {
+			t.Errorf("ADV-003: expected RankUpperBound <= 1, got %d", res.RankUpperBound)
+		}
+	})
+
+	// -------------------------------------------------------------
+	// ADV-004: Highly non-minimal model
+	// y^2 = x^3 - 10^12 * x
+	// -------------------------------------------------------------
+	t.Run("ADV-004_NonMinimal_10_to_12", func(t *testing.T) {
+		aRat := big.NewRat(-1000000000000, 1)
+		bRat := big.NewRat(0, 1)
+
+		res, err := ComputeTwoDescentRankBound(aRat, bRat, nil)
+		if err != nil {
+			t.Fatalf("unexpected error on ADV-004: %v", err)
+		}
+
+		// True rank = 0, upper bound <= 1
+		if res.RankLowerBound != 0 {
+			t.Errorf("ADV-004: expected RankLowerBound = 0, got %d", res.RankLowerBound)
+		}
+	})
+
+	// -------------------------------------------------------------
+	// ADV-005: False linear independence trap from 2-torsion translation
+	// y^2 = x^3 - 25x, P=(25/4, 75/8), Q = P + T = (-4, 6), T=(0, 0)
+	// -------------------------------------------------------------
+	t.Run("ADV-005_TwoTorsion_Translation_Independence_Trap", func(t *testing.T) {
+		aRat := big.NewRat(-25, 1)
+		bRat := big.NewRat(0, 1)
+
+		// P and Q generate the SAME rank 1 subgroup modulo torsion
+		ptP := NewEllipticPoint(big.NewRat(25, 4), big.NewRat(75, 8))
+		ptQ := NewEllipticPoint(big.NewRat(-4, 1), big.NewRat(6, 1))
+
+		candidates := []EllipticPoint{ptP, ptQ}
+		gens := FilterIndependentGeneratorsKummer(candidates, aRat, bRat, 2)
+
+		// If the filter has a flaw, it counts both P and Q as independent, returning len(gens) == 2.
+		// A sound implementation must detect Q - P = T in E[2] and return exactly 1 generator!
+		if len(gens) != 1 {
+			t.Errorf("ADV-005: expected exactly 1 independent generator, got %d: %v", len(gens), gens)
+		}
+	})
+}
+
+
 
 
 
