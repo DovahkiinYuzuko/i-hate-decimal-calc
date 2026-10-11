@@ -2,15 +2,9 @@ package calc
 
 import (
 	"math/big"
+	"strings"
 	"testing"
 )
-
-// Helper to make a variable monomial for n variables
-func testVarMon(varIdx, numVars int) Monomial {
-	exps := make([]int, numVars)
-	exps[varIdx] = 1
-	return newMonomial(exps)
-}
 
 // Helper to make a constant MPoly
 func testConstPoly(val int64, numVars int) *MPoly {
@@ -560,6 +554,210 @@ func TestIdealOperations_CLI_EndToEnd(t *testing.T) {
 	}
 	if Format(res4) != "1" {
 		t.Errorf("expected dimension 1 for twisted cubic, got: %s", Format(res4))
+	}
+}
+
+func TestPrimaryDecomposition_AdversarialBenchmarks(t *testing.T) {
+	order := OrderGRevLex
+
+	// 1. Counterexample Case: I = <x - y, xy> == <x - y, x^2>
+	// Must not be decomposed into radical <x, y>; intersection must strictly equal I!
+	numVars2 := 2 // x: 0, y: 1
+	xMinusY := &MPoly{Terms: []Term{
+		{Coeff: big.NewRat(1, 1), Mon: newMonomial([]int{1, 0})},
+		{Coeff: big.NewRat(-1, 1), Mon: newMonomial([]int{0, 1})},
+	}}
+	xy := &MPoly{Terms: []Term{{Coeff: big.NewRat(1, 1), Mon: newMonomial([]int{1, 1})}}}
+	ICounter := []*MPoly{xMinusY, xy}
+
+	compsCounter, err := PrimaryDecomposition(ICounter, numVars2, order)
+	if err != nil {
+		t.Fatalf("decomposition of <x - y, xy> failed: %v", err)
+	}
+	interCounter := compsCounter[0].Primary
+	for i := 1; i < len(compsCounter); i++ {
+		interCounter, err = IdealIntersection(interCounter, compsCounter[i].Primary, order)
+		if err != nil {
+			t.Fatalf("IdealIntersection failed: %v", err)
+		}
+	}
+	eqCounter, err := IdealEquals(interCounter, ICounter, order)
+	if err != nil || !eqCounter {
+		t.Errorf("counterexample <x - y, xy> failed: intersection != I (eq=%v, err=%v)", eqCounter, err)
+	}
+
+	// 2. Killer Benchmark T05: I = <x^2 - 2, y^2 - 2>
+	// Coordinate eliminants are irreducible over Q, but ideal splits into 2 components:
+	// <x^2 - 2, y - x> and <x^2 - 2, y + x>
+	x2Minus2 := &MPoly{Terms: []Term{
+		{Coeff: big.NewRat(1, 1), Mon: newMonomial([]int{2, 0})},
+		{Coeff: big.NewRat(-2, 1), Mon: zeroMonomial(numVars2)},
+	}}
+	y2Minus2 := &MPoly{Terms: []Term{
+		{Coeff: big.NewRat(1, 1), Mon: newMonomial([]int{0, 2})},
+		{Coeff: big.NewRat(-2, 1), Mon: zeroMonomial(numVars2)},
+	}}
+	IT05 := []*MPoly{x2Minus2, y2Minus2}
+
+	compsT05, err := PrimaryDecomposition(IT05, numVars2, order)
+	if err != nil {
+		t.Fatalf("decomposition of T05 <x^2 - 2, y^2 - 2> failed: %v", err)
+	}
+	if len(compsT05) != 2 {
+		t.Fatalf("expected 2 components for T05 <x^2 - 2, y^2 - 2>, got %d", len(compsT05))
+	}
+	interT05, err := IdealIntersection(compsT05[0].Primary, compsT05[1].Primary, order)
+	if err != nil {
+		t.Fatalf("IdealIntersection failed for T05: %v", err)
+	}
+	eqT05, err := IdealEquals(interT05, IT05, order)
+	if err != nil || !eqT05 {
+		t.Errorf("expected intersection == IT05, got eq=%v, err=%v", eqT05, err)
+	}
+
+	// 3. Killer Benchmark T03: I = <xz, yz, z^2> in Q[x, y, z]
+	// Components: <z> and embedded point <x, y, z^2>
+	numVars3 := 3 // x: 0, y: 1, z: 2
+	xz := &MPoly{Terms: []Term{{Coeff: big.NewRat(1, 1), Mon: newMonomial([]int{1, 0, 1})}}}
+	yz := &MPoly{Terms: []Term{{Coeff: big.NewRat(1, 1), Mon: newMonomial([]int{0, 1, 1})}}}
+	z2 := makeVarPowMPoly(2, 2, numVars3)
+	IT03 := []*MPoly{xz, yz, z2}
+
+	compsT03, err := PrimaryDecomposition(IT03, numVars3, order)
+	if err != nil {
+		t.Fatalf("decomposition of T03 <xz, yz, z^2> failed: %v", err)
+	}
+	if len(compsT03) != 2 {
+		t.Fatalf("expected 2 components for T03, got %d", len(compsT03))
+	}
+	interT03, err := IdealIntersection(compsT03[0].Primary, compsT03[1].Primary, order)
+	if err != nil {
+		t.Fatalf("IdealIntersection failed for T03: %v", err)
+	}
+	eqT03, err := IdealEquals(interT03, IT03, order)
+	if err != nil || !eqT03 {
+		t.Errorf("expected intersection == IT03, got eq=%v, err=%v", eqT03, err)
+	}
+
+	// 4. Killer Benchmark T07: 3 coordinate axes I = <xy, xz, yz> in Q[x, y, z]
+	// Components: <x, y>, <x, z>, <y, z>
+	xy3 := &MPoly{Terms: []Term{{Coeff: big.NewRat(1, 1), Mon: newMonomial([]int{1, 1, 0})}}}
+	IT07 := []*MPoly{xy3, xz, yz}
+
+	compsT07, err := PrimaryDecomposition(IT07, numVars3, order)
+	if err != nil {
+		t.Fatalf("decomposition of T07 <xy, xz, yz> failed: %v", err)
+	}
+	if len(compsT07) != 3 {
+		t.Fatalf("expected 3 components for T07, got %d", len(compsT07))
+	}
+	interT07 := compsT07[0].Primary
+	for i := 1; i < len(compsT07); i++ {
+		interT07, err = IdealIntersection(interT07, compsT07[i].Primary, order)
+		if err != nil {
+			t.Fatalf("IdealIntersection failed for T07: %v", err)
+		}
+	}
+	eqT07, err := IdealEquals(interT07, IT07, order)
+	if err != nil || !eqT07 {
+		t.Errorf("expected intersection == IT07, got eq=%v, err=%v", eqT07, err)
+	}
+
+	// 5. Killer Benchmark T11: Fat point I = <x^2, xy, y^2> in Q[x, y]
+	// Already primary, must NOT be split!
+	x2 := makeVarPowMPoly(0, 2, numVars2)
+	y2 := makeVarPowMPoly(1, 2, numVars2)
+	IT11 := []*MPoly{x2, xy, y2}
+
+	compsT11, err := PrimaryDecomposition(IT11, numVars2, order)
+	if err != nil {
+		t.Fatalf("decomposition of T11 <x^2, xy, y^2> failed: %v", err)
+	}
+	if len(compsT11) != 1 {
+		t.Errorf("expected exactly 1 primary component for T11 <x^2, xy, y^2>, got %d", len(compsT11))
+	}
+}
+
+func TestPrimaryDecomposition_VerifyCertificate_And_Explain_And_Lean(t *testing.T) {
+	env := NewEnv()
+	exprStr := "primary_decomposition([x^2 - 1, y], [x, y])"
+	parsed, err := Parse(exprStr)
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+
+	res, err := EvalWithEnv(parsed, env)
+	if err != nil {
+		t.Fatalf("EvalWithEnv failed: %v", err)
+	}
+
+	// 1. Test VerifyComputation
+	cert, err := VerifyComputation(parsed, res, env)
+	if err != nil {
+		t.Fatalf("VerifyComputation failed: %v", err)
+	}
+	if cert == nil {
+		t.Fatalf("expected non-nil VerificationCertificate")
+	}
+	if !cert.IsVerified {
+		t.Errorf("expected IsVerified == true, got false. Details: %s", cert.Details)
+	}
+	if cert.Residual.String() != "0" {
+		t.Errorf("expected residual 0, got: %s", cert.Residual.String())
+	}
+
+	certIR, ok := cert.CertIR.(*IdealDecompositionCertificate)
+	if !ok {
+		t.Fatalf("expected *IdealDecompositionCertificate in CertIR, got %T", cert.CertIR)
+	}
+	if len(certIR.ForwardSyzygies) == 0 {
+		t.Errorf("expected forward syzygies > 0, got 0")
+	}
+	if len(certIR.BackwardSyzygies) == 0 {
+		t.Errorf("expected backward syzygies > 0, got 0")
+	}
+	if len(certIR.IrredundancyWitness) == 0 {
+		t.Errorf("expected irredundancy witnesses > 0, got 0")
+	}
+
+	// 2. Test ProofTrace and Explain steps
+	trace, err := cert.ToProofTrace()
+	if err != nil {
+		t.Fatalf("ToProofTrace failed: %v", err)
+	}
+	if trace.StepCount() != 5 {
+		t.Errorf("expected exactly 5 academic proof steps, got %d", trace.StepCount())
+	}
+	expectedRules := []string{
+		"DimensionEliminationAnalysis",
+		"PrimaryDecompositionGTZ",
+		"ForwardSyzygyContainment",
+		"BackwardSyzygyContainment",
+		"IrredundancyMinimalityCheck",
+	}
+	for i, r := range expectedRules {
+		if i < len(trace.Steps) && trace.Steps[i].Rule != r {
+			t.Errorf("step %d rule expected %s, got %s", i, r, trace.Steps[i].Rule)
+		}
+	}
+	explainOutput := trace.RenderExplain("ja")
+	if !strings.Contains(explainOutput, "DimensionEliminationAnalysis") {
+		t.Errorf("expected explain output to contain DimensionEliminationAnalysis, got: %s", explainOutput)
+	}
+
+	// 3. Test Lean 4 Theorem Generation
+	leanCode, err := GenerateLeanSource("ihd_primary_decomp_test", cert, parsed, res)
+	if err != nil {
+		t.Fatalf("GenerateLeanSource failed: %v", err)
+	}
+	if !strings.Contains(leanCode, "theorem ihd_primary_decomp_test") {
+		t.Errorf("expected 'theorem ihd_primary_decomp_test' in Lean code, got: %s", leanCode)
+	}
+	if !strings.Contains(leanCode, "by") {
+		t.Errorf("expected proof tactic in Lean code, got: %s", leanCode)
+	}
+	if strings.Contains(leanCode, "sorry") {
+		t.Errorf("Lean code must not contain monkey-patch 'sorry': %s", leanCode)
 	}
 }
 

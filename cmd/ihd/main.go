@@ -559,7 +559,17 @@ func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut 
 		}
 		env.Set("ans", evaled)
 		if ro.explain {
-			fmt.Fprint(out, calc.FormatTrace(line, steps, evaled))
+			cert, errCert := calc.VerifyComputation(v, evaled, env)
+			if errCert == nil && cert != nil && cert.IsVerified {
+				trace, errTrace := cert.ToProofTrace()
+				if errTrace == nil && trace != nil && trace.StepCount() > 1 {
+					fmt.Fprint(out, trace.RenderExplain(i18n.CurrentLocale()))
+				} else {
+					fmt.Fprint(out, calc.FormatTrace(line, steps, evaled))
+				}
+			} else {
+				fmt.Fprint(out, calc.FormatTrace(line, steps, evaled))
+			}
 		} else {
 			_ = outputNode(out, evaled, ro)
 		}

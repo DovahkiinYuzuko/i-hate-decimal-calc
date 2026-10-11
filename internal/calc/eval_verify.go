@@ -184,9 +184,6 @@ func VerifyComputation(expr, result Node, env *Env) (*VerificationCertificate, e
 
 		case "primary_decomposition", "ideal_radical", "ideal_dimension":
 			_ = fsm.TransitionTo(VerifyStateTargetClassified)
-			if env != nil && env.LastCert != nil && env.LastCert.Domain == DomainIdeal {
-				return env.LastCert, nil
-			}
 			return verifyIdealDecomposition(fn, result, env, fsm)
 
 		case "is_solvable_by_radicals":
@@ -1919,22 +1916,219 @@ func verifyHNF(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*V
 func verifyIdealDecomposition(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
 	_ = fsm.TransitionTo(VerifyStateResidualConstructed)
 
-	eqStr := fmt.Sprintf("%s == %s", fn.String(), result.String())
-	zeroResidual := mustRational(0, 1)
+	if len(fn.Args) < 2 {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, fmt.Errorf("insufficient arguments for ideal decomposition verification")
+	}
 
-	details := "Ideal operation verified via mutual containment and Groebner reduction"
-	certIR := NewIdealDecompositionCertificate(
-		nil, nil, nil, 0, nil, nil, nil, zeroResidual, true, details,
+	polys, varNames, order, err := parseMPolyInputArgs(fn.Args[0], fn.Args[1], nil)
+	if err != nil {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, fmt.Errorf("failed to parse ideal generators: %w", err)
+	}
+
+	resList, ok := result.(*ListNode)
+	if !ok {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		return nil, fmt.Errorf("expected list of primary components, got %T", result)
+	}
+
+	varMap := make(map[string]int, len(varNames))
+	for i, v := range varNames {
+		varMap[v] = i
+	}
+	numVars := len(varNames)
+
+	type compData struct {
+		Gens []*MPoly
+		GB   []*MPoly
+	}
+	comps := make([]compData, 0, len(resList.Elements))
+	var compNodeLists [][]Node
+
+	for _, elem := range resList.Elements {
+		cList, ok := elem.(*ListNode)
+		if !ok {
+			continue
+		}
+		// Unpack [Q_k, P_k] pair if present
+		qListNode := cList
+		if len(cList.Elements) == 2 {
+			if qSub, ok := cList.Elements[0].(*ListNode); ok {
+				qListNode = qSub
+			}
+		}
+		var cGens []*MPoly
+		var cNodes []Node
+		for _, gn := range qListNode.Elements {
+			cNodes = append(cNodes, gn)
+			mp, err := nodeToMPoly(gn, varMap, numVars, order)
+			if err == nil && !mp.IsZero() {
+				cGens = append(cGens, mp)
+			}
+		}
+		if len(cGens) == 0 {
+			cGens = append(cGens, NewZeroMPoly(numVars))
+		}
+		gb, err := buchberger(cGens, order)
+		if err == nil {
+			gb = reduceGroebnerBasis(gb, order)
+		} else {
+			gb = cGens
+		}
+		comps = append(comps, compData{Gens: cGens, GB: gb})
+		compNodeLists = append(compNodeLists, cNodes)
+	}
+
+	// 1. Forward Syzygies: For each f_i in I, verify f_i in each Q_k.
+	var fwdSyzygies []IdealSyzygyRelation
+	totalResidual := big.NewRat(0, 1)
+
+	for _, f := range polys {
+		fNode := mpolyToNode(f, varNames)
+		for _, comp := range comps {
+			qs, rem := polyDivisionWithQuotients(f, comp.GB, order)
+			if !rem.IsZero() {
+				for _, t := range rem.Terms {
+					totalResidual.Add(totalResidual, new(big.Rat).Abs(t.Coeff))
+				}
+			}
+			var qNodes []Node
+			var gNodes []Node
+			for j, q := range qs {
+				if !q.IsZero() {
+					qNodes = append(qNodes, mpolyToNode(q, varNames))
+					gNodes = append(gNodes, mpolyToNode(comp.GB[j], varNames))
+				}
+			}
+			if len(qNodes) > 0 {
+				fwdSyzygies = append(fwdSyzygies, IdealSyzygyRelation{
+					TargetNode: fNode,
+					CombCoeffs: qNodes,
+					Gens:       gNodes,
+				})
+			}
+		}
+	}
+
+	// 2. Backward Syzygies: Compute intersection Q = bigcap Q_k,
+	// and verify each generator of Q belongs to I.
+	var bwdSyzygies []IdealSyzygyRelation
+	var intersectGens []*MPoly
+	if len(comps) > 0 {
+		intersectGens = comps[0].Gens
+		for k := 1; k < len(comps); k++ {
+			var interErr error
+			intersectGens, interErr = IdealIntersection(intersectGens, comps[k].Gens, order)
+			if interErr != nil {
+				break
+			}
+		}
+	}
+
+	idealGB, err := buchberger(polys, order)
+	if err == nil {
+		idealGB = reduceGroebnerBasis(idealGB, order)
+	} else {
+		idealGB = polys
+	}
+
+	for _, h := range intersectGens {
+		if h.IsZero() {
+			continue
+		}
+		qs, rem := polyDivisionWithQuotients(h, idealGB, order)
+		if !rem.IsZero() {
+			for _, t := range rem.Terms {
+				totalResidual.Add(totalResidual, new(big.Rat).Abs(t.Coeff))
+			}
+		}
+		var qNodes []Node
+		var gNodes []Node
+		for j, q := range qs {
+			if !q.IsZero() {
+				qNodes = append(qNodes, mpolyToNode(q, varNames))
+				gNodes = append(gNodes, mpolyToNode(idealGB[j], varNames))
+			}
+		}
+		if len(qNodes) > 0 {
+			bwdSyzygies = append(bwdSyzygies, IdealSyzygyRelation{
+				TargetNode: mpolyToNode(h, varNames),
+				CombCoeffs: qNodes,
+				Gens:       gNodes,
+			})
+		}
+	}
+
+	// 3. Irredundancy witnesses: For each k, check bigcap_{j != k} Q_j not subseteq Q_k
+	var witnesses []Node
+	if len(comps) > 1 {
+		for k := 0; k < len(comps); k++ {
+			var others []*MPoly
+			first := true
+			for j := 0; j < len(comps); j++ {
+				if j == k {
+					continue
+				}
+				if first {
+					others = comps[j].Gens
+					first = false
+				} else {
+					others, _ = IdealIntersection(others, comps[j].Gens, order)
+				}
+			}
+			for _, og := range others {
+				if og.IsZero() {
+					continue
+				}
+				_, rem := polyDivisionWithQuotients(og, comps[k].GB, order)
+				if !rem.IsZero() {
+					witnesses = append(witnesses, mpolyToNode(og, varNames))
+					break
+				}
+			}
+		}
+	}
+
+	isVerified := totalResidual.Sign() == 0
+	dim, _ := IdealDimensionAndMaximalIndependentSet(idealGB, numVars)
+
+	var idealGenNodes []Node
+	for _, f := range polys {
+		idealGenNodes = append(idealGenNodes, mpolyToNode(f, varNames))
+	}
+
+	details := fmt.Sprintf(
+		"Ideal decomposition verified via mutual containment and Groebner syzygies (dim=%d, components=%d, forward_syzygies=%d, backward_syzygies=%d, irredundancy_witnesses=%d)",
+		dim, len(comps), len(fwdSyzygies), len(bwdSyzygies), len(witnesses),
 	)
 
-	_ = fsm.TransitionTo(VerifyStateCertified)
+	certIR := NewIdealDecompositionCertificate(
+		idealGenNodes,
+		compNodeLists,
+		nil,
+		dim,
+		fwdSyzygies,
+		bwdSyzygies,
+		witnesses,
+		&RationalNode{Val: totalResidual},
+		isVerified,
+		details,
+	)
+
+	state := VerifyStateCertified
+	if !isVerified {
+		state = VerifyStateRefuted
+	}
+	_ = fsm.TransitionTo(state)
+
 	return &VerificationCertificate{
 		Domain:     DomainIdeal,
-		Equation:   eqStr,
-		Residual:   zeroResidual,
-		IsVerified: true,
+		Equation:   certIR.EquationString(),
+		Residual:   &RationalNode{Val: totalResidual},
+		IsVerified: isVerified,
 		Details:    details,
-		State:      VerifyStateCertified,
+		State:      state,
 		CertIR:     certIR,
 	}, nil
 }

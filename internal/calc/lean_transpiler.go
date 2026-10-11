@@ -736,9 +736,10 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 		tactic = "by intro x ; constructor <;> ring"
 
 	case *IdealDecompositionCertificate:
-		if len(c.ForwardSyzygies) > 0 {
-			var eqs []string
-			for _, syz := range c.ForwardSyzygies {
+		var eqs []string
+		allSyzygies := append(append([]IdealSyzygyRelation{}, c.ForwardSyzygies...), c.BackwardSyzygies...)
+		if len(allSyzygies) > 0 {
+			for _, syz := range allSyzygies {
 				lhsStr, _ := ToLeanSyntax(syz.TargetNode)
 				var terms []string
 				for j, q := range syz.CombCoeffs {

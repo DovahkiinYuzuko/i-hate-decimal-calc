@@ -906,15 +906,16 @@ func buildUnivariateNodeFromCoeffs(coeffs []*big.Rat, varName string) Node {
 			continue
 		}
 		cNode := &RationalNode{Val: new(big.Rat).Set(c)}
-		if deg == 0 {
+		switch deg {
+		case 0:
 			terms = append(terms, cNode)
-		} else if deg == 1 {
+		case 1:
 			if c.Cmp(big.NewRat(1, 1)) == 0 {
 				terms = append(terms, &VarNode{Name: varName})
 			} else {
 				terms = append(terms, &MulNode{Factors: []Node{cNode, &VarNode{Name: varName}}})
 			}
-		} else {
+		default:
 			powNode := &PowNode{Base: &VarNode{Name: varName}, Exp: &RationalNode{Val: big.NewRat(int64(deg), 1)}}
 			if c.Cmp(big.NewRat(1, 1)) == 0 {
 				terms = append(terms, powNode)
@@ -1480,23 +1481,45 @@ func PrimaryDecomposition(I []*MPoly, numVars int, order MonomialOrder) ([]Prima
 
 	// Splitting by factorization (GTZ / Möller 1993):
 	// If any basis element g has a non-trivial factor f1 not in I,
-	// split I into (I + <f1>) and (I : f1^infinity).
+	// split I into I1 = (I : f1^infinity) and I2 = (I + <f1^m>),
+	// where m is the stabilization exponent of I : f1^k.
+	// Safety guards:
+	// 1. Progress guard: I : f1^infinity must be strictly larger than I and strictly smaller than <1> (i.e. f1 not in sqrt(I)).
+	// 2. Exact split verification: verify that IdealIntersection(I1, I2) == I before accepting the split!
 	for _, g := range redGB {
 		if g.Degree() >= 2 {
 			f1 := findNontrivialFactor(g, numVars, order)
 			if f1 != nil && f1.Degree() > 0 && f1.Degree() < g.Degree() {
-				// Check if f1 is already in I
+				// Guard: f1 must not be in I
 				if !polyReduce(f1, redGB, order).IsZero() {
-					I1 := append([]*MPoly{}, redGB...)
-					I1 = append(I1, f1)
+					I1, m, err := IdealSaturation(redGB, f1, order)
+					// Guard 1: Saturation must not be unit ideal <1> (i.e. f1 not in sqrt(I))
+					isUnit := len(I1) > 0 && !I1[0].IsZero() && I1[0].LeadingMonomial().IsZero()
+					if err == nil && len(I1) > 0 && !isUnit && m > 0 {
+						// Check strict containment I strictly in I1
+						eqSat, _ := IdealEquals(I1, redGB, order)
+						if !eqSat {
+							// Form I2 = I + <f1^m>
+							f1m := &MPoly{Terms: []Term{{Coeff: big.NewRat(1, 1), Mon: zeroMonomial(numVars)}}}
+							for k := 0; k < m; k++ {
+								f1m = f1m.Mul(f1, order)
+							}
+							I2 := append([]*MPoly{}, redGB...)
+							I2 = append(I2, f1m)
 
-					I2, _, err := IdealSaturation(redGB, f1, order)
-					if err == nil && len(I2) > 0 {
-						comps1, err1 := PrimaryDecomposition(I1, numVars, order)
-						comps2, err2 := PrimaryDecomposition(I2, numVars, order)
-						if err1 == nil && err2 == nil && len(comps1) > 0 && len(comps2) > 0 {
-							all := append(comps1, comps2...)
-							return cleanIrredundantComponents(all, order)
+							// Guard 2: Verify exact intersection identity I1 cap I2 == I
+							inter, errInter := IdealIntersection(I1, I2, order)
+							if errInter == nil {
+								eqInter, errEq := IdealEquals(inter, redGB, order)
+								if errEq == nil && eqInter {
+									comps1, err1 := PrimaryDecomposition(I1, numVars, order)
+									comps2, err2 := PrimaryDecomposition(I2, numVars, order)
+									if err1 == nil && err2 == nil && len(comps1) > 0 && len(comps2) > 0 {
+										all := append(comps1, comps2...)
+										return cleanIrredundantComponents(all, order)
+									}
+								}
+							}
 						}
 					}
 				}
