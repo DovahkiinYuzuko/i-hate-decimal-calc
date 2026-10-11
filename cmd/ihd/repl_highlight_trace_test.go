@@ -78,16 +78,18 @@ func TestREPLColorTrace_Keystrokes(t *testing.T) {
 
 	var logBuf strings.Builder
 	separator := strings.Repeat("=", 70) + "\n"
+	subSeparator := strings.Repeat("-", 60) + "\n"
 
 	logBuf.WriteString(separator)
 	logBuf.WriteString("  IHD REPL 逐次キーストローク構文ハイライト・カラーダンプ検証ログ\n")
-	logBuf.WriteString(separator + "\n")
+	logBuf.WriteString(separator)
+	logBuf.WriteByte('\n')
 
 	// =========================================================================
 	// シナリオ 1: factor(114514) を 1 文字ずつタイピングした時のカラー遷移
 	// =========================================================================
 	logBuf.WriteString("[シナリオ 1] 'factor(114514)' の 1 文字ずつ逐次タイピング検証\n")
-	logBuf.WriteString(strings.Repeat("-", 60) + "\n")
+	logBuf.WriteString(subSeparator)
 
 	fullInput := "factor(114514)"
 	for i := 1; i <= len(fullInput); i++ {
@@ -125,7 +127,7 @@ func TestREPLColorTrace_Keystrokes(t *testing.T) {
 	// シナリオ 2: カスタム変数代入前後のセマンティック・ハイブリッド変化
 	// =========================================================================
 	logBuf.WriteString("[シナリオ 2] 変数代入前後の動的セマンティック着色検証: 'sin(x + a)'\n")
-	logBuf.WriteString(strings.Repeat("-", 60) + "\n")
+	logBuf.WriteString(subSeparator)
 
 	env := calc.NewEnv()
 
@@ -162,10 +164,10 @@ func TestREPLColorTrace_Keystrokes(t *testing.T) {
 	logBuf.WriteString("\n")
 
 	// =========================================================================
-	// シナリオ 3: ミスマッチ括弧 '(1+2]' の赤背景と行末エスケープリセット
+	// シナリオ 3: ミスマッチ括弧 '(1+2]' の赤背景と行末エスケープリセット検証
 	// =========================================================================
 	logBuf.WriteString("[シナリオ 3] ミスマッチ括弧 '(1+2]' の警告と行末エスケープリセット検証\n")
-	logBuf.WriteString(strings.Repeat("-", 60) + "\n")
+	logBuf.WriteString(subSeparator)
 
 	frameErr, colorMapErr := dumpKeystrokeFrame("(1+2]", nil, "dark")
 	logBuf.WriteString(frameErr)
@@ -179,7 +181,7 @@ func TestREPLColorTrace_Keystrokes(t *testing.T) {
 	// シナリオ 4: 空白なし 'sin(x+a)' における DefaultColor リセットと色漏洩防止検証
 	// =========================================================================
 	logBuf.WriteString("[シナリオ 4] 空白なし 'sin(x+a)' での DefaultColor による直前色漏洩防止検証\n")
-	logBuf.WriteString(strings.Repeat("-", 60) + "\n")
+	logBuf.WriteString(subSeparator)
 
 	// readline.HighlightToColorSequence を直接呼び出して端末セル色を検証
 	highlightsDark := BuildREPLHighlights("dark", nil)
