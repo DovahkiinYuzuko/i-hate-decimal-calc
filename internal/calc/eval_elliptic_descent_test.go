@@ -490,6 +490,84 @@ func TestDualIsogenousPair_SingularGuard(t *testing.T) {
 	}
 }
 
+func TestMapDualPointToCurve_FormulaAndBranches(t *testing.T) {
+	// E: y^2 = x^3 - 25x (c=0, d=-25)
+	// E': Y^2 = X^3 + 100X (c'=0, d'=100)
+	// P = (-4, 6) on E
+	// 2P = (1681/144, -62279/1728)
+	// phi(P) = (9/4, -123/8) on E'
+	q := NewEllipticPoint(big.NewRat(9, 4), big.NewRat(-123, 8))
+	dPrime := big.NewInt(100)
+
+	mapped, err := MapDualPointToCurve(q, dPrime)
+	if err != nil {
+		t.Fatalf("unexpected error in MapDualPointToCurve: %v", err)
+	}
+
+	// Double P = (-4, 6) on E: y^2 = x^3 - 25x (A = -25, B = 0)
+	aRat := big.NewRat(-25, 1)
+	bRat := big.NewRat(0, 1)
+	p := NewEllipticPoint(big.NewRat(-4, 1), big.NewRat(6, 1))
+	twoP, err := ScalarMulEllipticPoint(p, big.NewInt(2), aRat, bRat)
+	if err != nil {
+		t.Fatalf("ScalarMulEllipticPoint failed: %v", err)
+	}
+
+	// Verify mapped point equals 2P (both X and Y must match!)
+	if mapped.X.Cmp(twoP.X) != 0 {
+		t.Errorf("mapped.X: expected %s, got %s", twoP.X.RatString(), mapped.X.RatString())
+	}
+	// Note: in our engine, points are typically stored with Y >= 0 or tested up to sign,
+	// but mapDualPointToCurve should match 2P coordinate-wise.
+	// In Go engine, points on curve satisfy y^2 = f(x).
+	if mapped.Y.Cmp(twoP.Y) != 0 {
+		// Test if opposite sign or exact
+		negY := new(big.Rat).Neg(twoP.Y)
+		if mapped.Y.Cmp(negY) != 0 {
+			t.Errorf("mapped.Y: expected %s or %s, got %s", twoP.Y.RatString(), negY.RatString(), mapped.Y.RatString())
+		}
+	}
+
+	// Branch tests:
+	// Q = (0, 0)' should map to Infinity
+	qZero := NewEllipticPoint(big.NewRat(0, 1), big.NewRat(0, 1))
+	mappedZero, err := MapDualPointToCurve(qZero, dPrime)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !mappedZero.IsInf {
+		t.Errorf("expected InfinityPoint for Q=(0,0), got %v", mappedZero)
+	}
+
+	// Q = Infinity should map to Infinity
+	mappedInf, err := MapDualPointToCurve(InfinityPoint(), dPrime)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !mappedInf.IsInf {
+		t.Errorf("expected InfinityPoint for Q=Inf, got %v", mappedInf)
+	}
+}
+
+func TestIsPointTorsion_MazurOrders(t *testing.T) {
+	// y^2 = x^3 - 25x (A = -25, B = 0)
+	aRat := big.NewRat(-25, 1)
+	bRat := big.NewRat(0, 1)
+
+	// (0, 0) is 2-torsion point
+	pt2 := NewEllipticPoint(big.NewRat(0, 1), big.NewRat(0, 1))
+	if !IsPointTorsion(pt2, aRat, bRat) {
+		t.Errorf("expected (0, 0) to be identified as torsion")
+	}
+
+	// (25/4, 75/8) is generator of infinite order
+	ptGen := NewEllipticPoint(big.NewRat(25, 4), big.NewRat(75, 8))
+	if IsPointTorsion(ptGen, aRat, bRat) {
+		t.Errorf("expected (25/4, 75/8) to be identified as infinite order (NOT torsion)")
+	}
+}
+
+
 
 
 

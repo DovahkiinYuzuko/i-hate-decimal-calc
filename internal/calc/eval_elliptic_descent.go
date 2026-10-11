@@ -779,7 +779,7 @@ func ComputeTwoDescentRankBound(aRat, bRat *big.Rat, fsm *EllipticDescentLifecyc
 				pts := SearchQuarticRationalPoints(d1, c, d2, 50)
 				for _, pt := range pts {
 					origPt := unshiftAndUnscalePoint(pt, chosenRoot, scaleD)
-					if IsOnCurve(origPt, aRat, bRat) && !isPointTorsion(origPt, aRat, bRat) {
+					if IsOnCurve(origPt, aRat, bRat) && !IsPointTorsion(origPt, aRat, bRat) {
 						candidates = append(candidates, origPt)
 					}
 				}
@@ -790,12 +790,12 @@ func ComputeTwoDescentRankBound(aRat, bRat *big.Rat, fsm *EllipticDescentLifecyc
 				dPrime2 := new(big.Int).Div(dPrime, dPrime1)
 				pts := SearchQuarticRationalPoints(dPrime1, cPrime, dPrime2, 50)
 				for _, pt := range pts {
-					mappedPt, err := mapDualPointToCurve(pt, dPrime)
+					mappedPt, err := MapDualPointToCurve(pt, dPrime)
 					if err != nil {
 						continue
 					}
 					origPt := unshiftAndUnscalePoint(mappedPt, chosenRoot, scaleD)
-					if IsOnCurve(origPt, aRat, bRat) && !isPointTorsion(origPt, aRat, bRat) {
+					if IsOnCurve(origPt, aRat, bRat) && !IsPointTorsion(origPt, aRat, bRat) {
 						candidates = append(candidates, origPt)
 					}
 				}
@@ -921,9 +921,12 @@ func SearchQuarticRationalPoints(d1, c, d2 *big.Int, bound int) []EllipticPoint 
 	return points
 }
 
-// mapDualPointToCurve maps a point Q = (X, Y) on dual curve E': Y^2 = X^3 + cPrime*X^2 + dPrime*X
+// MapDualPointToCurve maps a point Q = (X, Y) on dual curve E': Y^2 = X^3 + cPrime*X^2 + dPrime*X
 // to point (x', y') on E: y'^2 = x'^3 + c*x'^2 + d*x' via dual isogeny psi.
-func mapDualPointToCurve(q EllipticPoint, dPrime *big.Int) (EllipticPoint, error) {
+// Standard dual isogeny formula:
+// x' = Y^2 / (4 * X^2)
+// y' = Y * (d' - X^2) / (8 * X^2)
+func MapDualPointToCurve(q EllipticPoint, dPrime *big.Int) (EllipticPoint, error) {
 	if q.IsInf || q.X.Sign() == 0 {
 		return InfinityPoint(), nil
 	}
@@ -934,16 +937,12 @@ func mapDualPointToCurve(q EllipticPoint, dPrime *big.Int) (EllipticPoint, error
 	y2 := new(big.Rat).Mul(q.Y, q.Y)
 	xPrime := new(big.Rat).Quo(y2, fourX2)
 
-	// y' = Y * (X^2 - d') / (8 * X^2)
+	// y' = Y * (d' - X^2) / (8 * X^2)
 	dPrimeRat := new(big.Rat).SetInt(dPrime)
-	x2MinusD := new(big.Rat).Sub(x2, dPrimeRat)
-	numY := new(big.Rat).Mul(q.Y, x2MinusD)
+	dMinusX2 := new(big.Rat).Sub(dPrimeRat, x2)
+	numY := new(big.Rat).Mul(q.Y, dMinusX2)
 	eightX2 := new(big.Rat).Mul(big.NewRat(8, 1), x2)
 	yPrime := new(big.Rat).Quo(numY, eightX2)
-
-	if yPrime.Sign() < 0 {
-		yPrime.Neg(yPrime)
-	}
 
 	return NewEllipticPoint(xPrime, yPrime), nil
 }
@@ -972,12 +971,15 @@ func unshiftAndUnscalePoint(p EllipticPoint, rootRat *big.Rat, u *big.Int) Ellip
 	return NewEllipticPoint(xOrig, yOrig)
 }
 
-// isPointTorsion checks whether point p has finite order dividing {1..10, 12} using Mazur's theorem.
-func isPointTorsion(p EllipticPoint, aRat, bRat *big.Rat) bool {
+// IsPointTorsion checks whether point p has finite order dividing {1..10, 12, 16} using Mazur's theorem.
+// On rational elliptic curves, the possible cyclic torsion orders are in {1..10, 12}.
+// We test m in {1..12, 16} to cover all possible torsion element orders up to group order 16.
+func IsPointTorsion(p EllipticPoint, aRat, bRat *big.Rat) bool {
 	if p.IsInf {
 		return true
 	}
-	for m := int64(1); m <= 12; m++ {
+	orders := []int64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16}
+	for _, m := range orders {
 		mP, err := ScalarMulEllipticPoint(p, big.NewInt(m), aRat, bRat)
 		if err != nil {
 			return true
@@ -989,6 +991,14 @@ func isPointTorsion(p EllipticPoint, aRat, bRat *big.Rat) bool {
 	return false
 }
 
+func isPointTorsion(p EllipticPoint, aRat, bRat *big.Rat) bool {
+	return IsPointTorsion(p, aRat, bRat)
+}
+
+func mapDualPointToCurve(q EllipticPoint, dPrime *big.Int) (EllipticPoint, error) {
+	return MapDualPointToCurve(q, dPrime)
+}
+
 // filterIndependentGenerators selects up to maxRank linearly independent infinite-order generators.
 func filterIndependentGenerators(candidates []EllipticPoint, aRat, bRat *big.Rat, maxRank int) []EllipticPoint {
 	var gens []EllipticPoint
@@ -996,7 +1006,7 @@ func filterIndependentGenerators(candidates []EllipticPoint, aRat, bRat *big.Rat
 		if len(gens) >= maxRank {
 			break
 		}
-		if isPointTorsion(cand, aRat, bRat) {
+		if IsPointTorsion(cand, aRat, bRat) {
 			continue
 		}
 
