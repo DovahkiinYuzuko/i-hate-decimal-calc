@@ -246,7 +246,7 @@ ihd "plot(sin(x), [-pi, pi])"
 - **厳密離散確率・統計**: `binom`, `hyper`, `geom`, `bayes`, `expect`, `variance`, `stddev`
 - **実代数幾何・数理論理・量化子消去**: `qe`, `forall`, `exists`, `cad`
 - **ガロア理論・代数的根号可解性**: `galois_group`, `is_solvable_by_radicals`
-- **楕円曲線代数・数論幾何**: `ec_add`, `ec_mul`, `ec_torsion`, `ec_p_order`, `ec_p_trace`, `ec_p_add`, `ec_p_mul`
+- **楕円曲線代数・数論幾何・2降下法**: `ec_add`, `ec_mul`, `ec_torsion`, `ec_p_order`, `ec_p_trace`, `ec_p_add`, `ec_p_mul`, `ec_rank_bound`, `ec_generators`
 - **クリフォード代数・幾何代数 & 厳密量子回路等価性検証**: `clifford`, `clifford_wedge`, `clifford_contract`, `clifford_dual`, `quantum_equiv`, `quantum_eval`
 - **多変数多項式イデアル・可換代数**: `primary_decomposition`, `ideal_radical`, `ideal_dimension`, `ideal_intersection`, `ideal_colon`, `ideal_saturation`
 - **CAS反復制御 & 任意基数進数変換**: `table`, `product`, `for`, `to_base`, `from_base`, `bin`, `oct`, `hex`
@@ -254,8 +254,8 @@ ihd "plot(sin(x), [-pi, pi])"
 - **ビジュアル・自己検証**: `plot`, `verify`
 
 > [!NOTE]
-> **代数・超越方程式ソルバー、線形代数、およびクリフォード代数・量子回路検証**  
-> `solve` は1次・2次・3次・4次（Ferrari法）の代数方程式の根号完全閉形式解に加え、ランバートのW関数（`lambert_w`）を用いた初等超越方程式（$x e^x = c$, $x + \ln x = c$, $x^x = c$ 等）の閉形式求解をサポートしています。また、`integrate` はガウス積分 $\int e^{-a x^2} dx$ の誤差関数 `erf` による閉形式化を完備し、線形代数の `eigenvals` は最大 4×4 行列の特性方程式から厳密固有値を導出可能です。さらに、`clifford` は直交対角計量 $(p, q, r)$ の幾何積・外積・縮約・双対ブレードを代数展開し、`quantum_equiv` は小数を一切排除した二進円分環 $\mathbb{Z}[1/\sqrt{2}, i]$ 上で Clifford+T 量子回路の厳密等価性判定および反例基底状態の抽出を実行します。
+> **代数・超越方程式ソルバー、線形代数、楕円曲線2降下法、およびクリフォード代数・量子回路検証**  
+> `solve` は1次・2次・3次・4次（Ferrari法）の代数方程式の根号完全閉形式解に加え、ランバートのW関数（`lambert_w`）を用いた初等超越方程式（$x e^x = c$, $x + \ln x = c$, $x^x = c$ 等）の閉形式求解をサポートしています。また、`integrate` はガウス積分 $\int e^{-a x^2} dx$ の誤差関数 `erf` による閉形式化を完備し、線形代数の `eigenvals` は最大 4×4 行列の特性方程式から厳密固有値を導出可能です。さらに、`clifford` は直交対角計量 $(p, q, r)$ の幾何積・外積・縮約・双対ブレードを代数展開し、`quantum_equiv` は小数を一切排除した二進円分環 $\mathbb{Z}[1/\sqrt{2}, i]$ 上で Clifford+T 量子回路の厳密等価性判定および反例基底状態の抽出を実行します。有理数体上の楕円曲線に対しては、有理2等分点を用いた2降下法（2-isogeny descent）によりセルマー群の $\mathbb{F}_2$ 次元を解析し、モーデル・ヴェイユ群の階数（Rank）上界（`ec_rank_bound`）および無限位数の独立有理点生成元（`ec_generators`）の決定論的算定を提供します。
 
 ---
 
@@ -566,7 +566,7 @@ Lexical syntax highlighting powered by a finite-state machine (FSM):
 - **Exact Discrete Probability & Statistics**: `binom`, `hyper`, `geom`, `bayes`, `expect`, `variance`, `stddev`
 - **Real Algebraic Geometry & Quantifier Elimination**: `qe`, `forall`, `exists`, `cad`
 - **Galois Theory & Solvability by Radicals**: `galois_group`, `is_solvable_by_radicals`
-- **Elliptic Curves & Arithmetic Geometry**: `ec_add`, `ec_mul`, `ec_torsion`, `ec_p_order`, `ec_p_trace`, `ec_p_add`, `ec_p_mul`
+- **Elliptic Curves, Arithmetic Geometry & 2-Descent**: `ec_add`, `ec_mul`, `ec_torsion`, `ec_p_order`, `ec_p_trace`, `ec_p_add`, `ec_p_mul`, `ec_rank_bound`, `ec_generators`
 - **Clifford Geometric Algebra & Quantum Circuit Equivalence**: `clifford`, `clifford_wedge`, `clifford_contract`, `clifford_dual`, `quantum_equiv`, `quantum_eval`
 - **Multivariate Polynomial Ideals & Commutative Algebra**: `primary_decomposition`, `ideal_radical`, `ideal_dimension`, `ideal_intersection`, `ideal_colon`, `ideal_saturation`
 - **CAS Iteration Control & Multi-Radix Arithmetic**: `table`, `product`, `for`, `to_base`, `from_base`, `bin`, `oct`, `hex`
@@ -574,8 +574,8 @@ Lexical syntax highlighting powered by a finite-state machine (FSM):
 - **Visualization & Verification Tools**: `plot`, `verify`
 
 > [!NOTE]
-> **Algebraic & Transcendental Equation Solver, Linear Algebra, Clifford Algebra & Quantum Verification**  
-> `solve` provides exact radical solutions for linear, quadratic, cubic, and quartic polynomials (via Ferrari's method, Tschirnhaus transformation, and resolvent cubics), alongside exact closed-form solutions for elementary transcendental equations ($x e^x = c$, $x + \ln x = c$, $x^x = c$, etc.) via the Lambert W function (`lambert_w`). Furthermore, `integrate` incorporates Gaussian integrals $\int e^{-a x^2} dx$ in terms of the error function `erf`, and `eigenvals` derives exact radical eigenvalues for matrices up to 4×4. Additionally, `clifford` algebraically expands and canonicalizes multivector expressions (geometric product, exterior wedge, left/right contraction, Poincaré dual) under orthogonal diagonal signatures $(p, q, r)$, and `quantum_equiv` performs zero-decimal Clifford+T quantum circuit equivalence verification and witness extraction over the binary cyclotomic ring $\mathbb{Z}[1/\sqrt{2}, i]$.
+> **Algebraic & Transcendental Equation Solver, Linear Algebra, Elliptic Curve 2-Descent, Clifford Algebra & Quantum Verification**  
+> `solve` provides exact radical solutions for linear, quadratic, cubic, and quartic polynomials (via Ferrari's method, Tschirnhaus transformation, and resolvent cubics), alongside exact closed-form solutions for elementary transcendental equations ($x e^x = c$, $x + \ln x = c$, $x^x = c$, etc.) via the Lambert W function (`lambert_w`). Furthermore, `integrate` incorporates Gaussian integrals $\int e^{-a x^2} dx$ in terms of the error function `erf`, and `eigenvals` derives exact radical eigenvalues for matrices up to 4×4. Additionally, `clifford` algebraically expands and canonicalizes multivector expressions (geometric product, exterior wedge, left/right contraction, Poincaré dual) under orthogonal diagonal signatures $(p, q, r)$, and `quantum_equiv` performs zero-decimal Clifford+T quantum circuit equivalence verification and witness extraction over the binary cyclotomic ring $\mathbb{Z}[1/\sqrt{2}, i]$. For elliptic curves over $\mathbb{Q}$ with rational 2-torsion, `ec_rank_bound` computes deterministic upper bounds on the Mordell-Weil rank via 2-isogeny descent and Selmer group dimension calculation, alongside searching for independent generators of infinite order (`ec_generators`).
 
 ---
 
