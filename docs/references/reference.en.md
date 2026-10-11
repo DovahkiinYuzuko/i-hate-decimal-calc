@@ -275,6 +275,8 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `ec_p_trace` | `ec_p_trace(A, B, p)` | Computes the Frobenius trace $a = p + 1 - \#E(\mathbb{F}_p)$ of elliptic curves over $\mathbb{F}_p$ (satisfying Hasse's bound $|a| \le 2\sqrt{p}$) |
 | `ec_p_add` | `ec_p_add(A, B, p, P, Q)` | Group point addition $P + Q$ on elliptic curves over prime finite field $\mathbb{F}_p$ (via modular inverse and Chord-and-Tangent law, supporting identity `O`) |
 | `ec_p_mul` | `ec_p_mul(A, B, p, n, P)` | Scalar point multiplication $n P$ on elliptic curves over prime finite field $\mathbb{F}_p$ (via Double-and-Add algorithm $\pmod p$) |
+| `ec_rank_bound` | `ec_rank_bound(A, B)` | Computes deterministic Mordell-Weil rank bounds $[r_{\text{lower}}, r_{\text{upper}}]$ via 2-isogeny descent and Selmer group dimension calculation for curves with rational 2-torsion |
+| `ec_generators` | `ec_generators(A, B)` | Extracts a set of linearly independent infinite-order rational points (generators of the lower-bound subgroup) via rational point search on 2-covering homogeneous spaces |
 
 ---
 

@@ -275,6 +275,8 @@
 | `ec_p_trace` | `ec_p_trace(A, B, p)` | 素有限体 $\mathbb{F}_p$ 上の楕円曲線のフロベニウストレース $a = p + 1 - \#E(\mathbb{F}_p)$ を決定論的に算出（Hasseの定理 $|a| \le 2\sqrt{p}$ を満たす整数） |
 | `ec_p_add` | `ec_p_add(A, B, p, P, Q)` | 素有限体 $\mathbb{F}_p$ 上の楕円曲線群における点加算 $P + Q$（$\pmod p$ の有理逆元とChord and Tangent幾何演算、単位元・無限遠点 `O` 対応） |
 | `ec_p_mul` | `ec_p_mul(A, B, p, n, P)` | 素有限体 $\mathbb{F}_p$ 上の楕円曲線群における点のスカラー倍算 $n P$（$\pmod p$ 上のDouble-and-Add高速累乗算） |
+| `ec_rank_bound` | `ec_rank_bound(A, B)` | 有理数体上の楕円曲線 $y^2 = x^3 + Ax + B$ に対し、有理2等分点を用いた2降下法（2-isogeny descent）によりセルマー群次元を算定し、モーデル・ヴェイユ階数の保証区間 $[r_{\text{lower}}, r_{\text{upper}}]$ を決定論的に算出 |
+| `ec_generators` | `ec_generators(A, B)` | 2降下法の等質空間有理点探索により得られた無限位数の独立有理点集合（階数下限を成す自由部分群の生成元）を抽出 |
 
 ---
 
