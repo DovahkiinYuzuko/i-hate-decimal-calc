@@ -224,7 +224,7 @@ func BuildDualIsogenousPair(aRat, rootRat *big.Rat) (c, d, cPrime, dPrime, scale
 	d = dIntRat.Num()
 
 	if d.Sign() == 0 {
-		return nil, nil, nil, nil, nil, fmt.Errorf("singular shifted curve: d == 0")
+		return nil, nil, nil, nil, nil, fmt.Errorf("%s", i18n.T("elliptic.err_singular_shifted_curve"))
 	}
 
 	// Dual curve E': Y^2 = X^3 - 2c X^2 + (c^2 - 4d) X
@@ -236,10 +236,32 @@ func BuildDualIsogenousPair(aRat, rootRat *big.Rat) (c, d, cPrime, dPrime, scale
 	dPrime = new(big.Int).Sub(c2, fourD) // c^2 - 4d
 
 	if dPrime.Sign() == 0 {
-		return nil, nil, nil, nil, nil, fmt.Errorf("singular dual curve: d' == 0")
+		return nil, nil, nil, nil, nil, fmt.Errorf("%s", i18n.T("elliptic.err_singular_dual_curve"))
+	}
+
+	deltaE, deltaEPrime := ComputeTwoDescentDiscriminants(d, dPrime)
+	if deltaE.Sign() == 0 || deltaEPrime.Sign() == 0 {
+		return nil, nil, nil, nil, nil, fmt.Errorf("%s", i18n.T("elliptic.err_singular_dual_curve"))
 	}
 
 	return c, d, cPrime, dPrime, u, nil
+}
+
+// ComputeTwoDescentDiscriminants calculates the exact integer discriminants
+// Delta(E) = 16 * d^2 * d' and Delta(E') = 256 * dPrime^2 * d
+// for E: y^2 = x^3 + cx^2 + dx and dual E': Y^2 = X^3 - 2cX^2 + d'X with d' = c^2 - 4d.
+func ComputeTwoDescentDiscriminants(d, dPrime *big.Int) (deltaE, deltaEPrime *big.Int) {
+	// Delta(E) = 16 * d^2 * d'
+	sixteen := big.NewInt(16)
+	d2 := new(big.Int).Mul(d, d)
+	deltaE = new(big.Int).Mul(sixteen, new(big.Int).Mul(d2, dPrime))
+
+	// Delta(E') = 256 * dPrime^2 * d
+	twoFiftySix := big.NewInt(256)
+	dPrime2 := new(big.Int).Mul(dPrime, dPrime)
+	deltaEPrime = new(big.Int).Mul(twoFiftySix, new(big.Int).Mul(dPrime2, d))
+
+	return deltaE, deltaEPrime
 }
 
 // -------------------------------------------------------------------------
@@ -608,7 +630,7 @@ func ComputeTwoDescentRankBound(aRat, bRat *big.Rat, fsm *EllipticDescentLifecyc
 	}
 	if len(roots) == 0 {
 		_ = fsm.TransitionTo(StateDescentFailed)
-		return nil, fmt.Errorf("two-descent error: curve has no rational 2-torsion points (Case C is currently unsupported)")
+		return nil, fmt.Errorf("%s", i18n.T("elliptic.err_no_rational_2_torsion"))
 	}
 
 	if err := fsm.TransitionTo(StateDescentTwoTorsionFactored); err != nil {

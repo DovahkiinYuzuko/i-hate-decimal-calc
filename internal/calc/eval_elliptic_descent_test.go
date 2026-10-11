@@ -448,6 +448,49 @@ func TestEllipticDescentTrace(t *testing.T) {
 	}
 }
 
+func TestComputeTwoDescentDiscriminants(t *testing.T) {
+	// y^2 = x^3 + 13x^2 + 128x
+	// d = 128, c = 13
+	// d' = 13^2 - 4(128) = 169 - 512 = -343
+	d := big.NewInt(128)
+	dPrime := big.NewInt(-343)
+
+	deltaE, deltaEPrime := ComputeTwoDescentDiscriminants(d, dPrime)
+
+	// Delta(E) = 16 * d^2 * d' = 16 * 128^2 * (-343) = -89915392
+	expectedDeltaE := big.NewInt(-89915392)
+	if deltaE.Cmp(expectedDeltaE) != 0 {
+		t.Errorf("deltaE: expected %s, got %s", expectedDeltaE.String(), deltaE.String())
+	}
+
+	// Delta(E') = 256 * dPrime^2 * d = 256 * (-343)^2 * 128 = 3855122432
+	expectedDeltaEPrime := big.NewInt(3855122432)
+	if deltaEPrime.Cmp(expectedDeltaEPrime) != 0 {
+		t.Errorf("deltaEPrime: expected %s, got %s", expectedDeltaEPrime.String(), deltaEPrime.String())
+	}
+}
+
+func TestDualIsogenousPair_SingularGuard(t *testing.T) {
+	// y^2 = x^3 - 3x + 2: roots 1 (double), -2 (single)
+	// For root x0 = 1: x -> x + 1 => y^2 = (x+1)^3 - 3(x+1) + 2 = x^3 + 3x^2
+	// Here d = 0, so shifted curve is singular!
+	root1 := big.NewRat(1, 1)
+	aRatForCubic := big.NewRat(-3, 1)
+	_, _, _, _, _, err := BuildDualIsogenousPair(aRatForCubic, root1)
+	if err == nil {
+		t.Fatalf("expected error for singular shifted curve d=0, got nil")
+	}
+
+	// Direct singular dual curve d' = 0 test
+	d := big.NewInt(1)
+	dPrime := big.NewInt(0)
+	deltaE, deltaEPrime := ComputeTwoDescentDiscriminants(d, dPrime)
+	if deltaE.Sign() != 0 || deltaEPrime.Sign() != 0 {
+		t.Errorf("expected both discriminants 0 when d'=0, got %s, %s", deltaE.String(), deltaEPrime.String())
+	}
+}
+
+
 
 
 

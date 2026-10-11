@@ -33,14 +33,14 @@
   "ast": {
     "err_matrix_dimension_error_expected_got": "matrix dimension error: expected %d rows, got %d",
     "err_matrix_dimension_error_row_expected": "matrix dimension error: row %d has %d elements, expected %d",
-    "err_matrix_dimension_error_rows_and": "matrix dimension error: rows and cols must be \u003e= 1, got %dx%d"
+    "err_matrix_dimension_error_rows_and": "matrix dimension error: rows and cols must be >= 1, got %dx%d"
   },
   "cad": {
     "err_cannot_solve_nil_formula": "cannot solve nil formula",
     "err_cannot_solve_nil_inequality": "cannot solve nil inequality",
     "err_constant_expression_did_not_evaluate": "constant expression did not evaluate to rational: %s",
     "err_failed_to_extract_univariate_polynomial": "failed to extract univariate polynomial in %s from %s",
-    "err_invalid_cad_fsm_transition": "invalid CAD FSM transition: %s -\u003e %s",
+    "err_invalid_cad_fsm_transition": "invalid CAD FSM transition: %s -> %s",
     "err_no_exact_roots": "no exact roots",
     "err_no_variables_specified": "no variables specified",
     "err_not_expects_1_argument": "not expects 1 argument",
@@ -70,7 +70,7 @@
     "err_sum_error_at": "sum error at %s=%d: %v",
     "err_sum_error_cannot_handle_term": "sum error: cannot handle term %s in symbolic sum",
     "err_sum_error_second_argument_must": "sum error: second argument must be a variable, got %s",
-    "err_sum_error_start_value_exceeds": "sum error: start value exceeds end value: %d \u003e %d",
+    "err_sum_error_start_value_exceeds": "sum error: start value exceeds end value: %d > %d",
     "err_sum_error_unsupported_bounds_and": "sum error: unsupported bounds %s to %s (and not Gosper-summable: %v)",
     "err_taylor_error_cannot_evaluate_derivative": "taylor error: cannot evaluate derivative at center: %v",
     "err_taylor_error_in": "taylor error in %d-th derivative: %v",
@@ -91,7 +91,7 @@
     "err_replay_read": "failed reading certificate file '%s': %v",
     "err_run_open_failed": "failed to open script file '%s': %v",
     "err_run_read_failed": "failed reading script file '%s': %v",
-    "err_run_script_required": "run requires a script file path: ihd run \u003cfile.ihd\u003e",
+    "err_run_script_required": "run requires a script file path: ihd run <file.ihd>",
     "err_unknown_stmt": "unknown statement type: %T",
     "err_write_file": "failed writing to file '%s': %v",
     "error_prefix": "Error: ",
@@ -116,7 +116,7 @@
     "help": "ihd - Exact Arithmetic Calculator\n\nUsage:\n  ihd [flags] [expression]\n  ihd [flags]                (Starts interactive REPL)\n  echo \"expr\" | ihd [flags]   (Evaluates piped input)\n\nFlags:\n  --lang      Set language locale (e.g., en, ja)\n  --ascii     Output using standard ASCII text (e.g., sqrt, pi) instead of Unicode\n  --approx    Display approximate decimal value alongside exact form\n  --latex     Output expression in LaTeX format ($$ ... $$)\n  --pretty    Output expression using 2D pretty-printed formatting\n  --deg       Use degree mode for trigonometric and inverse trigonometric functions\n  --explain   Show step-by-step algebraic rewriting explanations\n  -h, --help  Show this help message",
     "lean_file_saved": "Lean 4 formal proof code saved to: %s",
     "no_vars": "No variables defined.",
-    "prompt": "ihd\u003e ",
+    "prompt": "ihd> ",
     "repl_exit": "Goodbye.",
     "repl_exit_hint": "Type 'exit' or 'quit' to exit.",
     "repl_highlight_off": "Syntax highlighting disabled.",
@@ -141,12 +141,12 @@
   },
   "cubic": {
     "err_cannot_solve_cubic": "failed to solve cubic equation: %v",
-    "err_invalid_cubic_fsm_transition": "invalid Cubic FSM transition: %s -\u003e %s",
+    "err_invalid_cubic_fsm_transition": "invalid Cubic FSM transition: %s -> %s",
     "err_nil_coefficients": "cubic equation error: nil coefficient provided"
   },
   "diophantine": {
     "err_equation_expected": "expected an equation (==) or expression, got: %s",
-    "err_invalid_fsm_transition": "invalid Diophantine FSM transition: %s -\u003e %s",
+    "err_invalid_fsm_transition": "invalid Diophantine FSM transition: %s -> %s",
     "err_no_integer_solution": "no integer solution exists for the given Diophantine equation: %s",
     "err_pell_d_is_square": "D = %s is a perfect square; Pell's equation has no non-trivial integer solutions",
     "err_pell_d_must_be_positive_integer": "pell_solve requires positive integer D, got: %s",
@@ -182,9 +182,9 @@
     "err_failed_to_integralize_a": "failed to integralize A: %s",
     "err_failed_to_integralize_b": "failed to integralize B: %s",
     "err_invalid_args": "elliptic curve error: invalid argument format",
-    "err_invalid_elliptic_fsm_transition": "invalid Elliptic FSM transition: %s -\u003e %s",
+    "err_invalid_elliptic_fsm_transition": "invalid Elliptic FSM transition: %s -> %s",
     "err_invalid_point": "elliptic curve error: specified point does not lie on curve y^2 = x^3 + Ax + B: %s",
-    "err_invalid_schoof_fsm_transition": "invalid Schoof FSM transition: %s -\u003e %s",
+    "err_invalid_schoof_fsm_transition": "invalid Schoof FSM transition: %s -> %s",
     "err_p_invalid_args": "finite field elliptic curve error: invalid argument format",
     "err_point_format": "elliptic point syntax error: point must be [x, y] or point at infinity O",
     "err_prime_required": "characteristic p must be a prime integer greater than 3, got: %s",
@@ -195,7 +195,10 @@
     "err_trace_not_found": "failed to find Frobenius trace mod %d",
     "trace_elliptic_descent": "2-descent for elliptic curve y^2 = x^3 + (%s)x + (%s): rank lower = %d, upper = %d (dim S^(phi) = %d, dim S^(psi) = %d)",
     "trace_elliptic_generators": "elliptic generators extracted: %d found",
-    "trace_elliptic_rank_bound": "elliptic rank bounds: [%d, %d]"
+    "trace_elliptic_rank_bound": "elliptic rank bounds: [%d, %d]",
+    "err_singular_dual_curve": "singular dual elliptic curve error: dual discriminant is 0 (B' = 0 or B = 0)",
+    "err_no_rational_2_torsion": "unsupported elliptic curve: no rational 2-torsion points found for 2-isogeny descent",
+    "err_singular_shifted_curve": "singular shifted elliptic curve error: d = 0 is not non-singular"
   },
   "err_argument_must_be_in_1": "argument must be in range [%s, %s]",
   "err_cannot_determine_exact_sign_for": "cannot determine exact sign for: %s",
@@ -248,7 +251,7 @@
     "domain_non_negative_args": "%s domain error: arguments must be non-negative, got %s and %s",
     "domain_rand_max_int": "rand domain error: max must be an integer, got %s",
     "domain_rand_max_non_negative": "rand domain error: max must be non-negative, got %d",
-    "domain_rand_min_gt_max": "rand domain error: min cannot be greater than max, got %d \u003e %d",
+    "domain_rand_min_gt_max": "rand domain error: min cannot be greater than max, got %d > %d",
     "domain_rand_min_max_int": "rand domain error: min and max must be integers, got %s and %s",
     "domain_rand_seed_min_max_int": "rand domain error: seed, min, and max must be integers",
     "domain_tan": "math error: tan(%s) is undefined (division by zero)",
@@ -340,8 +343,8 @@
   },
   "explain": {
     "limit_cancel_factor": "Factor cancellation of singularity (%s - %s)",
-    "limit_eval": "Limit computation: lim_{%s-\u003e%s} %s = %s",
-    "limit_inf": "Limit at infinity: lim_{%s-\u003e%s} %s = %s",
+    "limit_eval": "Limit computation: lim_{%s->%s} %s = %s",
+    "limit_inf": "Limit at infinity: lim_{%s->%s} %s = %s",
     "limit_lhopital": "L'Hopital's rule applied: (d/d%s [%s]) / (d/d%s [%s]) = (%s) / (%s)",
     "limit_lhopital_inf": "L'Hopital's rule at infinity applied: (%s) / (%s)",
     "rule_denestradical": "Radical Denesting",
@@ -351,7 +354,7 @@
     "rule_difftrig": "Trigonometric Differentiation",
     "rule_ellipticadd": "Elliptic Curve Point Addition via Chord-and-Tangent",
     "rule_integrate": "Symbolic Integration",
-    "rule_limit": "Limit Computation \u0026 Indeterminate Form Resolution",
+    "rule_limit": "Limit Computation & Indeterminate Form Resolution",
     "rule_lllrelation": "Integer Relation Identification via LLL",
     "rule_matrixdet": "Determinant via Cofactor Expansion",
     "rule_matrixinv": "Matrix Inverse via Adjugate Matrix",
@@ -457,7 +460,7 @@
   "hensel": {
     "err_derivative_zero": "derivative f'(r0) is zero modulo p (not a simple root): %s",
     "err_leading_coeff_divisible": "leading coefficient must not be divisible by prime p: lc=%s, p=%s",
-    "err_lift_target_precision": "target precision k must be \u003e= 1",
+    "err_lift_target_precision": "target precision k must be >= 1",
     "err_not_coprime": "initial factors g0 and h0 must be coprime modulo p"
   },
   "integral": {
@@ -469,7 +472,7 @@
     "err_integrate_failed_to_evaluate_upper": "integrate: failed to evaluate upper limit %s: %v",
     "err_integrate_symbolic_integration_not_supported": "integrate: symbolic integration not supported for %s",
     "err_integrate_unsupported_unary_operator": "integrate: unsupported unary operator %s",
-    "err_invalid_risch_fsm_transition": "invalid Risch FSM transition: %s -\u003e %s",
+    "err_invalid_risch_fsm_transition": "invalid Risch FSM transition: %s -> %s",
     "err_no_valid_logarithmic_factors_recovered": "no valid logarithmic factors recovered from resultant roots",
     "err_resultant_in_z_could_not": "resultant in z could not be analyzed",
     "err_risch_integration_unsupported_exponential_extension": "Risch integration: unsupported exponential extension",
@@ -482,7 +485,7 @@
     "err_cos_expects_1_argument": "cos expects 1 argument",
     "err_exp_expects_1_argument": "exp expects 1 argument",
     "err_invalid_epsilon": "invalid epsilon tolerance for interval: %v (must be positive rational)",
-    "err_invalid_fsm_transition": "invalid interval refiner FSM transition: %s -\u003e %s",
+    "err_invalid_fsm_transition": "invalid interval refiner FSM transition: %s -> %s",
     "err_ln_argument_must_be_strictly": "ln argument must be strictly positive: %s",
     "err_ln_expects_1_argument": "ln expects 1 argument",
     "err_max_steps_exceeded": "interval refinement reached maximum step limit (%d), precision tolerance not fully met",
@@ -504,7 +507,7 @@
     "err_failed_to_reduce_normal_form": "math error: failed to reduce second-order ODE to normal form: %v",
     "err_failed_to_solve_case1_poly": "math error: failed to solve Case 1 auxiliary polynomial ODE: %v",
     "err_failed_to_solve_case2_poly": "math error: failed to solve Case 2 symmetric square ODE: %v",
-    "err_invalid_kovacic_fsm_transition": "math error: invalid Kovacic FSM transition: %s -\u003e %s",
+    "err_invalid_kovacic_fsm_transition": "math error: invalid Kovacic FSM transition: %s -> %s",
     "err_unsupported_non_rational_coefficients": "math error: Kovacic algorithm requires rational function coefficients in %s",
     "msg_case1_liouvillian_found": "Kovacic Case 1: rational exponential integral solution derived",
     "msg_case2_liouvillian_found": "Kovacic Case 2: quadratic algebraic extension symmetric square solution derived",
@@ -537,8 +540,8 @@
     "err_find_min_poly_args": "invalid argument: find_min_poly requires 2 arguments (expr, maxDegree)",
     "err_find_min_poly_degree": "invalid argument: maxDegree must be positive integer, got %d",
     "err_inconsistent_dimension": "invalid argument: basis row dimension mismatch: row %d has length %d, expected %d",
-    "err_invalid_delta": "invalid argument: Lovasz parameter delta must satisfy 1/4 \u003c delta \u003c 1, got %v",
-    "err_invalid_lll_fsm_transition": "math error: invalid LLL FSM transition: %s -\u003e %s",
+    "err_invalid_delta": "invalid argument: Lovasz parameter delta must satisfy 1/4 < delta < 1, got %v",
+    "err_invalid_lll_fsm_transition": "math error: invalid LLL FSM transition: %s -> %s",
     "err_linearly_dependent_basis": "math error: basis vectors must be linearly independent",
     "err_matrix_expected": "invalid argument: lll expects a matrix of integers",
     "err_relation_not_found": "math error: no non-trivial integer relation found within precision"
@@ -553,7 +556,7 @@
     "err_matrix_dimension_error_det_requires": "matrix dimension error: det requires square matrix, got %dx%d",
     "err_matrix_dimension_mismatch_cannot_multiply": "matrix dimension mismatch: cannot multiply %dx%d matrix by %dx%d matrix",
     "err_matrix_has_vector_has": "%s (matrix has %d rows, vector has %d elements)",
-    "err_qr_decomposition_requires_rows_cols": "%s error: QR decomposition requires rows \u003e= cols, got %dx%d",
+    "err_qr_decomposition_requires_rows_cols": "%s error: QR decomposition requires rows >= cols, got %dx%d",
     "err_solve_linear_error_constant_vector": "solve_linear error: constant vector b must be 1D or column matrix, got %dx%d",
     "err_solve_linear_error_first_argument": "solve_linear error: first argument must be a matrix, got %T",
     "err_solve_linear_error_second_argument": "solve_linear error: second argument must be a vector or list, got %T",
@@ -567,7 +570,7 @@
     "err_hnf_transform_args": "hnf_transform requires 1 argument: hnf_transform(matrix)",
     "err_inconsistent_row_length": "matrix_integer error: row %d length %d differs from expected %d",
     "err_integer_matrix_expected": "matrix_integer error: all matrix elements must be integers",
-    "err_invalid_snf_fsm_transition": "invalid Smith Normal Form FSM transition: %s -\u003e %s",
+    "err_invalid_snf_fsm_transition": "invalid Smith Normal Form FSM transition: %s -> %s",
     "err_invariant_factors_args": "invariant_factors requires 1 argument: invariant_factors(matrix)",
     "err_matrix_expected": "matrix_integer error: expected matrix, got %s",
     "err_snf_args": "snf requires 1 argument: snf(matrix)",
@@ -638,7 +641,7 @@
     "err_case_pair_format": "each piecewise case must be a list containing exactly [expr, condition], got: %s",
     "err_invalid_cases_format": "piecewise cases must be a list of [expr, condition] pairs",
     "err_invalid_piecewise_args": "piecewise function requires 1 or 2 arguments: piecewise(cases [, otherwise])",
-    "err_invalid_piecewise_fsm_transition": "invalid Piecewise FSM transition: %s -\u003e %s"
+    "err_invalid_piecewise_fsm_transition": "invalid Piecewise FSM transition: %s -> %s"
   },
   "plot": {
     "asymptote": "* Asymptote:         x = %s (discontinuous)\n",
@@ -669,10 +672,10 @@
     "err_args_count": "to_primitive_element requires at least 1 argument: to_primitive_element([expr1, expr2, ...]) or to_primitive_element(expr1, expr2)",
     "err_failed_to_find_c": "primitive_element error: failed to find primitive element coefficient c within search limit",
     "err_gcd_not_linear": "primitive_element error: field GCD did not yield a linear factor for generator recovery",
-    "err_invalid_fsm_transition": "invalid Primitive Element FSM transition: %s -\u003e %s",
+    "err_invalid_fsm_transition": "invalid Primitive Element FSM transition: %s -> %s",
     "err_nil_polynomial": "primitive_element error: minimal polynomial cannot be nil or empty",
     "err_not_algebraic": "primitive_element error: expression is not a recognized algebraic number or polynomial: %s",
-    "trace_collapse_step": "Collapsing algebraic extensions: Q(%s, %s) -\u003e Q(%s)",
+    "trace_collapse_step": "Collapsing algebraic extensions: Q(%s, %s) -> Q(%s)",
     "trace_primitive_found": "Primitive element found: theta = %s + %d*%s with minimal polynomial: %s"
   },
   "prob": {
@@ -728,7 +731,7 @@
     "err_cannot_expand": "puiseux: local expansion failed: %s",
     "err_equation_contains_no_var": "puiseux: equation contains no variable %s",
     "err_identity_equation": "puiseux: identity equation (infinite solutions)",
-    "err_invalid_fsm_transition": "puiseux: invalid FSM state transition (%v -\u003e %v)",
+    "err_invalid_fsm_transition": "puiseux: invalid FSM state transition (%v -> %v)",
     "err_no_characteristic_roots": "puiseux: no non-zero characteristic roots found",
     "err_order_must_be_positive_int": "puiseux: expansion order must be a non-negative integer, got %s",
     "err_puiseux_args": "puiseux requires 3 or 4 arguments: (F, y, x [, order])"
@@ -736,14 +739,14 @@
   "qe": {
     "err_expected_var_list": "quantifier syntax error: first argument must be variable or list of variables",
     "err_invalid_args": "quantifier elimination error: invalid argument count",
-    "err_invalid_qe_fsm_transition": "invalid QE FSM transition: %s -\u003e %s",
+    "err_invalid_qe_fsm_transition": "invalid QE FSM transition: %s -> %s",
     "err_nil_formula": "quantifier elimination error: nil formula provided",
     "err_no_variables": "quantifier elimination error: no bound variables specified",
     "err_unsupported_body": "quantifier elimination error: unsupported formula structure"
   },
   "quartic": {
     "err_cannot_solve_quartic": "failed to solve quartic equation: %v",
-    "err_invalid_quartic_fsm_transition": "invalid Quartic FSM transition: %s -\u003e %s",
+    "err_invalid_quartic_fsm_transition": "invalid Quartic FSM transition: %s -> %s",
     "err_nil_coefficients": "quartic equation error: nil coefficient provided"
   },
   "rational": {
@@ -811,12 +814,12 @@
     "solve_linear_system": "Solve linear system by Gaussian elimination to RREF: %s",
     "solve_pell": "Find minimal positive integer solution to Pell's equation %s^2 - %s * %s^2 = 1 via continued fractions: (%s, %s)",
     "solve_quad_formula": "Quadratic formula: discriminant D = b^2 - 4ac = %s, %s = (-b ± √D) / (2a)",
-    "solve_quad_repeated": "Repeated root of quadratic equation: discriminant D = 0 =\u003e %s = -b / (2a)",
+    "solve_quad_repeated": "Repeated root of quadratic equation: discriminant D = 0 => %s = -b / (2a)",
     "solve_quartic_ferrari": "Exact algebraic roots of quartic equation via Ferrari's formula: %s",
     "step_0_desc": "Expression was evaluated directly without intermediate rewrites",
     "step_0_title": "Step 0: Direct Evaluation",
     "step_header": "[Step %d: %s]",
-    "trig_expand": "Trigonometric expansion: addition \u0026 multiple-angle formulas",
+    "trig_expand": "Trigonometric expansion: addition & multiple-angle formulas",
     "trig_reduce": "Trigonometric reduction: product-to-sum, power reduction, and harmonic addition",
     "unverified_mark": "[Unverified]",
     "verified_mark": "[Verified (Self-check passed)]"
@@ -824,7 +827,7 @@
   "transcendental": {
     "err_branch_must_be_integer": "lambert_w branch must be an integer, got: %s",
     "err_erf_args": "erf requires 1 argument: erf(z)",
-    "err_invalid_fsm_transition": "invalid Transcendental FSM transition: %s -\u003e %s",
+    "err_invalid_fsm_transition": "invalid Transcendental FSM transition: %s -> %s",
     "err_lambert_w_args": "lambert_w requires 1 or 2 arguments: lambert_w(z [, branch])",
     "err_transcendental_not_solvable": "transcendental equation %s = 0 could not be normalized to Lambert W form",
     "trace_solve_lambert": "Solve transcendental equation %s = 0 via Lambert W function: %s"
@@ -872,7 +875,7 @@
     "err_incomplete_roots": "Solution set is incomplete or invalid",
     "err_integrate_requires_at_least_1": "integrate requires at least 1 argument",
     "err_inv_requires_at_least_1": "inv requires at least 1 argument",
-    "err_invalid_verification_fsm_transition": "invalid verification FSM transition: %s -\u003e %s",
+    "err_invalid_verification_fsm_transition": "invalid verification FSM transition: %s -> %s",
     "err_lu_elements_must_be_matrixnode": "lu elements must be MatrixNode",
     "err_lu_output_must_be_a": "lu output must be a list [P, L, U]",
     "err_matrix_decomposition_requires_at_least": "matrix decomposition requires at least 1 argument",
