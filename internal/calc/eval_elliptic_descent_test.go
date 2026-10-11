@@ -567,6 +567,51 @@ func TestIsPointTorsion_MazurOrders(t *testing.T) {
 	}
 }
 
+func TestQuarticSolvability_TwoAdicHenselAndSturmReal(t *testing.T) {
+	// 1. Real solvability tests
+	realCases := []struct {
+		d1, c, d2 int64
+		expected  bool
+	}{
+		{-1, 3, -1, true},   // Delta = 9 - 4 = 5 > 0, c = 3 > 0
+		{-1, 2, -1, true},   // Delta = 4 - 4 = 0, c = 2 > 0 -> root t=1 gives F=0, soluble
+		{-1, 1, -1, false},  // Delta = 1 - 4 = -3 < 0
+		{-1, -3, -1, false}, // c = -3 <= 0, no positive vertex
+		{1, -100, -5, true}, // d1 > 0 -> e=0 boundary point (1, 0) gives F=1 > 0
+		{-5, -100, 1, true}, // d2 > 0 -> M=0 gives F=1 > 0
+	}
+
+	for _, rc := range realCases {
+		res := IsQuarticRealSoluble(big.NewInt(rc.d1), big.NewInt(rc.c), big.NewInt(rc.d2))
+		if res != rc.expected {
+			t.Errorf("IsQuarticRealSoluble(%d, %d, %d): expected %v, got %v", rc.d1, rc.c, rc.d2, rc.expected, res)
+		}
+	}
+
+	// 2. 2-adic solvability tests
+	twoAdicCases := []struct {
+		name      string
+		d1, c, d2 int64
+		expected  bool
+	}{
+		{"Square leading: M^4 - 25e^4", 1, 0, -25, true},
+		{"Insoluble: 2M^4 + 3e^4", 2, 0, 3, false},
+		{"Insoluble negative: -M^4 - e^4", -1, 0, -1, false},
+		{"Units 17 mod 8: 17M^4 + 17e^4", 17, 0, 17, true},
+		{"Integer solution (-2)^4 + 32 = 16: -M^4 + 32e^4", -1, 0, 32, true},
+		{"Insoluble mod 8: 3M^4 + 5e^4", 3, 0, 5, false},
+		{"Insoluble mod 8: 3M^4 + 3e^4", 3, 0, 3, false},
+	}
+
+	for _, tc := range twoAdicCases {
+		res := IsQuarticTwoAdicSoluble(big.NewInt(tc.d1), big.NewInt(tc.c), big.NewInt(tc.d2))
+		if res != tc.expected {
+			t.Errorf("IsQuarticTwoAdicSoluble(%s): expected %v, got %v", tc.name, tc.expected, res)
+		}
+	}
+}
+
+
 
 
 

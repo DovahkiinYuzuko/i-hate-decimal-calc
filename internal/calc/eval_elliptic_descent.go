@@ -313,48 +313,96 @@ func IsQuarticRealSoluble(d1, c, d2 *big.Int) bool {
 }
 
 // IsQuarticTwoAdicSoluble tests whether N^2 = d1 M^4 + c M^2 e^2 + d2 e^4 has a solution in Q_2.
-// Uses projective pair enumeration over Z/64Z (direct 2-adic square criterion).
+// Uses projective pair Hensel lifting tree over Z/2^k Z (k=8, 256) with gradient validation.
 func IsQuarticTwoAdicSoluble(d1, c, d2 *big.Int) bool {
+	const k = 8
+	const mod = int64(1 << k) // 256
+	const maxStableValuation = k - 3 // 5
+
 	eval := func(mInt, eInt int64) bool {
 		m := big.NewInt(mInt)
 		e := big.NewInt(eInt)
 		f := evalQuartic(d1, c, d2, m, e)
-		if f.Sign() == 0 {
-			return true
+
+		// Reduce modulo 2^k
+		fMod := new(big.Int).Mod(f, big.NewInt(mod))
+		if fMod.Sign() < 0 {
+			fMod.Add(fMod, big.NewInt(mod))
 		}
-		// Direct 2-adic square criterion:
-		// x in Q_2^* is a square iff v_2(x) is even, and unit part x / 2^{v_2(x)} = 1 (mod 8).
-		val := new(big.Int).Set(f)
-		v2 := 0
-		rem := new(big.Int)
-		two := big.NewInt(2)
-		for {
-			rem.Mod(val, two)
-			if rem.Sign() == 0 {
-				v2++
-				val.Div(val, two)
-			} else {
-				break
+
+		if fMod.Sign() == 0 {
+			// Test if it lifts to a smooth zero via Hensel's lemma:
+			// dF/dM = 4*d1*M^3 + 2*c*M*e^2
+			// dF/de = 2*c*M^2*e + 4*d2*e^3
+			m2 := new(big.Int).Mul(m, m)
+			e2 := new(big.Int).Mul(e, e)
+			m3 := new(big.Int).Mul(m2, m)
+			e3 := new(big.Int).Mul(e2, e)
+
+			four := big.NewInt(4)
+			two := big.NewInt(2)
+
+			dfDm := new(big.Int).Add(
+				new(big.Int).Mul(four, new(big.Int).Mul(d1, m3)),
+				new(big.Int).Mul(two, new(big.Int).Mul(c, new(big.Int).Mul(m, e2))),
+			)
+			dfDe := new(big.Int).Add(
+				new(big.Int).Mul(two, new(big.Int).Mul(c, new(big.Int).Mul(m2, e))),
+				new(big.Int).Mul(four, new(big.Int).Mul(d2, e3)),
+			)
+
+			// The gradient has factors of 2. A smooth zero in Z_2 exists if
+			// (grad / 2) is not (0, 0) mod 2, or if f is an exact integer square.
+			gradDmDiv2 := new(big.Int).Div(dfDm, two)
+			gradDeDiv2 := new(big.Int).Div(dfDe, two)
+			if new(big.Int).Mod(gradDmDiv2, two).Sign() != 0 || new(big.Int).Mod(gradDeDiv2, two).Sign() != 0 {
+				return true
 			}
+			// If exact zero:
+			if f.Sign() == 0 {
+				return true
+			}
+			return false
 		}
+
+		// Direct 2-adic square criterion with valuation safety:
+		// x in Q_2^* is a square iff v_2(x) is even (= 2s), and unit part = 1 (mod 8).
+		// Requires 2s <= k - 3 so the unit part mod 8 is mathematically stable.
+		val := fMod.Int64()
+		v2 := 0
+		for (val & 1) == 0 {
+			v2++
+			val >>= 1
+		}
+
 		if v2%2 != 0 {
 			return false
 		}
-		mod8 := new(big.Int).Mod(val, big.NewInt(8))
-		if mod8.Sign() < 0 {
-			mod8.Add(mod8, big.NewInt(8))
+
+		if v2 <= maxStableValuation {
+			return (val & 7) == 1
 		}
-		return mod8.Cmp(big.NewInt(1)) == 0
+
+		// For deep valuations (v2 > 5), check if original integer value is a square in Z
+		if f.Sign() > 0 {
+			s := new(big.Int).Sqrt(f)
+			s2 := new(big.Int).Mul(s, s)
+			if s2.Cmp(f) == 0 {
+				return true
+			}
+		}
+
+		return false
 	}
 
-	// Chart 1: e = 1, M in 0..63
-	for m := int64(0); m < 64; m++ {
+	// Chart 1: e = 1, M in 0..mod-1
+	for m := int64(0); m < mod; m++ {
 		if eval(m, 1) {
 			return true
 		}
 	}
-	// Chart 2: M = 1, e even in 0..62
-	for e := int64(0); e < 64; e += 2 {
+	// Chart 2: M = 1, e even in 0..mod-2
+	for e := int64(0); e < mod; e += 2 {
 		if eval(1, e) {
 			return true
 		}
