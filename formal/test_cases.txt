@@ -66,3 +66,8 @@ hnf([[2, 4], [4, 2]])
 hnf([[3, 6], [1, 4]])
 snf([[2, 4], [4, 2]])
 snf([[3, 6], [1, 4]])
+
+# 10. Elliptic Curve 2-Descent Generators (NormNum tactic)
+ec_generators(-25, 0)
+ec_generators(-36, 0)
+
