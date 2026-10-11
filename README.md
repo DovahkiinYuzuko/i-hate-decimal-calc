@@ -248,6 +248,7 @@ ihd "plot(sin(x), [-pi, pi])"
 - **ガロア理論・代数的根号可解性**: `galois_group`, `is_solvable_by_radicals`
 - **楕円曲線代数・数論幾何**: `ec_add`, `ec_mul`, `ec_torsion`, `ec_p_order`, `ec_p_trace`, `ec_p_add`, `ec_p_mul`
 - **クリフォード代数・幾何代数 & 厳密量子回路等価性検証**: `clifford`, `clifford_wedge`, `clifford_contract`, `clifford_dual`, `quantum_equiv`, `quantum_eval`
+- **多変数多項式イデアル・可換代数**: `primary_decomposition`, `ideal_radical`, `ideal_dimension`, `ideal_intersection`, `ideal_colon`, `ideal_saturation`
 - **CAS反復制御 & 任意基数進数変換**: `table`, `product`, `for`, `to_base`, `from_base`, `bin`, `oct`, `hex`
 - **前提条件システム（仮定）**: `assume`, `unassume`, `assumptions`, `clear_assumptions`
 - **ビジュアル・自己検証**: `plot`, `verify`
@@ -567,6 +568,7 @@ Lexical syntax highlighting powered by a finite-state machine (FSM):
 - **Galois Theory & Solvability by Radicals**: `galois_group`, `is_solvable_by_radicals`
 - **Elliptic Curves & Arithmetic Geometry**: `ec_add`, `ec_mul`, `ec_torsion`, `ec_p_order`, `ec_p_trace`, `ec_p_add`, `ec_p_mul`
 - **Clifford Geometric Algebra & Quantum Circuit Equivalence**: `clifford`, `clifford_wedge`, `clifford_contract`, `clifford_dual`, `quantum_equiv`, `quantum_eval`
+- **Multivariate Polynomial Ideals & Commutative Algebra**: `primary_decomposition`, `ideal_radical`, `ideal_dimension`, `ideal_intersection`, `ideal_colon`, `ideal_saturation`
 - **CAS Iteration Control & Multi-Radix Arithmetic**: `table`, `product`, `for`, `to_base`, `from_base`, `bin`, `oct`, `hex`
 - **Symbolic Assumptions System**: `assume`, `unassume`, `assumptions`, `clear_assumptions`
 - **Visualization & Verification Tools**: `plot`, `verify`

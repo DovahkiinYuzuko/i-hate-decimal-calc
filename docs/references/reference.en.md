@@ -26,6 +26,7 @@ Complete language specification and built-in function reference for `ihd` (i-hat
   - [16. Clifford Geometric Algebra & Binary Cyclotomic Quantum Circuit Verification](#16-clifford-geometric-algebra--binary-cyclotomic-quantum-circuit-verification)
   - [17. CAS Iteration Control & Multi-Radix Arithmetic](#17-cas-iteration-control--multi-radix-arithmetic)
   - [18. REPL Syntax Highlighting, Themes & Interactive Commands](#18-repl-syntax-highlighting-themes--interactive-commands)
+  - [19. Multivariate Polynomial Ideals & Primary Decomposition (GTZ)](#19-multivariate-polynomial-ideals--primary-decomposition-gtz)
 
 ---
 
@@ -382,5 +383,18 @@ Interactive control commands, high-contrast color themes, and real-time lexical 
 | `help` | `help` | Prints concise built-in help and a summary of interactive commands |
 | `exit` / `quit` | `exit` / `quit` / `Ctrl+D` | Exits the interactive REPL session cleanly |
 | CLI Options | `ihd --theme light` / `--no-color` | CLI startup flags to set initial color theme or disable ANSI coloring completely |
+
+---
+
+### 19. Multivariate Polynomial Ideals & Primary Decomposition (GTZ)
+
+| Function | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `primary_decomposition` | `primary_decomposition([x^2 - 1, y], [x, y])` | Computes primary decomposition $I = \bigcap Q_i$ of multivariate polynomial ideal $I = \langle p_1, \dots \rangle$ via Gianni-Trager-Zacharias (GTZ) algorithm, returning a list of `[[Q_1, P_1], ...]` pairs of primary component $Q_i$ and associated prime $P_i = \sqrt{Q_i}$. Optional 3rd argument specifies monomial order (`"grevlex"` or `"lex"`). |
+| `ideal_radical` | `ideal_radical([x^2, x*y], [x, y])` | Computes generator list of radical ideal $\sqrt{I}$. |
+| `ideal_dimension` | `ideal_dimension([x*y, x*z], [x, y, z])` | Finds maximal independent variable set from leading monomial ideal of Groebner basis and returns Krull dimension as an integer. |
+| `ideal_intersection` | `ideal_intersection([x], [y], [x, y])` | Computes ideal intersection $I \cap J$ via auxiliary variable elimination. |
+| `ideal_colon` | `ideal_colon([x^2], x, [x])` | Computes colon ideal (quotient ideal) $I : f = \{ g \mid f g \in I \}$ by polynomial $f$. |
+| `ideal_saturation` | `ideal_saturation([x^2], x, [x])` | Computes saturation ideal $I : f^\infty$ iteratively and returns generators upon reaching stabilization index $m$. |
 
 

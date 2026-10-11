@@ -26,6 +26,7 @@
   - [16. クリフォード幾何代数 & 二進円分環・厳密量子回路等価性検証](#16-クリフォード幾何代数--二進円分環厳密量子回路等価性検証)
   - [17. CAS反復制御構文 & 任意基数進数変換](#17-cas反復制御構文--任意基数進数変換)
   - [18. REPL 構文ハイライト・テーマ・対話環境コマンド](#18-repl-構文ハイライトテーマ対話環境コマンド)
+  - [19. 多変数多項式イデアル・準素分解 (GTZ法)](#19-多変数多項式イデアル準素分解-gtz法)
 
 ---
 
@@ -382,5 +383,19 @@
 | `help` | `help` | REPL 内簡易ヘルプおよび主要コマンド一覧を表示 |
 | `exit` / `quit` | `exit` / `quit` / `Ctrl+D` | REPL セッションを終了 |
 | CLI オプション | `ihd --theme light` / `--no-color` | 起動時の初期テーマ指定および完全カラー無効化フラグ |
+
+---
+
+### 19. 多変数多項式イデアル・準素分解 (GTZ法)
+
+| 関数 | 書式・例 | 説明 |
+| :--- | :--- | :--- |
+| `primary_decomposition` | `primary_decomposition([x^2 - 1, y], [x, y])` | 多変数多項式イデアル $I = \langle p_1, \dots \rangle$ に対し、Gianni-Trager-Zacharias (GTZ) 法により準素分解 $I = \bigcap Q_i$ を計算し、各準素成分 $Q_i$ とその素イデアル $P_i = \sqrt{Q_i}$ のペアリスト `[[Q_1, P_1], ...]` を返却。第3引数で単項式順序（`"grevlex"` または `"lex"`）を指定可能 |
+| `ideal_radical` | `ideal_radical([x^2, x*y], [x, y])` | イデアル $I$ の根基イデアル $\sqrt{I}$ の生成元リストを計算（零次元成分にはSeidenbergの補題を適用） |
+| `ideal_dimension` | `ideal_dimension([x*y, x*z], [x, y, z])` | グレブナー基底の先頭単項式イデアルから最大独立変数集合を求め、代数多様体（イデアル）のKrull次元を整数で返却 |
+| `ideal_intersection` | `ideal_intersection([x], [y], [x, y])` | 2つのイデアルの交わり $I \cap J$ を補助変数消去法により計算 |
+| `ideal_colon` | `ideal_colon([x^2], x, [x])` | 多項式 $f$ による商イデアル（コロンイデアル） $I : f = \{ g \mid f g \in I \}$ を計算 |
+| `ideal_saturation` | `ideal_saturation([x^2], x, [x])` | 多項式 $f$ による飽和イデアル $I : f^\infty$ を逐次計算し、安定化指数 $m$ で終端した生成元リストを返却 |
+
 
 
