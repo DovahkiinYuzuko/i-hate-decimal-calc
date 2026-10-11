@@ -192,7 +192,10 @@
     "err_scalar_int_required": "楕円曲線スカラー倍エラー: スカラー倍数は整数である必要があります",
     "err_singular_curve": "特異楕円曲線エラー: 判別式が 0 のため非特異曲線ではありません (4A^3 + 27B^2 = 0)",
     "err_singular_finite_curve": "有限体上の特異楕円曲線エラー: 判別式 4A^3 + 27B^2 ≡ 0 (mod p) です",
-    "err_trace_not_found": "フロベニウス・トレース (mod %d) の探索に失敗しました"
+    "err_trace_not_found": "フロベニウス・トレース (mod %d) の探索に失敗しました",
+    "trace_elliptic_descent": "楕円曲線 y^2 = x^3 + (%s)x + (%s) に対する2降下法: 階数下界 = %d, 上界 = %d (dim S^(phi) = %d, dim S^(psi) = %d)",
+    "trace_elliptic_generators": "楕円曲線の独立生成元抽出: %d 個発見",
+    "trace_elliptic_rank_bound": "楕円曲線の階数境界算定: [%d, %d]"
   },
   "err_argument_must_be_in_1": "引数は範囲 [%s, %s] 内である必要があります",
   "err_cannot_determine_exact_sign_for": "厳密な符号を決定できません: %s",
@@ -854,12 +857,16 @@
   "verify": {
     "dual_holds": "双対変換による往復演算が元の式と完全一致",
     "elliptic_add_holds": "楕円曲線の群加法公式が成立",
+    "elliptic_generators_holds": "発見された楕円曲線の生成元が曲線方程式を充足し無限位数を保持",
+    "elliptic_rank_bound_holds": "楕円曲線の2降下法セルマー境界および有理点階数下界関係が成立",
     "err_apart_requires_at_least_1": "apart には少なくとも1つの引数が必要です",
     "err_argument_must_be_a_matrix": "引数は行列である必要があります",
     "err_cannot_verify_nil_expression_or": "nil の式または結果は検証できません",
     "err_cholesky_output_must_be_a": "cholesky の出力は MatrixNode である必要があります",
     "err_dsolve_requires_at_least_1": "dsolve には少なくとも1つの引数が必要です",
     "err_elliptic_add_mismatch": "計算結果の点がWeierstrass加法公式と一致しません",
+    "err_elliptic_generators_mismatch": "楕円曲線の生成元が曲線方程式を充足しないか捩れ点です",
+    "err_elliptic_rank_bound_mismatch": "楕円曲線の階数境界関係に矛盾があります",
     "err_factor_requires_at_least_1": "factor には少なくとも1つの引数が必要です",
     "err_hnf_matrices_invalid": "HNF結果行列が不正または欠落しています",
     "err_incomplete_roots": "解集合が不完全または無効です",

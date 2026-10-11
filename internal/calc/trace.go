@@ -35,6 +35,7 @@ const (
 	RulePolynomialRoot    RuleID = "PolynomialRoot"
 	RuleLLLRelation       RuleID = "LLLRelation"
 	RuleEllipticAdd       RuleID = "EllipticAdd"
+	RuleEllipticDescent   RuleID = "EllipticDescent"
 )
 
 
@@ -152,6 +153,7 @@ var ruleTitles = map[RuleID]string{
 	RulePolynomialRoot:    "Polynomial Root Verification",
 	RuleLLLRelation:       "Integer Relation Identification via LLL",
 	RuleEllipticAdd:       "Elliptic Curve Point Addition via Chord-and-Tangent",
+	RuleEllipticDescent:   "Elliptic Curve 2-Descent & Rank",
 }
 
 

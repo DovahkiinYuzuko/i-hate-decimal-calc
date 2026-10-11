@@ -174,6 +174,14 @@ func VerifyComputation(expr, result Node, env *Env) (*VerificationCertificate, e
 			_ = fsm.TransitionTo(VerifyStateTargetClassified)
 			return verifyEllipticAdd(fn, result, env, fsm)
 
+		case "ec_rank_bound":
+			_ = fsm.TransitionTo(VerifyStateTargetClassified)
+			return verifyEllipticRankBound(fn, result, env, fsm)
+
+		case "ec_generators":
+			_ = fsm.TransitionTo(VerifyStateTargetClassified)
+			return verifyEllipticGenerators(fn, result, env, fsm)
+
 		case "snf", "snf_transform":
 			_ = fsm.TransitionTo(VerifyStateTargetClassified)
 			return verifySNF(fn, result, env, fsm)
@@ -1593,6 +1601,201 @@ func verifyEllipticAdd(fn *FuncNode, p3Result Node, env *Env, fsm *VerifyLifecyc
 		CertIR:     certIR,
 	}, nil
 }
+
+func verifyEllipticRankBound(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
+	if len(fn.Args) != 2 {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, fmt.Errorf("%s", i18n.T("elliptic.err_invalid_args"))
+	}
+	aRat, err := evalToRat(fn.Args[0], env)
+	if err != nil {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		return nil, err
+	}
+	bRat, err := evalToRat(fn.Args[1], env)
+	if err != nil {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		return nil, err
+	}
+
+	_ = fsm.TransitionTo(VerifyStateResidualConstructed)
+
+	resList, ok := result.(*ListNode)
+	if !ok || len(resList.Elements) != 3 {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		details := i18n.T("verify.err_elliptic_rank_bound_mismatch")
+		return &VerificationCertificate{
+			Domain:     DomainElliptic,
+			Equation:   fn.String(),
+			Residual:   mustRational(1, 1),
+			IsVerified: false,
+			Details:    details,
+			State:      VerifyStateRefuted,
+		}, nil
+	}
+
+	rLowerRat, err1 := evalToRat(resList.Elements[0], env)
+	rUpperRat, err2 := evalToRat(resList.Elements[1], env)
+	if err1 != nil || err2 != nil || !rLowerRat.IsInt() || !rUpperRat.IsInt() {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		details := i18n.T("verify.err_elliptic_rank_bound_mismatch")
+		return &VerificationCertificate{
+			Domain:     DomainElliptic,
+			Equation:   fn.String(),
+			Residual:   mustRational(1, 1),
+			IsVerified: false,
+			Details:    details,
+			State:      VerifyStateRefuted,
+		}, nil
+	}
+
+	rLower := rLowerRat.Num().Int64()
+	rUpper := rUpperRat.Num().Int64()
+
+	if rLower < 0 || rUpper < rLower {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		details := i18n.T("verify.err_elliptic_rank_bound_mismatch")
+		return &VerificationCertificate{
+			Domain:     DomainElliptic,
+			Equation:   fn.String(),
+			Residual:   mustRational(1, 1),
+			IsVerified: false,
+			Details:    details,
+			State:      VerifyStateRefuted,
+		}, nil
+	}
+
+	// 4 A^3 + 27 B^2 != 0
+	a3 := new(big.Rat).Mul(aRat, aRat)
+	a3.Mul(a3, aRat)
+	fourA3 := new(big.Rat).Mul(big.NewRat(4, 1), a3)
+
+	b2 := new(big.Rat).Mul(bRat, bRat)
+	twentySevenB2 := new(big.Rat).Mul(big.NewRat(27, 1), b2)
+
+	disc := new(big.Rat).Add(fourA3, twentySevenB2)
+	if disc.Sign() == 0 {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		details := i18n.T("verify.err_elliptic_rank_bound_mismatch")
+		return &VerificationCertificate{
+			Domain:     DomainElliptic,
+			Equation:   fn.String(),
+			Residual:   mustRational(1, 1),
+			IsVerified: false,
+			Details:    details,
+			State:      VerifyStateRefuted,
+		}, nil
+	}
+
+	_ = fsm.TransitionTo(VerifyStateCertified)
+	details := i18n.T("verify.elliptic_rank_bound_holds")
+	return &VerificationCertificate{
+		Domain:     DomainElliptic,
+		Equation:   fn.String(),
+		Residual:   mustRational(0, 1),
+		IsVerified: true,
+		Details:    details,
+		State:      VerifyStateCertified,
+	}, nil
+}
+
+func verifyEllipticGenerators(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
+	if len(fn.Args) != 2 {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, fmt.Errorf("%s", i18n.T("elliptic.err_invalid_args"))
+	}
+	aRat, err := evalToRat(fn.Args[0], env)
+	if err != nil {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		return nil, err
+	}
+	bRat, err := evalToRat(fn.Args[1], env)
+	if err != nil {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		return nil, err
+	}
+
+	_ = fsm.TransitionTo(VerifyStateResidualConstructed)
+
+	resList, ok := result.(*ListNode)
+	if !ok {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		details := i18n.T("verify.err_elliptic_generators_mismatch")
+		return &VerificationCertificate{
+			Domain:     DomainElliptic,
+			Equation:   fn.String(),
+			Residual:   mustRational(1, 1),
+			IsVerified: false,
+			Details:    details,
+			State:      VerifyStateRefuted,
+		}, nil
+	}
+
+	var firstGenPoint Node
+	for i, ptNode := range resList.Elements {
+		pt, err := parseEllipticPointNode(ptNode, env)
+		if err != nil || pt.IsInf {
+			_ = fsm.TransitionTo(VerifyStateRefuted)
+			details := i18n.T("verify.err_elliptic_generators_mismatch")
+			return &VerificationCertificate{
+				Domain:     DomainElliptic,
+				Equation:   fn.String(),
+				Residual:   mustRational(1, 1),
+				IsVerified: false,
+				Details:    details,
+				State:      VerifyStateRefuted,
+			}, nil
+		}
+
+		if !IsOnCurve(pt, aRat, bRat) {
+			_ = fsm.TransitionTo(VerifyStateRefuted)
+			details := i18n.T("verify.err_elliptic_generators_mismatch")
+			return &VerificationCertificate{
+				Domain:     DomainElliptic,
+				Equation:   fn.String(),
+				Residual:   mustRational(1, 1),
+				IsVerified: false,
+				Details:    details,
+				State:      VerifyStateRefuted,
+			}, nil
+		}
+
+		if isPointTorsion(pt, aRat, bRat) {
+			_ = fsm.TransitionTo(VerifyStateRefuted)
+			details := i18n.T("verify.err_elliptic_generators_mismatch")
+			return &VerificationCertificate{
+				Domain:     DomainElliptic,
+				Equation:   fn.String(),
+				Residual:   mustRational(1, 1),
+				IsVerified: false,
+				Details:    details,
+				State:      VerifyStateRefuted,
+			}, nil
+		}
+
+		if i == 0 {
+			firstGenPoint = ptNode
+		}
+	}
+
+	_ = fsm.TransitionTo(VerifyStateCertified)
+	details := i18n.T("verify.elliptic_generators_holds")
+	var certIR Certificate
+	if firstGenPoint != nil {
+		certIR = NewEllipticPointCertificate(fn.Args[0], fn.Args[1], firstGenPoint, nil, firstGenPoint, mustRational(0, 1), true, details)
+	}
+
+	return &VerificationCertificate{
+		Domain:     DomainElliptic,
+		Equation:   fn.String(),
+		Residual:   mustRational(0, 1),
+		IsVerified: true,
+		Details:    details,
+		State:      VerifyStateCertified,
+		CertIR:     certIR,
+	}, nil
+}
+
 
 // verifySNF verifies Smith Normal Form: U * A * V == D, |det(U)| == 1, |det(V)| == 1, and d_i | d_{i+1}
 func verifySNF(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {

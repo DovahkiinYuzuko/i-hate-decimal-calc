@@ -954,6 +954,17 @@ func init() {
 		MinArgs: 2,
 		MaxArgs: 2,
 	})
+	// Elliptic Curve 2-Descent & Mordell-Weil Rank (issue-109)
+	RegisterFunction(FunctionSpec{
+		Name:    "ec_rank_bound",
+		MinArgs: 2,
+		MaxArgs: 2,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "ec_generators",
+		MinArgs: 2,
+		MaxArgs: 2,
+	})
 
 	// LLL Lattice Basis Reduction & Integer Relation (issue-75)
 	RegisterFunction(FunctionSpec{

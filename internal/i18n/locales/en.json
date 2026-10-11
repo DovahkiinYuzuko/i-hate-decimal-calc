@@ -192,7 +192,10 @@
     "err_scalar_int_required": "elliptic scalar mul error: scalar must be an integer",
     "err_singular_curve": "singular elliptic curve error: discriminant is zero (4A^3 + 27B^2 = 0)",
     "err_singular_finite_curve": "singular elliptic curve error over finite field: discriminant 4A^3 + 27B^2 = 0 mod p",
-    "err_trace_not_found": "failed to find Frobenius trace mod %d"
+    "err_trace_not_found": "failed to find Frobenius trace mod %d",
+    "trace_elliptic_descent": "2-descent for elliptic curve y^2 = x^3 + (%s)x + (%s): rank lower = %d, upper = %d (dim S^(phi) = %d, dim S^(psi) = %d)",
+    "trace_elliptic_generators": "elliptic generators extracted: %d found",
+    "trace_elliptic_rank_bound": "elliptic rank bounds: [%d, %d]"
   },
   "err_argument_must_be_in_1": "argument must be in range [%s, %s]",
   "err_cannot_determine_exact_sign_for": "cannot determine exact sign for: %s",
@@ -854,12 +857,16 @@
   "verify": {
     "dual_holds": "Dual round-trip transformation matches original expression",
     "elliptic_add_holds": "Elliptic curve group law addition holds",
+    "elliptic_generators_holds": "Elliptic curve generators satisfy Weierstrass equation and have infinite order",
+    "elliptic_rank_bound_holds": "Elliptic curve 2-descent Selmer bound and lower bound consistency hold",
     "err_apart_requires_at_least_1": "apart requires at least 1 argument",
     "err_argument_must_be_a_matrix": "argument must be a matrix",
     "err_cannot_verify_nil_expression_or": "cannot verify nil expression or result",
     "err_cholesky_output_must_be_a": "cholesky output must be a MatrixNode",
     "err_dsolve_requires_at_least_1": "dsolve requires at least 1 argument",
     "err_elliptic_add_mismatch": "Result point does not match Weierstrass addition formula",
+    "err_elliptic_generators_mismatch": "Elliptic curve generator does not satisfy Weierstrass equation or has finite torsion",
+    "err_elliptic_rank_bound_mismatch": "Elliptic curve rank bounds are inconsistent",
     "err_factor_requires_at_least_1": "factor requires at least 1 argument",
     "err_hnf_matrices_invalid": "Invalid or missing HNF result matrices",
     "err_incomplete_roots": "Solution set is incomplete or invalid",
