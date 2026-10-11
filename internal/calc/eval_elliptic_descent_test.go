@@ -689,6 +689,64 @@ func TestTwoDescentRankIntervalAndShaResilience(t *testing.T) {
 	}
 }
 
+func TestMordellWeilIndependenceAndLean4Scope(t *testing.T) {
+	// 1. Kummer independence filtering on y^2 = x^3 - 25x (A = -25, B = 0)
+	// Points on curve:
+	// Torsion: (0, 0), (5, 0), (-5, 0)
+	// Infinite order: P = (-4, 6)
+	// 2P = (1681/144, -62279/1728)
+	// -P = (-4, -6)
+	aRat := big.NewRat(-25, 1)
+	bRat := big.NewRat(0, 1)
+
+	pTorsion1 := NewEllipticPoint(big.NewRat(0, 1), big.NewRat(0, 1))
+	pTorsion2 := NewEllipticPoint(big.NewRat(5, 1), big.NewRat(0, 1))
+	pTorsion3 := NewEllipticPoint(big.NewRat(-5, 1), big.NewRat(0, 1))
+	pGen := NewEllipticPoint(big.NewRat(-4, 1), big.NewRat(6, 1))
+	pNegGen := NewEllipticPoint(big.NewRat(-4, 1), big.NewRat(-6, 1))
+	pDouble, err := AddEllipticPoints(pGen, pGen, aRat, bRat)
+	if err != nil {
+		t.Fatalf("AddEllipticPoints 2P failed: %v", err)
+	}
+
+	candidates := []EllipticPoint{pTorsion1, pTorsion2, pTorsion3, pGen, pNegGen, pDouble}
+	gens := FilterIndependentGeneratorsKummer(candidates, aRat, bRat, 2)
+	if len(gens) != 1 {
+		t.Fatalf("expected exactly 1 independent generator, got %d (%v)", len(gens), gens)
+	}
+	if !gens[0].Equal(pGen) && !gens[0].Equal(pNegGen) {
+		t.Errorf("expected generator to be P or -P, got %v", gens[0])
+	}
+
+	// 2. Saturation status in TwoDescentResult
+	res, err := ComputeTwoDescentRankBound(aRat, bRat, nil)
+	if err != nil {
+		t.Fatalf("ComputeTwoDescentRankBound failed: %v", err)
+	}
+	if res.IsSaturated {
+		t.Errorf("expected IsSaturated = false (subgroup bound without CPS height saturation proof)")
+	}
+
+	// 3. Lean 4 theorem scope and boundaries
+	leanCode, err := GenerateLean4EllipticPointTheorems("E_congruent_5", aRat, bRat, gens)
+	if err != nil {
+		t.Fatalf("GenerateLean4EllipticPointTheorems failed: %v", err)
+	}
+	if !strings.Contains(leanCode, "import Mathlib") {
+		t.Errorf("expected 'import Mathlib' in Lean 4 output, got: %s", leanCode)
+	}
+	if !strings.Contains(leanCode, "theorem E_congruent_5_point_0_on_curve") {
+		t.Errorf("expected scoped theorem name in Lean 4 output, got: %s", leanCode)
+	}
+	if !strings.Contains(leanCode, "CERTIFICATE SCOPE: Rational point membership verification") {
+		t.Errorf("expected explicit scope boundary comment, got: %s", leanCode)
+	}
+	if !strings.Contains(leanCode, "ring") {
+		t.Errorf("expected proof tactic 'ring' in Lean 4 output, got: %s", leanCode)
+	}
+}
+
+
 
 
 

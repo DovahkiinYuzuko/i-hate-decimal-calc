@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 	"sort"
+	"strings"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
@@ -569,6 +570,7 @@ type TwoDescentResult struct {
 	Generators     []EllipticPoint
 	Sha2Possible   bool
 	Coverings      []QuarticCoveringState
+	IsSaturated    bool
 }
 
 // generateSquarefreeDivisors generates all signed squarefree divisor classes mod squares.
@@ -947,6 +949,7 @@ func ComputeTwoDescentRankBound(aRat, bRat *big.Rat, fsm *EllipticDescentLifecyc
 		Generators:     gens,
 		Sha2Possible:   sha2Possible,
 		Coverings:      coverings,
+		IsSaturated:    false,
 	}
 
 	return res, nil
@@ -1128,38 +1131,119 @@ func mapDualPointToCurve(q EllipticPoint, dPrime *big.Int) (EllipticPoint, error
 	return MapDualPointToCurve(q, dPrime)
 }
 
-// filterIndependentGenerators selects up to maxRank linearly independent infinite-order generators.
-func filterIndependentGenerators(candidates []EllipticPoint, aRat, bRat *big.Rat, maxRank int) []EllipticPoint {
+// computeSquarefreePart computes the squarefree integer part of n.
+func computeSquarefreePart(n *big.Int) *big.Int {
+	if n.Sign() == 0 {
+		return big.NewInt(0)
+	}
+	sign := int64(1)
+	if n.Sign() < 0 {
+		sign = -1
+	}
+	absN := new(big.Int).Abs(n)
+	factors := factorIntPrimes(absN)
+	res := big.NewInt(sign)
+	for _, f := range factors {
+		if f.exp%2 != 0 {
+			res.Mul(res, f.prime)
+		}
+	}
+	return res
+}
+
+// computeMatrixF2Rank calculates the rank of a binary matrix over F_2 using Gaussian elimination.
+func computeMatrixF2Rank(matrix [][]int, cols int) int {
+	if len(matrix) == 0 || cols == 0 {
+		return 0
+	}
+	rows := len(matrix)
+	m := make([][]int, rows)
+	for i := range matrix {
+		m[i] = make([]int, cols)
+		copy(m[i], matrix[i])
+	}
+
+	pivotRow := 0
+	for col := 0; col < cols && pivotRow < rows; col++ {
+		sel := -1
+		for r := pivotRow; r < rows; r++ {
+			if m[r][col] == 1 {
+				sel = r
+				break
+			}
+		}
+		if sel == -1 {
+			continue
+		}
+		m[pivotRow], m[sel] = m[sel], m[pivotRow]
+		for r := 0; r < rows; r++ {
+			if r != pivotRow && m[r][col] == 1 {
+				for c := col; c < cols; c++ {
+					m[r][c] ^= m[pivotRow][c]
+				}
+			}
+		}
+		pivotRow++
+	}
+	return pivotRow
+}
+
+// FilterIndependentGeneratorsKummer selects up to maxRank linearly independent infinite-order generators
+// using Mazur torsion filtering, multi-root Kummer map F_2-independence testing, and group law linear combinations.
+func FilterIndependentGeneratorsKummer(candidates []EllipticPoint, aRat, bRat *big.Rat, maxRank int) []EllipticPoint {
+	if maxRank <= 0 {
+		return nil
+	}
+
+	roots, _ := FindTwoTorsionRationalRoots(aRat, bRat)
+
 	var gens []EllipticPoint
+	var primeBases [][]*big.Int
+	for range roots {
+		primeBases = append(primeBases, []*big.Int{})
+	}
+
 	for _, cand := range candidates {
 		if len(gens) >= maxRank {
 			break
 		}
+		if cand.IsInf || cand.X == nil || cand.Y == nil {
+			continue
+		}
+		// 1. Torsion filter
 		if IsPointTorsion(cand, aRat, bRat) {
 			continue
 		}
 
+		// 2. Direct group law small linear combinations with existing generators
 		dependent := false
+		candNeg := NewEllipticPoint(cand.X, new(big.Rat).Neg(cand.Y))
 		for _, g := range gens {
-			if cand.Equal(g) {
+			if cand.Equal(g) || candNeg.Equal(g) {
 				dependent = true
 				break
 			}
-			candNeg := NewEllipticPoint(cand.X, new(big.Rat).Neg(cand.Y))
-			if candNeg.Equal(g) {
-				dependent = true
-				break
-			}
-
-			// Check small multiples
-			for k := int64(2); k <= 4; k++ {
+			for k := int64(1); k <= 4; k++ {
+				// k*cand == +/- g
+				kCand, err := ScalarMulEllipticPoint(cand, big.NewInt(k), aRat, bRat)
+				if err == nil && (g.Equal(kCand) || g.Equal(NewEllipticPoint(kCand.X, new(big.Rat).Neg(kCand.Y)))) {
+					dependent = true
+					break
+				}
+				// k*g == +/- cand
 				kG, err := ScalarMulEllipticPoint(g, big.NewInt(k), aRat, bRat)
 				if err == nil && (cand.Equal(kG) || candNeg.Equal(kG)) {
 					dependent = true
 					break
 				}
-				kCand, err := ScalarMulEllipticPoint(cand, big.NewInt(k), aRat, bRat)
-				if err == nil && (g.Equal(kCand) || g.Equal(NewEllipticPoint(kCand.X, new(big.Rat).Neg(kCand.Y)))) {
+				// cand +/- k*g is torsion?
+				candPlusKG, err1 := AddEllipticPoints(cand, kG, aRat, bRat)
+				if err1 == nil && IsPointTorsion(candPlusKG, aRat, bRat) {
+					dependent = true
+					break
+				}
+				candMinusKG, err2 := AddEllipticPoints(cand, NewEllipticPoint(kG.X, new(big.Rat).Neg(kG.Y)), aRat, bRat)
+				if err2 == nil && IsPointTorsion(candMinusKG, aRat, bRat) {
 					dependent = true
 					break
 				}
@@ -1168,12 +1252,165 @@ func filterIndependentGenerators(candidates []EllipticPoint, aRat, bRat *big.Rat
 				break
 			}
 		}
-
-		if !dependent {
-			gens = append(gens, cand)
+		if dependent {
+			continue
 		}
+
+		// 3. Kummer map across all rational 2-torsion roots
+		if len(roots) > 0 {
+			allSquare := true
+			var candRow []int
+
+			for rootIdx, root := range roots {
+				shiftedX := new(big.Rat).Sub(cand.X, root)
+				if shiftedX.Sign() == 0 {
+					continue
+				}
+				sqfreeVal := computeSquarefreePart(new(big.Int).Mul(shiftedX.Num(), shiftedX.Denom()))
+				if sqfreeVal.Cmp(big.NewInt(1)) != 0 {
+					allSquare = false
+				}
+
+				absSq := new(big.Int).Abs(sqfreeVal)
+				factors := factorIntPrimes(absSq)
+				for _, f := range factors {
+					found := false
+					for _, p := range primeBases[rootIdx] {
+						if p.Cmp(f.prime) == 0 {
+							found = true
+							break
+						}
+					}
+					if !found {
+						primeBases[rootIdx] = append(primeBases[rootIdx], new(big.Int).Set(f.prime))
+					}
+				}
+			}
+
+			if allSquare {
+				// The candidate is a 2-multiple of another point, thus dependent in E(Q)/2E(Q)!
+				continue
+			}
+
+			// Build concatenated Kummer vector across all roots for candidate
+			for rootIdx, root := range roots {
+				shiftedX := new(big.Rat).Sub(cand.X, root)
+				sqfreeVal := computeSquarefreePart(new(big.Int).Mul(shiftedX.Num(), shiftedX.Denom()))
+
+				if sqfreeVal.Sign() < 0 {
+					candRow = append(candRow, 1)
+				} else {
+					candRow = append(candRow, 0)
+				}
+
+				for _, p := range primeBases[rootIdx] {
+					vp := 0
+					tmp := new(big.Int).Abs(sqfreeVal)
+					for new(big.Int).Mod(tmp, p).Sign() == 0 {
+						vp++
+						tmp.Div(tmp, p)
+					}
+					candRow = append(candRow, vp%2)
+				}
+			}
+
+			// Reconstruct Kummer vectors for already accepted generators
+			totalCols := len(candRow)
+			var rePaddedMatrix [][]int
+			for i := range gens {
+				var gRow []int
+				for rootIdx, root := range roots {
+					shiftedX := new(big.Rat).Sub(gens[i].X, root)
+					sqfreeVal := computeSquarefreePart(new(big.Int).Mul(shiftedX.Num(), shiftedX.Denom()))
+					if sqfreeVal.Sign() < 0 {
+						gRow = append(gRow, 1)
+					} else {
+						gRow = append(gRow, 0)
+					}
+					for _, p := range primeBases[rootIdx] {
+						vp := 0
+						tmp := new(big.Int).Abs(sqfreeVal)
+						for new(big.Int).Mod(tmp, p).Sign() == 0 {
+							vp++
+							tmp.Div(tmp, p)
+						}
+						gRow = append(gRow, vp%2)
+					}
+				}
+				rePaddedMatrix = append(rePaddedMatrix, gRow)
+			}
+
+			rankBefore := computeMatrixF2Rank(rePaddedMatrix, totalCols)
+			matrixWithCand := append(rePaddedMatrix, candRow)
+			rankAfter := computeMatrixF2Rank(matrixWithCand, totalCols)
+
+			if len(gens) > 0 && rankAfter <= rankBefore {
+				// Linearly dependent in Kummer space!
+				continue
+			}
+		}
+
+		gens = append(gens, cand)
 	}
+
 	return gens
+}
+
+// filterIndependentGenerators selects up to maxRank linearly independent infinite-order generators.
+func filterIndependentGenerators(candidates []EllipticPoint, aRat, bRat *big.Rat, maxRank int) []EllipticPoint {
+	return FilterIndependentGeneratorsKummer(candidates, aRat, bRat, maxRank)
+}
+
+// GenerateLean4EllipticPointTheorems emits formally verifiable Lean 4 / Mathlib theorems
+// proving that the specified rational points lie on the Weierstrass model of the elliptic curve.
+//
+// NOTE: This certificate asserts ONLY rational point membership on E(Q).
+// It does NOT claim Mordell-Weil rank completeness, full basis, or saturation.
+func GenerateLean4EllipticPointTheorems(curveName string, aRat, bRat *big.Rat, points []EllipticPoint) (string, error) {
+	if curveName == "" {
+		curveName = "E"
+	}
+	var sb strings.Builder
+	sb.WriteString("import Mathlib\n\n")
+	sb.WriteString("/-!\n")
+	sb.WriteString("# Formally Verified Elliptic Curve Point Membership\n\n")
+	sb.WriteString("CERTIFICATE SCOPE: Rational point membership verification on Weierstrass model.\n")
+	sb.WriteString("NOTE: This theorem certifies ONLY that the specified point lies on the curve E(ℚ).\n")
+	sb.WriteString("It does NOT assert rank completeness, full Mordell-Weil basis, or saturation.\n")
+	sb.WriteString("-/\n\n")
+
+	formatRatLean := func(r *big.Rat) string {
+		num := r.Num()
+		den := r.Denom()
+		if den.Cmp(big.NewInt(1)) == 0 {
+			if num.Sign() < 0 {
+				return fmt.Sprintf("(%s : ℚ)", num.String())
+			}
+			return fmt.Sprintf("(%s : ℚ)", num.String())
+		}
+		if num.Sign() < 0 {
+			return fmt.Sprintf("((%s : ℚ) / (%s : ℚ))", num.String(), den.String())
+		}
+		return fmt.Sprintf("((%s : ℚ) / (%s : ℚ))", num.String(), den.String())
+	}
+
+	aStr := formatRatLean(aRat)
+	bStr := formatRatLean(bRat)
+
+	for i, pt := range points {
+		if pt.IsInf || pt.X == nil || pt.Y == nil {
+			continue
+		}
+		xStr := formatRatLean(pt.X)
+		yStr := formatRatLean(pt.Y)
+
+		thmName := fmt.Sprintf("%s_point_%d_on_curve", curveName, i)
+		sb.WriteString(fmt.Sprintf("-- Verification of point P_%d on E : y^2 = x^3 + (%s)*x + (%s)\n", i, aRat.RatString(), bRat.RatString()))
+		sb.WriteString(fmt.Sprintf("theorem %s : %s ^ 2 = %s ^ 3 + %s * %s + %s := by\n", thmName, yStr, xStr, aStr, xStr, bStr))
+		sb.WriteString("  ring\n\n")
+	}
+
+	return sb.String(), nil
 }
 
 // -------------------------------------------------------------------------
