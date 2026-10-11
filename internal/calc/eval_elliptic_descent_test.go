@@ -611,6 +611,55 @@ func TestQuarticSolvability_TwoAdicHenselAndSturmReal(t *testing.T) {
 	}
 }
 
+func TestTwoDescentRankIntervalAndShaResilience(t *testing.T) {
+	// SHA-CONGRUENT-17: y^2 = x^3 - 289x (congruent number n=17)
+	// Has rank 0, but Selmer rank 2 due to non-trivial Sha[2] = Z/2Z x Z/2Z!
+	aRat := big.NewRat(-289, 1)
+	bRat := big.NewRat(0, 1)
+
+	res, err := ComputeTwoDescentRankBound(aRat, bRat, nil)
+	if err != nil {
+		t.Fatalf("ComputeTwoDescentRankBound failed: %v", err)
+	}
+
+	// Must certify interval [0, 2] and flag sha_2_possible
+	if res.RankLowerBound != 0 {
+		t.Errorf("expected RankLowerBound = 0, got %d", res.RankLowerBound)
+	}
+	if res.RankUpperBound != 2 {
+		t.Errorf("expected RankUpperBound = 2, got %d", res.RankUpperBound)
+	}
+	if res.IsExact {
+		t.Errorf("expected IsExact = false for interval [0, 2], got true")
+	}
+	if !res.Sha2Possible {
+		t.Errorf("expected Sha2Possible = true for [0, 2] interval gap, got false")
+	}
+	if len(res.Coverings) == 0 {
+		t.Errorf("expected Coverings to be tracked in TwoDescentResult")
+	}
+
+	// Check CLI response: ec_rank_bound(-289, 0)
+	node, err := EvalString("ec_rank_bound(-289, 0)")
+	if err != nil {
+		t.Fatalf("eval ec_rank_bound failed: %v", err)
+	}
+	listNode, ok := node.(*ListNode)
+	if !ok || len(listNode.Elements) < 3 {
+		t.Fatalf("expected ListNode with at least 3 elements, got %v", node)
+	}
+	lowerRat, ok1 := listNode.Elements[0].(*RationalNode)
+	upperRat, ok2 := listNode.Elements[1].(*RationalNode)
+	exactVar, ok3 := listNode.Elements[2].(*VarNode)
+	if !ok1 || !ok2 || !ok3 {
+		t.Fatalf("unexpected node types in ec_rank_bound result: %v", listNode.Elements)
+	}
+	if lowerRat.Val.Num().Int64() != 0 || upperRat.Val.Num().Int64() != 2 || exactVar.Name != "false" {
+		t.Errorf("expected [0, 2, false], got [%v, %v, %v]", lowerRat.Val, upperRat.Val, exactVar.Name)
+	}
+}
+
+
 
 
 
