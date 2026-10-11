@@ -657,6 +657,36 @@ func TestTwoDescentRankIntervalAndShaResilience(t *testing.T) {
 	if lowerRat.Val.Num().Int64() != 0 || upperRat.Val.Num().Int64() != 2 || exactVar.Name != "false" {
 		t.Errorf("expected [0, 2, false], got [%v, %v, %v]", lowerRat.Val, upperRat.Val, exactVar.Name)
 	}
+
+	// SHA-960D1: y^2 = x^3 - 52x^2 + x
+	// Short Weierstrass: A = -2701/3, B = -280748/27
+	// True rank is 0, but 2-Selmer rank is 2 (Sha[2] nontrivial). Must yield interval [0, 2] with Sha2Possible=true.
+	aRat960 := big.NewRat(-2701, 3)
+	bRat960 := big.NewRat(-280748, 27)
+	res960, err := ComputeTwoDescentRankBound(aRat960, bRat960, nil)
+	if err != nil {
+		t.Fatalf("ComputeTwoDescentRankBound for SHA-960D1 failed: %v", err)
+	}
+	if res960.RankLowerBound != 0 || res960.RankUpperBound != 2 || res960.IsExact || !res960.Sha2Possible {
+		t.Errorf("SHA-960D1: expected [0, 2, exact=false, sha_possible=true], got [%d, %d, %v, %v]",
+			res960.RankLowerBound, res960.RankUpperBound, res960.IsExact, res960.Sha2Possible)
+	}
+
+	// SHA-2RANK4: y^2 = x^3 + 62x^2 + 9409x
+	// Short Weierstrass: A = 24383/3, B = -4773566/27
+	// Selmer rank bound is >= 2, must yield interval and Sha2Possible if gap exists.
+	aRatRank4 := big.NewRat(24383, 3)
+	bRatRank4 := big.NewRat(-4773566, 27)
+	resRank4, err := ComputeTwoDescentRankBound(aRatRank4, bRatRank4, nil)
+	if err != nil {
+		t.Fatalf("ComputeTwoDescentRankBound for SHA-2RANK4 failed: %v", err)
+	}
+	if resRank4.RankUpperBound < resRank4.RankLowerBound {
+		t.Errorf("SHA-2RANK4: upper bound %d < lower bound %d", resRank4.RankUpperBound, resRank4.RankLowerBound)
+	}
+	if resRank4.RankUpperBound > resRank4.RankLowerBound && !resRank4.Sha2Possible {
+		t.Errorf("SHA-2RANK4: expected Sha2Possible=true when rankUpper > rankLower")
+	}
 }
 
 
