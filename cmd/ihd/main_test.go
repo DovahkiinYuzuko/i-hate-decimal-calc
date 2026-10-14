@@ -98,6 +98,35 @@ func TestCLI_OneShot_LaTeX(t *testing.T) {
 	}
 }
 
+func TestCLI_OneShot_Typst(t *testing.T) {
+	// 1. Using --typst flag
+	out := new(bytes.Buffer)
+	errOut := new(bytes.Buffer)
+	code := run([]string{"--typst", "1/2 + sqrt(2)"}, strings.NewReader(""), out, errOut)
+
+	if code != 0 {
+		t.Fatalf("expected exit code 0, got %d. stderr: %s", code, errOut.String())
+	}
+	actual := strings.TrimSpace(out.String())
+	expected := "$1 / 2 + sqrt(2)$"
+	if actual != expected {
+		t.Errorf("expected %q, got %q", expected, actual)
+	}
+
+	// 2. Using --format typst flag
+	out.Reset()
+	errOut.Reset()
+	code = run([]string{"--format", "typst", "[[1, 2], [3, 4]]"}, strings.NewReader(""), out, errOut)
+	if code != 0 {
+		t.Fatalf("expected exit code 0, got %d. stderr: %s", code, errOut.String())
+	}
+	actual = strings.TrimSpace(out.String())
+	expected = "$mat(1, 2; 3, 4)$"
+	if actual != expected {
+		t.Errorf("expected %q, got %q", expected, actual)
+	}
+}
+
 func TestCLI_OneShot_Pretty(t *testing.T) {
 	out := new(bytes.Buffer)
 	errOut := new(bytes.Buffer)

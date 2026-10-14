@@ -1,0 +1,113 @@
+name: Typst Math Verification
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      custom_expr:
+        description: 'カスタム数式（空欄の場合は標準テストセットのみ検証）'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  typst-verify:
+    name: Verify Typst Math Compilation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          check-latest: true
+
+      - name: Set up Typst CLI
+        uses: typst-community/setup-typst@v5
+        with:
+          typst-version: latest
+
+      - name: Build ihd binary
+        run: |
+          go build -buildvcs=false -o ihd ./cmd/ihd
+
+      - name: Generate Typst Math Document
+        run: |
+          mkdir -p test-scripts/typst
+          cat << 'EOF' > test-scripts/typst/test_document.typ
+          #set page(paper: "a4", margin: 2cm)
+          #set text(font: "DejaVu Sans", size: 11pt)
+
+          = i-hate-decimal-calc Typst Math Verification Document
+
+          This document verifies that mathematical expressions exported from `ihd`
+          compile without syntax errors into valid typesetting output.
+
+          == Standard Mathematical Test Suite
+
+          EOF
+
+          # Standard test expressions
+          EXPRS=(
+            "42"
+            "1/2 + 3/4"
+            "sqrt(2) + sqrt(3)"
+            "3*sqrt(2)"
+            "cbrt(2)"
+            "1 + 2*i"
+            "1 - 2*i"
+            "[[1, 2], [3, 4]]"
+            "pi + e"
+            "sin(pi/6)"
+            "x^2 + 2*x + 1"
+            "1/(sqrt(2) + 1)"
+          )
+
+          for expr in "${EXPRS[@]}"; do
+            TYP_MATH=$(./ihd --typst "$expr")
+            echo "=== Input: $expr ==="
+            echo "=== Typst: $TYP_MATH ==="
+            cat << EOF >> test-scripts/typst/test_document.typ
+
+          === Expression: `$expr`
+          $TYP_MATH
+
+          EOF
+          done
+
+          # Custom expression if provided
+          CUSTOM_EXPR="${{ github.event.inputs.custom_expr }}"
+          if [ -n "$CUSTOM_EXPR" ]; then
+            echo "Processing custom expression: $CUSTOM_EXPR"
+            CUSTOM_TYP=$(./ihd --typst "$CUSTOM_EXPR")
+            cat << EOF >> test-scripts/typst/test_document.typ
+
+          == Custom Workflow Input: `$CUSTOM_EXPR`
+          $CUSTOM_TYP
+
+          EOF
+          fi
+
+      - name: Compile Typst to PDF
+        run: |
+          typst compile test-scripts/typst/test_document.typ test-scripts/typst/test_document.pdf
+
+      - name: Compile Typst to SVG
+        run: |
+          typst compile --format svg test-scripts/typst/test_document.typ test-scripts/typst/test_document.svg
+
+      - name: Upload Compiled PDF Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: compiled-typst-math-pdf
+          path: test-scripts/typst/test_document.pdf
+          retention-days: 14

@@ -111,6 +111,8 @@
     "flag_pretty": "数式を2Dプリティプリント形式で整列表示",
     "flag_replay": "指定されたJSON証明書ファイルを読み込み独立再検証を実行",
     "flag_theme": "REPLのシンタックスハイライトテーマを指定 ('dark', 'light', 'none')",
+    "flag_typst": "数式をTypst形式 ($ ... $) で出力",
+    "flag_format": "出力フォーマットを指定 (typst, latex, ascii, pretty)",
     "flag_verify": "計算結果の代数的正当性を自律逆算検証し証明書を表示",
     "flag_version": "バージョン情報を表示",
     "flag_warn_loop": "反復ループの警告ステップ数を一時指定 (例: 100000)",
