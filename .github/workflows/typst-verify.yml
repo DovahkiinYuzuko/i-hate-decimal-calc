@@ -2,7 +2,7 @@ name: Typst Math Verification
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, 'issue-*' ]
     tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
