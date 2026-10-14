@@ -124,6 +124,11 @@ func GetWarnIterationsBig(cfg *Config) *big.Int {
 	return parseBigIntFromRaw(cfg.WarnIterations, defaultVal)
 }
 
+// GetWarnIterationsBig returns the warning iteration threshold for this config as *big.Int.
+func (c *Config) GetWarnIterationsBig() *big.Int {
+	return GetWarnIterationsBig(c)
+}
+
 // GetMaxIterationsBig returns the maximum iteration limit as *big.Int.
 // Defaults to -1 (unlimited) if not specified or invalid.
 func GetMaxIterationsBig(cfg *Config) *big.Int {
@@ -132,6 +137,11 @@ func GetMaxIterationsBig(cfg *Config) *big.Int {
 		return defaultVal
 	}
 	return parseBigIntFromRaw(cfg.MaxIterations, defaultVal)
+}
+
+// GetMaxIterationsBig returns the maximum iteration limit for this config as *big.Int.
+func (c *Config) GetMaxIterationsBig() *big.Int {
+	return GetMaxIterationsBig(c)
 }
 
 // SaveConfigWarnIterationsBig updates the warn_iterations entry in ~/.ihd/config.json.

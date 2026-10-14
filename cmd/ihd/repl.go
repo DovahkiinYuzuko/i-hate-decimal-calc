@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"os"
 	"sort"
 	"strings"
@@ -102,6 +103,10 @@ func runREPL(in io.Reader, out, errOut io.Writer, ro runOptions) int {
 			continue
 		}
 
+		if handleREPLCommand(line, env, ro, out) {
+			continue
+		}
+
 		lowerLine := strings.ToLower(line)
 		if lowerLine == "theme" {
 			fmt.Fprintf(out, i18n.T("cli.repl_theme_current")+"\n", currentTheme)
@@ -189,6 +194,10 @@ func runScannerREPL(in io.Reader, out, errOut io.Writer, ro runOptions, env *cal
 			continue
 		}
 
+		if handleREPLCommand(line, env, ro, out) {
+			continue
+		}
+
 		lowerLine := strings.ToLower(line)
 		if lowerLine == "theme" {
 			fmt.Fprintf(out, i18n.T("cli.repl_theme_current")+"\n", currentTheme)
@@ -254,4 +263,58 @@ func printVars(env *calc.Env, ro runOptions, out io.Writer) {
 	for _, name := range names {
 		fmt.Fprintf(out, "%s = %s\n", name, formatOutput(vars[name], ro))
 	}
+}
+
+func handleREPLCommand(line string, env *calc.Env, ro runOptions, out io.Writer) bool {
+	lowerLine := strings.ToLower(line)
+	if lowerLine == "config loop" || lowerLine == "loop" {
+		warnBig, maxBig, _ := env.GetIterationLimits()
+		warnStr := "100000"
+		if warnBig != nil {
+			warnStr = warnBig.String()
+		}
+		maxStr := "unlimited"
+		if maxBig != nil && maxBig.Sign() > 0 {
+			maxStr = maxBig.String()
+		}
+		fmt.Fprintf(out, i18n.T("cli.repl_loop_status")+"\n", warnStr, maxStr)
+		return true
+	}
+
+	if strings.HasPrefix(lowerLine, "warn-loop ") || strings.HasPrefix(lowerLine, "config warn-loop ") {
+		idx := strings.LastIndex(line, " ")
+		valStr := strings.TrimSpace(line[idx+1:])
+		if n, ok := new(big.Int).SetString(valStr, 10); ok && n.Sign() > 0 {
+			_ = i18n.SaveConfigWarnIterationsBig(n)
+			_, maxLimit, writer := env.GetIterationLimits()
+			env.SetIterationLimits(n, maxLimit, writer)
+			fmt.Fprintf(out, i18n.T("cli.repl_warn_loop_set")+"\n", n.String())
+		} else {
+			fmt.Fprintln(out, i18n.T("cli.repl_loop_invalid"))
+		}
+		return true
+	}
+
+	if strings.HasPrefix(lowerLine, "max-loop ") || strings.HasPrefix(lowerLine, "config max-loop ") {
+		idx := strings.LastIndex(line, " ")
+		valStr := strings.TrimSpace(line[idx+1:])
+		lowerVal := strings.ToLower(valStr)
+		if lowerVal == "off" || lowerVal == "-1" || lowerVal == "none" || lowerVal == "unlimited" {
+			unlimited := big.NewInt(-1)
+			_ = i18n.SaveConfigMaxIterationsBig(unlimited)
+			warnLimit, _, writer := env.GetIterationLimits()
+			env.SetIterationLimits(warnLimit, unlimited, writer)
+			fmt.Fprintf(out, i18n.T("cli.repl_max_loop_set")+"\n", "unlimited")
+		} else if n, ok := new(big.Int).SetString(valStr, 10); ok && n.Sign() > 0 {
+			_ = i18n.SaveConfigMaxIterationsBig(n)
+			warnLimit, _, writer := env.GetIterationLimits()
+			env.SetIterationLimits(warnLimit, n, writer)
+			fmt.Fprintf(out, i18n.T("cli.repl_max_loop_set")+"\n", n.String())
+		} else {
+			fmt.Fprintln(out, i18n.T("cli.repl_loop_invalid"))
+		}
+		return true
+	}
+
+	return false
 }
