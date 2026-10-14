@@ -336,6 +336,7 @@
 | `--replay` | `ihd --replay cert.json` | 保存された証明書 JSON を読み込み、各ステップの残差が0かを再検証 |
 | `--micro-verifier` | `ihd --micro-verifier > micro_verifier.go` | Go の標準ライブラリのみで動作する検証用コードを出力。証明書 JSON の残差検証を単体で実行可能 |
 | `--lean` / `--lean-file` | `ihd --lean "factor(x^2 - 1)"` / `ihd --lean-file p.lean "factor(x^2 - 1)"` | 計算結果や導出ステップを **Lean 4（Mathlib4）** の形式証明コード（`by ring`, `by ext <;> fin_cases`, `by repeat constructor <;> norm_num`, `by simp` 等）として出力 |
+| `--typst` / `--format typst` | `ihd --typst "1/2 + sqrt(2)"` / `ihd --format typst "[[1, 2], [3, 4]]"` | 新世代組版システム **Typst** の数式モード記法（`$ ... $`、分数 `/`、根号 `sqrt(...)`/`root(...)`、行列 `mat(...)` 等）で出力 |
 
 ---
 

@@ -24,6 +24,8 @@ type runOptions struct {
 	opts          calc.FormatOptions
 	showApprox    bool
 	latex         bool
+	typst         bool
+	format        string
 	pretty        bool
 	deg           bool
 	explain       bool
@@ -144,8 +146,20 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 			flagArgs = append(flagArgs, a)
 			continue
 		}
+		if a == "-format" || a == "--format" {
+			flagArgs = append(flagArgs, a)
+			if i+1 < len(args) {
+				i++
+				flagArgs = append(flagArgs, args[i])
+			}
+			continue
+		}
+		if strings.HasPrefix(a, "-format=") || strings.HasPrefix(a, "--format=") {
+			flagArgs = append(flagArgs, a)
+			continue
+		}
 		switch a {
-		case "-ascii", "--ascii", "-approx", "--approx", "-latex", "--latex", "-pretty", "--pretty", "-deg", "--deg", "-explain", "--explain", "-verify", "--verify", "-lean", "--lean", "-h", "--help", "-v", "--version", "-version", "--no-update-check", "-no-update-check", "-i", "--i", "-interval", "--interval", "-no-color", "--no-color":
+		case "-ascii", "--ascii", "-approx", "--approx", "-latex", "--latex", "-typst", "--typst", "-pretty", "--pretty", "-deg", "--deg", "-explain", "--explain", "-verify", "--verify", "-lean", "--lean", "-h", "--help", "-v", "--version", "-version", "--no-update-check", "-no-update-check", "-i", "--i", "-interval", "--interval", "-no-color", "--no-color":
 			flagArgs = append(flagArgs, a)
 		default:
 			exprArgs = append(exprArgs, a)
@@ -174,6 +188,8 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 	langFlag := fs.String("lang", "", i18n.T("cli.flag_lang"))
 	asciiFlag := fs.Bool("ascii", false, i18n.T("cli.flag_ascii"))
 	approxFlag := fs.Bool("approx", false, i18n.T("cli.flag_approx"))
+	formatFlag := fs.String("format", "", i18n.T("cli.flag_format"))
+	typstFlag := fs.Bool("typst", false, i18n.T("cli.flag_typst"))
 	latexFlag := fs.Bool("latex", false, i18n.T("cli.flag_latex"))
 	prettyFlag := fs.Bool("pretty", false, i18n.T("cli.flag_pretty"))
 	degFlag := fs.Bool("deg", false, i18n.T("cli.flag_deg"))
@@ -240,11 +256,14 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 		_ = os.Setenv("IHD_NO_UPDATE_CHECK", "1")
 	}
 
+	fmtMode := strings.ToLower(*formatFlag)
 	ro := runOptions{
-		opts:          calc.FormatOptions{AsciiOnly: *asciiFlag},
+		opts:          calc.FormatOptions{AsciiOnly: *asciiFlag || fmtMode == "ascii"},
 		showApprox:    *approxFlag,
-		latex:         *latexFlag,
-		pretty:        *prettyFlag,
+		latex:         *latexFlag || fmtMode == "latex",
+		typst:         *typstFlag || fmtMode == "typst",
+		format:        fmtMode,
+		pretty:        *prettyFlag || fmtMode == "pretty",
 		deg:           *degFlag,
 		explain:       *explainFlag,
 		verify:        *verifyFlag,
@@ -426,6 +445,9 @@ func formatOutput(node calc.Node, ro runOptions) string {
 		}
 	}
 
+	if ro.typst {
+		return calc.FormatTypst(node)
+	}
 	if ro.latex {
 		return calc.FormatLaTeX(node)
 	}
@@ -460,6 +482,10 @@ func outputNode(out io.Writer, node calc.Node, ro runOptions) error {
 		}
 	}
 
+	if ro.typst {
+		_, err := fmt.Fprintln(out, calc.FormatTypst(node))
+		return err
+	}
 	if ro.latex {
 		_, err := fmt.Fprintln(out, calc.FormatLaTeX(node))
 		return err

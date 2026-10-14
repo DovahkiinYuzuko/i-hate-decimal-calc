@@ -582,6 +582,236 @@ func formatLaTeXAdd(a *AddNode) string {
 	return sb.String()
 }
 
+// FormatTypst formats an AST node as Typst math text wrapped in $ ... $.
+func FormatTypst(n Node) string {
+	if n == nil {
+		return "$$"
+	}
+	return fmt.Sprintf("$%s$", formatTypstNode(n))
+}
+
+func formatTypstNode(n Node) string {
+	switch v := n.(type) {
+	case *PolyNode:
+		return formatTypstNode(PolyToNode(v))
+
+	case *RationalNode:
+		if v.Val.IsInt() {
+			return v.Val.Num().String()
+		}
+		num := new(big.Int).Abs(v.Val.Num())
+		denom := v.Val.Denom()
+		if v.Val.Sign() < 0 {
+			return fmt.Sprintf("-%s / %s", num.String(), denom.String())
+		}
+		return fmt.Sprintf("%s / %s", num.String(), denom.String())
+
+	case *ConstNode:
+		return v.Name
+
+	case *VarNode:
+		return v.Name
+
+	case *SqrtNode:
+		return fmt.Sprintf("sqrt(%s)", formatTypstNode(v.Radicand))
+
+	case *FuncNode:
+		if v.Name == "cbrt" && len(v.Args) == 1 {
+			return fmt.Sprintf("root(3, %s)", formatTypstNode(v.Args[0]))
+		}
+		if v.Name == "root" && len(v.Args) == 2 {
+			return fmt.Sprintf("root(%s, %s)", formatTypstNode(v.Args[0]), formatTypstNode(v.Args[1]))
+		}
+		if v.Name == "abs" && len(v.Args) == 1 {
+			return fmt.Sprintf("abs(%s)", formatTypstNode(v.Args[0]))
+		}
+		fnName := v.Name
+		switch fnName {
+		case "asin":
+			fnName = "arcsin"
+		case "acos":
+			fnName = "arccos"
+		case "atan":
+			fnName = "arctan"
+		}
+		if len(v.Args) == 1 {
+			return fmt.Sprintf("%s(%s)", fnName, formatTypstNode(v.Args[0]))
+		}
+		if len(v.Args) == 2 && v.Name == "log" {
+			return fmt.Sprintf("log_(%s)(%s)", formatTypstNode(v.Args[0]), formatTypstNode(v.Args[1]))
+		}
+		argStrs := make([]string, len(v.Args))
+		for i, a := range v.Args {
+			argStrs[i] = formatTypstNode(a)
+		}
+		return fmt.Sprintf("%s(%s)", fnName, strings.Join(argStrs, ", "))
+
+	case *ComplexNode:
+		realIsZero := isZero(v.Real)
+		imagIsZero := isZero(v.Imag)
+
+		if realIsZero && imagIsZero {
+			return "0"
+		}
+		if imagIsZero {
+			return formatTypstNode(v.Real)
+		}
+		if realIsZero {
+			return formatTypstImagPart(v.Imag)
+		}
+
+		realStr := formatTypstNode(v.Real)
+		if isNegative(v.Imag) {
+			posImag, _ := simplifyUnaryOp("-", v.Imag)
+			return fmt.Sprintf("%s - %s", realStr, formatTypstImagPart(posImag))
+		}
+		return fmt.Sprintf("%s + %s", realStr, formatTypstImagPart(v.Imag))
+
+	case *PowNode:
+		baseStr := formatTypstNode(v.Base)
+		expStr := formatTypstNode(v.Exp)
+		switch v.Base.(type) {
+		case *AddNode, *MulNode, *UnaryOpNode, *ComplexNode:
+			baseStr = fmt.Sprintf("(%s)", baseStr)
+		}
+		switch exp := v.Exp.(type) {
+		case *RationalNode:
+			if !exp.Val.IsInt() || exp.Val.Sign() < 0 {
+				expStr = fmt.Sprintf("(%s)", expStr)
+			}
+		case *AddNode, *MulNode, *UnaryOpNode, *ComplexNode:
+			expStr = fmt.Sprintf("(%s)", expStr)
+		}
+		return fmt.Sprintf("%s^%s", baseStr, expStr)
+
+	case *UnaryOpNode:
+		if v.Op == "!" {
+			exprStr := formatTypstNode(v.Expr)
+			if _, isOp := v.Expr.(*AddNode); isOp {
+				exprStr = fmt.Sprintf("(%s)", exprStr)
+			}
+			return fmt.Sprintf("%s!", exprStr)
+		}
+		exprStr := formatTypstNode(v.Expr)
+		if _, isOp := v.Expr.(*AddNode); isOp {
+			exprStr = fmt.Sprintf("-(%s)", exprStr)
+		} else {
+			exprStr = fmt.Sprintf("-%s", exprStr)
+		}
+		return exprStr
+
+	case *MulNode:
+		return formatTypstMul(v)
+
+	case *AddNode:
+		return formatTypstAdd(v)
+
+	case *ListNode:
+		elemStrs := make([]string, len(v.Elements))
+		for i, e := range v.Elements {
+			elemStrs[i] = formatTypstNode(e)
+		}
+		return fmt.Sprintf("(%s)", strings.Join(elemStrs, ", "))
+
+	case *MatrixNode:
+		rowStrs := make([]string, v.Rows)
+		for r := 0; r < v.Rows; r++ {
+			elemStrs := make([]string, v.Cols)
+			for c := 0; c < v.Cols; c++ {
+				elemStrs[c] = formatTypstNode(v.Data[r][c])
+			}
+			rowStrs[r] = strings.Join(elemStrs, ", ")
+		}
+		return fmt.Sprintf("mat(%s)", strings.Join(rowStrs, "; "))
+
+	default:
+		return n.String()
+	}
+}
+
+func formatTypstImagPart(imag Node) string {
+	one := big.NewRat(1, 1)
+	negOne := big.NewRat(-1, 1)
+
+	if rat, ok := imag.(*RationalNode); ok {
+		if rat.Val.Cmp(one) == 0 {
+			return "i"
+		}
+		if rat.Val.Cmp(negOne) == 0 {
+			return "-i"
+		}
+		if rat.Val.IsInt() {
+			return fmt.Sprintf("%s i", rat.Val.Num().String())
+		}
+		return fmt.Sprintf("(%s) i", formatTypstNode(rat))
+	}
+	return fmt.Sprintf("%s i", formatTypstNode(imag))
+}
+
+func formatTypstMul(m *MulNode) string {
+	if len(m.Factors) == 2 {
+		if r, ok := m.Factors[0].(*RationalNode); ok {
+			// Check for 1/d * Base -> (Base) / d
+			if !r.Val.IsInt() && r.Val.Num().Cmp(big.NewInt(1)) == 0 {
+				baseStr := formatTypstNode(m.Factors[1])
+				return fmt.Sprintf("(%s) / %s", baseStr, r.Val.Denom().String())
+			}
+			// Check for -1/d * Base -> -(Base) / d
+			if !r.Val.IsInt() && r.Val.Num().Cmp(big.NewInt(-1)) == 0 {
+				baseStr := formatTypstNode(m.Factors[1])
+				return fmt.Sprintf("-(%s) / %s", baseStr, r.Val.Denom().String())
+			}
+			// Check for 1 * Base -> Base
+			one := big.NewRat(1, 1)
+			if r.Val.Cmp(one) == 0 {
+				return formatTypstNode(m.Factors[1])
+			}
+			// Check for -1 * Base -> -Base
+			negOne := big.NewRat(-1, 1)
+			if r.Val.Cmp(negOne) == 0 {
+				return fmt.Sprintf("-%s", formatTypstNode(m.Factors[1]))
+			}
+			// Integer coeff * Sqrt/Const/Func/Symbol -> 3 sqrt(2)
+			if r.Val.IsInt() {
+				coeffStr := r.Val.Num().String()
+				baseStr := formatTypstNode(m.Factors[1])
+				return fmt.Sprintf("%s %s", coeffStr, baseStr)
+			}
+		}
+	}
+
+	strs := make([]string, len(m.Factors))
+	for i, f := range m.Factors {
+		fStr := formatTypstNode(f)
+		if _, isAdd := f.(*AddNode); isAdd {
+			fStr = fmt.Sprintf("(%s)", fStr)
+		}
+		strs[i] = fStr
+	}
+	return strings.Join(strs, " ")
+}
+
+func formatTypstAdd(a *AddNode) string {
+	sortedTerms := sortTerms(a.Terms)
+
+	var sb strings.Builder
+	for i, t := range sortedTerms {
+		if i == 0 {
+			sb.WriteString(formatTypstNode(t))
+		} else {
+			if isNegative(t) {
+				posTerm, _ := simplifyUnaryOp("-", t)
+				sb.WriteString(" - ")
+				sb.WriteString(formatTypstNode(posTerm))
+			} else {
+				sb.WriteString(" + ")
+				sb.WriteString(formatTypstNode(t))
+			}
+		}
+	}
+	return sb.String()
+}
+
 // Box represents a 2D text box with height, width, and a baseline row index (0-indexed).
 type Box struct {
 	Lines    []string

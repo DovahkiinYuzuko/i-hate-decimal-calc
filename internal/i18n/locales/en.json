@@ -111,6 +111,8 @@
     "flag_pretty": "Output expression using 2D pretty-printed formatting",
     "flag_replay": "Replay and independently verify proof certificate from specified JSON file",
     "flag_theme": "Set REPL syntax highlighting color theme ('dark', 'light', 'none')",
+    "flag_typst": "Output expression in Typst format ($ ... $)",
+    "flag_format": "Specify output format (typst, latex, ascii, pretty)",
     "flag_verify": "Autonomously verify algebraic correctness and print certificate",
     "flag_version": "Show version",
     "flag_warn_loop": "Set iteration step warning limit (e.g., 100000)",

@@ -146,6 +146,55 @@ func TestFormatLaTeX(t *testing.T) {
 	}
 }
 
+func TestFormatTypst(t *testing.T) {
+	testCases := []struct {
+		input    string
+		expected string
+	}{
+		{"42", "$42$"},
+		{"3/4", "$3 / 4$"},
+		{"-3/4", "$-3 / 4$"},
+		{"sqrt(2)", "$sqrt(2)$"},
+		{"3*sqrt(2)", "$3 sqrt(2)$"},
+		{"1 + 2*i", "$1 + 2 i$"},
+		{"1 - 2*i", "$1 - 2 i$"},
+		{"1/2 + sqrt(2)", "$1 / 2 + sqrt(2)$"},
+		{"pi", "$pi$"},
+		{"e", "$e$"},
+		{"sin(1)", "$sin(1)$"},
+		{"[[1, 2], [3, 4]]", "$mat(1, 2; 3, 4)$"},
+	}
+
+	for _, tc := range testCases {
+		node, err := EvalString(tc.input)
+		if err != nil {
+			t.Fatalf("eval error for %q: %v", tc.input, err)
+		}
+		actual := FormatTypst(node)
+		if actual != tc.expected {
+			t.Errorf("input %q: expected %q, got %q", tc.input, tc.expected, actual)
+		}
+	}
+
+	// Test unsimplified AST (PowNode)
+	powNode, err := NewPow(mustRational(2, 1), mustRational(3, 1))
+	if err != nil {
+		t.Fatalf("unexpected NewPow error: %v", err)
+	}
+	if actual := FormatTypst(powNode); actual != "$2^3$" {
+		t.Errorf("expected '$2^3$', got %q", actual)
+	}
+
+	// Fractional exponent
+	fracExp, err := NewPow(&VarNode{Name: "x"}, mustRational(1, 2))
+	if err != nil {
+		t.Fatalf("unexpected NewPow error: %v", err)
+	}
+	if actual := FormatTypst(fracExp); actual != "$x^(1 / 2)$" {
+		t.Errorf("expected '$x^(1 / 2)$', got %q", actual)
+	}
+}
+
 func TestFormatPretty2D(t *testing.T) {
 	// 1. Integer should be 1 line
 	nInt := mustRational(42, 1)
