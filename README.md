@@ -227,6 +227,13 @@ ihd "plot(sin(x), [-pi, pi])"
 - **カスタム変数ハイライト**: 未束縛の記号（$x, y$ 等）は標準色を維持し、現在のセッション環境に定義された変数のみを識別して着色（Darkテーマ時は淡いシアン）。
 - **テーマ設定 & 永続化**: `dark`（暗め背景向け）および `light`（明るめ背景向け）テーマに対応。REPL 内コマンド（`theme dark` / `theme light`）で切り替え可能で、設定は `~/.ihd/config.json` に保存。
 
+#### 5. 反復ループの非破壊安全性 & ユーザー主権制御（`--warn-loop` / `--max-loop`）
+CAS反復構文（`table`, `for`, `product`）において、長時間の計算ループによる意図しない暴走を防止しつつ、大量サンプリングやモンテカルロ計算を阻害しないハイブリッド安全機構を搭載しています。
+- **非破壊警告**: 警告閾値（デフォルト: 100,000ステップ）を超過した際、パイプライン（標準出力）を汚染せず `os.Stderr` へ一度だけ警告を発出し、計算を中断せず続行します。
+- **最大安全上限ガード**: 指定した最大上限（デフォルト: 無制限）に到達した場合は安全に強制遮断します。
+- **任意精度（`math/big.Int`）管理**: 32bit/64bit 環境での桁あふれや巨大数入力によるオーバーフローを完全撲滅しています。
+- **CLIワンショット & REPL対話コマンド**: ワンショット実行時は `--warn-loop <N>`, `--max-loop <N>` フラグで指定可能。REPL内では `warn-loop <N>`, `max-loop <N>`, `config loop` コマンドで設定確認・変更・永続化（`~/.ihd/config.json`）が可能です。
+
 ---
 
 ### 構文・演算子・関数リファレンス
@@ -546,6 +553,13 @@ Lexical syntax highlighting powered by a finite-state machine (FSM):
 - **Rainbow Nested Delimiters**: Delimiter depths across parentheses `()` and brackets `[]` rotate through 4 cyclic colors. Bracket mismatches are highlighted with an error background.
 - **Custom Variable Highlighting**: Unbound symbols ($x, y$) retain the neutral base text color, while user-defined custom variables in the active session environment are highlighted.
 - **Dual Themes & Persistence**: Supports `dark` and `light` themes. Configurable inside the REPL (`theme dark` / `theme light`), persisted to `~/.ihd/config.json`.
+
+#### 5. Iteration Safety & Non-Destructive Loop Control (`--warn-loop` / `--max-loop`)
+Protects against runaway CAS loops (`table`, `for`, `product`) without hindering heavy computations or Monte Carlo sampling:
+- **Non-Destructive Warning**: Emits a single warning to `os.Stderr` when exceeding the warning threshold (default: 100,000 steps) without polluting `stdout` or breaking downstream pipes.
+- **Maximum Safety Guard**: Stops execution safely when reaching the maximum iteration limit (default: unlimited).
+- **Arbitrary-Precision (`math/big.Int`)**: Step counters and thresholds are managed via `big.Int` to prevent integer overflow across 32-bit and 64-bit architectures.
+- **CLI Flags & REPL Commands**: Configurable per-run via `--warn-loop <N>` and `--max-loop <N>`, or interactively inside REPL via `warn-loop <N>`, `max-loop <N>`, and `config loop` commands with persistence in `~/.ihd/config.json`.
 
 ---
 
