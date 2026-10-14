@@ -225,6 +225,7 @@
     "iteration_arg_must_be_var": "%s エラー: イテレータ引数は変数名である必要があります (%s)",
     "iteration_bounds_eval": "%s エラー: 反復範囲の評価に失敗しました: %v",
     "iteration_step_zero": "%s エラー: 刻み幅に0は指定できません",
+    "iteration_max_exceeded": "%s エラー: 反復回数が最大上限 (%s ステップ) を超過しました",
     "arg_zero_undefined": "0の偏角は未定義です",
     "assume_args_count": "assume には 1 または 2 個の引数が必要です",
     "assume_inconsistent": "変数 '%s' に対する前提条件に矛盾があります",
@@ -916,5 +917,8 @@
     "unsupported_domain": "自律逆算チェッカーが未定義のドメインです",
     "verified_header": "[VERIFIED: %s]",
     "wz_holds": "Wilf-Zeilberger差分等式 Delta_n(F) == Delta_k(G) が成立 (WZ証明書を確認)"
+  },
+  "warnings": {
+    "iteration_limit_exceeded": "警告: %s 反復が %s ステップを超過しました (処理を続行します...)"
   }
 }

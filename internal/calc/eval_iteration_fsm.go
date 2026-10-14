@@ -2,7 +2,9 @@ package calc
 
 import (
 	"fmt"
+	"io"
 	"math/big"
+	"os"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
@@ -14,6 +16,7 @@ const (
 	StateIterInit IterationState = iota
 	StateIterScopedSetup
 	StateIterStep
+	StateIterWarn
 	StateIterTeardown
 	StateIterDone
 	StateIterError
@@ -21,24 +24,51 @@ const (
 
 // IterationFSM controls and executes an iteration loop with guaranteed cleanup and dynamic scoping.
 type IterationFSM struct {
-	State   IterationState
-	VarName string
-	Start   *big.Rat
-	End     *big.Rat
-	Step    *big.Rat
-	Env     *Env
-	Err     error
+	State          IterationState
+	VarName        string
+	Start          *big.Rat
+	End            *big.Rat
+	Step           *big.Rat
+	Env            *Env
+	Err            error
+	WarnIterations *big.Int
+	MaxIterations  *big.Int
+	WarnWriter     io.Writer
+	StepCount      *big.Int
+	Warned         bool
 }
 
-// NewIterationFSM initializes a new iteration state machine.
+// NewIterationFSM initializes a new iteration state machine with defaults from config.
 func NewIterationFSM(varName string, start, end, step *big.Rat, env *Env) *IterationFSM {
+	cfg, _ := i18n.LoadConfig()
+	warnLimit := i18n.GetWarnIterationsBig(cfg)
+	maxLimit := i18n.GetMaxIterationsBig(cfg)
+
 	return &IterationFSM{
-		State:   StateIterInit,
-		VarName: varName,
-		Start:   start,
-		End:     end,
-		Step:    step,
-		Env:     env,
+		State:          StateIterInit,
+		VarName:        varName,
+		Start:          start,
+		End:            end,
+		Step:           step,
+		Env:            env,
+		WarnIterations: warnLimit,
+		MaxIterations:  maxLimit,
+		WarnWriter:     os.Stderr,
+		StepCount:      big.NewInt(0),
+		Warned:         false,
+	}
+}
+
+// SetLimits configures custom iteration limits and warning output writer.
+func (fsm *IterationFSM) SetLimits(warnLimit, maxLimit *big.Int, warnWriter io.Writer) {
+	if warnLimit != nil {
+		fsm.WarnIterations = new(big.Int).Set(warnLimit)
+	}
+	if maxLimit != nil {
+		fsm.MaxIterations = new(big.Int).Set(maxLimit)
+	}
+	if warnWriter != nil {
+		fsm.WarnWriter = warnWriter
 	}
 }
 
@@ -80,6 +110,27 @@ func (fsm *IterationFSM) Run(stepFn func(curr *big.Rat) (stop bool, err error)) 
 			}
 			if step.Sign() < 0 && curr.Cmp(fsm.End) < 0 {
 				break
+			}
+
+			// Increment step counter
+			fsm.StepCount.Add(fsm.StepCount, big.NewInt(1))
+
+			// Check maximum iterations limit
+			if fsm.MaxIterations != nil && fsm.MaxIterations.Sign() > 0 && fsm.StepCount.Cmp(fsm.MaxIterations) > 0 {
+				fsm.State = StateIterError
+				fsm.Err = fmt.Errorf("%s", i18n.T("errors.iteration_max_exceeded", fsm.VarName, fsm.MaxIterations.String()))
+				return fsm.Err
+			}
+
+			// Check non-destructive warning threshold
+			if fsm.WarnIterations != nil && fsm.StepCount.Cmp(fsm.WarnIterations) > 0 && !fsm.Warned {
+				prevState := fsm.State
+				fsm.State = StateIterWarn
+				fsm.Warned = true
+				if fsm.WarnWriter != nil {
+					fmt.Fprintf(fsm.WarnWriter, "%s\n", i18n.T("warnings.iteration_limit_exceeded", fsm.VarName, fsm.WarnIterations.String()))
+				}
+				fsm.State = prevState
 			}
 
 			// Update variable in environment

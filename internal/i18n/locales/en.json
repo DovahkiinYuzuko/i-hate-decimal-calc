@@ -225,6 +225,7 @@
     "iteration_arg_must_be_var": "%s error: iterator argument must be a variable name, got %s",
     "iteration_bounds_eval": "%s error: failed to evaluate bounds: %v",
     "iteration_step_zero": "%s error: step size cannot be zero",
+    "iteration_max_exceeded": "%s error: iteration count exceeded maximum limit (%s steps)",
     "arg_zero_undefined": "argument of zero is undefined",
     "assume_args_count": "assume requires 1 or 2 arguments",
     "assume_inconsistent": "inconsistent assumption for variable '%s'",
@@ -916,5 +917,8 @@
     "unsupported_domain": "Autonomous verification checker is not defined for this domain",
     "verified_header": "[VERIFIED: %s]",
     "wz_holds": "Wilf-Zeilberger difference equation Delta_n(F) == Delta_k(G) holds (WZ certificate confirmed)"
+  },
+  "warnings": {
+    "iteration_limit_exceeded": "warning: %s iteration exceeded %s steps (continuing execution...)"
   }
 }
