@@ -235,6 +235,19 @@ CAS反復構文（`table`, `for`, `product`）において、長時間の計算�
 - **任意精度（`math/big.Int`）管理**: 32bit/64bit 環境での桁あふれや巨大数入力によるオーバーフローを防止します。
 - **CLIワンショット & REPL対話コマンド**: ワンショット実行時は `--warn-loop <N>`, `--max-loop <N>` フラグで指定可能。REPL内では `warn-loop <N>`, `max-loop <N>`, `config loop` コマンドで設定確認・変更・永続化（`~/.ihd/config.json`）が可能です。
 
+#### 6. 新世代組版 Typst 数式エクスポート（`--typst` / `--format typst`）
+Markdown や Typst ドキュメントへ貼り付け可能な Typst 数式モード記法（`$ ... $`）で出力します。分数・平方根・n乗根・行列・複素数・多項式などを Typst の簡潔な構文に正準変換します。
+
+```bash
+ihd --typst "1/2 + sqrt(2)/2"
+# 出力: $1 / 2 + sqrt(2) / 2$
+
+ihd --format typst "[[1, 2], [3, 4]]"
+# 出力: $mat(1, 2; 3, 4)$
+```
+
+エクスポートされる数式は GitHub Actions CI 上で Typst コンパイラにより自動コンパイル検証されています。
+
 ---
 
 ### 構文・演算子・関数リファレンス
@@ -566,6 +579,19 @@ Protects against runaway CAS loops (`table`, `for`, `product`) without hindering
 - **Arbitrary-Precision (`math/big.Int`)**: Step counters and thresholds are managed via `big.Int` to prevent integer overflow across 32-bit and 64-bit architectures.
 - **CLI Flags & REPL Commands**: Configurable per-run via `--warn-loop <N>` and `--max-loop <N>`, or interactively inside REPL via `warn-loop <N>`, `max-loop <N>`, and `config loop` commands with persistence in `~/.ihd/config.json`.
 
+#### 6. Modern Typesetting Typst Math Export (`--typst` / `--format typst`)
+Exports mathematical expressions directly into Typst math mode syntax (`$ ... $`) ready for technical documentation. Canonicalizes fractions, radicals, n-th roots, matrices, complex numbers, and polynomials into Typst-native representations.
+
+```bash
+ihd --typst "1/2 + sqrt(2)/2"
+# Output: $1 / 2 + sqrt(2) / 2$
+
+ihd --format typst "[[1, 2], [3, 4]]"
+# Output: $mat(1, 2; 3, 4)$
+```
+
+Exported Typst expressions are continuously validated and compiled via Typst compiler in GitHub Actions CI.
+
 ---
 
 ### Syntax & Functions Reference
@@ -609,6 +635,8 @@ Protects against runaway CAS loops (`table`, `for`, `product`) without hindering
 | `--ascii`            | Output using standard ASCII strings (`sqrt`, `pi`) instead of Unicode symbols.<br>`ihd --ascii "sqrt(2) + pi"` $\to$ `sqrt(2) + pi`               |
 | `--approx`           | Display approximate floating-point decimal value alongside the exact form.<br>`ihd --approx "sqrt(2)"` $\to$ `√2 (≈ 1.4142135623730951)`          |
 | `--latex`            | Output expression in LaTeX format (`$$ ... $$`) ready to paste into papers.<br>`ihd --latex "1/2 + sqrt(2)"` $\to$ `$$ \frac{1}{2} + \sqrt{2} $$` |
+| `--typst`            | Output expression in Typst math mode format (`$ ... $`).<br>`ihd --typst "1/2 + sqrt(2)"` $\to$ `$1 / 2 + sqrt(2)$`                                |
+| `--format <fmt>`     | Specify output format (`typst`, `latex`, `ascii`, `pretty`).<br>`ihd --format typst "[[1, 2], [3, 4]]"` $\to$ `$mat(1, 2; 3, 4)$`                 |
 | `--pretty`           | Output expression in multi-line 2D pretty-printed Unicode formatting.<br>`ihd --pretty "1/2 + sqrt(2)/2"`                                         |
 | `--deg`              | Evaluate trigonometric and inverse trigonometric functions in degrees.<br>`ihd --deg "sin(30) + cos(60)"` $\to$ `1`                               |
 | `--explain`          | Displays step-by-step algebraic rewriting derivation trees (radical denesting, rationalization, factoring, differentiation rules, etc.).<br>`ihd --explain "1 / (sqrt(2) + 1)"` |
