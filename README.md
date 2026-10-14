@@ -235,7 +235,7 @@ CAS反復構文（`table`, `for`, `product`）において、長時間の計算�
 - **任意精度（`math/big.Int`）管理**: 32bit/64bit 環境での桁あふれや巨大数入力によるオーバーフローを防止します。
 - **CLIワンショット & REPL対話コマンド**: ワンショット実行時は `--warn-loop <N>`, `--max-loop <N>` フラグで指定可能。REPL内では `warn-loop <N>`, `max-loop <N>`, `config loop` コマンドで設定確認・変更・永続化（`~/.ihd/config.json`）が可能です。
 
-#### 6. 新世代組版 Typst 数式エクスポート（`--typst` / `--format typst`）
+#### 6. Typst 数式エクスポート（`--typst` / `--format typst`）
 Markdown や Typst ドキュメントへ貼り付け可能な Typst 数式モード記法（`$ ... $`）で出力します。分数・平方根・n乗根・行列・複素数・多項式などを Typst の簡潔な構文に正準変換します。
 
 ```bash
@@ -291,7 +291,7 @@ ihd --format typst "[[1, 2], [3, 4]]"
 | `--ascii`            | 数学記号（`√`, `π`）をASCII文字列（`sqrt`, `pi`）にフォールバックして出力。<br>`ihd --ascii "sqrt(2) + pi"` $\to$ `sqrt(2) + pi`                                       |
 | `--approx`           | 厳密解の横に参考用の浮動小数点小数近似値（float64、15〜17桁）を併記。<br>`ihd --approx "sqrt(2)"` $\to$ `√2 (≈ 1.4142135623730951)`                                    |
 | `--latex`            | MarkdownやTeX論文に貼り付け可能なLaTeX形式（`$$ ... $$`）で出力。<br>`ihd --latex "1/2 + sqrt(2)"` $\to$ `$$ \frac{1}{2} + \sqrt{2} $$`                                |
-| `--typst`            | 新世代組版システムTypstの数式モード記法（`$ ... $`）で出力。<br>`ihd --typst "1/2 + sqrt(2)"` $\to$ `$1 / 2 + sqrt(2)$`                                                   |
+| `--typst`            | 組版システム Typst の数式モード記法（`$ ... $`）で出力。<br>`ihd --typst "1/2 + sqrt(2)"` $\to$ `$1 / 2 + sqrt(2)$`                                                   |
 | `--format <fmt>`     | 出力フォーマットを指定（`typst`, `latex`, `ascii`, `pretty`）。<br>`ihd --format typst "[[1, 2], [3, 4]]"` $\to$ `$mat(1, 2; 3, 4)$`                                       |
 | `--pretty`           | 分数線や根号を複数行アスキーアートで組版表示する2Dプリティプリント。<br>`ihd --pretty "1/2 + sqrt(2)/2"`                                                               |
 | `--deg`              | 三角関数および逆三角関数を度数法（Degree）として解釈・計算。<br>`ihd --deg "sin(30) + cos(60)"` $\to$ `1`                                                              |
@@ -579,7 +579,7 @@ Protects against runaway CAS loops (`table`, `for`, `product`) without hindering
 - **Arbitrary-Precision (`math/big.Int`)**: Step counters and thresholds are managed via `big.Int` to prevent integer overflow across 32-bit and 64-bit architectures.
 - **CLI Flags & REPL Commands**: Configurable per-run via `--warn-loop <N>` and `--max-loop <N>`, or interactively inside REPL via `warn-loop <N>`, `max-loop <N>`, and `config loop` commands with persistence in `~/.ihd/config.json`.
 
-#### 6. Modern Typesetting Typst Math Export (`--typst` / `--format typst`)
+#### 6. Typst Math Export (`--typst` / `--format typst`)
 Exports mathematical expressions directly into Typst math mode syntax (`$ ... $`) ready for technical documentation. Canonicalizes fractions, radicals, n-th roots, matrices, complex numbers, and polynomials into Typst-native representations.
 
 ```bash
