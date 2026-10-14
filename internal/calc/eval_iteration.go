@@ -74,6 +74,7 @@ func handleTable(args []Node, env *Env) (Node, error) {
 
 	elements := make([]Node, 0)
 	fsm := NewIterationFSM(v.Name, start, end, step, env)
+	fsm.SetLimits(env.GetIterationLimits())
 	err = fsm.Run(func(curr *big.Rat) (bool, error) {
 		val, err := EvalWithEnv(expr, env)
 		if err != nil {
@@ -115,6 +116,7 @@ func handleProduct(args []Node, env *Env) (Node, error) {
 
 	acc := Node(mustRational(1, 1))
 	fsm := NewIterationFSM(v.Name, start, end, step, env)
+	fsm.SetLimits(env.GetIterationLimits())
 	err = fsm.Run(func(curr *big.Rat) (bool, error) {
 		val, err := EvalWithEnv(expr, env)
 		if err != nil {
@@ -173,6 +175,7 @@ func handleFor(args []Node, env *Env) (Node, error) {
 
 	lastRes := Node(mustRational(0, 1))
 	fsm := NewIterationFSM(v.Name, start, end, step, env)
+	fsm.SetLimits(env.GetIterationLimits())
 	err = fsm.Run(func(curr *big.Rat) (bool, error) {
 		val, err := EvalWithEnv(bodyNode, env)
 		if err != nil {

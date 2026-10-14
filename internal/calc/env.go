@@ -2,15 +2,21 @@ package calc
 
 import (
 	"fmt"
+	"io"
+	"math/big"
+	"os"
 	"sync"
 )
 
 // Env represents a symbol table mapping variable names to AST nodes and assumptions.
 type Env struct {
-	mu          sync.RWMutex
-	vars        map[string]Node
-	assumptions *AssumptionStore
-	LastCert    *VerificationCertificate
+	mu             sync.RWMutex
+	vars           map[string]Node
+	assumptions    *AssumptionStore
+	LastCert       *VerificationCertificate
+	WarnIterations *big.Int
+	MaxIterations  *big.Int
+	WarnWriter     io.Writer
 }
 
 // NewEnv creates a new, empty Env instance.
@@ -18,6 +24,7 @@ func NewEnv() *Env {
 	return &Env{
 		vars:        make(map[string]Node),
 		assumptions: NewAssumptionStore(),
+		WarnWriter:  os.Stderr,
 	}
 }
 
@@ -32,6 +39,40 @@ func (e *Env) Assumptions() *AssumptionStore {
 		e.assumptions = NewAssumptionStore()
 	}
 	return e.assumptions
+}
+
+// SetIterationLimits sets loop warning/max limits and warning writer on this environment.
+func (e *Env) SetIterationLimits(warnLimit, maxLimit *big.Int, warnWriter io.Writer) {
+	if e == nil {
+		return
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if warnLimit != nil {
+		e.WarnIterations = new(big.Int).Set(warnLimit)
+	}
+	if maxLimit != nil {
+		e.MaxIterations = new(big.Int).Set(maxLimit)
+	}
+	if warnWriter != nil {
+		e.WarnWriter = warnWriter
+	}
+}
+
+// GetIterationLimits returns loop warning/max limits and warning writer, falling back to defaults if not set.
+func (e *Env) GetIterationLimits() (*big.Int, *big.Int, io.Writer) {
+	if e == nil {
+		return big.NewInt(100000), big.NewInt(-1), os.Stderr
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	warn := e.WarnIterations
+	max := e.MaxIterations
+	writer := e.WarnWriter
+	if writer == nil {
+		writer = os.Stderr
+	}
+	return warn, max, writer
 }
 
 // IsPositive checks if variable name has positive assumption.
@@ -194,5 +235,12 @@ func (e *Env) Clone() *Env {
 	if e.assumptions != nil {
 		copied.assumptions = e.assumptions.Clone()
 	}
+	if e.WarnIterations != nil {
+		copied.WarnIterations = new(big.Int).Set(e.WarnIterations)
+	}
+	if e.MaxIterations != nil {
+		copied.MaxIterations = new(big.Int).Set(e.MaxIterations)
+	}
+	copied.WarnWriter = e.WarnWriter
 	return copied
 }

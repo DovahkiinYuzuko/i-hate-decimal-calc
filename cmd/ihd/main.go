@@ -37,6 +37,8 @@ type runOptions struct {
 	intervalEps   string
 	noColor       bool
 	theme         string
+	warnLoop      *big.Int
+	maxLoop       *big.Int
 }
 
 func run(args []string, in io.Reader, out, errOut io.Writer) int {
@@ -55,6 +57,30 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 			continue
 		}
 		if strings.HasPrefix(a, "-lang=") || strings.HasPrefix(a, "--lang=") {
+			flagArgs = append(flagArgs, a)
+			continue
+		}
+		if a == "-warn-loop" || a == "--warn-loop" {
+			flagArgs = append(flagArgs, a)
+			if i+1 < len(args) {
+				i++
+				flagArgs = append(flagArgs, args[i])
+			}
+			continue
+		}
+		if strings.HasPrefix(a, "-warn-loop=") || strings.HasPrefix(a, "--warn-loop=") {
+			flagArgs = append(flagArgs, a)
+			continue
+		}
+		if a == "-max-loop" || a == "--max-loop" {
+			flagArgs = append(flagArgs, a)
+			if i+1 < len(args) {
+				i++
+				flagArgs = append(flagArgs, args[i])
+			}
+			continue
+		}
+		if strings.HasPrefix(a, "-max-loop=") || strings.HasPrefix(a, "--max-loop=") {
 			flagArgs = append(flagArgs, a)
 			continue
 		}
@@ -162,6 +188,8 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 	intervalEpsFlag := fs.String("interval-eps", "", i18n.T("cli.flag_interval"))
 	noColorFlag := fs.Bool("no-color", false, i18n.T("cli.flag_no_color"))
 	themeFlag := fs.String("theme", "", i18n.T("cli.flag_theme"))
+	warnLoopFlag := fs.String("warn-loop", "", i18n.T("cli.flag_warn_loop"))
+	maxLoopFlag := fs.String("max-loop", "", i18n.T("cli.flag_max_loop"))
 	versionFlag := fs.Bool("version", false, i18n.T("cli.flag_version"))
 	fs.BoolVar(versionFlag, "v", false, i18n.T("cli.flag_version"))
 	noUpdateCheckFlag := fs.Bool("no-update-check", false, i18n.T("cli.flag_no_update_check"))
@@ -177,6 +205,19 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 	if *langFlag != "" {
 		_ = i18n.Init(*langFlag)
 		_ = i18n.SaveConfigLocale(*langFlag)
+	}
+
+	var warnLoopBig *big.Int
+	if *warnLoopFlag != "" {
+		if n, ok := new(big.Int).SetString(*warnLoopFlag, 10); ok {
+			warnLoopBig = n
+		}
+	}
+	var maxLoopBig *big.Int
+	if *maxLoopFlag != "" {
+		if n, ok := new(big.Int).SetString(*maxLoopFlag, 10); ok {
+			maxLoopBig = n
+		}
 	}
 
 	if *helpFlag {
@@ -216,6 +257,8 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 		intervalEps:   *intervalEpsFlag,
 		noColor:       *noColorFlag,
 		theme:         *themeFlag,
+		warnLoop:      warnLoopBig,
+		maxLoop:       maxLoopBig,
 	}
 
 	if ro.replayFile != "" {
@@ -267,10 +310,15 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 		return runREPL(in, out, errOut, ro)
 	}
 
-	// Pipe / redirect mode: process line by line
+	// Pipe / redirect mode: process line by line with buffered writer
+	bufOut := bufio.NewWriterSize(out, 64*1024)
+	defer bufOut.Flush()
+
 	scanner := bufio.NewScanner(in)
 	hadError := false
 	env := calc.NewEnv()
+	ensureEnvIterationLimits(env, ro, errOut)
+
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" || strings.HasPrefix(line, "#") {
@@ -280,7 +328,10 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 			break
 		}
 		if strings.EqualFold(line, "vars") {
-			printVars(env, ro, out)
+			printVars(env, ro, bufOut)
+			continue
+		}
+		if handleREPLCommand(line, env, ro, bufOut) {
 			continue
 		}
 		lowerLine := strings.ToLower(line)
@@ -293,23 +344,23 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 			if ro.theme != "" {
 				currentTheme = ro.theme
 			}
-			fmt.Fprintf(out, i18n.T("cli.repl_theme_current")+"\n", currentTheme)
+			fmt.Fprintf(bufOut, i18n.T("cli.repl_theme_current")+"\n", currentTheme)
 			continue
 		}
 		if strings.HasPrefix(lowerLine, "theme ") {
 			target := strings.TrimSpace(lowerLine[6:])
 			if target == "dark" || target == "light" || target == "none" {
 				_ = i18n.SaveConfigTheme(target)
-				fmt.Fprintf(out, i18n.T("cli.repl_theme_set")+"\n", target)
+				fmt.Fprintf(bufOut, i18n.T("cli.repl_theme_set")+"\n", target)
 			} else {
-				fmt.Fprintln(out, i18n.T("cli.repl_theme_invalid"))
+				fmt.Fprintln(bufOut, i18n.T("cli.repl_theme_invalid"))
 			}
 			continue
 		}
 		if lowerLine == "highlight" || lowerLine == "color" {
 			cfg, _ := i18n.LoadConfig()
 			if (cfg != nil && cfg.SyntaxHighlight != nil && !*cfg.SyntaxHighlight) || ro.noColor {
-				fmt.Fprintln(out, i18n.T("cli.repl_highlight_status_off"))
+				fmt.Fprintln(bufOut, i18n.T("cli.repl_highlight_status_off"))
 			} else {
 				currentTheme := "dark"
 				if cfg != nil && cfg.Theme != "" {
@@ -318,22 +369,22 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 				if ro.theme != "" {
 					currentTheme = ro.theme
 				}
-				fmt.Fprintf(out, i18n.T("cli.repl_highlight_status_on")+"\n", currentTheme)
+				fmt.Fprintf(bufOut, i18n.T("cli.repl_highlight_status_on")+"\n", currentTheme)
 			}
 			continue
 		}
 		if lowerLine == "highlight on" || lowerLine == "color on" {
 			_ = i18n.SaveConfigHighlight(true)
-			fmt.Fprintln(out, i18n.T("cli.repl_highlight_on"))
+			fmt.Fprintln(bufOut, i18n.T("cli.repl_highlight_on"))
 			continue
 		}
 		if lowerLine == "highlight off" || lowerLine == "color off" {
 			_ = i18n.SaveConfigHighlight(false)
-			fmt.Fprintln(out, i18n.T("cli.repl_highlight_off"))
+			fmt.Fprintln(bufOut, i18n.T("cli.repl_highlight_off"))
 			continue
 		}
 
-		if err := evaluateLineWithEnv(line, ro, env, out, errOut); err != nil {
+		if err := evaluateLineWithEnv(line, ro, env, bufOut, errOut); err != nil {
 			hadError = true
 		}
 	}
@@ -439,12 +490,34 @@ func outputNode(out io.Writer, node calc.Node, ro runOptions) error {
 	return bw.Flush()
 }
 
+func ensureEnvIterationLimits(env *calc.Env, ro runOptions, errOut io.Writer) {
+	currentWarn, currentMax, _ := env.GetIterationLimits()
+	if currentWarn == nil && currentMax == nil {
+		cfg, _ := i18n.LoadConfig()
+		warn := ro.warnLoop
+		if warn == nil && cfg != nil {
+			warn = cfg.GetWarnIterationsBig()
+		}
+		max := ro.maxLoop
+		if max == nil && cfg != nil {
+			max = cfg.GetMaxIterationsBig()
+		}
+		env.SetIterationLimits(warn, max, errOut)
+	} else {
+		_, _, w := env.GetIterationLimits()
+		if w == nil {
+			env.SetIterationLimits(currentWarn, currentMax, errOut)
+		}
+	}
+}
+
 func evaluateLine(line string, ro runOptions, out, errOut io.Writer) error {
 	env := calc.NewEnv()
 	return evaluateLineWithEnv(line, ro, env, out, errOut)
 }
 
 func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut io.Writer) error {
+	ensureEnvIterationLimits(env, ro, errOut)
 	lowerLine := strings.ToLower(line)
 	if strings.HasPrefix(lowerLine, "explain ") || strings.HasPrefix(lowerLine, "steps ") {
 		parts := strings.SplitN(line, " ", 2)
@@ -635,6 +708,7 @@ func runScriptFile(filePath string, ro runOptions, out, errOut io.Writer) int {
 
 	scanner := bufio.NewScanner(file)
 	env := calc.NewEnv()
+	ensureEnvIterationLimits(env, ro, errOut)
 	lineNum := 0
 	hadError := false
 
