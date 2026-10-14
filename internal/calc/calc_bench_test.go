@@ -136,3 +136,36 @@ func BenchmarkPlotter(b *testing.B) {
 		}
 	}
 }
+
+// BenchmarkTableParallel measures parallel table evaluation across CPU worker pool.
+func BenchmarkTableParallel(b *testing.B) {
+	expr, err := Parse("table(k^2, k, 1, 500)")
+	if err != nil {
+		b.Fatalf("failed to parse: %v", err)
+	}
+
+	b.ResetTimer()
+	for b.Loop() {
+		_, err := Eval(expr)
+		if err != nil {
+			b.Fatalf("eval error: %v", err)
+		}
+	}
+}
+
+// BenchmarkProductBinaryTreeNTT measures product evaluation with divide-and-conquer NTT.
+func BenchmarkProductBinaryTreeNTT(b *testing.B) {
+	expr, err := Parse("product(k, k, 1, 500)")
+	if err != nil {
+		b.Fatalf("failed to parse: %v", err)
+	}
+
+	b.ResetTimer()
+	for b.Loop() {
+		_, err := Eval(expr)
+		if err != nil {
+			b.Fatalf("eval error: %v", err)
+		}
+	}
+}
+

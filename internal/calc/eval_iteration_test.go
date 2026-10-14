@@ -230,3 +230,122 @@ func TestEvalIteration_For_StressFastAccumulation(t *testing.T) {
 		t.Errorf("stress for loop expected 10000, got %s", res.String())
 	}
 }
+
+func TestEvalIteration_Product_BinaryTreeNTT(t *testing.T) {
+	// 1. Compare product(k, k, 1, 500) with 500!
+	prodNode, err := EvalString("product(k, k, 1, 500)")
+	if err != nil {
+		t.Fatalf("unexpected error in product: %v", err)
+	}
+	factNode, err := EvalString("500!")
+	if err != nil {
+		t.Fatalf("unexpected error in 500!: %v", err)
+	}
+	if prodNode.String() != factNode.String() {
+		t.Errorf("product(k, k, 1, 500) != 500!")
+	}
+
+	// 2. Telescoping product with rational reduction
+	telNode, err := EvalString("product(k / (k + 2), k, 1, 100)")
+	if err != nil {
+		t.Fatalf("unexpected error in telescoping product: %v", err)
+	}
+	// Expected: 2 / (101 * 102) = 1 / 5151
+	if telNode.String() != "1/5151" {
+		t.Errorf("expected 1/5151, got %s", telNode.String())
+	}
+
+	// 3. Symbolic product
+	symNode, err := EvalString("product(2 * x, k, 1, 4)")
+	if err != nil {
+		t.Fatalf("unexpected error in symbolic product: %v", err)
+	}
+	if symNode.String() != "16 * x^4" {
+		t.Errorf("expected 16 * x^4, got %s", symNode.String())
+	}
+
+	// 4. Large product triggering NTT (> 1024 bits in intermediate and final product)
+	nttNode, err := EvalString("product(k, k, 1, 1000)")
+	if err != nil {
+		t.Fatalf("unexpected error in 1000 product: %v", err)
+	}
+	fact1000, err := EvalString("1000!")
+	if err != nil {
+		t.Fatalf("unexpected error in 1000!: %v", err)
+	}
+	if nttNode.String() != fact1000.String() {
+		t.Errorf("product(k, k, 1, 1000) != 1000!")
+	}
+}
+
+func TestEvalIteration_Table_Parallel(t *testing.T) {
+	// Parallel table evaluation with > 16 elements
+	node, err := EvalString("table(k^2, k, 1, 50)")
+	if err != nil {
+		t.Fatalf("unexpected error in parallel table: %v", err)
+	}
+	list, ok := node.(*ListNode)
+	if !ok {
+		t.Fatalf("expected ListNode, got %T", node)
+	}
+	if len(list.Elements) != 50 {
+		t.Fatalf("expected 50 elements, got %d", len(list.Elements))
+	}
+	// Verify exact ordering
+	if list.Elements[0].String() != "1" {
+		t.Errorf("element 0: got %s, expected 1", list.Elements[0].String())
+	}
+	if list.Elements[49].String() != "2500" {
+		t.Errorf("element 49: got %s, expected 2500", list.Elements[49].String())
+	}
+
+	// Non-trivial factor table in parallel
+	nodeFactor, err := EvalString("table(factor(k^2 - 1), k, 2, 20)")
+	if err != nil {
+		t.Fatalf("unexpected error in factor table: %v", err)
+	}
+	listFactor, ok := nodeFactor.(*ListNode)
+	if !ok || len(listFactor.Elements) != 19 {
+		t.Fatalf("expected 19 elements, got %v", nodeFactor)
+	}
+	// k=2: factor(3) -> 3
+	if listFactor.Elements[0].String() != "3" {
+		t.Errorf("k=2: got %s, expected 3", listFactor.Elements[0].String())
+	}
+	// k=3: factor(8) -> 2^3
+	if listFactor.Elements[1].String() != "2^3" {
+		t.Errorf("k=3: got %s, expected 2^3", listFactor.Elements[1].String())
+	}
+}
+
+func TestEvalIteration_Table_PureExpressionCheck(t *testing.T) {
+	// Pure expression
+	pureExpr, _ := Parse("k^2 + 2*k + 1")
+	if !isPureExpression(pureExpr) {
+		t.Errorf("expected k^2 + 2*k + 1 to be pure")
+	}
+
+	// Impure: assignment
+	impureAssign, _ := Parse("s = s + k")
+	if isPureExpression(impureAssign) {
+		t.Errorf("expected s = s + k to be impure")
+	}
+
+	// Impure table should run sequentially and persist side effects
+	env := NewEnv()
+	env.Set("s", mustRational(0, 1))
+	res, err := EvalStringWithEnv("table(s = s + k, k, 1, 20)", env)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	list, ok := res.(*ListNode)
+	if !ok || len(list.Elements) != 20 {
+		t.Fatalf("expected 20 elements, got %v", res)
+	}
+	sVal, _ := env.Get("s")
+	if sVal.String() != "210" { // sum(1..20) = 210
+		t.Errorf("expected side effect accumulation to be 210, got %s", sVal.String())
+	}
+}
+
+
