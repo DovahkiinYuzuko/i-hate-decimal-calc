@@ -331,7 +331,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 			printVars(env, ro, bufOut)
 			continue
 		}
-		if handleREPLCommand(line, env, ro, bufOut) {
+		if handleREPLCommand(line, env, bufOut) {
 			continue
 		}
 		lowerLine := strings.ToLower(line)

@@ -103,7 +103,7 @@ func runREPL(in io.Reader, out, errOut io.Writer, ro runOptions) int {
 			continue
 		}
 
-		if handleREPLCommand(line, env, ro, out) {
+		if handleREPLCommand(line, env, out) {
 			continue
 		}
 
@@ -194,7 +194,7 @@ func runScannerREPL(in io.Reader, out, errOut io.Writer, ro runOptions, env *cal
 			continue
 		}
 
-		if handleREPLCommand(line, env, ro, out) {
+		if handleREPLCommand(line, env, out) {
 			continue
 		}
 
@@ -265,7 +265,7 @@ func printVars(env *calc.Env, ro runOptions, out io.Writer) {
 	}
 }
 
-func handleREPLCommand(line string, env *calc.Env, ro runOptions, out io.Writer) bool {
+func handleREPLCommand(line string, env *calc.Env, out io.Writer) bool {
 	lowerLine := strings.ToLower(line)
 	if lowerLine == "config loop" || lowerLine == "loop" {
 		warnBig, maxBig, _ := env.GetIterationLimits()
