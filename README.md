@@ -12,15 +12,15 @@
 
 ## 日本語
 
-### なぜ ihd なのか？（小数の完全撲滅）
+### なぜ ihd なのか？（小数の排除と厳密代数計算）
 
 一般的なプログラミング言語や関数電卓では、小数を扱う際に `float64` などの浮動小数点数を使用するため、不可避の丸め誤差が生じます。また、無理数や超越数も適当な桁数で丸められてしまいます。
 
-`ihd`（i-hate-decimal-calc）は、**「小数の存在を一切許さない」** という強い思想のもと設計された、コマンドライン向けの完全厳密数式処理システム（CAS）電卓です。入力された小数は字句解析の段階で即座に任意精度有理数（`big.Rat`）へ変換され、平方根・三角関数・対数・超越数・虚数単位はシンボルノードとして保持され、代数的簡約ルールによって厳密な形式のまま計算されます。
+`ihd`（i-hate-decimal-calc）は、**「小数の存在を一切許さない」** という強い思想のもと設計された、コマンドライン向けの厳密数式処理システム（CAS）電卓です。入力された小数は字句解析の段階で即座に任意精度有理数（`big.Rat`）へ変換され、平方根・三角関数・対数・超越数・虚数単位はシンボルノードとして保持され、代数的簡約ルールによって厳密な形式のまま計算されます。
 
-| 入力数式              | 一般的な電卓・言語（浮動小数点数） | `ihd`（完全厳密計算） | 簡約・処理内容                               |
-| :-------------------- | :--------------------------------- | :-------------------- | :------------------------------------------- |
-| `0.1 + 0.2`           | `0.30000000000000004`              | `3/10`                | 誤差ゼロの完全有理数約分                     |
+| 入力数式              | 一般的な電卓・言語（浮動小数点数） | `ihd`（厳密計算） | 簡約・処理内容                               |
+| :-------------------- | :--------------------------------- | :---------------- | :------------------------------------------- |
+| `0.1 + 0.2`           | `0.30000000000000004`              | `3/10`            | 誤差ゼロの有理数約分                         |
 | `0.(3)`               | `0.3333333333333333`               | `1/3`                 | 循環小数をFSM字句解析により厳密分数化        |
 | `sqrt(8)`             | `2.8284271247461903`               | `2*√2`                | 平方因子の自動くくり出し                     |
 | `sqrt(5 + 2*sqrt(6))` | `3.1462643699419726`               | `√2 + √3`             | Borodin (1985) 法による二重根号の自動分解    |
@@ -231,7 +231,7 @@ ihd "plot(sin(x), [-pi, pi])"
 CAS反復構文（`table`, `for`, `product`）において、長時間の計算ループによる意図しない暴走を防止しつつ、大量サンプリングやモンテカルロ計算を阻害しないハイブリッド安全機構を搭載しています。
 - **非破壊警告**: 警告閾値（デフォルト: 100,000ステップ）を超過した際、パイプライン（標準出力）を汚染せず `os.Stderr` へ一度だけ警告を発出し、計算を中断せず続行します。
 - **最大安全上限ガード**: 指定した最大上限（デフォルト: 無制限）に到達した場合は安全に強制遮断します。
-- **任意精度（`math/big.Int`）管理**: 32bit/64bit 環境での桁あふれや巨大数入力によるオーバーフローを完全撲滅しています。
+- **任意精度（`math/big.Int`）管理**: 32bit/64bit 環境での桁あふれや巨大数入力によるオーバーフローを防止します。
 - **CLIワンショット & REPL対話コマンド**: ワンショット実行時は `--warn-loop <N>`, `--max-loop <N>` フラグで指定可能。REPL内では `warn-loop <N>`, `max-loop <N>`, `config loop` コマンドで設定確認・変更・永続化（`~/.ihd/config.json`）が可能です。
 
 ---
@@ -242,7 +242,7 @@ CAS反復構文（`table`, `for`, `product`）において、長時間の計算�
 
 > [!TIP]
 > 演算子と優先順位、予約定数、およびカテゴリ別全関数の詳細仕様・書式・使用例は専用リファレンスに網羅されています。  
-> **[完全構文・演算子・関数リファレンス (Japanese Edition)](docs/references/reference.ja.md)**
+> **[構文・演算子・関数詳細リファレンス (Japanese Edition)](docs/references/reference.ja.md)**
 
 #### 主なカテゴリと代表関数
 - **基本代数・数論・方程式**: `sqrt`, `cbrt`, `expand`, `factor`, `apart`, `together`, `abs`, `gcd`, `lcm`, `mod`, `inv_mod`, `crt`, `totient`, `is_prime`, `cfrac`, `from_cfrac`, `rand`, `fib`, `digit_count`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `sturm`, `root_count`, `isolate_roots`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `to_primitive_element`, `primitive_element`, `padic_val`, `padic_norm`, `padic_expand`, `solve`, `solve_diophantine`, `pell_solve`
@@ -262,7 +262,7 @@ CAS反復構文（`table`, `for`, `product`）において、長時間の計算�
 
 > [!NOTE]
 > **代数・超越方程式ソルバー、線形代数、楕円曲線2降下法、およびクリフォード代数・量子回路検証**  
-> `solve` は1次・2次・3次・4次（Ferrari法）の代数方程式の根号完全閉形式解に加え、ランバートのW関数（`lambert_w`）を用いた初等超越方程式（$x e^x = c$, $x + \ln x = c$, $x^x = c$ 等）の閉形式求解をサポートしています。また、`integrate` はガウス積分 $\int e^{-a x^2} dx$ の誤差関数 `erf` による閉形式化を完備し、線形代数の `eigenvals` は最大 4×4 行列の特性方程式から厳密固有値を導出可能です。さらに、`clifford` は直交対角計量 $(p, q, r)$ の幾何積・外積・縮約・双対ブレードを代数展開し、`quantum_equiv` は小数を一切排除した二進円分環 $\mathbb{Z}[1/\sqrt{2}, i]$ 上で Clifford+T 量子回路の厳密等価性判定および反例基底状態の抽出を実行します。有理数体上の楕円曲線に対しては、有理2等分点を用いた2降下法（2-isogeny descent）によりセルマー群の $\mathbb{F}_2$ 次元を解析し、モーデル・ヴェイユ群の階数（Rank）上界（`ec_rank_bound`）および無限位数の独立有理点生成元（`ec_generators`）の決定論的算定を提供します。
+> `solve` は1次・2次・3次・4次（Ferrari法）の代数方程式の根号による閉形式解に加え、ランバートのW関数（`lambert_w`）を用いた初等超越方程式（$x e^x = c$, $x + \ln x = c$, $x^x = c$ 等）の閉形式求解をサポートしています。また、`integrate` はガウス積分 $\int e^{-a x^2} dx$ の誤差関数 `erf` による閉形式化を完備し、線形代数の `eigenvals` は最大 4×4 行列の特性方程式から厳密固有値を導出可能です。さらに、`clifford` は直交対角計量 $(p, q, r)$ の幾何積・外積・縮約・双対ブレードを代数展開し、`quantum_equiv` は小数を一切排除した二進円分環 $\mathbb{Z}[1/\sqrt{2}, i]$ 上で Clifford+T 量子回路の厳密等価性判定および反例基底状態の抽出を実行します。有理数体上の楕円曲線に対しては、有理2等分点を用いた2降下法（2-isogeny descent）によりセルマー群の $\mathbb{F}_2$ 次元を解析し、モーデル・ヴェイユ群の階数（Rank）上界（`ec_rank_bound`）および無限位数の独立有理点生成元（`ec_generators`）の決定論的算定を提供します。
 
 ---
 
@@ -271,7 +271,9 @@ CAS反復構文（`table`, `for`, `product`）において、長時間の計算�
 | オプション           | 説明・使用例                                                                                                                                                           |
 | :------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--theme <dark\|light\|none>` | REPLのカラーテーマを指定（`dark`: 暗め背景、`light`: 明るめ背景、`none`: ハイライト無効）。設定は `~/.ihd/config.json` に永続化。<br>`ihd --theme light`                 |
-| `--no-color`         | ANSIエスケープシーケンスによるカラー出力を完全に無効化（環境変数 `NO_COLOR=1` にも準拠）。                                                                             |
+| `--no-color`         | ANSIエスケープシーケンスによるカラー出力を無効化（環境変数 `NO_COLOR=1` にも準拠）。                                                                                 |
+| `--warn-loop <N>`    | 反復構文（`table`, `for`, `product`）の非破壊警告ステップ数を指定（デフォルト: 100000）。<br>`ihd --warn-loop 500 "table(k, k, 1, 1000)"`                                    |
+| `--max-loop <N>`     | 反復構文の最大安全上限ステップ数を指定（超過時はエラー終了、デフォルト: -1:無制限）。<br>`ihd --max-loop 10000 "table(k, k, 1, 20000)"`                                |
 | `--ascii`            | 数学記号（`√`, `π`）をASCII文字列（`sqrt`, `pi`）にフォールバックして出力。<br>`ihd --ascii "sqrt(2) + pi"` $\to$ `sqrt(2) + pi`                                       |
 | `--approx`           | 厳密解の横に参考用の浮動小数点小数近似値（float64、15〜17桁）を併記。<br>`ihd --approx "sqrt(2)"` $\to$ `√2 (≈ 1.4142135623730951)`                                    |
 | `--latex`            | MarkdownやTeX論文に貼り付け可能なLaTeX形式（`$$ ... $$`）で出力。<br>`ihd --latex "1/2 + sqrt(2)"` $\to$ `$$ \frac{1}{2} + \sqrt{2} $$`                                |
@@ -339,7 +341,7 @@ pwsh exam/exam.ps1
 
 ## English
 
-### Why ihd? (Total Elimination of Decimals)
+### Why ihd? (Elimination of Decimals & Exact Algebraic Computation)
 
 Standard calculators and programming languages rely on `float64` floating-point representations, inevitably leading to rounding errors and truncating irrational or transcendental numbers into arbitrary decimals.
 
@@ -569,7 +571,7 @@ Protects against runaway CAS loops (`table`, `for`, `product`) without hindering
 
 > [!TIP]
 > For complete operator precedence, constants, and exhaustive function specifications with mathematical examples:  
-> **[Complete Syntax, Operators & Functions Reference (English Edition)](docs/references/reference.en.md)**
+> **[Syntax, Operators & Functions Comprehensive Reference (English Edition)](docs/references/reference.en.md)**
 
 #### Major Categories & Representative Functions
 - **Basic Algebra, Number Theory & Equations**: `sqrt`, `cbrt`, `expand`, `factor`, `apart`, `together`, `abs`, `gcd`, `lcm`, `mod`, `inv_mod`, `crt`, `totient`, `is_prime`, `cfrac`, `from_cfrac`, `rand`, `fib`, `digit_count`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `sturm`, `root_count`, `isolate_roots`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `to_primitive_element`, `primitive_element`, `padic_val`, `padic_norm`, `padic_expand`, `solve`, `solve_diophantine`, `pell_solve`
@@ -599,6 +601,8 @@ Protects against runaway CAS loops (`table`, `for`, `product`) without hindering
 | :------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `--theme <dark\|light\|none>` | Specify REPL color theme (`dark`, `light`, or `none`). Persisted to `~/.ihd/config.json`.<br>`ihd --theme light`                                  |
 | `--no-color`         | Disables all ANSI terminal colors and escape sequences (respects `NO_COLOR=1`).                                                                   |
+| `--warn-loop <N>`    | Step threshold before emitting non-destructive warning for loops (`table`, `for`, `product`, default: 100000).<br>`ihd --warn-loop 500 "table(k, k, 1, 1000)"` |
+| `--max-loop <N>`     | Maximum iteration limit for loops before halting with an error (default: -1: unlimited).<br>`ihd --max-loop 10000 "table(k, k, 1, 20000)"`     |
 | `--ascii`            | Output using standard ASCII strings (`sqrt`, `pi`) instead of Unicode symbols.<br>`ihd --ascii "sqrt(2) + pi"` $\to$ `sqrt(2) + pi`               |
 | `--approx`           | Display approximate floating-point decimal value alongside the exact form.<br>`ihd --approx "sqrt(2)"` $\to$ `√2 (≈ 1.4142135623730951)`          |
 | `--latex`            | Output expression in LaTeX format (`$$ ... $$`) ready to paste into papers.<br>`ihd --latex "1/2 + sqrt(2)"` $\to$ `$$ \frac{1}{2} + \sqrt{2} $$` |
