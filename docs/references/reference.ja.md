@@ -381,10 +381,13 @@
 | `theme light` | `theme light` | 明るめ・白背景端末向け高コントラストパレット（濃い青・マゼンタ・緑・シアンのレインボー括弧、赤数値、黒演算子）へ切り替え、永続化 |
 | `highlight` | `highlight` / `color` | 現在の構文ハイライト有効/無効ステータスを表示 |
 | `highlight on` / `off` | `highlight on` / `highlight off` | リアルタイム構文ハイライトおよびネスト深度別レインボー括弧の有効化・無効化を動的切り替え |
+| `warn-loop` | `warn-loop <N>` / `warn-loop` | 反復ループの非破壊警告ステップ数を指定・表示し、`~/.ihd/config.json` に永続化（デフォルト: 100,000） |
+| `max-loop` | `max-loop <N>` / `max-loop` | 反復ループの最大安全上限ステップ数を指定・表示し、`~/.ihd/config.json` に永続化（デフォルト: -1:無制限） |
+| `config loop` | `config loop` | 現在の反復ループ警告閾値および最大安全上限の構成値を表示 |
 | `vars` | `vars` | 現在の REPL セッション環境に束縛されている変数・定数の一覧を表示 |
 | `help` | `help` | REPL 内簡易ヘルプおよび主要コマンド一覧を表示 |
 | `exit` / `quit` | `exit` / `quit` / `Ctrl+D` | REPL セッションを終了 |
-| CLI オプション | `ihd --theme light` / `--no-color` | 起動時の初期テーマ指定および完全カラー無効化フラグ |
+| CLI オプション | `ihd --theme light` / `--no-color` / `--warn-loop <N>` / `--max-loop <N>` | 起動時のテーマ指定、カラー無効化、反復警告・最大上限指定フラグ |
 
 ---
 

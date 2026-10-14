@@ -381,10 +381,13 @@ Interactive control commands, high-contrast color themes, and real-time lexical 
 | `theme light` | `theme light` | Switches to the light-background palette (bold blue/magenta/green/cyan delimiters, red numbers, black operators), persisted to configuration |
 | `highlight` | `highlight` / `color` | Shows current syntax highlight status (enabled / disabled) |
 | `highlight on` / `off` | `highlight on` / `highlight off` | Toggles real-time lexical highlighting and nested rainbow delimiters dynamically |
+| `warn-loop` | `warn-loop <N>` / `warn-loop` | Configure and display warning threshold for iteration loops, persisted to `~/.ihd/config.json` (default: 100,000) |
+| `max-loop` | `max-loop <N>` / `max-loop` | Configure and display maximum iteration limit for loops, persisted to `~/.ihd/config.json` (default: -1: unlimited) |
+| `config loop` | `config loop` | Display current loop warning threshold and maximum iteration safety limit |
 | `vars` | `vars` | Displays all currently bound user variables in the active environment |
 | `help` | `help` | Prints concise built-in help and a summary of interactive commands |
 | `exit` / `quit` | `exit` / `quit` / `Ctrl+D` | Exits the interactive REPL session cleanly |
-| CLI Options | `ihd --theme light` / `--no-color` | CLI startup flags to set initial color theme or disable ANSI coloring completely |
+| CLI Options | `ihd --theme light` / `--no-color` / `--warn-loop <N>` / `--max-loop <N>` | CLI startup flags to set initial color theme, disable color, or set loop thresholds |
 
 ---
 
