@@ -180,7 +180,7 @@ ihd --explain "sqrt(5 + 2*sqrt(6))"
 ```
 
 #### 2. ターミナル2D数式組版プリティプリント（`--pretty`）
-分数や平方根を複数行のアスキーアートボックスモデルで美しく描画します。
+分数や平方根を複数行のアスキーアートボックスモデルで描画します。
 
 ```bash
 ihd --pretty "1/2 + sqrt(2)/2"
@@ -192,7 +192,7 @@ ihd --pretty "1/2 + sqrt(2)/2"
 ```
 
 #### 3. Braille 2×4 サブピクセル高解像度プロッタ（`plot`）
-Unicode点字文字を用いた 2×4 サブピクセル描画により、ターミナル上で美麗に関数の形状をプロットします。CASエンジンが零点や極値を自動検出し、厳密代数ラベルを軸上にピン留めします。さらに Tupper (2001) の不連続判定により漸近線の偽結合を防止します。
+Unicode点字文字を用いた 2×4 サブピクセル描画により、ターミナル上に関数の形状をプロットします。CASエンジンが零点や極値を自動検出し、厳密代数ラベルを軸上にピン留めします。さらに Tupper (2001) の不連続判定により漸近線の偽結合を防止します。
 
 ```bash
 ihd "plot(sin(x), [-pi, pi])"
@@ -249,31 +249,14 @@ ihd --format typst "[[1, 2], [3, 4]]"
 エクスポートされる数式は GitHub Actions CI 上で Typst コンパイラにより自動コンパイル検証されています。
 
 #### 7. コレクション・リスト操作 & 第一級ラムダ式
-
-Python スタイルのスライス構文（`[start:end:step]`）、有理数刻み対応の等差数列生成 `range`、第一級無名関数 `lambda`、および高階関数 `map`, `filter` をサポートしています。
+Python スタイルのスライス構文（`[start:end:step]`）、有理数刻み数列生成 `range`、第一級無名関数 `lambda`、および高階関数 `map`, `filter` をサポートしています。
 
 ```bash
-# スライス構文（インデックス参照・反転・刻み幅）
-ihd "[10, 20, 30, 40, 50][1:4]"
-# 出力: [20, 30, 40]
-
-ihd "[1, 2, 3, 4, 5][::-1]"
-# 出力: [5, 4, 3, 2, 1]
-
-# 有理数刻み range による等差数列生成
-ihd "range(0, 1, 1/4)"
-# 出力: [0, 1/4, 1/2, 3/4]
-
-# ラムダ式と高階関数 map / filter
-ihd "map(lambda(x, x^2), [1, 2, 3, 4])"
+ihd "map(lambda(x, x^2), range(1, 5))"
 # 出力: [1, 4, 9, 16]
 
-ihd "filter(lambda(x, x > 2), [1, 2, 3, 4, 5])"
-# 出力: [3, 4, 5]
-
-# 即時呼び出し (IIFE) と多引数ラムダ
-ihd "lambda(x, y, x + y)(2, 3)"
-# 出力: 5
+ihd "[10, 20, 30, 40, 50][1:4]"
+# 出力: [20, 30, 40]
 ```
 
 ---
@@ -621,31 +604,14 @@ ihd --format typst "[[1, 2], [3, 4]]"
 Exported Typst expressions are continuously validated and compiled via Typst compiler in GitHub Actions CI.
 
 #### 7. Collection Manipulation, Slicing & First-Class Lambda Expressions
-
-Supports Python-style slice syntax (`[start:end:step]`), arithmetic progression generation with rational step `range`, first-class anonymous functions `lambda`, and higher-order functions `map` and `filter`.
+Supports Python-style slice syntax (`[start:end:step]`), arithmetic progressions with rational step `range`, first-class anonymous functions `lambda`, and higher-order functions `map` and `filter`.
 
 ```bash
-# Slice syntax (indexing, reversal, step)
-ihd "[10, 20, 30, 40, 50][1:4]"
-# Output: [20, 30, 40]
-
-ihd "[1, 2, 3, 4, 5][::-1]"
-# Output: [5, 4, 3, 2, 1]
-
-# Arithmetic progressions with rational step via range
-ihd "range(0, 1, 1/4)"
-# Output: [0, 1/4, 1/2, 3/4]
-
-# Lambda expressions and higher-order map / filter
-ihd "map(lambda(x, x^2), [1, 2, 3, 4])"
+ihd "map(lambda(x, x^2), range(1, 5))"
 # Output: [1, 4, 9, 16]
 
-ihd "filter(lambda(x, x > 2), [1, 2, 3, 4, 5])"
-# Output: [3, 4, 5]
-
-# Immediately Invoked Function Expression (IIFE)
-ihd "lambda(x, y, x + y)(2, 3)"
-# Output: 5
+ihd "[10, 20, 30, 40, 50][1:4]"
+# Output: [20, 30, 40]
 ```
 
 ---
