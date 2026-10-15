@@ -248,6 +248,34 @@ ihd --format typst "[[1, 2], [3, 4]]"
 
 エクスポートされる数式は GitHub Actions CI 上で Typst コンパイラにより自動コンパイル検証されています。
 
+#### 7. コレクション・リスト操作 & 第一級ラムダ式
+
+Python スタイルのスライス構文（`[start:end:step]`）、有理数刻み対応の等差数列生成 `range`、第一級無名関数 `lambda`、および高階関数 `map`, `filter` をサポートしています。
+
+```bash
+# スライス構文（インデックス参照・反転・刻み幅）
+ihd "[10, 20, 30, 40, 50][1:4]"
+# 出力: [20, 30, 40]
+
+ihd "[1, 2, 3, 4, 5][::-1]"
+# 出力: [5, 4, 3, 2, 1]
+
+# 有理数刻み range による等差数列生成
+ihd "range(0, 1, 1/4)"
+# 出力: [0, 1/4, 1/2, 3/4]
+
+# ラムダ式と高階関数 map / filter
+ihd "map(lambda(x, x^2), [1, 2, 3, 4])"
+# 出力: [1, 4, 9, 16]
+
+ihd "filter(lambda(x, x > 2), [1, 2, 3, 4, 5])"
+# 出力: [3, 4, 5]
+
+# 即時呼び出し (IIFE) と多引数ラムダ
+ihd "lambda(x, y, x + y)(2, 3)"
+# 出力: 5
+```
+
 ---
 
 ### 構文・演算子・関数リファレンス
@@ -270,7 +298,7 @@ ihd --format typst "[[1, 2], [3, 4]]"
 - **楕円曲線代数・数論幾何・2降下法**: `ec_add`, `ec_mul`, `ec_torsion`, `ec_p_order`, `ec_p_trace`, `ec_p_add`, `ec_p_mul`, `ec_rank_bound`, `ec_generators`
 - **クリフォード代数・幾何代数 & 厳密量子回路等価性検証**: `clifford`, `clifford_wedge`, `clifford_contract`, `clifford_dual`, `quantum_equiv`, `quantum_eval`
 - **多変数多項式イデアル・可換代数**: `primary_decomposition`, `ideal_radical`, `ideal_dimension`, `ideal_intersection`, `ideal_colon`, `ideal_saturation`
-- **CAS反復制御 & 任意基数進数変換**: `table`, `product`, `for`, `to_base`, `from_base`, `bin`, `oct`, `hex`
+- **コレクション・リスト操作 & CAS反復制御**: `range`, `map`, `filter`, `lambda`, `table`, `product`, `for`, `to_base`, `from_base`, `bin`, `oct`, `hex`
 - **前提条件システム（仮定）**: `assume`, `unassume`, `assumptions`, `clear_assumptions`
 - **ビジュアル・自己検証**: `plot`, `verify`
 
@@ -592,6 +620,34 @@ ihd --format typst "[[1, 2], [3, 4]]"
 
 Exported Typst expressions are continuously validated and compiled via Typst compiler in GitHub Actions CI.
 
+#### 7. Collection Manipulation, Slicing & First-Class Lambda Expressions
+
+Supports Python-style slice syntax (`[start:end:step]`), arithmetic progression generation with rational step `range`, first-class anonymous functions `lambda`, and higher-order functions `map` and `filter`.
+
+```bash
+# Slice syntax (indexing, reversal, step)
+ihd "[10, 20, 30, 40, 50][1:4]"
+# Output: [20, 30, 40]
+
+ihd "[1, 2, 3, 4, 5][::-1]"
+# Output: [5, 4, 3, 2, 1]
+
+# Arithmetic progressions with rational step via range
+ihd "range(0, 1, 1/4)"
+# Output: [0, 1/4, 1/2, 3/4]
+
+# Lambda expressions and higher-order map / filter
+ihd "map(lambda(x, x^2), [1, 2, 3, 4])"
+# Output: [1, 4, 9, 16]
+
+ihd "filter(lambda(x, x > 2), [1, 2, 3, 4, 5])"
+# Output: [3, 4, 5]
+
+# Immediately Invoked Function Expression (IIFE)
+ihd "lambda(x, y, x + y)(2, 3)"
+# Output: 5
+```
+
 ---
 
 ### Syntax & Functions Reference
@@ -614,7 +670,7 @@ Exported Typst expressions are continuously validated and compiled via Typst com
 - **Elliptic Curves, Arithmetic Geometry & 2-Descent**: `ec_add`, `ec_mul`, `ec_torsion`, `ec_p_order`, `ec_p_trace`, `ec_p_add`, `ec_p_mul`, `ec_rank_bound`, `ec_generators`
 - **Clifford Geometric Algebra & Quantum Circuit Equivalence**: `clifford`, `clifford_wedge`, `clifford_contract`, `clifford_dual`, `quantum_equiv`, `quantum_eval`
 - **Multivariate Polynomial Ideals & Commutative Algebra**: `primary_decomposition`, `ideal_radical`, `ideal_dimension`, `ideal_intersection`, `ideal_colon`, `ideal_saturation`
-- **CAS Iteration Control & Multi-Radix Arithmetic**: `table`, `product`, `for`, `to_base`, `from_base`, `bin`, `oct`, `hex`
+- **Collection Manipulation & CAS Iteration Control**: `range`, `map`, `filter`, `lambda`, `table`, `product`, `for`, `to_base`, `from_base`, `bin`, `oct`, `hex`
 - **Symbolic Assumptions System**: `assume`, `unassume`, `assumptions`, `clear_assumptions`
 - **Visualization & Verification Tools**: `plot`, `verify`
 

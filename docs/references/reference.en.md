@@ -402,4 +402,20 @@ Interactive control commands, high-contrast color themes, and real-time lexical 
 | `ideal_colon` | `ideal_colon([x^2], x, [x])` | Computes colon ideal (quotient ideal) $I : f = \{ g \mid f g \in I \}$ by polynomial $f$. |
 | `ideal_saturation` | `ideal_saturation([x^2], x, [x])` | Computes saturation ideal $I : f^\infty$ iteratively and returns generators upon reaching stabilization index $m$. |
 
+---
+
+### 20. Collection Manipulation & First-Class Lambda Expressions
+
+Provides sequence generation, higher-order function mapping, predicate filtering, first-class lambda expressions, and array slicing.
+
+| Function / Syntax | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `range` | `range(5)` / `range(2, 6)` / `range(0, 1, 1/3)` | Generates an arithmetic sequence as a list. Syntax: `range(stop)` or `range(start, stop, [step])`. The step argument accepts integers and exact rational fractions (step = 0 yields an error) |
+| `map` | `map(sin, [0, pi/2, pi])` / `map(lambda(x, x^2), range(5))` | Applies a function or lambda expression to each element of a collection, returning a new list. Syntax: `map(fn, list)`. Protects parent environment variables using a shadow scope |
+| `filter` | `filter(is_prime, range(1, 11))` / `filter(lambda(x, x > 2), [1, 2, 3, 4])` | Extracts elements that satisfy a predicate function or boolean lambda expression. Syntax: `filter(pred, list)` |
+| `lambda` | `lambda(x, x^2)` / `lambda([x, y], x + y)` | Defines a first-class anonymous function. Syntax: `lambda(param, body)` or `lambda([p1, p2, ...], body)`. Supports immediate calls `lambda(x, x+1)(5)` and calls via bound variables `f = lambda(x, x^2); f(3)` |
+| Single Index | `list[0]`, `list[-1]` | 0-indexed element access. Negative indices denote positions from the end ($-1$ is the last element). Out-of-bounds access returns an IndexError |
+| Slice Syntax | `list[start:stop]`, `list[start:stop:step]` | Subsequence extraction conforming to CPython `PySlice_GetIndicesEx` normalization. Supports all 8 patterns (`[:]`, `[:end]`, `[start:]`, `[start:end]`, `[::step]`, `[start::step]`, `[:end:step]`, `[start:end:step]`), negative indices, negative steps, and boundary clipping (step = 0 yields an error) |
+
+
 

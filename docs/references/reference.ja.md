@@ -403,5 +403,21 @@
 | `ideal_colon` | `ideal_colon([x^2], x, [x])` | 多項式 $f$ による商イデアル（コロンイデアル） $I : f = \{ g \mid f g \in I \}$ を計算 |
 | `ideal_saturation` | `ideal_saturation([x^2], x, [x])` | 多項式 $f$ による飽和イデアル $I : f^\infty$ を逐次計算し、安定化指数 $m$ で終端した生成元リストを返却 |
 
+---
+
+### 20. コレクション・リスト操作言語拡張 & 第一級ラムダ式
+
+リスト・コレクションに対するシーケンス生成、高階関数適用、述語フィルタリング、第一級ラムダ式、およびインデックス・スライス構文を提供します。
+
+| 関数・構文 | 書式・例 | 説明 |
+| :--- | :--- | :--- |
+| `range` | `range(5)` / `range(2, 6)` / `range(0, 1, 1/3)` | 等差数列のリストを生成。引数 `range(stop)` または `range(start, stop, [step])`。step には整数および有理数分数を指定可能（step = 0 はエラー） |
+| `map` | `map(sin, [0, pi/2, pi])` / `map(lambda(x, x^2), range(5))` | コレクションの各要素に関数またはラムダ式を適用した新しいリストを返却。引数 `map(fn, list)`。走査時は親環境変数を保護するシャドウスコープを適用 |
+| `filter` | `filter(is_prime, range(1, 11))` / `filter(lambda(x, x > 2), [1, 2, 3, 4])` | 述語関数または真偽値を返すラムダ式を満たす要素のみを抽出したリストを返却。引数 `filter(pred, list)` |
+| `lambda` | `lambda(x, x^2)` / `lambda([x, y], x + y)` | 第一級無名関数（ラムダ式）を定義。引数 `lambda(param, body)` または `lambda([p1, p2, ...], body)`。即時呼び出し `lambda(x, x+1)(5)` や変数代入後の呼び出し `f = lambda(x, x^2); f(3)` に対応 |
+| 単一インデックス | `list[0]`, `list[-1]` | 0-indexed による要素取得。負のインデックスは末尾からの相対位置（$-1$ は末尾要素）。範囲外アクセス時は IndexError を送出 |
+| スライス記法 | `list[start:stop]`, `list[start:stop:step]` | CPython `PySlice_GetIndicesEx` 準拠の部分リスト抽出。全8パターン（`[:]`, `[:end]`, `[start:]`, `[start:end]`, `[::step]`, `[start::step]`, `[:end:step]`, `[start:end:step]`）に対応。負のインデックス・逆順ステップ（step < 0）および範囲外クリッピングに対応（step = 0 はエラー） |
+
+
 
 
