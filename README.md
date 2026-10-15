@@ -71,7 +71,12 @@ ihd "sqrt(2) + sqrt(3) == sqrt(5 + 2*sqrt(6))"
 # 実代数不等式の厳密解（CAD / Sturm根分離）
 ihd "solve(x^2 - 4 < 0)"
 # 出力: [[-2, 2]]
+```
 
+<details>
+<summary><b>高等数学・専門分野のワンショット計算例（超越方程式・特殊積分・幾何自動証明・群論など）</b></summary>
+
+```bash
 # 初等超越方程式の閉形式求解（Lambert W関数）
 ihd "solve(x*exp(x) == 1, x)"
 # 出力: [lambert_w(1)]
@@ -96,6 +101,8 @@ ihd "ec_p_order(1, 1, 5)"
 ihd "abelian_group_structure([[2, 4], [4, 2]])"
 # 出力: Z_2 + Z_6
 ```
+
+</details>
 
 
 #### 2. 対話モード（REPL）
@@ -167,9 +174,13 @@ ihd "１＋２×３"
 #### 1. 代数変換プロセスを可視化する途中式ツリー（`--explain`）
 分母の有理化や二重根号外し、方程式の求解、微分の適用過程などを2Dツリー形式の途中式として詳細に出力します（REPLやパイプでも `explain <式>` または `steps <式>` で実行可能）。
 
+<details>
+<summary><b>途中式ツリー実行例と出力</b></summary>
+
 ```bash
 ihd --explain "sqrt(5 + 2*sqrt(6))"
 ```
+
 ```text
 式: sqrt(5 + 2*sqrt(6))
 ├── [Step 1: 二重根号の簡約]
@@ -179,24 +190,36 @@ ihd --explain "sqrt(5 + 2*sqrt(6))"
     = √2 + √3
 ```
 
+</details>
+
 #### 2. ターミナル2D数式組版プリティプリント（`--pretty`）
 分数や平方根を複数行のアスキーアートボックスモデルで描画します。
+
+<details>
+<summary><b>ボックスモデル組版実行例と出力</b></summary>
 
 ```bash
 ihd --pretty "1/2 + sqrt(2)/2"
 ```
+
 ```text
  1     √2 
 --- + ----
  2     2  
 ```
 
+</details>
+
 #### 3. Braille 2×4 サブピクセル高解像度プロッタ（`plot`）
 Unicode点字文字を用いた 2×4 サブピクセル描画により、ターミナル上に関数の形状をプロットします。CASエンジンが零点や極値を自動検出し、厳密代数ラベルを軸上にピン留めします。さらに Tupper (2001) の不連続判定により漸近線の偽結合を防止します。
+
+<details>
+<summary><b>ターミナルプロット描画実行例と出力（アスキーアート）</b></summary>
 
 ```bash
 ihd "plot(sin(x), [-pi, pi])"
 ```
+
 ```text
     1 ┼                          │                        
       │                          │        ⣀⠤⠔⠒⠢⠤⡀         
@@ -222,6 +245,8 @@ ihd "plot(sin(x), [-pi, pi])"
 * Domain:            x ∈ [-π, π], y ∈ [-1, 1]
 ```
 
+</details>
+
 #### 4. REPL 構文ハイライト & レインボー括弧
 外部依存ライブラリを使用せず、単一レキシカル有限状態機械（FSM）により入力文字列の色分け表示を行います。
 - **ネスト深度別レインボー括弧**: 括弧 `()` および角括弧 `[]` のネスト深度（4色循環）に応じたハイライト。括弧の不整合（ミスマッチ）はエラー警告色（赤背景）で表示。
@@ -238,6 +263,9 @@ CAS反復構文（`table`, `for`, `product`）において、長時間の計算�
 #### 6. Typst 数式エクスポート（`--typst` / `--format typst`）
 Markdown や Typst ドキュメントへ貼り付け可能な Typst 数式モード記法（`$ ... $`）で出力します。分数・平方根・n乗根・行列・複素数・多項式などを Typst の簡潔な構文に正準変換します。
 
+<details>
+<summary><b>Typst 数式エクスポート実行例</b></summary>
+
 ```bash
 ihd --typst "1/2 + sqrt(2)/2"
 # 出力: $1 / 2 + sqrt(2) / 2$
@@ -246,10 +274,15 @@ ihd --format typst "[[1, 2], [3, 4]]"
 # 出力: $mat(1, 2; 3, 4)$
 ```
 
+</details>
+
 エクスポートされる数式は GitHub Actions CI 上で Typst コンパイラにより自動コンパイル検証されています。
 
 #### 7. コレクション・リスト操作 & 第一級ラムダ式
 Python スタイルのスライス構文（`[start:end:step]`）、有理数刻み数列生成 `range`、第一級無名関数 `lambda`、および高階関数 `map`, `filter` をサポートしています。
+
+<details>
+<summary><b>コレクション・リスト操作 & ラムダ式実行例</b></summary>
 
 ```bash
 ihd "map(lambda(x, x^2), range(1, 5))"
@@ -259,8 +292,13 @@ ihd "[10, 20, 30, 40, 50][1:4]"
 # 出力: [20, 30, 40]
 ```
 
+</details>
+
 #### 8. 厳密有理数ベクトル空間による物理単位計算 & 次元解析
 有理数体 $\mathbb{Q}$ 上の 7 次元ベクトル空間（SI基本7単位）に基づき、小数を一切使わずに物理単位の加減乗除、組立単位・接頭辞の厳密展開、次元整合性検証、および単位換算（`convert_unit`）を実行します。初等超越関数への有次元引数の投入は厳格に遮断され、無次元化された結果は自動的に通常数値へと縮約されます。
+
+<details>
+<summary><b>物理単位計算 & 次元解析実行例</b></summary>
 
 ```bash
 # 単位の乗除算と約分
@@ -280,6 +318,8 @@ ihd --verify "convert_unit(100 [km/h], m/s)"
 # 出力: 250/9 [m/s]
 # [VERIFIED: convert_unit(100[km * h^-1], m * s^-1) == 250/9 [m/s]]
 ```
+
+</details>
 
 ---
 
@@ -449,7 +489,12 @@ ihd "sqrt(2) + sqrt(3) == sqrt(5 + 2*sqrt(6))"
 # Real algebraic inequality solving (CAD / Sturm root isolation)
 ihd "solve(x^2 - 4 < 0)"
 # Output: [[-2, 2]]
+```
 
+<details>
+<summary><b>Advanced & Specialized One-Shot Examples (Transcendental equations, integration, automated geometry theorem proving, group theory, etc.)</b></summary>
+
+```bash
 # Elementary transcendental equation solving (Lambert W function)
 ihd "solve(x*exp(x) == 1, x)"
 # Output: [lambert_w(1)]
@@ -474,6 +519,8 @@ ihd "ec_p_order(1, 1, 5)"
 ihd "abelian_group_structure([[2, 4], [4, 2]])"
 # Output: Z_2 + Z_6
 ```
+
+</details>
 
 
 #### 2. Interactive REPL
@@ -545,9 +592,13 @@ ihd "１＋２×３"
 #### 1. Step-by-Step Derivation Trees (`--explain`)
 Displays detailed educational step-by-step algebraic rewriting trees (rationalization, radical denesting, quadratic formula, differentiation rules, etc.):
 
+<details>
+<summary><b>Step-by-step derivation tree example & output</b></summary>
+
 ```bash
 ihd --explain "sqrt(5 + 2*sqrt(6))"
 ```
+
 ```text
 式: sqrt(5 + 2*sqrt(6))
 ├── [Step 1: 二重根号の簡約]
@@ -557,24 +608,36 @@ ihd --explain "sqrt(5 + 2*sqrt(6))"
     = √2 + √3
 ```
 
+</details>
+
 #### 2. Terminal 2D Pretty Printing (`--pretty`)
 Renders fractions and square roots in multi-line ASCII/Unicode box-model typography:
+
+<details>
+<summary><b>2D box-model layout example & output</b></summary>
 
 ```bash
 ihd --pretty "1/2 + sqrt(2)/2"
 ```
+
 ```text
  1     √2 
 --- + ----
  2     2  
 ```
 
+</details>
+
 #### 3. Unicode Braille High-Resolution Plotter (`plot`)
 Renders smooth function graphs directly in your terminal using 2×4 Braille subpixel characters. Automatically detects roots and extrema with exact algebraic coordinate pinning, guarded against false asymptotic connections by Tupper (2001) discontinuity detection:
+
+<details>
+<summary><b>Terminal plot rendering example & output (ASCII / Braille art)</b></summary>
 
 ```bash
 ihd "plot(sin(x), [-pi, pi])"
 ```
+
 ```text
     1 ┼                          │                        
       │                          │        ⣀⠤⠔⠒⠢⠤⡀         
@@ -600,6 +663,8 @@ ihd "plot(sin(x), [-pi, pi])"
 * Domain:            x ∈ [-π, π], y ∈ [-1, 1]
 ```
 
+</details>
+
 #### 4. REPL Syntax Highlighting & Rainbow Delimiters
 Lexical syntax highlighting powered by a finite-state machine (FSM):
 - **Rainbow Nested Delimiters**: Delimiter depths across parentheses `()` and brackets `[]` rotate through 4 cyclic colors. Bracket mismatches are highlighted with an error background.
@@ -616,6 +681,9 @@ Protects against runaway CAS loops (`table`, `for`, `product`) without hindering
 #### 6. Typst Math Export (`--typst` / `--format typst`)
 Exports mathematical expressions directly into Typst math mode syntax (`$ ... $`) ready for technical documentation. Canonicalizes fractions, radicals, n-th roots, matrices, complex numbers, and polynomials into Typst-native representations.
 
+<details>
+<summary><b>Typst math export examples</b></summary>
+
 ```bash
 ihd --typst "1/2 + sqrt(2)/2"
 # Output: $1 / 2 + sqrt(2) / 2$
@@ -624,10 +692,15 @@ ihd --format typst "[[1, 2], [3, 4]]"
 # Output: $mat(1, 2; 3, 4)$
 ```
 
+</details>
+
 Exported Typst expressions are continuously validated and compiled via Typst compiler in GitHub Actions CI.
 
 #### 7. Collection Manipulation, Slicing & First-Class Lambda Expressions
 Supports Python-style slice syntax (`[start:end:step]`), arithmetic progressions with rational step `range`, first-class anonymous functions `lambda`, and higher-order functions `map` and `filter`.
+
+<details>
+<summary><b>Collection manipulation & lambda expression examples</b></summary>
 
 ```bash
 ihd "map(lambda(x, x^2), range(1, 5))"
@@ -637,8 +710,13 @@ ihd "[10, 20, 30, 40, 50][1:4]"
 # Output: [20, 30, 40]
 ```
 
+</details>
+
 #### 8. Exact Rational Vector Space Physical Units & Dimensional Analysis
 Implements exact dimensional analysis over the 7-dimensional vector space $\mathbb{Q}^7$ of SI base units without floating-point approximations. Supports SI base and derived units (N, J, W, Pa, Hz, etc.), SI prefixes, dimensional consistency checks, transcendental function guards, and exact rational unit conversions (`convert_unit`):
+
+<details>
+<summary><b>Physical units & dimensional analysis examples</b></summary>
 
 ```bash
 # Multiplication and unit cancellation
@@ -658,6 +736,8 @@ ihd --verify "convert_unit(100 [km/h], m/s)"
 # Output: 250/9 [m/s]
 # [VERIFIED: convert_unit(100[km * h^-1], m * s^-1) == 250/9 [m/s]]
 ```
+
+</details>
 
 ---
 
