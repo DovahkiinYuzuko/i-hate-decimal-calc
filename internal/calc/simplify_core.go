@@ -50,6 +50,12 @@ func simplifyUnaryOp(op string, expr Node) (Node, error) {
 				}
 			}
 			return NewMatrix(v.Rows, v.Cols, negData)
+		case *QuantityNode:
+			negVal, err := simplifyUnaryOp("-", v.Value)
+			if err != nil {
+				return nil, err
+			}
+			return NewQuantityNode(negVal, v.Scale, v.Dimensions, v.DisplayUnit), nil
 		default:
 			negOne, _ := NewRational(-1, 1)
 			return simplifyMul([]Node{negOne, expr})
@@ -91,6 +97,9 @@ func isZero(n Node) bool {
 	if r, ok := n.(*RationalNode); ok && r.Val.Sign() == 0 {
 		return true
 	}
+	if q, ok := n.(*QuantityNode); ok {
+		return isZero(q.Value)
+	}
 	return false
 }
 
@@ -101,6 +110,8 @@ func isZeroNode(n Node) bool {
 	switch v := n.(type) {
 	case *RationalNode:
 		return v.Val.Sign() == 0
+	case *QuantityNode:
+		return isZeroNode(v.Value)
 	case *MulNode:
 		for _, f := range v.Factors {
 			if isZeroNode(f) {

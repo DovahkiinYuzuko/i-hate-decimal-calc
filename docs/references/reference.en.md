@@ -417,5 +417,27 @@ Provides sequence generation, higher-order function mapping, predicate filtering
 | Single Index | `list[0]`, `list[-1]` | 0-indexed element access. Negative indices denote positions from the end ($-1$ is the last element). Out-of-bounds access returns an IndexError |
 | Slice Syntax | `list[start:stop]`, `list[start:stop:step]` | Subsequence extraction conforming to CPython `PySlice_GetIndicesEx` normalization. Supports all 8 patterns (`[:]`, `[:end]`, `[start:]`, `[start:end]`, `[::step]`, `[start::step]`, `[:end:step]`, `[start:end:step]`), negative indices, negative steps, and boundary clipping (step = 0 yields an error) |
 
+---
+
+### 21. Physical Units & Dimensional Analysis
+
+Performs dimensional analysis and physical unit calculations over the 7-dimensional rational vector space $\mathbb{Q}^7$ of SI base units without floating-point approximations.
+
+#### Supported Units & Prefixes
+* **SI Base Units**: `m` (length), `kg` (mass), `s` (time), `A` (electric current), `K` (temperature), `mol` (amount of substance), `cd` (luminous intensity)
+* **Derived Units**: `N` (force), `J` (energy), `W` (power), `Pa` (pressure), `Hz` (frequency), `C` (charge), `V` (voltage), `ohm` (resistance), `F` (capacitance), `S` (conductance), `Wb` (magnetic flux), `T` (magnetic flux density), `H` (inductance)
+* **Accepted Non-SI Units**: `min` (minute, $60\text{ s}$), `h` / `hour` (hour, $3600\text{ s}$), `d` / `day` (day, $86400\text{ s}$), `g` (gram, $1/1000\text{ kg}$), `t` (tonne, $1000\text{ kg}$), `L` / `l` (liter, $1/1000\text{ m}^3$)
+* **SI Prefixes**: `Y` ($10^{24}$), `Z` ($10^{21}$), `E` ($10^{18}$), `P` ($10^{15}$), `T` ($10^{12}$), `G` ($10^9$), `M` ($10^6$), `k` ($10^3$), `h` ($10^2$), `da` ($10^1$), `d` ($10^{-1}$), `c` ($10^{-2}$), `m` ($10^{-3}$), `u` ($10^{-6}$), `n` ($10^{-9}$), `p` ($10^{-12}$), `f` ($10^{-15}$), `a` ($10^{-18}$)
+
+| Function / Syntax | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `[unit]` Syntax | `10 [m/s]`, `5 [kg*m/s^2]`, `(1/4) [h]` | Attaches a unit expression to a value or expression. Operators `*`, `/`, `^` are supported inside the unit expression. Use parentheses for fractions such as `(1/4) [h]` |
+| `unit` | `unit(m/s)`, `unit(N)` | Constructs a unit quantity with magnitude 1 |
+| `convert_unit` | `convert_unit(100 [km/h], m/s)`, `convert_unit((1/4) [h], min)` | Converts a physical quantity to dimensionally compatible target units via exact rational ratio. Returns an error on dimension mismatch |
+| Arithmetic Operations | `10 [m/s] * 5 [s]` $\to$ `50 [m]`, `1 [km] - 200 [m]` $\to$ `4/5 [km]` | Validates dimensional consistency on addition/subtraction. Multiplies/divides rational dimension vectors. Automatically unboxes to standard numbers when dimensionless |
+| Transcendental Guards | `sin(10 [m])` $\to$ Error | Rejects dimensioned arguments to elementary transcendental functions (`sin`, `cos`, `exp`, `ln`, etc.) |
+| Verification (`--verify`) | `ihd --verify "convert_unit(100 [km/h], m/s)"` | Verifies that source and target quantities have zero residual when expanded to SI base units |
+
+
 
 

@@ -29,6 +29,7 @@ const (
 	DomainSNF           VerificationDomain = "snf"
 	DomainHNF           VerificationDomain = "hnf"
 	DomainIdeal         VerificationDomain = "ideal"
+	DomainUnits         VerificationDomain = "units"
 )
 
 // VerificationCertificate represents a certified mathematical proof of correctness.
@@ -207,6 +208,10 @@ func VerifyComputation(expr, result Node, env *Env) (*VerificationCertificate, e
 				Details:    i18n.T("verify.err_no_independent_verifier"),
 				State:      VerifyStateUnsupportedDomain,
 			}, nil
+
+		case "convert_unit":
+			_ = fsm.TransitionTo(VerifyStateTargetClassified)
+			return verifyConvertUnit(fn, result, env, fsm)
 		}
 
 	case *RelOpNode:
@@ -2335,5 +2340,93 @@ func verifyIdealDecomposition(fn *FuncNode, result Node, _ *Env, fsm *VerifyLife
 		CertIR:     certIR,
 	}, nil
 }
+
+// verifyConvertUnit verifies physical unit conversion: qSrc and qResult must represent the identical physical quantity in SI base units.
+func verifyConvertUnit(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
+	if len(fn.Args) != 2 {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, fmt.Errorf("convert_unit requires 2 arguments")
+	}
+
+	srcNode, err := EvalWithEnv(fn.Args[0], env)
+	if err != nil {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, err
+	}
+
+	qSrc, okSrc := srcNode.(*QuantityNode)
+	qRes, okRes := result.(*QuantityNode)
+	if !okSrc || !okRes {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, fmt.Errorf("operands to verifyConvertUnit must be QuantityNode")
+	}
+
+	_ = fsm.TransitionTo(VerifyStateResidualConstructed)
+
+	// Dimension must match exactly
+	if !qSrc.Dimensions.Equal(qRes.Dimensions) {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		return &VerificationCertificate{
+			Domain:     DomainUnits,
+			Equation:   fmt.Sprintf("%s == %s", fn.String(), result.String()),
+			Residual:   mustRational(1, 1),
+			IsVerified: false,
+			Details:    "dimension mismatch between source and converted units",
+			State:      VerifyStateRefuted,
+		}, nil
+	}
+
+	// Verify base SI values: (src.Value * src.Scale) - (res.Value * res.Scale) == 0
+	srcBase, err := simplifyMul([]Node{qSrc.Value, NewRationalFromBigRat(qSrc.Scale)})
+	if err != nil {
+		return nil, err
+	}
+	resBase, err := simplifyMul([]Node{qRes.Value, NewRationalFromBigRat(qRes.Scale)})
+	if err != nil {
+		return nil, err
+	}
+
+	negRes, err := simplifyUnaryOp("-", resBase)
+	if err != nil {
+		return nil, err
+	}
+	diff, err := simplifyAdd([]Node{srcBase, negRes})
+	if err != nil {
+		return nil, err
+	}
+
+	_ = fsm.TransitionTo(VerifyStateSimplificationEvaluated)
+	isZeroRes := isZero(diff)
+
+	eqStr := fmt.Sprintf("%s == %s", fn.String(), result.String())
+	if isZeroRes {
+		_ = fsm.TransitionTo(VerifyStateCertified)
+		details := "Physical unit conversion verified: SI base quantity equivalence holds with zero residual"
+		certIR := NewIdentityCertificate(IdentityKindEquivalence, fn, result, mustRational(0, 1), true, details)
+		return &VerificationCertificate{
+			Domain:     DomainUnits,
+			Equation:   eqStr,
+			Residual:   mustRational(0, 1),
+			IsVerified: true,
+			Details:    details,
+			State:      VerifyStateCertified,
+			CertIR:     certIR,
+		}, nil
+	}
+
+	_ = fsm.TransitionTo(VerifyStateRefuted)
+	details := fmt.Sprintf("Physical unit conversion refuted: non-zero SI base residual %s", diff.String())
+	certIR := NewIdentityCertificate(IdentityKindEquivalence, fn, result, diff, false, details)
+	return &VerificationCertificate{
+		Domain:     DomainUnits,
+		Equation:   eqStr,
+		Residual:   diff,
+		IsVerified: false,
+		Details:    details,
+		State:      VerifyStateRefuted,
+		CertIR:     certIR,
+	}, nil
+}
+
 
 

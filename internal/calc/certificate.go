@@ -25,6 +25,7 @@ const (
 	CertDomainLattice       CertificateDomain = "lattice"
 	CertDomainAlgebraicExtension CertificateDomain = "algebraic_extension"
 	CertDomainIdeal              CertificateDomain = "ideal"
+	CertDomainUnits              CertificateDomain = "units"
 	CertDomainGeneral            CertificateDomain = "general"
 )
 
