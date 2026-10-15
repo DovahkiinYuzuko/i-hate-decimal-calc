@@ -31,6 +31,7 @@ const (
 	TokenEQ
 	TokenNEQ
 	TokenString
+	TokenColon
 )
 
 // Token represents a single lexical token.

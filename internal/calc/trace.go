@@ -36,6 +36,11 @@ const (
 	RuleLLLRelation       RuleID = "LLLRelation"
 	RuleEllipticAdd       RuleID = "EllipticAdd"
 	RuleEllipticDescent   RuleID = "EllipticDescent"
+	RuleSlice             RuleID = "Slice"
+	RuleRange             RuleID = "Range"
+	RuleMap               RuleID = "Map"
+	RuleFilter            RuleID = "Filter"
+	RuleLambda            RuleID = "Lambda"
 )
 
 

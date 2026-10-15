@@ -81,6 +81,10 @@ const (
 	NodePiecewise
 	NodeInterval
 	NodeString
+	NodeIndex
+	NodeSlice
+	NodeLambda
+	NodeApply
 )
 
 // Node represents any node in the mathematical expression tree.
