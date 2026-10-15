@@ -91,6 +91,43 @@ func EvalWithEnv(n Node, env *Env) (Node, error) {
 		return simplifySqrtWithEnv(rad, env)
 
 	case *FuncNode:
+		if env != nil {
+			if bound, ok := env.Get(v.Name); ok {
+				if lambda, okL := bound.(*LambdaNode); okL {
+					evaledArgs := make([]Node, len(v.Args))
+					for i, a := range v.Args {
+						ea, err := EvalWithEnv(a, env)
+						if err != nil {
+							return nil, err
+						}
+						evaledArgs[i] = ea
+					}
+					if len(lambda.Params) != len(evaledArgs) {
+						return nil, fmt.Errorf("%s", i18n.T("errors.lambda_param_count_mismatch", len(lambda.Params), len(evaledArgs)))
+					}
+					var res Node
+					if len(lambda.Params) == 1 {
+						err := env.WithScopedVar(lambda.Params[0], evaledArgs[0], func(setVar func(Node)) error {
+							r, e := EvalWithEnv(lambda.Body, env)
+							if e != nil {
+								return e
+							}
+							res = r
+							return nil
+						})
+						if err != nil {
+							return nil, err
+						}
+						return res, nil
+					}
+					workEnv := env.Clone()
+					for pIdx, pName := range lambda.Params {
+						workEnv.Set(pName, evaledArgs[pIdx])
+					}
+					return EvalWithEnv(lambda.Body, workEnv)
+				}
+			}
+		}
 		if spec, ok := LookupFunction(v.Name); ok && spec.LazyArgs {
 			if spec.Handler != nil {
 				return spec.Handler(v.Args, env)
@@ -212,6 +249,30 @@ func EvalWithEnv(n Node, env *Env) (Node, error) {
 
 	case *PiecewiseNode:
 		return NormalizePiecewise(v, env)
+
+	case *IndexNode:
+		return evalIndex(v.Target, v.Index, env)
+
+	case *SliceNode:
+		return evalSlice(v.Target, v.Start, v.Stop, v.Step, env)
+
+	case *LambdaNode:
+		return v, nil
+
+	case *ApplyNode:
+		callee, err := EvalWithEnv(v.Callee, env)
+		if err != nil {
+			return nil, err
+		}
+		evaledArgs := make([]Node, len(v.Args))
+		for i, a := range v.Args {
+			ea, err := EvalWithEnv(a, env)
+			if err != nil {
+				return nil, err
+			}
+			evaledArgs[i] = ea
+		}
+		return applyCallableWithArgs(callee, evaledArgs, env)
 
 	case *StringNode, *PlotNode, *IntervalNode:
 		return v, nil

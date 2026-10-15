@@ -137,6 +137,9 @@ func (l *Lexer) NextToken() Token {
 	case ']':
 		tok = Token{Type: TokenRBracket, Literal: "]", Pos: startPos}
 		l.readChar()
+	case ':':
+		tok = Token{Type: TokenColon, Literal: ":", Pos: startPos}
+		l.readChar()
 	case '√':
 		tok = Token{Type: TokenIdent, Literal: "sqrt", Pos: startPos}
 		l.readChar()

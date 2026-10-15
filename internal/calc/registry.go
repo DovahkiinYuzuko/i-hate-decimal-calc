@@ -414,6 +414,29 @@ func init() {
 		LazyArgs: true,
 	})
 	RegisterFunction(FunctionSpec{
+		Name:    "range",
+		MinArgs: 1,
+		MaxArgs: 3,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:     "map",
+		MinArgs:  2,
+		MaxArgs:  2,
+		LazyArgs: true,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:     "filter",
+		MinArgs:  2,
+		MaxArgs:  2,
+		LazyArgs: true,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:     "lambda",
+		MinArgs:  2,
+		MaxArgs:  2,
+		LazyArgs: true,
+	})
+	RegisterFunction(FunctionSpec{
 		Name:    "limit",
 		MinArgs: 3,
 		MaxArgs: 4,

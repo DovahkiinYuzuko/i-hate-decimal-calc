@@ -63,6 +63,7 @@ const (
 	PREC_PRODUCT      // * /
 	PREC_POWER        // ^ (right-associative)
 	PREC_POSTFIX      // !
+	PREC_INDEX        // [ (array indexing / slicing)
 )
 
 var precedences = map[TokenType]int{
@@ -79,14 +80,17 @@ var precedences = map[TokenType]int{
 	TokenSlash:    PREC_PRODUCT,
 	TokenCaret:    PREC_POWER,
 	TokenBang:     PREC_POSTFIX,
+	TokenLBracket: PREC_INDEX,
+	TokenLParen:   PREC_INDEX,
 }
 
 // Parser parses a token stream into an AST node.
 type Parser struct {
-	tokens  []Token
-	pos     int
-	curTok  Token
-	peekTok Token
+	tokens   []Token
+	pos      int
+	curTok   Token
+	peekTok  Token
+	argDepth int
 }
 
 // NewParser creates a new Parser instance.
@@ -197,8 +201,8 @@ func (p *Parser) ParseExpression(precedence int) (ast.Node, error) {
 	}
 
 	// Check if next token starts another expression directly (implicit multiplication like 2pi or (1+2)(3+4))
-	if p.isStartOfExpression(p.peekTok.Type) {
-		return nil, newSyntaxErr("parser.err_implicit_multiplication", p.peekTok.Literal)
+	if err := p.checkImplicitMul(left, precedence); err != nil {
+		return nil, err
 	}
 
 	// 2. Infix parse
@@ -209,8 +213,8 @@ func (p *Parser) ParseExpression(precedence int) (ast.Node, error) {
 			return nil, err
 		}
 
-		if p.isStartOfExpression(p.peekTok.Type) {
-			return nil, newSyntaxErr("parser.err_implicit_multiplication", p.peekTok.Literal)
+		if err := p.checkImplicitMul(left, precedence); err != nil {
+			return nil, err
 		}
 	}
 
@@ -232,7 +236,9 @@ func (p *Parser) parsePrefix() (ast.Node, error) {
 			return p.parseFuncCall(name)
 		}
 		if isReservedFunc(name) && !isBareSymbolAllowed(name) {
-			return nil, newSyntaxErr("parser.err_func_missing_args", p.curTok.Pos, name)
+			if p.argDepth == 0 {
+				return nil, newSyntaxErr("parser.err_func_missing_args", p.curTok.Pos, name)
+			}
 		}
 		// Constants: pi, e, or imaginary unit i
 		if name == "i" {
@@ -345,9 +351,157 @@ func (p *Parser) parseInfix(left ast.Node) (ast.Node, error) {
 		// Postfix factorial: left!
 		return ast.NewUnaryOp("!", left)
 
+	case TokenLBracket:
+		// Postfix index/slice: left[...]
+		return p.parseBracketPostfix(left)
+
+	case TokenLParen:
+		// Postfix application: left(...)
+		if isCallable(left) {
+			return p.parseCallPostfix(left)
+		}
+		return nil, newSyntaxErr("parser.err_implicit_multiplication", p.curTok.Literal)
+
 	default:
 		return nil, newSyntaxErr("parser.err_unexpected_infix_token", p.curTok.Literal)
 	}
+}
+
+func (p *Parser) parseBracketPostfix(left ast.Node) (ast.Node, error) {
+	// curTok is TokenLBracket '['
+	if p.peekTok.Type == TokenColon {
+		// Slicing with omitted start (e.g., [:end], [::step], or [:])
+		p.nextToken() // move to ':'
+		if p.peekTok.Type == TokenRBracket {
+			p.nextToken() // move to ']'
+			return ast.NewSliceNode(left, nil, nil, nil), nil
+		}
+		if p.peekTok.Type == TokenColon {
+			p.nextToken() // move to second ':'
+			if p.peekTok.Type == TokenRBracket {
+				p.nextToken() // move to ']'
+				return ast.NewSliceNode(left, nil, nil, nil), nil
+			}
+			p.nextToken() // move to step expr
+			step, err := p.ParseExpression(PREC_LOWEST)
+			if err != nil {
+				return nil, err
+			}
+			if p.peekTok.Type != TokenRBracket {
+				return nil, newSyntaxErr("parser.err_expected_rbracket", p.peekTok.Literal)
+			}
+			p.nextToken() // move to ']'
+			return ast.NewSliceNode(left, nil, nil, step), nil
+		}
+
+		// Has stop expression
+		p.nextToken() // move to stop expr
+		stop, err := p.ParseExpression(PREC_LOWEST)
+		if err != nil {
+			return nil, err
+		}
+		if p.peekTok.Type == TokenRBracket {
+			p.nextToken() // move to ']'
+			return ast.NewSliceNode(left, nil, stop, nil), nil
+		}
+		if p.peekTok.Type == TokenColon {
+			p.nextToken() // move to second ':'
+			if p.peekTok.Type == TokenRBracket {
+				p.nextToken() // move to ']'
+				return ast.NewSliceNode(left, nil, stop, nil), nil
+			}
+			p.nextToken() // move to step expr
+			step, err := p.ParseExpression(PREC_LOWEST)
+			if err != nil {
+				return nil, err
+			}
+			if p.peekTok.Type != TokenRBracket {
+				return nil, newSyntaxErr("parser.err_expected_rbracket", p.peekTok.Literal)
+			}
+			p.nextToken() // move to ']'
+			return ast.NewSliceNode(left, nil, stop, step), nil
+		}
+		return nil, newSyntaxErr("parser.err_expected_rbracket", p.peekTok.Literal)
+	}
+
+	if p.peekTok.Type == TokenRBracket {
+		return nil, newSyntaxErr("parser.err_empty_index_bracket")
+	}
+
+	// First expression (either single index or slice start)
+	p.nextToken() // move to start of first expression
+	firstExpr, err := p.ParseExpression(PREC_LOWEST)
+	if err != nil {
+		return nil, err
+	}
+
+	// Single index lookup: left[firstExpr]
+	if p.peekTok.Type == TokenRBracket {
+		p.nextToken() // move to ']'
+		return ast.NewIndexNode(left, firstExpr), nil
+	}
+
+	// If not ']', it must be ':' for slicing: left[firstExpr : ...]
+	if p.peekTok.Type != TokenColon {
+		return nil, newSyntaxErr("parser.err_expected_rbracket_or_colon", p.peekTok.Literal)
+	}
+
+	p.nextToken() // move to ':'
+	start := firstExpr
+
+	if p.peekTok.Type == TokenRBracket {
+		p.nextToken() // move to ']'
+		return ast.NewSliceNode(left, start, nil, nil), nil
+	}
+	if p.peekTok.Type == TokenColon {
+		// left[start::step]
+		p.nextToken() // move to second ':'
+		if p.peekTok.Type == TokenRBracket {
+			p.nextToken() // move to ']'
+			return ast.NewSliceNode(left, start, nil, nil), nil
+		}
+		p.nextToken() // move to step expr
+		step, err := p.ParseExpression(PREC_LOWEST)
+		if err != nil {
+			return nil, err
+		}
+		if p.peekTok.Type != TokenRBracket {
+			return nil, newSyntaxErr("parser.err_expected_rbracket", p.peekTok.Literal)
+		}
+		p.nextToken() // move to ']'
+		return ast.NewSliceNode(left, start, nil, step), nil
+	}
+
+	// Has stop expression: left[start:stop...]
+	p.nextToken() // move to stop expr
+	stop, err := p.ParseExpression(PREC_LOWEST)
+	if err != nil {
+		return nil, err
+	}
+	if p.peekTok.Type == TokenRBracket {
+		p.nextToken() // move to ']'
+		return ast.NewSliceNode(left, start, stop, nil), nil
+	}
+	if p.peekTok.Type == TokenColon {
+		// left[start:stop:step]
+		p.nextToken() // move to second ':'
+		if p.peekTok.Type == TokenRBracket {
+			p.nextToken() // move to ']'
+			return ast.NewSliceNode(left, start, stop, nil), nil
+		}
+		p.nextToken() // move to step expr
+		step, err := p.ParseExpression(PREC_LOWEST)
+		if err != nil {
+			return nil, err
+		}
+		if p.peekTok.Type != TokenRBracket {
+			return nil, newSyntaxErr("parser.err_expected_rbracket", p.peekTok.Literal)
+		}
+		p.nextToken() // move to ']'
+		return ast.NewSliceNode(left, start, stop, step), nil
+	}
+
+	return nil, newSyntaxErr("parser.err_expected_rbracket", p.peekTok.Literal)
 }
 
 func (p *Parser) parseFuncCall(name string) (ast.Node, error) {
@@ -370,10 +524,12 @@ func (p *Parser) parseFuncCall(name string) (ast.Node, error) {
 
 	p.nextToken() // move to first arg
 
+	p.argDepth++
 	var args []ast.Node
 	for {
 		arg, err := p.ParseExpression(PREC_LOWEST)
 		if err != nil {
+			p.argDepth--
 			return nil, err
 		}
 		args = append(args, arg)
@@ -387,8 +543,10 @@ func (p *Parser) parseFuncCall(name string) (ast.Node, error) {
 			p.nextToken() // curTok is ')'
 			break
 		}
+		p.argDepth--
 		return nil, newSyntaxErr("parser.err_expected_comma_or_rparen", name, p.peekTok.Literal)
 	}
+	p.argDepth--
 
 	if name == "sqrt" {
 		if len(args) != 1 {
@@ -420,6 +578,27 @@ func (p *Parser) parseFuncCall(name string) (ast.Node, error) {
 			kind = ast.QuantifierExists
 		}
 		return ast.NewQuantifier(kind, vars, args[1]), nil
+	}
+
+	if name == "lambda" {
+		if len(args) != 2 {
+			return nil, fmt.Errorf("%s", i18n.T("errors.lambda_param_count_mismatch", 2, len(args)))
+		}
+		var params []string
+		if list, ok := args[0].(*ast.ListNode); ok {
+			for _, elem := range list.Elements {
+				if v, ok := elem.(*ast.VarNode); ok {
+					params = append(params, v.Name)
+				} else {
+					return nil, fmt.Errorf("%s", i18n.T("errors.lambda_param_must_be_ident", elem.String()))
+				}
+			}
+		} else if v, ok := args[0].(*ast.VarNode); ok {
+			params = append(params, v.Name)
+		} else {
+			return nil, fmt.Errorf("%s", i18n.T("errors.lambda_param_must_be_ident", args[0].String()))
+		}
+		return ast.NewLambdaNode(params, args[1]), nil
 	}
 
 	return ast.NewFunc(name, args)
@@ -515,3 +694,60 @@ func (p *Parser) parseBracketList() ([]ast.Node, error) {
 	p.nextToken() // move to ']'
 	return elems, nil
 }
+
+func isCallable(n ast.Node) bool {
+	switch n.(type) {
+	case *ast.LambdaNode, *ast.ApplyNode:
+		return true
+	default:
+		return false
+	}
+}
+
+func (p *Parser) checkImplicitMul(left ast.Node, precedence int) error {
+	if p.isStartOfExpression(p.peekTok.Type) {
+		if p.peekTok.Type == TokenLBracket && precedence < PREC_INDEX {
+			return nil
+		}
+		if p.peekTok.Type == TokenLParen && isCallable(left) && precedence < PREC_INDEX {
+			return nil
+		}
+		return newSyntaxErr("parser.err_implicit_multiplication", p.peekTok.Literal)
+	}
+	return nil
+}
+
+func (p *Parser) parseCallPostfix(left ast.Node) (ast.Node, error) {
+	// curTok is TokenLParen '('
+	if p.peekTok.Type == TokenRParen {
+		p.nextToken() // move to ')'
+		return ast.NewApplyNode(left, []ast.Node{}), nil
+	}
+
+	p.nextToken() // move to first arg
+	p.argDepth++
+	var args []ast.Node
+	for {
+		arg, err := p.ParseExpression(PREC_LOWEST)
+		if err != nil {
+			p.argDepth--
+			return nil, err
+		}
+		args = append(args, arg)
+
+		if p.peekTok.Type == TokenComma {
+			p.nextToken() // curTok is ','
+			p.nextToken() // move to next arg
+			continue
+		}
+		if p.peekTok.Type == TokenRParen {
+			p.nextToken() // curTok is ')'
+			break
+		}
+		p.argDepth--
+		return nil, newSyntaxErr("parser.err_expected_comma_or_rparen", "call", p.peekTok.Literal)
+	}
+	p.argDepth--
+	return ast.NewApplyNode(left, args), nil
+}
+

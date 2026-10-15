@@ -54,8 +54,12 @@ const (
 	NodePoly            = ast.NodePoly
 	NodeAlgebraicNumber = ast.NodeAlgebraicNumber
 	NodeQuantifier      = ast.NodeQuantifier
-	NodePiecewise       = ast.NodePiecewise
 	NodeInterval        = ast.NodeInterval
+	NodeString          = ast.NodeString
+	NodeIndex           = ast.NodeIndex
+	NodeSlice           = ast.NodeSlice
+	NodeLambda          = ast.NodeLambda
+	NodeApply           = ast.NodeApply
 )
 
 type QuantifierKind = ast.QuantifierKind
@@ -89,6 +93,10 @@ type (
 	PiecewiseNode       = ast.PiecewiseNode
 	IntervalNode        = ast.IntervalNode
 	StringNode          = ast.StringNode
+	IndexNode           = ast.IndexNode
+	SliceNode           = ast.SliceNode
+	LambdaNode          = ast.LambdaNode
+	ApplyNode           = ast.ApplyNode
 )
 
 var (
@@ -111,6 +119,10 @@ var (
 	NewPiecewiseNode        = ast.NewPiecewiseNode
 	NewIntervalNode         = ast.NewIntervalNode
 	NewStringNode           = ast.NewStringNode
+	NewIndexNode            = ast.NewIndexNode
+	NewSliceNode            = ast.NewSliceNode
+	NewLambdaNode           = ast.NewLambdaNode
+	NewApplyNode            = ast.NewApplyNode
 	Walk                    = ast.Walk
 	Inspect                 = ast.Inspect
 	Transform               = ast.Transform
@@ -147,6 +159,9 @@ const (
 	TokenGTE      = parser.TokenGTE
 	TokenLTE      = parser.TokenLTE
 	TokenEQ       = parser.TokenEQ
+	TokenNEQ      = parser.TokenNEQ
+	TokenString   = parser.TokenString
+	TokenColon    = parser.TokenColon
 )
 
 type (

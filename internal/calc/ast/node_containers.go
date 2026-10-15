@@ -252,4 +252,151 @@ func (n *StringNode) Equal(other Node) bool {
 	return false
 }
 
+// -------------------------------------------------------------------------
+// IndexNode (Collection Single Element Indexing expr[index])
+// -------------------------------------------------------------------------
+
+// IndexNode represents indexing into a collection (e.g. list[0], matrix[r, c]).
+type IndexNode struct {
+	Target Node
+	Index  Node
+}
+
+func NewIndexNode(target, index Node) *IndexNode {
+	return &IndexNode{Target: target, Index: index}
+}
+
+func (n *IndexNode) Type() NodeType { return NodeIndex }
+func (n *IndexNode) String() string {
+	return fmt.Sprintf("%s[%s]", n.Target.String(), n.Index.String())
+}
+func (n *IndexNode) Equal(other Node) bool {
+	o, ok := other.(*IndexNode)
+	if !ok {
+		return false
+	}
+	return n.Target.Equal(o.Target) && n.Index.Equal(o.Index)
+}
+
+// -------------------------------------------------------------------------
+// SliceNode (Subsequence Slicing expr[start:stop:step])
+// -------------------------------------------------------------------------
+
+// SliceNode represents a sequence slice with optional start, stop, and step bounds.
+type SliceNode struct {
+	Target Node
+	Start  Node // optional, can be nil
+	Stop   Node // optional, can be nil
+	Step   Node // optional, can be nil
+}
+
+func NewSliceNode(target, start, stop, step Node) *SliceNode {
+	return &SliceNode{Target: target, Start: start, Stop: stop, Step: step}
+}
+
+func (n *SliceNode) Type() NodeType { return NodeSlice }
+func (n *SliceNode) String() string {
+	startStr := ""
+	if n.Start != nil {
+		startStr = n.Start.String()
+	}
+	stopStr := ""
+	if n.Stop != nil {
+		stopStr = n.Stop.String()
+	}
+	if n.Step != nil {
+		return fmt.Sprintf("%s[%s:%s:%s]", n.Target.String(), startStr, stopStr, n.Step.String())
+	}
+	return fmt.Sprintf("%s[%s:%s]", n.Target.String(), startStr, stopStr)
+}
+func (n *SliceNode) Equal(other Node) bool {
+	o, ok := other.(*SliceNode)
+	if !ok || !n.Target.Equal(o.Target) {
+		return false
+	}
+	equalNode := func(a, b Node) bool {
+		if a == nil && b == nil {
+			return true
+		}
+		if a != nil && b != nil {
+			return a.Equal(b)
+		}
+		return false
+	}
+	return equalNode(n.Start, o.Start) && equalNode(n.Stop, o.Stop) && equalNode(n.Step, o.Step)
+}
+
+// -------------------------------------------------------------------------
+// LambdaNode (First-Class Anonymous Function lambda(params, body))
+// -------------------------------------------------------------------------
+
+// LambdaNode represents a first-class anonymous function.
+type LambdaNode struct {
+	Params []string
+	Body   Node
+}
+
+func NewLambdaNode(params []string, body Node) *LambdaNode {
+	return &LambdaNode{Params: params, Body: body}
+}
+
+func (n *LambdaNode) Type() NodeType { return NodeLambda }
+func (n *LambdaNode) String() string {
+	if len(n.Params) == 1 {
+		return fmt.Sprintf("lambda(%s, %s)", n.Params[0], n.Body.String())
+	}
+	return fmt.Sprintf("lambda([%s], %s)", strings.Join(n.Params, ", "), n.Body.String())
+}
+func (n *LambdaNode) Equal(other Node) bool {
+	o, ok := other.(*LambdaNode)
+	if !ok || len(n.Params) != len(o.Params) || !n.Body.Equal(o.Body) {
+		return false
+	}
+	for i := range n.Params {
+		if n.Params[i] != o.Params[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// -------------------------------------------------------------------------
+// ApplyNode (Function/Lambda Application callee(arg1, arg2, ...))
+// -------------------------------------------------------------------------
+
+// ApplyNode represents an immediate application of a callable expression (like lambda) to arguments.
+type ApplyNode struct {
+	Callee Node
+	Args   []Node
+}
+
+func NewApplyNode(callee Node, args []Node) *ApplyNode {
+	return &ApplyNode{Callee: callee, Args: args}
+}
+
+func (n *ApplyNode) Type() NodeType { return NodeApply }
+
+func (n *ApplyNode) String() string {
+	argStrs := make([]string, len(n.Args))
+	for i, a := range n.Args {
+		argStrs[i] = a.String()
+	}
+	return fmt.Sprintf("%s(%s)", n.Callee.String(), strings.Join(argStrs, ", "))
+}
+
+func (n *ApplyNode) Equal(other Node) bool {
+	o, ok := other.(*ApplyNode)
+	if !ok || !n.Callee.Equal(o.Callee) || len(n.Args) != len(o.Args) {
+		return false
+	}
+	for i := range n.Args {
+		if !n.Args[i].Equal(o.Args[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+
+
 
