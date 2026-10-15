@@ -259,6 +259,28 @@ ihd "[10, 20, 30, 40, 50][1:4]"
 # 出力: [20, 30, 40]
 ```
 
+#### 8. 厳密有理数ベクトル空間による物理単位計算 & 次元解析
+有理数体 $\mathbb{Q}$ 上の 7 次元ベクトル空間（SI基本7単位）に基づき、小数を一切使わずに物理単位の加減乗除、組立単位・接頭辞の厳密展開、次元整合性検証、および単位換算（`convert_unit`）を実行します。初等超越関数への有次元引数の投入は厳格に遮断され、無次元化された結果は自動的に通常数値へと縮約されます。
+
+```bash
+# 単位の乗除算と約分
+ihd "10 [m/s] * 5 [s]"
+# 出力: 50 [m]
+
+# 接頭辞と組立単位を含む減算（スケール正規化）
+ihd "1 [km] - 200 [m]"
+# 出力: 4/5 [km]
+
+# 厳密分数による単位換算
+ihd "convert_unit((1/4) [h], min)"
+# 出力: 15 [min]
+
+# 独立証明書付き単位換算自己検証
+ihd --verify "convert_unit(100 [km/h], m/s)"
+# 出力: 250/9 [m/s]
+# [VERIFIED: convert_unit(100[km * h^-1], m * s^-1) == 250/9 [m/s]]
+```
+
 ---
 
 ### 構文・演算子・関数リファレンス
@@ -282,6 +304,7 @@ ihd "[10, 20, 30, 40, 50][1:4]"
 - **クリフォード代数・幾何代数 & 厳密量子回路等価性検証**: `clifford`, `clifford_wedge`, `clifford_contract`, `clifford_dual`, `quantum_equiv`, `quantum_eval`
 - **多変数多項式イデアル・可換代数**: `primary_decomposition`, `ideal_radical`, `ideal_dimension`, `ideal_intersection`, `ideal_colon`, `ideal_saturation`
 - **コレクション・リスト操作 & CAS反復制御**: `range`, `map`, `filter`, `lambda`, `table`, `product`, `for`, `to_base`, `from_base`, `bin`, `oct`, `hex`
+- **物理単位計算・次元解析**: `convert_unit`, `unit`
 - **前提条件システム（仮定）**: `assume`, `unassume`, `assumptions`, `clear_assumptions`
 - **ビジュアル・自己検証**: `plot`, `verify`
 
@@ -614,6 +637,28 @@ ihd "[10, 20, 30, 40, 50][1:4]"
 # Output: [20, 30, 40]
 ```
 
+#### 8. Exact Rational Vector Space Physical Units & Dimensional Analysis
+Implements exact dimensional analysis over the 7-dimensional vector space $\mathbb{Q}^7$ of SI base units without floating-point approximations. Supports SI base and derived units (N, J, W, Pa, Hz, etc.), SI prefixes, dimensional consistency checks, transcendental function guards, and exact rational unit conversions (`convert_unit`):
+
+```bash
+# Multiplication and unit cancellation
+ihd "10 [m/s] * 5 [s]"
+# Output: 50 [m]
+
+# Prefix normalization in subtraction
+ihd "1 [km] - 200 [m]"
+# Output: 4/5 [km]
+
+# Unit conversion with fractions
+ihd "convert_unit((1/4) [h], min)"
+# Output: 15 [min]
+
+# Verified conversion certificate
+ihd --verify "convert_unit(100 [km/h], m/s)"
+# Output: 250/9 [m/s]
+# [VERIFIED: convert_unit(100[km * h^-1], m * s^-1) == 250/9 [m/s]]
+```
+
 ---
 
 ### Syntax & Functions Reference
@@ -637,6 +682,7 @@ ihd "[10, 20, 30, 40, 50][1:4]"
 - **Clifford Geometric Algebra & Quantum Circuit Equivalence**: `clifford`, `clifford_wedge`, `clifford_contract`, `clifford_dual`, `quantum_equiv`, `quantum_eval`
 - **Multivariate Polynomial Ideals & Commutative Algebra**: `primary_decomposition`, `ideal_radical`, `ideal_dimension`, `ideal_intersection`, `ideal_colon`, `ideal_saturation`
 - **Collection Manipulation & CAS Iteration Control**: `range`, `map`, `filter`, `lambda`, `table`, `product`, `for`, `to_base`, `from_base`, `bin`, `oct`, `hex`
+- **Physical Units & Dimensional Analysis**: `convert_unit`, `unit`
 - **Symbolic Assumptions System**: `assume`, `unassume`, `assumptions`, `clear_assumptions`
 - **Visualization & Verification Tools**: `plot`, `verify`
 

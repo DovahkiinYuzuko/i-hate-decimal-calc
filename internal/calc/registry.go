@@ -1161,6 +1161,20 @@ func init() {
 		MinArgs: 1,
 		MaxArgs: -1,
 	})
+
+	// Physical Units & Dimensional Analysis
+	RegisterFunction(FunctionSpec{
+		Name:     "convert_unit",
+		MinArgs:  2,
+		MaxArgs:  2,
+		LazyArgs: true,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:     "unit",
+		MinArgs:  1,
+		MaxArgs:  1,
+		LazyArgs: true,
+	})
 }
 
 

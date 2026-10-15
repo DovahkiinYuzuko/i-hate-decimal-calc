@@ -159,27 +159,52 @@ func EvalWithEnv(n Node, env *Env) (Node, error) {
 		if err != nil {
 			return nil, err
 		}
+		if q, ok := base.(*QuantityNode); ok {
+			return evalQuantityPow(q, exp)
+		}
 		return simplifyPow(base, exp)
 
 	case *AddNode:
 		evaledTerms := make([]Node, len(v.Terms))
+		hasQuantity := false
 		for i, t := range v.Terms {
 			et, err := EvalWithEnv(t, env)
 			if err != nil {
 				return nil, err
 			}
 			evaledTerms[i] = et
+			if _, ok := et.(*QuantityNode); ok {
+				hasQuantity = true
+			} else if uop, isUop := et.(*UnaryOpNode); isUop {
+				if _, okQ := uop.Expr.(*QuantityNode); okQ {
+					hasQuantity = true
+				}
+			}
+		}
+		if hasQuantity {
+			return evalQuantityAddChain(evaledTerms)
 		}
 		return simplifyAdd(evaledTerms)
 
 	case *MulNode:
 		evaledFactors := make([]Node, len(v.Factors))
+		hasQuantity := false
 		for i, f := range v.Factors {
 			ef, err := EvalWithEnv(f, env)
 			if err != nil {
 				return nil, err
 			}
 			evaledFactors[i] = ef
+			if _, ok := ef.(*QuantityNode); ok {
+				hasQuantity = true
+			} else if pow, isPow := ef.(*PowNode); isPow {
+				if _, okQ := pow.Base.(*QuantityNode); okQ {
+					hasQuantity = true
+				}
+			}
+		}
+		if hasQuantity {
+			return evalQuantityMulChain(evaledFactors)
 		}
 		return simplifyMul(evaledFactors)
 
@@ -230,6 +255,14 @@ func EvalWithEnv(n Node, env *Env) (Node, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		if _, okL := lhs.(*QuantityNode); okL {
+			return EvalQuantityRelOp(v.Op, lhs, rhs)
+		}
+		if _, okR := rhs.(*QuantityNode); okR {
+			return EvalQuantityRelOp(v.Op, lhs, rhs)
+		}
+
 		evaluatedRel := NewRelOp(lhs, v.Op, rhs)
 
 		// For inequalities (<, <=, >, >=), attempt rigorous rational interval evaluation for constant relations:
@@ -431,6 +464,16 @@ func simplifyFunc(name string, args []Node) (Node, error) {
 }
 
 func simplifyFuncWithEnv(name string, args []Node, env *Env) (Node, error) {
+	// Transcendental dimension guard
+	switch name {
+	case "sin", "cos", "tan", "sec", "csc", "cot", "exp", "ln", "log", "sinh", "cosh", "tanh", "asin", "acos", "atan":
+		for _, arg := range args {
+			if q, ok := arg.(*QuantityNode); ok && !q.Dimensions.IsZero() {
+				return nil, fmt.Errorf("%s", i18n.T("errors.transcendental_dimension", name, q.String()))
+			}
+		}
+	}
+
 	spec, ok := LookupFunction(name)
 	if !ok {
 		return nil, fmt.Errorf("%s", i18n.T("errors.unknown_function", name))

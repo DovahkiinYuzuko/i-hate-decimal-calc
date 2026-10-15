@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"math/big"
 	"sort"
 )
 
@@ -66,6 +67,8 @@ func Walk(node Node, visitor func(Node) bool) {
 		if v.Otherwise != nil {
 			Walk(v.Otherwise, visitor)
 		}
+	case *QuantityNode:
+		Walk(v.Value, visitor)
 	case *RationalNode, *ConstNode, *VarNode, *PlotNode, *PolyNode, *AlgebraicNumberNode, *StringNode:
 		// Leaf nodes: no children
 	}
@@ -184,6 +187,13 @@ func Transform(node Node, transformer func(Node) Node) Node {
 		transformedChild = &PiecewiseNode{
 			Cases:     newCases,
 			Otherwise: newOtherwise,
+		}
+	case *QuantityNode:
+		transformedChild = &QuantityNode{
+			Value:       Transform(v.Value, transformer),
+			Scale:       new(big.Rat).Set(v.Scale),
+			Dimensions:  v.Dimensions.Clone(),
+			DisplayUnit: v.DisplayUnit,
 		}
 	case *RationalNode, *ConstNode, *VarNode, *PlotNode, *PolyNode, *AlgebraicNumberNode, *StringNode:
 		transformedChild = node

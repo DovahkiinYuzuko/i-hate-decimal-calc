@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc/ast"
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc/units"
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
@@ -218,13 +219,12 @@ func evalIndex(target Node, indexNode Node, env *Env) (Node, error) {
 		return nil, err
 	}
 
-	idxVal, err := evalInteger(indexNode, env)
-	if err != nil {
-		return nil, err
-	}
-
 	switch col := evalTarget.(type) {
 	case *ListNode:
+		idxVal, err := evalInteger(indexNode, env)
+		if err != nil {
+			return nil, err
+		}
 		n := int64(len(col.Elements))
 		resolvedIdx := idxVal
 		if resolvedIdx < 0 {
@@ -238,6 +238,10 @@ func evalIndex(target Node, indexNode Node, env *Env) (Node, error) {
 		return elem, nil
 
 	case *MatrixNode:
+		idxVal, err := evalInteger(indexNode, env)
+		if err != nil {
+			return nil, err
+		}
 		// Matrix indexing M[r] returns row vector as ListNode
 		n := int64(col.Rows)
 		resolvedIdx := idxVal
@@ -252,6 +256,12 @@ func evalIndex(target Node, indexNode Node, env *Env) (Node, error) {
 		return ast.NewList(rowCopy), nil
 
 	default:
+		// Not a collection: Resolve as physical unit assignment (e.g. 10 [m], 5 [kg/s])
+		fsm := units.NewQuantityFSM()
+		scale, dims, unitErr := fsm.ResolveUnitExprWithFSM(indexNode)
+		if unitErr == nil {
+			return ast.NewQuantityNode(evalTarget, scale, dims, indexNode.String()), nil
+		}
 		return nil, fmt.Errorf("%s", i18n.T("errors.index_not_applicable", evalTarget.String()))
 	}
 }

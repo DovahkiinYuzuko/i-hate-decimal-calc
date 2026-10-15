@@ -60,6 +60,7 @@ const (
 	NodeSlice           = ast.NodeSlice
 	NodeLambda          = ast.NodeLambda
 	NodeApply           = ast.NodeApply
+	NodeQuantity        = ast.NodeQuantity
 )
 
 type QuantifierKind = ast.QuantifierKind
@@ -97,6 +98,8 @@ type (
 	SliceNode           = ast.SliceNode
 	LambdaNode          = ast.LambdaNode
 	ApplyNode           = ast.ApplyNode
+	QuantityNode        = ast.QuantityNode
+	DimensionVector     = ast.DimensionVector
 )
 
 var (
@@ -123,6 +126,7 @@ var (
 	NewSliceNode            = ast.NewSliceNode
 	NewLambdaNode           = ast.NewLambdaNode
 	NewApplyNode            = ast.NewApplyNode
+	NewQuantityNode         = ast.NewQuantityNode
 	Walk                    = ast.Walk
 	Inspect                 = ast.Inspect
 	Transform               = ast.Transform

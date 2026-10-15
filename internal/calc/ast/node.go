@@ -85,6 +85,7 @@ const (
 	NodeSlice
 	NodeLambda
 	NodeApply
+	NodeQuantity
 )
 
 // Node represents any node in the mathematical expression tree.

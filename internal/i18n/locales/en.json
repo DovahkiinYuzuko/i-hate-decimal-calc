@@ -230,6 +230,11 @@
   "err_unknown_node_type_for_evaluation": "unknown node type for evaluation: %T",
   "errors": {
     "arg_must_be_var": "%s error: %s argument must be a variable name, got %s",
+    "dimension_mismatch": "dimension mismatch: cannot add, subtract, or compare %s and %s with different dimensions",
+    "transcendental_dimension": "transcendental function %s requires a dimensionless argument, got: %s",
+    "unknown_unit": "unknown physical unit or prefix: %s",
+    "incompatible_unit_conversion": "incompatible unit conversion: cannot convert %s to dimensionally incompatible unit %s",
+    "convert_unit_requires_2_arguments": "convert_unit requires 2 arguments (quantity, target_unit)",
     "iteration_arg_must_be_var": "%s error: iterator argument must be a variable name, got %s",
     "iteration_bounds_eval": "%s error: failed to evaluate bounds: %v",
     "iteration_step_zero": "%s error: step size cannot be zero",

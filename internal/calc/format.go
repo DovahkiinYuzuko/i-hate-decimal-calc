@@ -192,6 +192,14 @@ func formatNode(n Node, opts FormatOptions) string {
 		}
 		return fmt.Sprintf("piecewise([%s])", strings.Join(parts, ", "))
 
+	case *QuantityNode:
+		valStr := formatNode(v.Value, opts)
+		unitStr := v.DisplayUnit
+		if unitStr == "" {
+			unitStr = v.Dimensions.String()
+		}
+		return fmt.Sprintf("%s [%s]", valStr, unitStr)
+
 	default:
 		return n.String()
 	}
