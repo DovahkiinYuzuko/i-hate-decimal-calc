@@ -24,15 +24,18 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Install Reference Builder Dependencies
+        working-directory: tools/reference-builder
+        run: npm ci
+
       - name: Build Single-File Reference HTML
-        run: |
-          node scripts/build-reference-html.js
+        run: node tools/reference-builder/index.js
 
       - name: Verify No Git Diff (Markdown vs HTML Out-of-Sync Check)
         run: |
           if ! git diff --exit-code docs/references/; then
             echo "::error::Reference HTML files are out of sync with Markdown sources!"
-            echo "Please run 'node scripts/build-reference-html.js' locally and commit the generated HTML files."
+            echo "Please run 'cd tools/reference-builder; npm ci; node index.js' locally and commit the generated HTML files."
             exit 1
           fi
           echo "Reference HTML files are perfectly synchronized with Markdown sources."

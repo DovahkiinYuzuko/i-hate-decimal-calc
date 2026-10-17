@@ -1,0 +1,16 @@
+{
+  "skipLink": "Skip to main content",
+  "hamburgerAria": "Open table of contents menu",
+  "drawerTitle": "Table of Contents",
+  "drawerCloseAria": "Close table of contents",
+  "tocTitle": "Table of Contents",
+  "tocAria": "Desktop table of contents navigation",
+  "searchPlaceholder": "Fast search by function, operator, keyword...",
+  "searchAria": "Search in reference",
+  "btnExpandAll": "Expand All",
+  "btnCollapseAll": "Collapse All",
+  "copyTooltip": "Click to copy",
+  "copiedToast": "Copied!",
+  "accordionToggleAria": "Toggle {title}",
+  "subAccordionToggleAria": "Toggle submenu for {title}"
+}
