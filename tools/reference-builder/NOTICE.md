@@ -1,87 +1,61 @@
-# Third-Party Software Notices and Information
+# Third-Party Notices
 
-This directory, **tools/reference-builder**, incorporates components from the following third-party open source software.
-The original copyright notices, licenses, and disclaimers are reproduced below in accordance with their respective licensing terms.
-
----
-
-## 1. Unified Ecosystem (unified, remark, rehype, unist)
-
-- **Packages:**
-  - `unified` (v11.0.5)
-  - `remark-parse` (v11.0.0)
-  - `remark-gfm` (v4.0.1)
-  - `remark-math` (v6.0.0)
-  - `remark-rehype` (v11.1.2)
-  - `rehype-katex` (v7.0.1)
-  - `rehype-stringify` (v10.0.1)
-  - `unist-util-visit` (v5.1.0)
-- **License:** MIT License
-- **Copyright:** (c) 2015 Titus Wormer <tituswormer@gmail.com>
-- **URL:** https://github.com/unifiedjs
-
-```
-(The MIT License)
-
-Copyright (c) 2015 Titus Wormer <tituswormer@gmail.com>
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-```
+This project utilizes third-party open-source software components. 
+Below is the list of libraries, their versions, licenses, and copyright notices categorized by their role and language.
 
 ---
 
-## 2. KaTeX
+## Markdown & HTML AST Pipeline (Unified Ecosystem)
 
-- **Package:** `katex`
-- **Version:** `v0.16.21` (CSS & WebFonts bundle) / `v0.19.0`
-- **License:** MIT License
-- **Copyright:** (c) 2013-2024 Khan Academy and other contributors
-- **URL:** https://katex.org / https://github.com/KaTeX/KaTeX
+### unified
+- **Version:** v11.0.5
+- **License:** MIT
+- **Copyright:** Copyright (c) 2015 Titus Wormer <tituswormer@gmail.com>
 
-```
-The MIT License (MIT)
+### remark-parse
+- **Version:** v11.0.0
+- **License:** MIT
+- **Copyright:** Copyright (c) 2015 Titus Wormer <tituswormer@gmail.com>
 
-Copyright (c) 2013-2024 Khan Academy and other contributors
+### remark-gfm
+- **Version:** v4.0.1
+- **License:** MIT
+- **Copyright:** Copyright (c) 2015 Titus Wormer <tituswormer@gmail.com>
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+### remark-math
+- **Version:** v6.0.0
+- **License:** MIT
+- **Copyright:** Copyright (c) 2015 Titus Wormer <tituswormer@gmail.com>
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+### remark-rehype
+- **Version:** v11.1.2
+- **License:** MIT
+- **Copyright:** Copyright (c) 2015 Titus Wormer <tituswormer@gmail.com>
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
+### rehype-katex
+- **Version:** v7.0.1
+- **License:** MIT
+- **Copyright:** Copyright (c) 2015 Titus Wormer <tituswormer@gmail.com>
+
+### rehype-stringify
+- **Version:** v10.0.1
+- **License:** MIT
+- **Copyright:** Copyright (c) 2015 Titus Wormer <tituswormer@gmail.com>
+
+### unist-util-visit
+- **Version:** v5.1.0
+- **License:** MIT
+- **Copyright:** Copyright (c) 2015 Titus Wormer <tituswormer@gmail.com>
 
 ---
 
-## 3. Digital Agency Design System (DADS) CSS Design Tokens
+## Mathematical Typesetting & WebFonts
 
-- **Components:** Design token definitions, color palettes, spacing variables, and component layouts adapted from Digital Agency Design System (DADS)
-- **License:** Open Source Guidelines (Government of Japan Digital Agency)
-- **URL:** https://design.digital.go.jp
+### katex
+- **Version:** v0.19.0 / v0.16.21
+- **License:** MIT
+- **Copyright:** Copyright (c) 2013-2024 Khan Academy and other contributors
+
+---
+
+> **License Details:** For the complete license text, please refer to each project's LICENSE file or official repository.
