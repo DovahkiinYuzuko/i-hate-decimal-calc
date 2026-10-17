@@ -206,6 +206,72 @@ const INLINE_CSS = `
     padding-left: calc(var(--space-2) - 3px);
   }
 
+  /* 階層目次アコーディオン */
+  .toc-group {
+    margin-bottom: var(--space-1);
+  }
+  .toc-group-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-1) var(--space-2);
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    list-style: none;
+    -webkit-user-select: none;
+    user-select: none;
+    transition: background-color 0.15s;
+  }
+  .toc-group-summary::-webkit-details-marker {
+    display: none;
+  }
+  .toc-group-summary:hover {
+    background-color: var(--color-bg-subtle);
+  }
+  .toc-group-icon {
+    width: 16px;
+    height: 16px;
+    fill: var(--color-text-muted);
+    transition: transform 0.2s ease;
+  }
+  .toc-group[open] > .toc-group-summary .toc-group-icon {
+    transform: rotate(90deg);
+  }
+  .toc-sublist {
+    list-style: none;
+    padding-left: var(--space-3);
+    margin-top: var(--space-1);
+    border-left: 2px solid var(--color-border-subtle);
+    margin-left: var(--space-2);
+  }
+  .toc-subitem {
+    margin-bottom: 2px;
+  }
+  .toc-sublink {
+    display: block;
+    padding: 3px var(--space-2);
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+    line-height: 1.4;
+    transition: background-color 0.15s, color 0.15s;
+  }
+  .toc-sublink:hover {
+    color: var(--color-text-main);
+    background-color: var(--color-bg-subtle);
+  }
+  .toc-sublink.active {
+    color: var(--color-primary-text);
+    background-color: var(--color-primary-bg);
+    font-weight: 700;
+    border-left: 2px solid var(--color-primary);
+    padding-left: calc(var(--space-2) - 2px);
+  }
+
   .main-content {
     flex: 1;
     min-width: 0;
@@ -357,6 +423,17 @@ const INLINE_CSS = `
     border-bottom: 3px solid var(--color-primary);
   }
 
+  h2.dads-h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.4;
+    margin-top: var(--space-8);
+    margin-bottom: var(--space-4);
+    padding-bottom: var(--space-2);
+    border-bottom: 2px solid var(--color-primary);
+    color: var(--color-text-main);
+  }
+
   h3.dads-h3 {
     font-size: 1.125rem;
     font-weight: 700;
@@ -399,7 +476,6 @@ const INLINE_CSS = `
   .table-container {
     width: 100%;
     overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
     margin: var(--space-3) 0 var(--space-5);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
@@ -763,18 +839,42 @@ const INLINE_JS = `
       });
     }
 
-    // 6. スクロールスパイ (現在地TOCハイライト)
-    const tocLinks = document.querySelectorAll('.toc-link');
-    const observedSections = document.querySelectorAll('details[id]');
+    // 6. スクロールスパイ (現在地TOCハイライト) ＆ クリック時自動展開
+    const allTocLinks = document.querySelectorAll('.toc-link, .toc-sublink');
+    const observedSections = document.querySelectorAll('details[id], h2[id]');
+
+    allTocLinks.forEach(link => {
+      link.addEventListener('click', () => {
+        const href = link.getAttribute('href');
+        if (href && href.startsWith('#')) {
+          const targetId = href.slice(1);
+          const targetEl = document.getElementById(targetId);
+          if (targetEl) {
+            if (targetEl.tagName.toLowerCase() === 'details') {
+              targetEl.open = true;
+            }
+            let parent = targetEl.parentElement;
+            while (parent) {
+              if (parent.tagName && parent.tagName.toLowerCase() === 'details') {
+                parent.open = true;
+              }
+              parent = parent.parentElement;
+            }
+          }
+        }
+      });
+    });
 
     if ('IntersectionObserver' in window && observedSections.length > 0) {
       const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
           if (entry.isIntersecting) {
             const id = entry.target.getAttribute('id');
-            tocLinks.forEach(link => {
+            allTocLinks.forEach(link => {
               if (link.getAttribute('href') === '#' + id) {
                 link.classList.add('active');
+                const parentGroup = link.closest('.toc-group');
+                if (parentGroup) parentGroup.open = true;
               } else {
                 link.classList.remove('active');
               }
@@ -812,7 +912,7 @@ const INLINE_JS = `
       if (e.key === 'Escape') closeDrawer();
     });
 
-    document.querySelectorAll('.mobile-drawer .toc-link').forEach(link => {
+    document.querySelectorAll('.mobile-drawer .toc-link, .mobile-drawer .toc-sublink').forEach(link => {
       link.addEventListener('click', closeDrawer);
     });
   });
@@ -899,8 +999,10 @@ function parseMarkdownToReferenceHtml(markdownContent, lang) {
   let title = 'ihd Complete Reference';
   let leadText = '';
   
-  const tocItems = [];
-  const sections = []; // 各セクション: { id, title, contentHtml, keywords }
+  const tocTree = []; // 各要素: { id, title, isGroup, children: [{ id, title }] }
+  const sections = []; // 各セクション: { id, title, contentHtml, keywords, isGroupHeader }
+  let currentGroup = null;
+  let inFunctionCategories = false;
   let currentSection = null;
   let inTable = false;
   let tableHeader = [];
@@ -1016,29 +1118,81 @@ function parseMarkdownToReferenceHtml(markdownContent, lang) {
       continue;
     }
 
-    // 5. 大見出し (## ) -> 新しいアコーディオンセクション
+    // 5. 大見出し (## )
     if (line.startsWith('## ')) {
+      if (inTable && currentSection) currentSection.contentHtml += flushTable();
+      if (inCodeBlock && currentSection) currentSection.contentHtml += flushCodeBlock();
+
       const secTitle = line.replace('## ', '').trim();
       const secId = 'sec-' + secTitle.toLowerCase().replace(/[^a-z0-9\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]+/g, '-').replace(/^-|-$/g, '');
 
-      currentSection = {
-        id: secId,
-        title: secTitle,
-        contentHtml: '',
-        keywords: [secTitle]
-      };
-      sections.push(currentSection);
-      tocItems.push({ id: secId, title: secTitle });
+      const isFunctionCategoryGroup = /カテゴリ別|Built-in Functions by Category/i.test(secTitle);
+
+      if (isFunctionCategoryGroup) {
+        inFunctionCategories = true;
+        currentGroup = {
+          id: secId,
+          title: secTitle,
+          isGroup: true,
+          children: []
+        };
+        tocTree.push(currentGroup);
+
+        currentSection = {
+          id: secId,
+          title: secTitle,
+          contentHtml: '',
+          keywords: [secTitle],
+          isGroupHeader: true
+        };
+        sections.push(currentSection);
+      } else {
+        inFunctionCategories = false;
+        currentGroup = null;
+        currentSection = {
+          id: secId,
+          title: secTitle,
+          contentHtml: '',
+          keywords: [secTitle],
+          isGroupHeader: false
+        };
+        sections.push(currentSection);
+        tocTree.push({
+          id: secId,
+          title: secTitle,
+          isGroup: false,
+          children: []
+        });
+      }
       lineIdx++;
       continue;
     }
 
     // 6. 中見出し (### )
     if (line.startsWith('### ')) {
+      if (inTable && currentSection) currentSection.contentHtml += flushTable();
+      if (inCodeBlock && currentSection) currentSection.contentHtml += flushCodeBlock();
+
       const subTitle = line.replace('### ', '').trim();
-      if (currentSection) {
-        currentSection.keywords.push(subTitle);
-        currentSection.contentHtml += `<h3 class="dads-h3">${escapeHtml(subTitle)}</h3>`;
+      const subId = 'sec-' + subTitle.toLowerCase().replace(/[^a-z0-9\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]+/g, '-').replace(/^-|-$/g, '');
+
+      if (inFunctionCategories && currentGroup) {
+        // 関数カテゴリ配下の各カテゴリ（1〜21）を独立アコーディオンとして生成
+        currentSection = {
+          id: subId,
+          title: subTitle,
+          contentHtml: '',
+          keywords: [subTitle],
+          isGroupHeader: false
+        };
+        sections.push(currentSection);
+        currentGroup.children.push({ id: subId, title: subTitle });
+      } else {
+        // 演算子等の通常セクション内の中見出し
+        if (currentSection) {
+          currentSection.keywords.push(subTitle);
+          currentSection.contentHtml += `<h3 class="dads-h3">${escapeHtml(subTitle)}</h3>`;
+        }
       }
       lineIdx++;
       continue;
@@ -1083,28 +1237,58 @@ function parseMarkdownToReferenceHtml(markdownContent, lang) {
     currentSection.contentHtml += flushCodeBlock();
   }
 
-  // TOC リスト HTML
+  // 階層 TOC リスト HTML
   let tocHtml = '<ul class="toc-list">';
-  tocItems.forEach(item => {
-    tocHtml += `<li class="toc-item"><a class="toc-link" href="#${item.id}">${escapeHtml(item.title)}</a></li>`;
+  tocTree.forEach(item => {
+    if (item.isGroup && item.children && item.children.length > 0) {
+      tocHtml += `
+        <li class="toc-item">
+          <details class="toc-group" open>
+            <summary class="toc-group-summary" aria-label="${escapeHtml(item.title)} のサブメニューを開閉">
+              <span>${escapeHtml(item.title)}</span>
+              <svg class="toc-group-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+            </summary>
+            <ul class="toc-sublist">
+      `;
+      item.children.forEach(sub => {
+        tocHtml += `<li class="toc-subitem"><a class="toc-sublink" href="#${sub.id}">${escapeHtml(sub.title)}</a></li>`;
+      });
+      tocHtml += `
+            </ul>
+          </details>
+        </li>
+      `;
+    } else {
+      tocHtml += `<li class="toc-item"><a class="toc-link" href="#${item.id}">${escapeHtml(item.title)}</a></li>`;
+    }
   });
   tocHtml += '</ul>';
 
   // セクションアコーディオン HTML
   let sectionsHtml = '';
-  sections.forEach((sec, idx) => {
-    const isOpen = idx < 3 ? ' open' : '';
-    sectionsHtml += `
-      <details class="dads-accordion" id="${sec.id}"${isOpen} data-keywords="${escapeHtml(sec.keywords.join(' '))}">
-        <summary class="accordion-summary" aria-label="${escapeHtml(sec.title)} を開閉">
-          <span class="accordion-title">${escapeHtml(sec.title)}</span>
-          <svg class="accordion-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/></svg>
-        </summary>
-        <div class="accordion-content">
-          ${sec.contentHtml}
-        </div>
-      </details>
-    `;
+  let accordionCount = 0;
+  sections.forEach((sec) => {
+    if (sec.isGroupHeader) {
+      sectionsHtml += `<h2 class="dads-h2" id="${sec.id}">${escapeHtml(sec.title)}</h2>`;
+      if (sec.contentHtml) {
+        sectionsHtml += `<div class="group-intro">${sec.contentHtml}</div>`;
+      }
+    } else {
+      // 最初の4つのアコーディオン（演算子、リテラル、予約定数、関数の第1カテゴリ）は初期状態で open
+      const isOpen = accordionCount < 4 ? ' open' : '';
+      sectionsHtml += `
+        <details class="dads-accordion" id="${sec.id}"${isOpen} data-keywords="${escapeHtml(sec.keywords.join(' '))}">
+          <summary class="accordion-summary" aria-label="${escapeHtml(sec.title)} を開閉">
+            <span class="accordion-title">${escapeHtml(sec.title)}</span>
+            <svg class="accordion-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/></svg>
+          </summary>
+          <div class="accordion-content">
+            ${sec.contentHtml}
+          </div>
+        </details>
+      `;
+      accordionCount++;
+    }
   });
 
   return `<!DOCTYPE html>
