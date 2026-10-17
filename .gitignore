@@ -60,6 +60,7 @@
 !go.sum
 !*.go
 !install.*
+!NOTICE.md
 # .gitignores/tools.gitignore
 !tools/
 !tools/micro-verifier/
@@ -75,3 +76,5 @@
 !tools/reference-builder/templates/**
 !tools/reference-builder/assets/
 !tools/reference-builder/assets/**
+!tools/reference-builder/README.md
+!tools/reference-builder/NOTICE.md
