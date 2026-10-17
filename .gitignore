@@ -13,7 +13,9 @@
 # .gitignores/docs.gitignore
 !docs/
 !docs/references/
-!docs/references/reference.*.md
+!docs/references/*/
+!docs/references/*/*.md
+!docs/references/*/*.html
 # .gitignores/exam.gitignore
 # exam folder
 !exam/
@@ -58,3 +60,6 @@
 !go.sum
 !*.go
 !install.*
+# .gitignores/scripts.gitignore
+!scripts/
+!scripts/build-reference-html.js

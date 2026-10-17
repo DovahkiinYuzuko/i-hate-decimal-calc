@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Complete language specification and built-in function reference for `ihd` (i-hate-decimal-calc), a strict CAS calculator that rejects all decimal approximations and computes strictly using arbitrary-precision rational numbers and algebraic symbols.">
+  <title>ihd Complete Syntax, Operators &amp; Functions Reference (English Edition)</title>
+  <style>
+  :root {
+    --color-primary: #0055ff;
+    --color-primary-hover: #0040cc;
+    --color-primary-active: #0033aa;
+    --color-primary-text: #0044cc;
+    --color-primary-bg: #f2f6fc;
+    --color-text-main: #1a1a1c;
+    --color-text-muted: #535359;
+    --color-bg-base: #f9f9fb;
+    --color-bg-surface: #ffffff;
+    --color-bg-subtle: #f2f2f5;
+    --color-border: #d0d0d8;
+    --color-border-subtle: #e4e4eb;
+    --color-border-dark: #1a1a1c;
+    --color-focus: #0055ff;
+    --color-code-bg: #21252b;
+    --color-code-text: #abb2bf;
+    --color-notice-bg: #e6f0ff;
+    --color-notice-border: #0055ff;
+    --font-family-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", "Hiragino Sans", "Meiryo", sans-serif;
+    --font-family-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+    --space-8: 48px;
+    --sidebar-width: 280px;
+    --header-height: 56px;
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    font-size: 16px;
+  }
+
+  body {
+    font-family: var(--font-family-sans);
+    color: var(--color-text-main);
+    background-color: var(--color-bg-base);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 4px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .skip-link {
+    position: absolute;
+    top: -9999px;
+    left: var(--space-4);
+    background: var(--color-primary);
+    color: #fff;
+    padding: var(--space-2) var(--space-4);
+    z-index: 9999;
+    font-weight: 700;
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+  }
+  .skip-link:focus {
+    top: var(--space-4);
+  }
+
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    height: var(--header-height);
+    background-color: var(--color-bg-surface);
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--space-5);
+  }
+
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .logo-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    text-decoration: none;
+  }
+
+  .version-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    background-color: var(--color-primary-bg);
+    color: var(--color-primary-text);
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(0, 85, 255, 0.2);
+  }
+
+  .btn-hamburger {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--color-text-main);
+    border-radius: var(--radius-sm);
+  }
+  .btn-hamburger:hover {
+    background-color: var(--color-bg-subtle);
+  }
+
+  .page-container {
+    display: flex;
+    max-width: 1440px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .sidebar-toc {
+    width: var(--sidebar-width);
+    flex-shrink: 0;
+    height: calc(100vh - var(--header-height));
+    position: sticky;
+    top: var(--header-height);
+    overflow-y: auto;
+    padding: var(--space-5) var(--space-4);
+    border-right: 1px solid var(--color-border);
+    background-color: var(--color-bg-surface);
+  }
+
+  .toc-title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-3);
+  }
+
+  .toc-list {
+    list-style: none;
+  }
+  .toc-item {
+    margin-bottom: var(--space-1);
+  }
+  .toc-link {
+    display: block;
+    padding: var(--space-1) var(--space-2);
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+    line-height: 1.4;
+    transition: background-color 0.15s, color 0.15s;
+  }
+  .toc-link:hover {
+    color: var(--color-text-main);
+    background-color: var(--color-bg-subtle);
+  }
+  .toc-link.active {
+    color: var(--color-primary-text);
+    background-color: var(--color-primary-bg);
+    font-weight: 700;
+    border-left: 3px solid var(--color-primary);
+    padding-left: calc(var(--space-2) - 3px);
+  }
+
+  .main-content {
+    flex: 1;
+    min-width: 0;
+    padding: var(--space-6) var(--space-6) var(--space-8);
+  }
+
+  .search-wrapper {
+    margin-bottom: var(--space-5);
+  }
+
+  .search-bar-inner {
+    position: relative;
+    width: 100%;
+  }
+
+  .search-input {
+    width: 100%;
+    height: 48px;
+    padding: 0 var(--space-5) 0 44px;
+    font-size: 1rem;
+    font-family: inherit;
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background-color: var(--color-bg-surface);
+    color: var(--color-text-main);
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .search-input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(0, 85, 255, 0.2);
+    outline: none;
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    color: var(--color-text-muted);
+    pointer-events: none;
+  }
+
+  .search-status-bar {
+    display: none;
+    margin-top: var(--space-2);
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+  }
+
+  .search-summary-text {
+    font-weight: 600;
+  }
+
+  .search-count-badge {
+    background-color: var(--color-primary-bg);
+    color: var(--color-primary-text);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+  }
+
+  .section-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+  }
+
+  .btn-action-sm {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-height: 36px;
+    padding: 0 var(--space-3);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-text-main);
+    background-color: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s;
+  }
+  .btn-action-sm:hover {
+    background-color: var(--color-bg-subtle);
+    border-color: #b5b5be;
+  }
+
+  details.dads-accordion {
+    background-color: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-5);
+    overflow: hidden;
+  }
+
+  summary.accordion-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-4);
+    background-color: var(--color-bg-subtle);
+    cursor: pointer;
+    list-style: none;
+    -webkit-user-select: none;
+    user-select: none;
+    border-left: 5px solid var(--color-primary);
+  }
+  summary.accordion-summary::-webkit-details-marker {
+    display: none;
+  }
+  summary.accordion-summary:hover {
+    background-color: #ebebee;
+  }
+
+  .accordion-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .accordion-icon {
+    width: 20px;
+    height: 20px;
+    fill: var(--color-text-muted);
+    transition: transform 0.2s ease;
+  }
+  details.dads-accordion[open] .accordion-icon {
+    transform: rotate(180deg);
+    fill: var(--color-primary);
+  }
+
+  .accordion-content {
+    padding: var(--space-5) var(--space-5) var(--space-6);
+    border-top: 1px solid var(--color-border);
+  }
+
+  h1.dads-h1 {
+    font-size: 1.875rem;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: var(--space-4);
+    padding-bottom: var(--space-3);
+    border-bottom: 3px solid var(--color-primary);
+  }
+
+  h3.dads-h3 {
+    font-size: 1.125rem;
+    font-weight: 700;
+    line-height: 1.5;
+    margin-top: var(--space-5);
+    margin-bottom: var(--space-3);
+    padding-bottom: var(--space-1);
+    border-bottom: 1px solid var(--color-border-subtle);
+  }
+
+  .lead-text {
+    font-size: 1.0625rem;
+    margin-bottom: var(--space-5);
+    color: var(--color-text-muted);
+  }
+
+  /* テーブルコンテナ (アプローチ2: クリーン枠線のみ、不要なシャドウ完全撤去) */
+  .table-container {
+    width: 100%;
+    overflow-x: auto;
+    margin: var(--space-3) 0 var(--space-5);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background-color: var(--color-bg-surface);
+  }
+
+  table.dads-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+  }
+
+  /* テーブルヘッダー: 下部2px黒ボーダー ＋ 縦罫線 */
+  table.dads-table thead th {
+    background-color: var(--color-bg-subtle);
+    color: var(--color-text-main);
+    font-weight: 700;
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 2px solid var(--color-border-dark);
+    border-right: 1px solid var(--color-border);
+    white-space: nowrap;
+    vertical-align: top;
+  }
+  table.dads-table thead th:last-child {
+    border-right: none;
+  }
+
+  /* テーブルセル: 下部細罫線 ＋ 縦罫線 */
+  table.dads-table tbody td {
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--color-border-subtle);
+    border-right: 1px solid var(--color-border-subtle);
+    vertical-align: top;
+    color: var(--color-text-main);
+  }
+  table.dads-table tbody td:last-child {
+    border-right: none;
+  }
+  table.dads-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+  table.dads-table tbody tr:hover td {
+    background-color: var(--color-primary-bg);
+  }
+
+  .col-rank {
+    width: 60px;
+    text-align: center;
+    font-weight: 600;
+    color: var(--color-text-muted);
+  }
+
+  .col-operator {
+    white-space: nowrap;
+    font-family: var(--font-family-mono);
+    font-weight: 700;
+    color: var(--color-primary-text);
+  }
+
+  /* インラインコード & クリックコピー対応 */
+  code.clickable-code {
+    font-family: var(--font-family-mono);
+    font-size: 0.875rem;
+    background-color: var(--color-bg-subtle);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border-subtle);
+    color: var(--color-primary-text);
+    cursor: pointer;
+    display: inline-block;
+    transition: background-color 0.15s, border-color 0.15s, transform 0.1s;
+    user-select: all;
+    -webkit-user-select: all;
+  }
+  code.clickable-code:hover {
+    background-color: #e0ecff;
+    border-color: #99c2ff;
+    transform: translateY(-1px);
+  }
+  code.clickable-code:active {
+    transform: translateY(0);
+  }
+
+  /* コードブロック (REPLカードスタイル) */
+  .code-block-wrapper {
+    position: relative;
+    margin: var(--space-4) 0;
+    border-radius: var(--radius-md);
+    background-color: var(--color-code-bg);
+    border: 1px solid #3e4451;
+    overflow: hidden;
+  }
+  .code-block-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-2) var(--space-4);
+    background-color: #1e2227;
+    border-bottom: 1px solid #2c313a;
+  }
+  .code-block-title {
+    font-size: 0.75rem;
+    font-family: var(--font-family-mono);
+    font-weight: 700;
+    color: #9da5b4;
+    text-transform: uppercase;
+  }
+  pre.dads-code-pre {
+    padding: var(--space-4);
+    overflow-x: auto;
+    font-family: var(--font-family-mono);
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--color-code-text);
+  }
+
+  /* コピートースト通知 */
+  .copy-toast {
+    position: fixed;
+    bottom: var(--space-6);
+    right: var(--space-6);
+    background-color: #1a1a1c;
+    color: #ffffff;
+    padding: var(--space-3) var(--space-5);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+    z-index: 1000;
+  }
+  .copy-toast.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* モバイル対応ドロワー */
+  .drawer-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.4);
+    z-index: 200;
+    backdrop-filter: blur(2px);
+  }
+  .mobile-drawer {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 300px;
+    max-width: 80%;
+    background-color: var(--color-bg-surface);
+    z-index: 201;
+    padding: var(--space-5) var(--space-4);
+    overflow-y: auto;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    box-shadow: 2px 0 16px rgba(0, 0, 0, 0.15);
+  }
+  .mobile-drawer.open {
+    transform: translateX(0);
+  }
+
+  @media (max-width: 768px) {
+    .btn-hamburger {
+      display: inline-flex;
+    }
+    .sidebar-toc {
+      display: none;
+    }
+    .main-content {
+      padding: var(--space-4) var(--space-4) var(--space-6);
+    }
+    .drawer-overlay, .mobile-drawer {
+      display: block;
+    }
+  }
+</style>
+</head>
+<body>
+  <a class="skip-link" href="#mainContent">本文へスキップ</a>
+
+  <header class="site-header">
+    <div class="header-brand">
+      <button class="btn-hamburger" id="btnHamburger" aria-label="目次メニューを開く">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+      </button>
+      <a class="logo-title" href="#">ihd Reference</a>
+      <span class="version-badge">v2.18.1</span>
+    </div>
+  </header>
+
+  <!-- モバイル用スライドイン・ドロワー -->
+  <div class="drawer-overlay" id="drawerOverlay"></div>
+  <aside class="mobile-drawer" id="mobileDrawer" aria-label="モバイル目次ナビゲーション">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <span style="font-weight: 700; font-size: 1.125rem;">目次</span>
+      <button id="btnCloseDrawer" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--color-text-main);">&times;</button>
+    </div>
+    <ul class="toc-list"><li class="toc-item"><a class="toc-link" href="#sec-operators-precedence">Operators &amp; Precedence</a></li><li class="toc-item"><a class="toc-link" href="#sec-number-literal-syntax-multi-radix-repeating-decimals">Number Literal Syntax (Multi-Radix &amp; Repeating Decimals)</a></li><li class="toc-item"><a class="toc-link" href="#sec-reserved-constants">Reserved Constants</a></li><li class="toc-item"><a class="toc-link" href="#sec-built-in-functions-by-category">Built-in Functions by Category</a></li></ul>
+  </aside>
+
+  <div class="page-container">
+    <nav class="sidebar-toc" id="sidebarToc" aria-label="デスクトップ目次ナビゲーション">
+      <h2 class="toc-title">目次</h2>
+      <ul class="toc-list"><li class="toc-item"><a class="toc-link" href="#sec-operators-precedence">Operators &amp; Precedence</a></li><li class="toc-item"><a class="toc-link" href="#sec-number-literal-syntax-multi-radix-repeating-decimals">Number Literal Syntax (Multi-Radix &amp; Repeating Decimals)</a></li><li class="toc-item"><a class="toc-link" href="#sec-reserved-constants">Reserved Constants</a></li><li class="toc-item"><a class="toc-link" href="#sec-built-in-functions-by-category">Built-in Functions by Category</a></li></ul>
+    </nav>
+
+    <main class="main-content" id="mainContent">
+      <h1 class="dads-h1">ihd Complete Syntax, Operators &amp; Functions Reference (English Edition)</h1>
+      <p class="lead-text">Complete language specification and built-in function reference for `ihd` (i-hate-decimal-calc), a strict CAS calculator that rejects all decimal approximations and computes strictly using arbitrary-precision rational numbers and algebraic symbols.</p>
+
+      <div class="search-wrapper">
+        <div class="search-bar-inner">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 14z"/></svg>
+          <input type="search" class="search-input" id="searchInput" placeholder="関数名、演算子、キーワードで高速検索..." aria-label="リファレンス内を検索">
+        </div>
+        <div class="search-status-bar" id="searchStatusBar">
+          <span id="searchResultText"></span>
+        </div>
+      </div>
+
+      <div class="section-toolbar">
+        <button type="button" class="btn-action-sm" id="btnExpandAll">すべて展開</button>
+        <button type="button" class="btn-action-sm" id="btnCollapseAll">すべて折りたたむ</button>
+      </div>
+
+      <div class="sections-container">
+        
+      <details class="dads-accordion" id="sec-operators-precedence" open data-keywords="Operators &amp; Precedence Distinguishing Relational Operators and Variable Assignment">
+        <summary class="accordion-summary" aria-label="Operators &amp; Precedence を開閉">
+          <span class="accordion-title">Operators &amp; Precedence</span>
+          <svg class="accordion-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/></svg>
+        </summary>
+        <div class="accordion-content">
+          <p class="body-p">Implicit multiplication (e.g., <code class="clickable-code" data-copy="2pi" title="クリックしてコピー">2pi</code> or <code class="clickable-code" data-copy="(1+2)(3+4)" title="クリックしてコピー">(1+2)(3+4)</code>) is strictly prohibited to prevent syntactic ambiguity. Explicit <code class="clickable-code" data-copy="*" title="クリックしてコピー">*</code> is required.</p><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">Rank</th><th scope="col">Operator</th><th scope="col">Associativity</th><th scope="col">Description & Examples</th></tr></thead><tbody><tr><td class="col-rank">1</td><td class="col-operator"><code class="clickable-code" data-copy="()" title="クリックしてコピー">()</code></td><td>-</td><td>Grouping parentheses</td></tr><tr><td class="col-rank">2</td><td class="col-operator"><code class="clickable-code" data-copy="!" title="クリックしてコピー">!</code></td><td>Postfix Unary</td><td>Factorial of non-negative integers (e.g., <code class="clickable-code" data-copy="5! = 120" title="クリックしてコピー">5! = 120</code>. Giant factorials accelerated via Legendre's formula, binary splitting tree, and NTT)</td></tr><tr><td class="col-rank">3</td><td class="col-operator"><code class="clickable-code" data-copy="^" title="クリックしてコピー">^</code></td><td><strong>Right-associative</strong></td><td>Exponentiation (e.g., <code class="clickable-code" data-copy="2^3^2 = 2^(3^2) = 512" title="クリックしてコピー">2^3^2 = 2^(3^2) = 512</code>)</td></tr><tr><td class="col-rank">4</td><td class="col-operator"><code class="clickable-code" data-copy="-" title="クリックしてコピー">-</code></td><td>Prefix Unary</td><td>Unary negation (Lower precedence than <code class="clickable-code" data-copy="^" title="クリックしてコピー">^</code>: <code class="clickable-code" data-copy="-3^2 = -(3^2) = -9" title="クリックしてコピー">-3^2 = -(3^2) = -9</code>)</td></tr><tr><td class="col-rank">5</td><td class="col-operator"><code class="clickable-code" data-copy="*" title="クリックしてコピー">*</code>, <code class="clickable-code" data-copy="/" title="クリックしてコピー">/</code></td><td>Left-associative</td><td>Multiplication and division (Explicit <code class="clickable-code" data-copy="*" title="クリックしてコピー">*</code> required)</td></tr><tr><td class="col-rank">6</td><td class="col-operator"><code class="clickable-code" data-copy="+" title="クリックしてコピー">+</code>, <code class="clickable-code" data-copy="-" title="クリックしてコピー">-</code></td><td>Left-associative</td><td>Addition and subtraction</td></tr><tr><td class="col-rank">7</td><td class="col-operator"><code class="clickable-code" data-copy="&lt;" title="クリックしてコピー">&lt;</code>, <code class="clickable-code" data-copy="&lt;=" title="クリックしてコピー">&lt;=</code>, <code class="clickable-code" data-copy="&gt;" title="クリックしてコピー">&gt;</code>, <code class="clickable-code" data-copy="&gt;=" title="クリックしてコピー">&gt;=</code>, <code class="clickable-code" data-copy="==" title="クリックしてコピー">==</code>, <code class="clickable-code" data-copy="!=" title="クリックしてコピー">!=</code></td><td>None</td><td>Relational operations & inequalities (Rigorous evaluation via rational interval arithmetic and algebraic proof)</td></tr></tbody></table></div><h3 class="dads-h3">Distinguishing Relational Operators and Variable Assignment</h3><p class="bullet-item">• <strong>Assignment Operator (<code class="clickable-code" data-copy="=" title="クリックしてコピー">=</code>)</strong>: Binds an evaluated expression to a variable in REPL and scripts (e.g., <code class="clickable-code" data-copy="x = 42" title="クリックしてコピー">x = 42</code>, <code class="clickable-code" data-copy="f = sin(x)" title="クリックしてコピー">f = sin(x)</code>).</p><p class="bullet-item">• <strong>Equality &amp; Relational Comparison (<code class="clickable-code" data-copy="==" title="クリックしてコピー">==</code>, <code class="clickable-code" data-copy="!=" title="クリックしてコピー">!=</code>)</strong>:</p><p class="body-p">  - Top-level evaluation: Rigorously evaluated to <code class="clickable-code" data-copy="true" title="クリックしてコピー">true</code> or <code class="clickable-code" data-copy="false" title="クリックしてコピー">false</code> using exact algebraic identity (<code class="clickable-code" data-copy="lhs - rhs == 0" title="クリックしてコピー">lhs - rhs == 0</code> and equivalence verification) and rational interval arithmetic (e.g., <code class="clickable-code" data-copy="1 == 2" title="クリックしてコピー">1 == 2</code> $\to$ <code class="clickable-code" data-copy="false" title="クリックしてコピー">false</code>, <code class="clickable-code" data-copy="0.(9) == 1" title="クリックしてコピー">0.(9) == 1</code> $\to$ <code class="clickable-code" data-copy="true" title="クリックしてコピー">true</code>, <code class="clickable-code" data-copy="sqrt(2)+sqrt(3) == sqrt(5+2*sqrt(6))" title="クリックしてコピー">sqrt(2)+sqrt(3) == sqrt(5+2*sqrt(6))</code> $\to$ <code class="clickable-code" data-copy="true" title="クリックしてコピー">true</code>, <code class="clickable-code" data-copy="1 != 2" title="クリックしてコピー">1 != 2</code> $\to$ <code class="clickable-code" data-copy="true" title="クリックしてコピー">true</code>).</p><p class="body-p">  - Solver arguments (<code class="clickable-code" data-copy="solve" title="クリックしてコピー">solve</code>, <code class="clickable-code" data-copy="dsolve" title="クリックしてコピー">dsolve</code>, <code class="clickable-code" data-copy="rsolve" title="クリックしてコピー">rsolve</code>, <code class="clickable-code" data-copy="verify" title="クリックしてコピー">verify</code>, etc.): Preserved intact as equation/relation AST nodes to serve as equation inputs for root finding and theorem proving (e.g., <code class="clickable-code" data-copy="solve(2 == 0, x)" title="クリックしてコピー">solve(2 == 0, x)</code> correctly raises a contradiction error, and <code class="clickable-code" data-copy="dsolve(y&amp;#39; == y, y, x)" title="クリックしてコピー">dsolve(y&amp;#39; == y, y, x)</code> is solved as an ODE).</p><p class="bullet-item">• <strong>Disambiguation from Factorial (<code class="clickable-code" data-copy="!" title="クリックしてコピー">!</code>)</strong>: When an expression contains factorial adjacent to equality, <code class="clickable-code" data-copy="1!=2" title="クリックしてコピー">1!=2</code> is unambiguously tokenized as <code class="clickable-code" data-copy="1 != 2" title="クリックしてコピー">1 != 2</code> (not-equal). Explicit factorial comparisons can be written as <code class="clickable-code" data-copy="(5!) == 120" title="クリックしてコピー">(5!) == 120</code> or <code class="clickable-code" data-copy="5! != 120" title="クリックしてコピー">5! != 120</code>.</p>
+        </div>
+      </details>
+    
+      <details class="dads-accordion" id="sec-number-literal-syntax-multi-radix-repeating-decimals" open data-keywords="Number Literal Syntax (Multi-Radix &amp; Repeating Decimals)">
+        <summary class="accordion-summary" aria-label="Number Literal Syntax (Multi-Radix &amp; Repeating Decimals) を開閉">
+          <span class="accordion-title">Number Literal Syntax (Multi-Radix &amp; Repeating Decimals)</span>
+          <svg class="accordion-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/></svg>
+        </summary>
+        <div class="accordion-content">
+          <p class="body-p"><code class="clickable-code" data-copy="ihd" title="クリックしてコピー">ihd</code> is a decimal-free exact rational CAS calculator. Number literals are parsed directly into arbitrary-precision rationals ($\mathbb{Q}$) at lexing time.</p><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">Literal Format</th><th scope="col">Example</th><th scope="col">Parsed Rational (Base 10)</th><th scope="col">Description</th></tr></thead><tbody><tr><td><strong>Standard Decimal</strong></td><td class="col-operator"><code class="clickable-code" data-copy="42" title="クリックしてコピー">42</code>, <code class="clickable-code" data-copy="1/3" title="クリックしてコピー">1/3</code></td><td><code class="clickable-code" data-copy="42" title="クリックしてコピー">42</code>, <code class="clickable-code" data-copy="1/3" title="クリックしてコピー">1/3</code></td><td>Standard arbitrary-precision integer and rational division</td></tr><tr><td><strong>Finite & Repeating Decimals</strong></td><td class="col-operator"><code class="clickable-code" data-copy="0.75" title="クリックしてコピー">0.75</code>, <code class="clickable-code" data-copy="0.(3)" title="クリックしてコピー">0.(3)</code>, <code class="clickable-code" data-copy="1.1(6)" title="クリックしてコピー">1.1(6)</code></td><td><code class="clickable-code" data-copy="3/4" title="クリックしてコピー">3/4</code>, <code class="clickable-code" data-copy="1/3" title="クリックしてコピー">1/3</code>, <code class="clickable-code" data-copy="7/6" title="クリックしてコピー">7/6</code></td><td>Decimal and parenthesized repetend notation, expanded directly to rationals</td></tr><tr><td><strong>Binary Literals</strong></td><td class="col-operator"><code class="clickable-code" data-copy="0b1011" title="クリックしてコピー">0b1011</code>, <code class="clickable-code" data-copy="0B0" title="クリックしてコピー">0B0</code></td><td><code class="clickable-code" data-copy="11" title="クリックしてコピー">11</code>, <code class="clickable-code" data-copy="0" title="クリックしてコピー">0</code></td><td>Prefixed binary integer notation</td></tr><tr><td><strong>Octal Literals</strong></td><td class="col-operator"><code class="clickable-code" data-copy="0o755" title="クリックしてコピー">0o755</code>, <code class="clickable-code" data-copy="0O10" title="クリックしてコピー">0O10</code></td><td><code class="clickable-code" data-copy="493" title="クリックしてコピー">493</code>, <code class="clickable-code" data-copy="8" title="クリックしてコピー">8</code></td><td>Prefixed octal integer notation</td></tr><tr><td><strong>Hexadecimal Literals</strong></td><td class="col-operator"><code class="clickable-code" data-copy="0xff" title="クリックしてコピー">0xff</code>, <code class="clickable-code" data-copy="0X1A" title="クリックしてコピー">0X1A</code></td><td><code class="clickable-code" data-copy="255" title="クリックしてコピー">255</code>, <code class="clickable-code" data-copy="26" title="クリックしてコピー">26</code></td><td>Prefixed hexadecimal integer notation</td></tr><tr><td><strong>Arbitrary-Radix Literals</strong></td><td class="col-operator"><code class="clickable-code" data-copy="2^^101" title="クリックしてコピー">2^^101</code>, <code class="clickable-code" data-copy="16^^ff" title="クリックしてコピー">16^^ff</code>, <code class="clickable-code" data-copy="64^^@_" title="クリックしてコピー">64^^@_</code></td><td><code class="clickable-code" data-copy="5" title="クリックしてコピー">5</code>, <code class="clickable-code" data-copy="255" title="クリックしてコピー">255</code>, <code class="clickable-code" data-copy="4031" title="クリックしてコピー">4031</code></td><td>Mathematica-style <code class="clickable-code" data-copy="base^^digits" title="クリックしてコピー">base^^digits</code> syntax ($2 \le \text{base} \le 64$. Base 64 uses Bash-compatible <code class="clickable-code" data-copy="@" title="クリックしてコピー">@</code>=62, <code class="clickable-code" data-copy="_" title="クリックしてコピー">_</code>=63)</td></tr></tbody></table></div>
+        </div>
+      </details>
+    
+      <details class="dads-accordion" id="sec-reserved-constants" open data-keywords="Reserved Constants">
+        <summary class="accordion-summary" aria-label="Reserved Constants を開閉">
+          <span class="accordion-title">Reserved Constants</span>
+          <svg class="accordion-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/></svg>
+        </summary>
+        <div class="accordion-content">
+          <div class="table-container"><table class="dads-table"><thead><tr><th scope="col">Identifier</th><th scope="col">Symbol</th><th scope="col">Description</th></tr></thead><tbody><tr><td><code class="clickable-code" data-copy="pi" title="クリックしてコピー">pi</code>, <code class="clickable-code" data-copy="π" title="クリックしてコピー">π</code></td><td class="col-operator">$\pi$</td><td>Archimedes' constant (Ratio of circumference to diameter)</td></tr><tr><td><code class="clickable-code" data-copy="e" title="クリックしてコピー">e</code></td><td class="col-operator">$e$</td><td>Euler's number (Base of natural logarithm)</td></tr><tr><td><code class="clickable-code" data-copy="i" title="クリックしてコピー">i</code></td><td class="col-operator">$i$</td><td>Imaginary unit ($i^2 = -1$)</td></tr><tr><td><code class="clickable-code" data-copy="inf" title="クリックしてコピー">inf</code>, <code class="clickable-code" data-copy="infinity" title="クリックしてコピー">infinity</code></td><td class="col-operator">$\infty$</td><td>Positive infinity (Used in limits <code class="clickable-code" data-copy="limit" title="クリックしてコピー">limit</code>, root isolation bounds, etc.)</td></tr><tr><td><code class="clickable-code" data-copy="-inf" title="クリックしてコピー">-inf</code></td><td class="col-operator">$-\infty$</td><td>Negative infinity</td></tr><tr><td><code class="clickable-code" data-copy="O" title="クリックしてコピー">O</code></td><td class="col-operator">$\mathcal{O}$</td><td>Group identity / point at infinity for elliptic curve operations</td></tr><tr><td><code class="clickable-code" data-copy="deg" title="クリックしてコピー">deg</code></td><td class="col-operator">-</td><td>Degree conversion constant ($\pi/180$. Allows <code class="clickable-code" data-copy="sin(30*deg)" title="クリックしてコピー">sin(30*deg)</code>)</td></tr><tr><td><code class="clickable-code" data-copy="delta" title="クリックしてコピー">delta</code></td><td class="col-operator">$\delta$</td><td>Dirac delta generalized function (Laplace transforms)</td></tr><tr><td><code class="clickable-code" data-copy="true" title="クリックしてコピー">true</code>, <code class="clickable-code" data-copy="false" title="クリックしてコピー">false</code></td><td class="col-operator">-</td><td>Boolean logical constants (Relational operations, QE outcomes)</td></tr></tbody></table></div>
+        </div>
+      </details>
+    
+      <details class="dads-accordion" id="sec-built-in-functions-by-category" data-keywords="Built-in Functions by Category 1. Basic Algebra, Number Theory &amp; Equations 2. Trigonometric, Logarithmic &amp; Complex Functions 3. Calculus, Differential Equations &amp; Discrete Summation 4. Linear Algebra &amp; 3D Vector Calculus 5. Computational Geometry 6. Exact Discrete Probability &amp; Statistics 7. Symbolic Assumptions System 8. Real Algebraic Geometry, Mathematical Logic &amp; Quantifier Elimination 9. Elliptic Curves &amp; Arithmetic Geometry 10. Visualization &amp; Verification Tools 11. Lattice Basis Reduction &amp; Integer Relations (LLL) 12. p-adic Arithmetic, Local Algebra &amp; Hensel Lifting 13. Local Algebraic Series &amp; Singularities (Puiseux Series) 14. Galois Theory, Solvability by Radicals &amp; Abel-Ruffini Certificates 15. Self-Verifying Certificates &amp; Formal Proof Infrastructure (ProofTrace / Explain / Verify / Lean 4) 16. Clifford Geometric Algebra &amp; Binary Cyclotomic Quantum Circuit Verification 17. CAS Iteration Control &amp; Multi-Radix Arithmetic 18. REPL Syntax Highlighting, Themes &amp; Interactive Commands 19. Multivariate Polynomial Ideals &amp; Primary Decomposition (GTZ) 20. Collection Manipulation &amp; First-Class Lambda Expressions 21. Physical Units &amp; Dimensional Analysis">
+        <summary class="accordion-summary" aria-label="Built-in Functions by Category を開閉">
+          <span class="accordion-title">Built-in Functions by Category</span>
+          <svg class="accordion-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/></svg>
+        </summary>
+        <div class="accordion-content">
+          <h3 class="dads-h3">1. Basic Algebra, Number Theory &amp; Equations</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">Function</th><th scope="col">Syntax & Example</th><th scope="col">Description</th></tr></thead><tbody><tr><td><code class="clickable-code" data-copy="abs" title="クリックしてコピー">abs</code></td><td class="col-operator"><code class="clickable-code" data-copy="abs(x)" title="クリックしてコピー">abs(x)</code></td><td>Absolute value (Sign removal for reals; $|a+bi| = \sqrt{a^2+b^2}$ for complex)</td></tr><tr><td><code class="clickable-code" data-copy="sqrt" title="クリックしてコピー">sqrt</code> / <code class="clickable-code" data-copy="√" title="クリックしてコピー">√</code></td><td class="col-operator"><code class="clickable-code" data-copy="sqrt(x)" title="クリックしてコピー">sqrt(x)</code></td><td>Square root (Square-free factoring, promotes negative numbers to complex $i$)</td></tr><tr><td><code class="clickable-code" data-copy="cbrt" title="クリックしてコピー">cbrt</code></td><td class="col-operator"><code class="clickable-code" data-copy="cbrt(x)" title="クリックしてコピー">cbrt(x)</code></td><td>Cube root (Cube-free factoring, real sign extraction)</td></tr><tr><td><code class="clickable-code" data-copy="gcd" title="クリックしてコピー">gcd</code> / <code class="clickable-code" data-copy="lcm" title="クリックしてコピー">lcm</code></td><td class="col-operator"><code class="clickable-code" data-copy="gcd(a, b)" title="クリックしてコピー">gcd(a, b)</code>, <code class="clickable-code" data-copy="lcm(a, b)" title="クリックしてコピー">lcm(a, b)</code></td><td>Greatest common divisor & least common multiple (integers)</td></tr><tr><td><code class="clickable-code" data-copy="mod" title="クリックしてコピー">mod</code></td><td class="col-operator"><code class="clickable-code" data-copy="mod(a, b)" title="クリックしてコピー">mod(a, b)</code></td><td>Integer modulo</td></tr><tr><td><code class="clickable-code" data-copy="perm" title="クリックしてコピー">perm</code> / <code class="clickable-code" data-copy="comb" title="クリックしてコピー">comb</code></td><td class="col-operator"><code class="clickable-code" data-copy="perm(n, r)" title="クリックしてコピー">perm(n, r)</code>, <code class="clickable-code" data-copy="comb(n, r)" title="クリックしてコピー">comb(n, r)</code></td><td>Permutations $nPr$ and combinations $nCr$ (non-negative integers)</td></tr><tr><td><code class="clickable-code" data-copy="rand" title="クリックしてコピー">rand</code></td><td class="col-operator"><code class="clickable-code" data-copy="rand(max)" title="クリックしてコピー">rand(max)</code>, <code class="clickable-code" data-copy="rand(min, max)" title="クリックしてコピー">rand(min, max)</code>, <code class="clickable-code" data-copy="rand(seed, min, max)" title="クリックしてコピー">rand(seed, min, max)</code></td><td>Integer pseudo-random generation via PCG algorithm (no floats, seedable)</td></tr><tr><td><code class="clickable-code" data-copy="cfrac" title="クリックしてコピー">cfrac</code></td><td class="col-operator"><code class="clickable-code" data-copy="cfrac(expr)" title="クリックしてコピー">cfrac(expr)</code></td><td>Regular continued fraction expansion (finite list for rationals, periodic for roots)</td></tr><tr><td><code class="clickable-code" data-copy="from_cfrac" title="クリックしてコピー">from_cfrac</code></td><td class="col-operator"><code class="clickable-code" data-copy="from_cfrac([3, 7, 16])" title="クリックしてコピー">from_cfrac([3, 7, 16])</code></td><td>Reconstruct exact rational fraction from continued fraction list (<code class="clickable-code" data-copy="355/113" title="クリックしてコピー">355/113</code>)</td></tr><tr><td><code class="clickable-code" data-copy="expand" title="クリックしてコピー">expand</code></td><td class="col-operator"><code class="clickable-code" data-copy="expand((x+1)^3)" title="クリックしてコピー">expand((x+1)^3)</code></td><td>Polynomial expansion using distributive law and binomial expansion</td></tr><tr><td><code class="clickable-code" data-copy="factor" title="クリックしてコピー">factor</code></td><td class="col-operator"><code class="clickable-code" data-copy="factor(expr)" title="クリックしてコピー">factor(expr)</code> / <code class="clickable-code" data-copy="factor(expr, var)" title="クリックしてコピー">factor(expr, var)</code></td><td>Integer prime factorization and univariate polynomial factorization</td></tr><tr><td><code class="clickable-code" data-copy="apart" title="クリックしてコピー">apart</code></td><td class="col-operator"><code class="clickable-code" data-copy="apart(expr)" title="クリックしてコピー">apart(expr)</code> / <code class="clickable-code" data-copy="apart(expr, var)" title="クリックしてコピー">apart(expr, var)</code></td><td>Partial fraction decomposition via Kung-Tong and Henrici algorithms</td></tr><tr><td><code class="clickable-code" data-copy="together" title="クリックしてコピー">together</code></td><td class="col-operator"><code class="clickable-code" data-copy="together(expr)" title="クリックしてコピー">together(expr)</code></td><td>Rational fraction common denominator consolidation</td></tr><tr><td><code class="clickable-code" data-copy="poly_gcd" title="クリックしてコピー">poly_gcd</code></td><td class="col-operator"><code class="clickable-code" data-copy="poly_gcd(p, q)" title="クリックしてコピー">poly_gcd(p, q)</code> / <code class="clickable-code" data-copy="poly_gcd(p, q, var)" title="クリックしてコピー">poly_gcd(p, q, var)</code></td><td>Multivariate polynomial exact GCD via Collins/Brown Subresultant PRS algorithm</td></tr><tr><td><code class="clickable-code" data-copy="poly_lcm" title="クリックしてコピー">poly_lcm</code></td><td class="col-operator"><code class="clickable-code" data-copy="poly_lcm(p, q)" title="クリックしてコピー">poly_lcm(p, q)</code> / <code class="clickable-code" data-copy="poly_lcm(p, q, var)" title="クリックしてコピー">poly_lcm(p, q, var)</code></td><td>Multivariate polynomial exact LCM via $\frac{p \cdot q}{\mathrm{GCD}(p, q)}$</td></tr><tr><td><code class="clickable-code" data-copy="resultant" title="クリックしてコピー">resultant</code></td><td class="col-operator"><code class="clickable-code" data-copy="resultant(p, q)" title="クリックしてコピー">resultant(p, q)</code> / <code class="clickable-code" data-copy="resultant(p, q, var)" title="クリックしてコピー">resultant(p, q, var)</code></td><td>Sylvester resultant and algebraic elimination via Sylvester's Dialytic Method</td></tr><tr><td><code class="clickable-code" data-copy="groebner" title="クリックしてコピー">groebner</code></td><td class="col-operator"><code class="clickable-code" data-copy="groebner([p1, p2, ...], [x, y, ...])" title="クリックしてコピー">groebner([p1, p2, ...], [x, y, ...])</code> / <code class="clickable-code" data-copy="groebner(..., [order])" title="クリックしてコピー">groebner(..., [order])</code></td><td>Reduced Gröbner basis for polynomial ideals (Buchberger 1965/1979/1985, Gebauer-Möller 1988 criteria, Giovini 1991 Sugar strategy. Orders: <code class="clickable-code" data-copy="lex" title="クリックしてコピー">lex</code>/<code class="clickable-code" data-copy="grevlex" title="クリックしてコピー">grevlex</code>)</td></tr><tr><td><code class="clickable-code" data-copy="sturm" title="クリックしてコピー">sturm</code></td><td class="col-operator"><code class="clickable-code" data-copy="sturm(p)" title="クリックしてコピー">sturm(p)</code> / <code class="clickable-code" data-copy="sturm(p, var)" title="クリックしてコピー">sturm(p, var)</code></td><td>Exact Sturm sequence (chain) via Primitive PRS over $\mathbb{Q}[x]$</td></tr><tr><td><code class="clickable-code" data-copy="root_count" title="クリックしてコピー">root_count</code></td><td class="col-operator"><code class="clickable-code" data-copy="root_count(p)" title="クリックしてコピー">root_count(p)</code> / <code class="clickable-code" data-copy="root_count(p, var, [a, b])" title="クリックしてコピー">root_count(p, var, [a, b])</code></td><td>Exact number of distinct real roots in interval $[a, b]$ or $(-\infty, \infty)$ via Sturm's Theorem</td></tr><tr><td><code class="clickable-code" data-copy="isolate_roots" title="クリックしてコピー">isolate_roots</code></td><td class="col-operator"><code class="clickable-code" data-copy="isolate_roots(p)" title="クリックしてコピー">isolate_roots(p)</code> / <code class="clickable-code" data-copy="isolate_roots(p, var, [a, b])" title="クリックしてコピー">isolate_roots(p, var, [a, b])</code></td><td>Exact real root isolation into disjoint rational intervals via square-free bisection</td></tr><tr><td><code class="clickable-code" data-copy="inv_mod" title="クリックしてコピー">inv_mod</code></td><td class="col-operator"><code class="clickable-code" data-copy="inv_mod(a, m)" title="クリックしてコピー">inv_mod(a, m)</code></td><td>Modular inverse via Extended Euclidean Algorithm ($a x \equiv 1 \pmod m$)</td></tr><tr><td><code class="clickable-code" data-copy="crt" title="クリックしてコピー">crt</code></td><td class="col-operator"><code class="clickable-code" data-copy="crt([r1, r2], [m1, m2])" title="クリックしてコピー">crt([r1, r2], [m1, m2])</code></td><td>Chinese Remainder Theorem (Garner's algorithm & generalized non-coprime CRT)</td></tr><tr><td><code class="clickable-code" data-copy="totient" title="クリックしてコピー">totient</code></td><td class="col-operator"><code class="clickable-code" data-copy="totient(n)" title="クリックしてコピー">totient(n)</code></td><td>Euler's totient function $\phi(n) = n \prod_{p \mid n} (1 - 1/p)$</td></tr><tr><td><code class="clickable-code" data-copy="is_prime" title="クリックしてコピー">is_prime</code></td><td class="col-operator"><code class="clickable-code" data-copy="is_prime(n)" title="クリックしてコピー">is_prime(n)</code></td><td>Deterministic primality test (Sorenson & Webster 12 bases for 64-bit, Baillie-PSW for big ints)</td></tr><tr><td><code class="clickable-code" data-copy="solve" title="クリックしてコピー">solve</code></td><td class="col-operator"><code class="clickable-code" data-copy="solve(expr, var)" title="クリックしてコピー">solve(expr, var)</code></td><td>Exact algebraic and elementary transcendental equation solver for linear, quadratic, cubic, and quartic polynomials (exact radical solutions via Cardano's formula, Ferrari's method, Tschirnhaus transformation, and resolvent cubics), as well as closed-form solutions for elementary transcendental equations via the Lambert W function <code class="clickable-code" data-copy="lambert_w" title="クリックしてコピー">lambert_w</code> ($f(x)e^{f(x)}=c$, $ax+b\ln x=c$, $x^x=c$, $a^x=bx$); supports multiple and complex roots</td></tr><tr><td><code class="clickable-code" data-copy="to_poly" title="クリックしてコピー">to_poly</code></td><td class="col-operator"><code class="clickable-code" data-copy="to_poly(expr, [x, y], &quot;lex&quot;)" title="クリックしてコピー">to_poly(expr, [x, y], &quot;lex&quot;)</code></td><td>Explicitly converts an expression to a canonical <code class="clickable-code" data-copy="PolyNode" title="クリックしてコピー">PolyNode</code> under specified variables and monomial order (<code class="clickable-code" data-copy="lex" title="クリックしてコピー">lex</code>, <code class="clickable-code" data-copy="grevlex" title="クリックしてコピー">grevlex</code>)</td></tr><tr><td><code class="clickable-code" data-copy="to_alg" title="クリックしてコピー">to_alg</code></td><td class="col-operator"><code class="clickable-code" data-copy="to_alg(rep, min_poly, [var])" title="クリックしてコピー">to_alg(rep, min_poly, [var])</code></td><td>Constructs an algebraic number node <code class="clickable-code" data-copy="AlgNode" title="クリックしてコピー">AlgNode</code> in field extension $\mathbb{Q}(\alpha) \cong \mathbb{Q}[x]/\langle m(x) \rangle$</td></tr><tr><td><code class="clickable-code" data-copy="alg_inv" title="クリックしてコピー">alg_inv</code></td><td class="col-operator"><code class="clickable-code" data-copy="alg_inv(rep, min_poly)" title="クリックしてコピー">alg_inv(rep, min_poly)</code></td><td>Computes multiplicative inverse $\beta^{-1} \in \mathbb{Q}(\alpha)$ via Extended Euclidean Algorithm</td></tr><tr><td><code class="clickable-code" data-copy="min_poly" title="クリックしてコピー">min_poly</code></td><td class="col-operator"><code class="clickable-code" data-copy="min_poly(rep, min_poly)" title="クリックしてコピー">min_poly(rep, min_poly)</code></td><td>Derives the irreducible monic minimal polynomial $m(x) \in \mathbb{Q}[x]$ of an algebraic element</td></tr><tr><td><code class="clickable-code" data-copy="solve_diophantine" title="クリックしてコピー">solve_diophantine</code></td><td class="col-operator"><code class="clickable-code" data-copy="solve_diophantine(3*x + 5*y == 7, [x, y])" title="クリックしてコピー">solve_diophantine(3*x + 5*y == 7, [x, y])</code></td><td>Exact Diophantine equation solver for linear Diophantine equations (via Extended Euclidean Algorithm and Bezout's identity parameterized by integer $t$) and Pythagorean triples. Supports <code class="clickable-code" data-copy="--verify" title="クリックしてコピー">--verify</code> algebraic certificate and <code class="clickable-code" data-copy="--lean" title="クリックしてコピー">--lean</code> formal proof generation</td></tr><tr><td><code class="clickable-code" data-copy="pell_solve" title="クリックしてコピー">pell_solve</code></td><td class="col-operator"><code class="clickable-code" data-copy="pell_solve(D)" title="クリックしてコピー">pell_solve(D)</code> / <code class="clickable-code" data-copy="pell_solve(D, 1)" title="クリックしてコピー">pell_solve(D, 1)</code> / <code class="clickable-code" data-copy="pell_solve(D, -1)" title="クリックしてコピー">pell_solve(D, -1)</code></td><td>Exact solver for Pell's equation $x^2 - D y^2 = 1$ and negative Pell's equation $x^2 - D y^2 = -1$, computing fundamental integer solutions $(x_1, y_1)$ via continuous fraction expansion of $\sqrt{D}$. Supports <code class="clickable-code" data-copy="--verify" title="クリックしてコピー">--verify</code> and <code class="clickable-code" data-copy="--lean" title="クリックしてコピー">--lean</code> (<code class="clickable-code" data-copy="by decide" title="クリックしてコピー">by decide</code> proof)</td></tr><tr><td><code class="clickable-code" data-copy="to_primitive_element" title="クリックしてコピー">to_primitive_element</code> / <code class="clickable-code" data-copy="primitive_element" title="クリックしてコピー">primitive_element</code></td><td class="col-operator"><code class="clickable-code" data-copy="to_primitive_element([sqrt(2), sqrt(3)])" title="クリックしてコピー">to_primitive_element([sqrt(2), sqrt(3)])</code> / <code class="clickable-code" data-copy="to_primitive_element([x^2 - 2, x^2 - 3])" title="クリックしてコピー">to_primitive_element([x^2 - 2, x^2 - 3])</code></td><td>Derives the simple extension isomorphism $\mathbb{Q}(\theta) \cong \mathbb{Q}(\alpha_1, \dots, \alpha_k)$ via the Primitive Element Theorem. Computes primitive element symbol, composite minimal polynomial $m_\theta(x)$, and generator representation polynomial list $[P_{\alpha_1}(\theta), \dots, P_{\alpha_k}(\theta)]$ using Sylvester resultants and algebraic field GCD. <code class="clickable-code" data-copy="primitive_element" title="クリックしてコピー">primitive_element</code> is an alias. Supports <code class="clickable-code" data-copy="--verify" title="クリックしてコピー">--verify</code> and <code class="clickable-code" data-copy="--lean" title="クリックしてコピー">--lean</code> formal proof verification</td></tr><tr><td><code class="clickable-code" data-copy="fib" title="クリックしてコピー">fib</code> / <code class="clickable-code" data-copy="fibonacci" title="クリックしてコピー">fibonacci</code></td><td class="col-operator"><code class="clickable-code" data-copy="fib(n)" title="クリックしてコピー">fib(n)</code> / <code class="clickable-code" data-copy="fibonacci(n)" title="クリックしてコピー">fibonacci(n)</code></td><td>Fibonacci number $F_n$. Evaluated in $O(\log n)$ sub-quadratic time via the Fast Doubling algorithm. Fully supports negative integer inputs via negafibonacci relations $F_{-n} = (-1)^{n+1} F_n$</td></tr><tr><td><code class="clickable-code" data-copy="digit_count" title="クリックしてコピー">digit_count</code></td><td class="col-operator"><code class="clickable-code" data-copy="digit_count(n)" title="クリックしてコピー">digit_count(n)</code> / <code class="clickable-code" data-copy="digit_count(n, base)" title="クリックしてコピー">digit_count(n, base)</code></td><td>Exact digit count of giant integers in specified <code class="clickable-code" data-copy="base" title="クリックしてコピー">base</code> (default 10). Example: <code class="clickable-code" data-copy="digit_count(fib(10000))" title="クリックしてコピー">digit_count(fib(10000))</code> $\to$ <code class="clickable-code" data-copy="2090" title="クリックしてコピー">2090</code></td></tr><tr><td><code class="clickable-code" data-copy="to_base" title="クリックしてコピー">to_base</code></td><td class="col-operator"><code class="clickable-code" data-copy="to_base(n, base)" title="クリックしてコピー">to_base(n, base)</code></td><td>Arbitrary-base conversion ($2 \le \text{base} \le 64$). Formats integers into positional numeral notation and rational fractions $p/q$ into repeating repetend notation via long division remainder hashing (e.g., <code class="clickable-code" data-copy="to_base(255, 16)" title="クリックしてコピー">to_base(255, 16)</code> $\to$ <code class="clickable-code" data-copy="ff" title="クリックしてコピー">ff</code>, <code class="clickable-code" data-copy="to_base(1/3, 2)" title="クリックしてコピー">to_base(1/3, 2)</code> $\to$ <code class="clickable-code" data-copy="0.(01)_2" title="クリックしてコピー">0.(01)_2</code>, <code class="clickable-code" data-copy="to_base(1/3, 16)" title="クリックしてコピー">to_base(1/3, 16)</code> $\to$ <code class="clickable-code" data-copy="0.(5)_16" title="クリックしてコピー">0.(5)_16</code>, <code class="clickable-code" data-copy="to_base(4031, 64)" title="クリックしてコピー">to_base(4031, 64)</code> $\to$ <code class="clickable-code" data-copy="@_" title="クリックしてコピー">@_</code>)</td></tr><tr><td><code class="clickable-code" data-copy="from_base" title="クリックしてコピー">from_base</code></td><td class="col-operator"><code class="clickable-code" data-copy="from_base(str, base)" title="クリックしてコピー">from_base(str, base)</code></td><td>Parses an arbitrary-base string ($2 \le \text{base} \le 64$) into an exact integer. Automatically accepts optional <code class="clickable-code" data-copy="0x" title="クリックしてコピー">0x</code>, <code class="clickable-code" data-copy="0b" title="クリックしてコピー">0b</code>, <code class="clickable-code" data-copy="0o" title="クリックしてコピー">0o</code> prefixes, and Base 64 <code class="clickable-code" data-copy="@" title="クリックしてコピー">@</code>/<code class="clickable-code" data-copy="_" title="クリックしてコピー">_</code> or <code class="clickable-code" data-copy="+" title="クリックしてコピー">+</code>/<code class="clickable-code" data-copy="/" title="クリックしてコピー">/</code> representations (e.g., <code class="clickable-code" data-copy="from_base(&quot;ff&quot;, 16)" title="クリックしてコピー">from_base(&quot;ff&quot;, 16)</code> $\to$ <code class="clickable-code" data-copy="255" title="クリックしてコピー">255</code>, <code class="clickable-code" data-copy="from_base(&quot;@_&quot;, 64)" title="クリックしてコピー">from_base(&quot;@_&quot;, 64)</code> $\to$ <code class="clickable-code" data-copy="4031" title="クリックしてコピー">4031</code>)</td></tr><tr><td><code class="clickable-code" data-copy="bin" title="クリックしてコピー">bin</code></td><td class="col-operator"><code class="clickable-code" data-copy="bin(n)" title="クリックしてコピー">bin(n)</code></td><td>Binary conversion shortcut with <code class="clickable-code" data-copy="0b" title="クリックしてコピー">0b</code> prefix (e.g., <code class="clickable-code" data-copy="bin(13)" title="クリックしてコピー">bin(13)</code> $\to$ <code class="clickable-code" data-copy="0b1101" title="クリックしてコピー">0b1101</code>)</td></tr><tr><td><code class="clickable-code" data-copy="oct" title="クリックしてコピー">oct</code></td><td class="col-operator"><code class="clickable-code" data-copy="oct(n)" title="クリックしてコピー">oct(n)</code></td><td>Octal conversion shortcut with <code class="clickable-code" data-copy="0o" title="クリックしてコピー">0o</code> prefix (e.g., <code class="clickable-code" data-copy="oct(63)" title="クリックしてコピー">oct(63)</code> $\to$ <code class="clickable-code" data-copy="0o77" title="クリックしてコピー">0o77</code>)</td></tr><tr><td><code class="clickable-code" data-copy="hex" title="クリックしてコピー">hex</code></td><td class="col-operator"><code class="clickable-code" data-copy="hex(n)" title="クリックしてコピー">hex(n)</code></td><td>Hexadecimal conversion shortcut with <code class="clickable-code" data-copy="0x" title="クリックしてコピー">0x</code> prefix (e.g., <code class="clickable-code" data-copy="hex(255)" title="クリックしてコピー">hex(255)</code> $\to$ <code class="clickable-code" data-copy="0xff" title="クリックしてコピー">0xff</code>)</td></tr></tbody></table></div><h3 class="dads-h3">2. Trigonometric, Logarithmic &amp; Complex Functions</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">Function</th><th scope="col">Syntax & Example</th><th scope="col">Description</th></tr></thead><tbody><tr><td><code class="clickable-code" data-copy="sin" title="クリックしてコピー">sin</code>, <code class="clickable-code" data-copy="cos" title="クリックしてコピー">cos</code>, <code class="clickable-code" data-copy="tan" title="クリックしてコピー">tan</code></td><td class="col-operator"><code class="clickable-code" data-copy="sin(pi/6)" title="クリックしてコピー">sin(pi/6)</code></td><td>Trigonometric functions (exact algebraic evaluation for rational multiples of $\pi$)</td></tr><tr><td><code class="clickable-code" data-copy="asin" title="クリックしてコピー">asin</code>, <code class="clickable-code" data-copy="acos" title="クリックしてコピー">acos</code>, <code class="clickable-code" data-copy="atan" title="クリックしてコピー">atan</code></td><td class="col-operator"><code class="clickable-code" data-copy="asin(1/2)" title="クリックしてコピー">asin(1/2)</code></td><td>Inverse trigonometric functions (exact values for special angles, principal branch)</td></tr><tr><td><code class="clickable-code" data-copy="trig_expand" title="クリックしてコピー">trig_expand</code></td><td class="col-operator"><code class="clickable-code" data-copy="trig_expand(sin(x+y))" title="クリックしてコピー">trig_expand(sin(x+y))</code> / <code class="clickable-code" data-copy="trig_expand(sin(2*x))" title="クリックしてコピー">trig_expand(sin(2*x))</code></td><td>Expands trigonometric functions using addition theorems and multiple-angle formulas</td></tr><tr><td><code class="clickable-code" data-copy="trig_reduce" title="クリックしてコピー">trig_reduce</code></td><td class="col-operator"><code class="clickable-code" data-copy="trig_reduce(sin(x)^2)" title="クリックしてコピー">trig_reduce(sin(x)^2)</code> / <code class="clickable-code" data-copy="trig_reduce(sin(x)+cos(x))" title="クリックしてコピー">trig_reduce(sin(x)+cos(x))</code></td><td>Reduces powers (half-angle), products to sums, and harmonic linear combinations</td></tr><tr><td><code class="clickable-code" data-copy="exp" title="クリックしてコピー">exp</code></td><td class="col-operator"><code class="clickable-code" data-copy="exp(x)" title="クリックしてコピー">exp(x)</code></td><td>Natural exponential function ($e^x$ exact symbolic representation with exponential multiplication rules)</td></tr><tr><td><code class="clickable-code" data-copy="log" title="クリックしてコピー">log</code></td><td class="col-operator"><code class="clickable-code" data-copy="log(x)" title="クリックしてコピー">log(x)</code> / <code class="clickable-code" data-copy="log(base, x)" title="クリックしてコピー">log(base, x)</code></td><td>Common logarithm (base 10) and arbitrary base logarithm</td></tr><tr><td><code class="clickable-code" data-copy="ln" title="クリックしてコピー">ln</code></td><td class="col-operator"><code class="clickable-code" data-copy="ln(x)" title="クリックしてコピー">ln(x)</code></td><td>Natural logarithm (base $e$)</td></tr><tr><td><code class="clickable-code" data-copy="arg" title="クリックしてコピー">arg</code></td><td class="col-operator"><code class="clickable-code" data-copy="arg(z)" title="クリックしてコピー">arg(z)</code></td><td>Exact principal complex argument $\theta \in (-\pi, \pi]$</td></tr><tr><td><code class="clickable-code" data-copy="polar" title="クリックしてコピー">polar</code></td><td class="col-operator"><code class="clickable-code" data-copy="polar(1 + i)" title="クリックしてコピー">polar(1 + i)</code></td><td>Polar form conversion $r(\cos\theta + i\sin\theta)$ (e.g., <code class="clickable-code" data-copy="√2*(cos(π/4) + i*sin(π/4))" title="クリックしてコピー">√2*(cos(π/4) + i*sin(π/4))</code>)</td></tr><tr><td><code class="clickable-code" data-copy="polar_exp" title="クリックしてコピー">polar_exp</code></td><td class="col-operator"><code class="clickable-code" data-copy="polar_exp(1 + i)" title="クリックしてコピー">polar_exp(1 + i)</code></td><td>Exponential polar conversion $r e^{i\theta}$ via Euler's formula</td></tr><tr><td><code class="clickable-code" data-copy="rect" title="クリックしてコピー">rect</code></td><td class="col-operator"><code class="clickable-code" data-copy="rect(sqrt(2), pi/4)" title="クリックしてコピー">rect(sqrt(2), pi/4)</code></td><td>Converts polar form $(r, \theta)$ to rectangular form $a + bi$</td></tr></tbody></table></div><h3 class="dads-h3">3. Calculus, Differential Equations &amp; Discrete Summation</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">Function</th><th scope="col">Syntax & Example</th><th scope="col">Description</th></tr></thead><tbody><tr><td><code class="clickable-code" data-copy="diff" title="クリックしてコピー">diff</code></td><td class="col-operator"><code class="clickable-code" data-copy="diff(sin(x)*x, x)" title="クリックしてコピー">diff(sin(x)*x, x)</code> / <code class="clickable-code" data-copy="diff(x^4, x, 2)" title="クリックしてコピー">diff(x^4, x, 2)</code></td><td>Exact symbolic differentiation (Product, Quotient, Chain rules, and higher-order derivatives)</td></tr><tr><td><code class="clickable-code" data-copy="integrate" title="クリックしてコピー">integrate</code></td><td class="col-operator"><code class="clickable-code" data-copy="integrate(x^2, x)" title="クリックしてコピー">integrate(x^2, x)</code> / <code class="clickable-code" data-copy="integrate(sin(x), x, 0, pi)" title="クリックしてコピー">integrate(sin(x), x, 0, pi)</code></td><td>Exact symbolic indefinite integration (antiderivatives, closed-form Gaussian integrals $\int e^{-a x^2} dx \to \frac{\sqrt{\pi}}{2\sqrt{a}} \operatorname{erf}(\sqrt{a}x)$, and $\int W(x) dx$) and definite integration over $[a, b]$</td></tr><tr><td><code class="clickable-code" data-copy="risch_integrate" title="クリックしてコピー">risch_integrate</code></td><td class="col-operator"><code class="clickable-code" data-copy="risch_integrate(x*exp(x^2), x)" title="クリックしてコピー">risch_integrate(x*exp(x^2), x)</code></td><td>Deterministic Risch algorithm (transcendental extension & Rothstein-Trager method) for exact indefinite integration</td></tr><tr><td><code class="clickable-code" data-copy="lambert_w" title="クリックしてコピー">lambert_w</code></td><td class="col-operator"><code class="clickable-code" data-copy="lambert_w(z)" title="クリックしてコピー">lambert_w(z)</code> / <code class="clickable-code" data-copy="lambert_w(z, k)" title="クリックしてコピー">lambert_w(z, k)</code></td><td>Lambert W function $W_k(z)$ (multivalued inverse of $w e^w = z$; principal branch $k=0$ by default, exact simplification for special values $W(0)=0, W(e)=1, W(-1/e)=-1$, derivative $\frac{d}{dz}W(z) = \frac{W(z)}{z(1+W(z))}$, antiderivative $\int W(x) dx = x W(x) - x + e^{W(x)}$, and algebraic identity elimination $W(z)e^{W(z)} \to z$)</td></tr><tr><td><code class="clickable-code" data-copy="erf" title="クリックしてコピー">erf</code></td><td class="col-operator"><code class="clickable-code" data-copy="erf(z)" title="クリックしてコピー">erf(z)</code></td><td>Gauss error function $\operatorname{erf}(z) = \frac{2}{\sqrt{\pi}}\int_0^z e^{-t^2} dt$ (special value $\operatorname{erf}(0)=0$, odd symmetry $\operatorname{erf}(-z) = -\operatorname{erf}(z)$, derivative $\frac{d}{dz}\operatorname{erf}(z) = \frac{2}{\sqrt{\pi}} e^{-z^2}$, and closed-form evaluation of Gaussian integrals $\int e^{-a x^2} dx$)</td></tr><tr><td><code class="clickable-code" data-copy="limit" title="クリックしてコピー">limit</code></td><td class="col-operator"><code class="clickable-code" data-copy="limit(sin(x)/x, x, 0)" title="クリックしてコピー">limit(sin(x)/x, x, 0)</code> / <code class="clickable-code" data-copy="limit(1/x, x, 0, 1)" title="クリックしてコピー">limit(1/x, x, 0, 1)</code></td><td>Exact symbolic limit computation (indeterminate forms, factoring, L'Hopital's rule, one-sided limits)</td></tr><tr><td><code class="clickable-code" data-copy="dsolve" title="クリックしてコピー">dsolve</code></td><td class="col-operator"><code class="clickable-code" data-copy="dsolve(diff(y, x) == y, y, x)" title="クリックしてコピー">dsolve(diff(y, x) == y, y, x)</code> / <code class="clickable-code" data-copy="dsolve(diff(y, x, 2) + 4*y == 0, y, x)" title="クリックしてコピー">dsolve(diff(y, x, 2) + 4*y == 0, y, x)</code></td><td>Symbolic ODE solver (1st-order linear via integrating factor, 2nd-order linear with constant coefficients and undetermined coefficients)</td></tr><tr><td><code class="clickable-code" data-copy="rsolve" title="クリックしてコピー">rsolve</code></td><td class="col-operator"><code class="clickable-code" data-copy="rsolve(a(n+1) == 2*a(n) + 1, a(n), [a(1) == 1])" title="クリックしてコピー">rsolve(a(n+1) == 2*a(n) + 1, a(n), [a(1) == 1])</code> / <code class="clickable-code" data-copy="rsolve(a(n+2) == a(n+1) + a(n), a(n), [a(0) == 0, a(1) == 1])" title="クリックしてコピー">rsolve(a(n+2) == a(n+1) + a(n), a(n), [a(0) == 0, a(1) == 1])</code></td><td>Linear recurrence relation solver (1st and 2nd order linear recurrences with constant coefficients, characteristic roots analysis, undetermined coefficients, and linear initial condition fitting)</td></tr><tr><td><code class="clickable-code" data-copy="laplace" title="クリックしてコピー">laplace</code></td><td class="col-operator"><code class="clickable-code" data-copy="laplace(sin(2*t), t, s)" title="クリックしてコピー">laplace(sin(2*t), t, s)</code> / <code class="clickable-code" data-copy="laplace(exp(3*t)*t^2)" title="クリックしてコピー">laplace(exp(3*t)*t^2)</code></td><td>Exact symbolic Laplace transform $\mathcal{L}\{f(t)\}$ (linearity, polynomial, exponential, trigonometric, damped oscillation & frequency shifting)</td></tr><tr><td><code class="clickable-code" data-copy="inv_laplace" title="クリックしてコピー">inv_laplace</code></td><td class="col-operator"><code class="clickable-code" data-copy="inv_laplace(1/(s-3), s, t)" title="クリックしてコピー">inv_laplace(1/(s-3), s, t)</code> / <code class="clickable-code" data-copy="inv_laplace(1/(s^2+4))" title="クリックしてコピー">inv_laplace(1/(s^2+4))</code></td><td>Exact symbolic inverse Laplace transform $\mathcal{L}^{-1}\{F(s)\}$ (via partial fraction decomposition <code class="clickable-code" data-copy="apart" title="クリックしてコピー">apart</code> and pole matching)</td></tr><tr><td><code class="clickable-code" data-copy="taylor" title="クリックしてコピー">taylor</code></td><td class="col-operator"><code class="clickable-code" data-copy="taylor(f, x, a, n)" title="クリックしてコピー">taylor(f, x, a, n)</code></td><td>Taylor / Maclaurin series expansion around $x=a$ up to order $n$</td></tr><tr><td><code class="clickable-code" data-copy="fourier_series" title="クリックしてコピー">fourier_series</code></td><td class="col-operator"><code class="clickable-code" data-copy="fourier_series(f, [t, L, n])" title="クリックしてコピー">fourier_series(f, [t, L, n])</code></td><td>Symbolic Fourier series expansion (computes exact definite integrals via Euler-Fourier formulas up to order $n$)</td></tr><tr><td><code class="clickable-code" data-copy="residue" title="クリックしてコピー">residue</code></td><td class="col-operator"><code class="clickable-code" data-copy="residue(1/(z^2*(z+1)), z, 0)" title="クリックしてコピー">residue(1/(z^2*(z+1)), z, 0)</code> / <code class="clickable-code" data-copy="residue(exp(z)/z^3, z, 0)" title="クリックしてコピー">residue(exp(z)/z^3, z, 0)</code></td><td>Exact algebraic residue $\mathrm{Res}(f, z_0)$ at isolated singularity $z_0$ in complex analysis (order determination, Taylor recurrence & Cauchy formula)</td></tr><tr><td><code class="clickable-code" data-copy="gamma" title="クリックしてコピー">gamma</code></td><td class="col-operator"><code class="clickable-code" data-copy="gamma(5)" title="クリックしてコピー">gamma(5)</code> / <code class="clickable-code" data-copy="gamma(1/2)" title="クリックしてコピー">gamma(1/2)</code> / <code class="clickable-code" data-copy="gamma(-1/2)" title="クリックしてコピー">gamma(-1/2)</code></td><td>Gamma function $\Gamma(z)$ (factorial $(n-1)!$ for positive integers, $\sqrt{\pi}$ expansion for half-integers, pole detection for non-positive integers)</td></tr><tr><td><code class="clickable-code" data-copy="beta" title="クリックしてコピー">beta</code></td><td class="col-operator"><code class="clickable-code" data-copy="beta(2, 3)" title="クリックしてコピー">beta(2, 3)</code> / <code class="clickable-code" data-copy="beta(1/2, 1/2)" title="クリックしてコピー">beta(1/2, 1/2)</code></td><td>Beta function $\mathrm{B}(p, q) = \frac{\Gamma(p)\Gamma(q)}{\Gamma(p+q)}$ (exact rational or algebraic expansion for integers/half-integers, e.g. $\mathrm{B}(1/2, 1/2) = \pi$)</td></tr><tr><td><code class="clickable-code" data-copy="bernoulli" title="クリックしてコピー">bernoulli</code></td><td class="col-operator"><code class="clickable-code" data-copy="bernoulli(4)" title="クリックしてコピー">bernoulli(4)</code> / <code class="clickable-code" data-copy="bernoulli(10)" title="クリックしてコピー">bernoulli(10)</code></td><td>$n$-th Bernoulli number $B_n$ (exact arbitrary-precision rational via Akiyama-Tanigawa algorithm, e.g. $B_{10} = 5/66$)</td></tr><tr><td><code class="clickable-code" data-copy="zeta" title="クリックしてコピー">zeta</code></td><td class="col-operator"><code class="clickable-code" data-copy="zeta(2)" title="クリックしてコピー">zeta(2)</code> / <code class="clickable-code" data-copy="zeta(4)" title="クリックしてコピー">zeta(4)</code> / <code class="clickable-code" data-copy="zeta(6)" title="クリックしてコピー">zeta(6)</code></td><td>Riemann zeta function $\zeta(s)$ (exact algebraic closed forms for positive even integers via Euler formula, e.g. $\zeta(4) = \pi^4/90$, pole detection at $s=1$)</td></tr><tr><td><code class="clickable-code" data-copy="piecewise" title="クリックしてコピー">piecewise</code></td><td class="col-operator"><code class="clickable-code" data-copy="piecewise([[expr1, cond1], ...], default)" title="クリックしてコピー">piecewise([[expr1, cond1], ...], default)</code></td><td>Piecewise algebraic function (first-class <code class="clickable-code" data-copy="PiecewiseNode" title="クリックしてコピー">PiecewiseNode</code>). Evaluates exact calculus (<code class="clickable-code" data-copy="diff" title="クリックしてコピー">diff</code>, <code class="clickable-code" data-copy="integrate" title="クリックしてコピー">integrate</code>) and algebraic equation solving (<code class="clickable-code" data-copy="solve" title="クリックしてコピー">solve</code>) across sign-invariant CAD cells</td></tr><tr><td><code class="clickable-code" data-copy="sum" title="クリックしてコピー">sum</code></td><td class="col-operator"><code class="clickable-code" data-copy="sum(expr, k, start, end)" title="クリックしてコピー">sum(expr, k, start, end)</code></td><td>Discrete summation (finite sum or exact polynomial closed form via Faulhaber formula)</td></tr><tr><td><code class="clickable-code" data-copy="gosper_sum" title="クリックしてコピー">gosper_sum</code></td><td class="col-operator"><code class="clickable-code" data-copy="gosper_sum(t_k, k)" title="クリックしてコピー">gosper_sum(t_k, k)</code></td><td>Gosper's algorithm for hypergeometric summation: finds closed-form antiderivative $z_k$ such that $z_{k+1}-z_k=t_k$</td></tr><tr><td><code class="clickable-code" data-copy="wz_cert" title="クリックしてコピー">wz_cert</code></td><td class="col-operator"><code class="clickable-code" data-copy="wz_cert(F, n, k)" title="クリックしてコピー">wz_cert(F, n, k)</code></td><td>Generates rational function certificate $R(n, k)$ for hypergeometric identity verification via Wilf-Zeilberger (WZ) theory</td></tr></tbody></table></div><h3 class="dads-h3">4. Linear Algebra &amp; 3D Vector Calculus</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">Function</th><th scope="col">Syntax & Example</th><th scope="col">Description</th></tr></thead><tbody><tr><td><code class="clickable-code" data-copy="det" title="クリックしてコピー">det</code></td><td class="col-operator"><code class="clickable-code" data-copy="det(A)" title="クリックしてコピー">det(A)</code></td><td>Exact determinant of a matrix via Laplace expansion, or CRT modular elimination over finite fields with Hadamard bounds to prevent intermediate coefficient explosion on integer matrices</td></tr><tr><td><code class="clickable-code" data-copy="inv" title="クリックしてコピー">inv</code></td><td class="col-operator"><code class="clickable-code" data-copy="inv(A)" title="クリックしてコピー">inv(A)</code></td><td>Exact inverse matrix via adjugate matrix method</td></tr><tr><td><code class="clickable-code" data-copy="transpose" title="クリックしてコピー">transpose</code></td><td class="col-operator"><code class="clickable-code" data-copy="transpose(A)" title="クリックしてコピー">transpose(A)</code></td><td>Matrix transpose (swaps rows and columns)</td></tr><tr><td><code class="clickable-code" data-copy="rref" title="クリックしてコピー">rref</code></td><td class="col-operator"><code class="clickable-code" data-copy="rref(A)" title="クリックしてコピー">rref(A)</code></td><td>Reduced Row Echelon Form via Bareiss fraction-free elimination</td></tr><tr><td><code class="clickable-code" data-copy="rank" title="クリックしてコピー">rank</code></td><td class="col-operator"><code class="clickable-code" data-copy="rank(A)" title="クリックしてコピー">rank(A)</code></td><td>Exact matrix rank (number of pivot columns)</td></tr><tr><td><code class="clickable-code" data-copy="trace" title="クリックしてコピー">trace</code> / <code class="clickable-code" data-copy="tr" title="クリックしてコピー">tr</code></td><td class="col-operator"><code class="clickable-code" data-copy="trace(A)" title="クリックしてコピー">trace(A)</code>, <code class="clickable-code" data-copy="tr(A)" title="クリックしてコピー">tr(A)</code></td><td>Matrix trace (sum of main diagonal entries $\sum_{i=1}^n A_{i,i}$)</td></tr><tr><td><code class="clickable-code" data-copy="eigenvals" title="クリックしてコピー">eigenvals</code></td><td class="col-operator"><code class="clickable-code" data-copy="eigenvals(A)" title="クリックしてコピー">eigenvals(A)</code></td><td>Exact eigenvalue analysis via Faddeev-LeVerrier characteristic polynomial and algebraic solver (exact radical eigenvalues up to 4×4 matrices)</td></tr><tr><td><code class="clickable-code" data-copy="eigenvects" title="クリックしてコピー">eigenvects</code></td><td class="col-operator"><code class="clickable-code" data-copy="eigenvects(A)" title="クリックしてコピー">eigenvects(A)</code></td><td>Exact eigenvector analysis via RREF nullspace basis extraction</td></tr><tr><td><code class="clickable-code" data-copy="lu" title="クリックしてコピー">lu</code></td><td class="col-operator"><code class="clickable-code" data-copy="lu(A)" title="クリックしてコピー">lu(A)</code></td><td>Exact PLU decomposition $PA=LU$ with row pivoting ($P$ permutation, $L$ unit lower, $U$ upper)</td></tr><tr><td><code class="clickable-code" data-copy="qr" title="クリックしてコピー">qr</code></td><td class="col-operator"><code class="clickable-code" data-copy="qr(A)" title="クリックしてコピー">qr(A)</code></td><td>Exact QR decomposition $A=QR$ via Two-Stage Gram-Schmidt with exact radicals ($Q^T Q = I$)</td></tr><tr><td><code class="clickable-code" data-copy="cholesky" title="クリックしてコピー">cholesky</code></td><td class="col-operator"><code class="clickable-code" data-copy="cholesky(A)" title="クリックしてコピー">cholesky(A)</code></td><td>Exact Cholesky decomposition $A=LL^T$ for symmetric positive-definite matrices with exact radicals</td></tr><tr><td><code class="clickable-code" data-copy="ldlt" title="クリックしてコピー">ldlt</code></td><td class="col-operator"><code class="clickable-code" data-copy="ldlt(A)" title="クリックしてコピー">ldlt(A)</code></td><td>Exact square-root-free $LDL^T$ decomposition ($L$ unit lower, $D$ positive diagonal rational matrix)</td></tr><tr><td><code class="clickable-code" data-copy="pinv" title="クリックしてコピー">pinv</code></td><td class="col-operator"><code class="clickable-code" data-copy="pinv(A)" title="クリックしてコピー">pinv(A)</code></td><td>Exact Moore-Penrose pseudoinverse $A^+$ via RREF full-rank factorization</td></tr><tr><td><code class="clickable-code" data-copy="solve_linear" title="クリックしてコピー">solve_linear</code> / <code class="clickable-code" data-copy="linsolve" title="クリックしてコピー">linsolve</code></td><td class="col-operator"><code class="clickable-code" data-copy="solve_linear(A, b)" title="クリックしてコピー">solve_linear(A, b)</code></td><td>Exact linear system solver $Ax=b$ (unique, inconsistent, or parametric solutions)</td></tr><tr><td><code class="clickable-code" data-copy="hnf" title="クリックしてコピー">hnf</code></td><td class="col-operator"><code class="clickable-code" data-copy="hnf(A)" title="クリックしてコピー">hnf(A)</code></td><td>Hermite Normal Form (HNF) of integer matrices via fraction-free elementary row operations and modulo reduction to row echelon upper triangular form $H$</td></tr><tr><td><code class="clickable-code" data-copy="hnf_transform" title="クリックしてコピー">hnf_transform</code></td><td class="col-operator"><code class="clickable-code" data-copy="hnf_transform(A)" title="クリックしてコピー">hnf_transform(A)</code></td><td>Hermite Normal Form with unimodular transform $[H, U]$ ($U \in \text{GL}_m(\mathbb{Z}), U A = H$)</td></tr><tr><td><code class="clickable-code" data-copy="snf" title="クリックしてコピー">snf</code></td><td class="col-operator"><code class="clickable-code" data-copy="snf(A)" title="クリックしてコピー">snf(A)</code></td><td>Smith Normal Form (SNF) of integer matrices via elementary row/column operations with invariant factor divisibility chain $d_1 \mid d_2 \mid \dots \mid d_r$</td></tr><tr><td><code class="clickable-code" data-copy="snf_transform" title="クリックしてコピー">snf_transform</code></td><td class="col-operator"><code class="clickable-code" data-copy="snf_transform(A)" title="クリックしてコピー">snf_transform(A)</code></td><td>Smith Normal Form with bilateral unimodular transforms $[D, U, V]$ ($U \in \text{GL}_m(\mathbb{Z}), V \in \text{GL}_n(\mathbb{Z}), U A V = D$)</td></tr><tr><td><code class="clickable-code" data-copy="invariant_factors" title="クリックしてコピー">invariant_factors</code></td><td class="col-operator"><code class="clickable-code" data-copy="invariant_factors(A)" title="クリックしてコピー">invariant_factors(A)</code></td><td>Extract invariant factors $[d_1, d_2, \dots, d_r]$ (positive diagonal entries of SNF)</td></tr><tr><td><code class="clickable-code" data-copy="abelian_group_structure" title="クリックしてコピー">abelian_group_structure</code></td><td class="col-operator"><code class="clickable-code" data-copy="abelian_group_structure(A)" title="クリックしてコピー">abelian_group_structure(A)</code></td><td>Identify direct sum structure of finitely generated abelian group $G = \mathbb{Z}^m / \operatorname{Im}(A)$ (e.g. <code class="clickable-code" data-copy="Z_2 + Z_6" title="クリックしてコピー">Z_2 + Z_6</code>, free part <code class="clickable-code" data-copy="Z" title="クリックしてコピー">Z</code>)</td></tr><tr><td><code class="clickable-code" data-copy="dot" title="クリックしてコピー">dot</code>, <code class="clickable-code" data-copy="cross" title="クリックしてコピー">cross</code></td><td class="col-operator"><code class="clickable-code" data-copy="dot(u, v)" title="クリックしてコピー">dot(u, v)</code>, <code class="clickable-code" data-copy="cross(u, v)" title="クリックしてコピー">cross(u, v)</code></td><td>Vector dot product and 3D vector cross product</td></tr><tr><td><code class="clickable-code" data-copy="norm" title="クリックしてコピー">norm</code></td><td class="col-operator"><code class="clickable-code" data-copy="norm(v)" title="クリックしてコピー">norm(v)</code></td><td>Euclidean vector norm ($\sqrt{\sum v_i^2}$, with radical simplification)</td></tr><tr><td><code class="clickable-code" data-copy="grad" title="クリックしてコピー">grad</code></td><td class="col-operator"><code class="clickable-code" data-copy="grad(f, [x, y, z])" title="クリックしてコピー">grad(f, [x, y, z])</code></td><td>Gradient vector field ($\nabla f$)</td></tr><tr><td><code class="clickable-code" data-copy="div" title="クリックしてコピー">div</code>, <code class="clickable-code" data-copy="curl" title="クリックしてコピー">curl</code></td><td class="col-operator"><code class="clickable-code" data-copy="div(F, [x, y, z])" title="クリックしてコピー">div(F, [x, y, z])</code>, <code class="clickable-code" data-copy="curl(F, ...)" title="クリックしてコピー">curl(F, ...)</code></td><td>Divergence ($\nabla \cdot F$) and 3D curl ($\nabla \times F$)</td></tr><tr><td>Matrix / Vector Syntax</td><td class="col-operator"><code class="clickable-code" data-copy="[[1, 2], [3, 4]]" title="クリックしてコピー">[[1, 2], [3, 4]]</code>, <code class="clickable-code" data-copy="[1, 2, 3]" title="クリックしてコピー">[1, 2, 3]</code></td><td>Matrix and vector literal syntax</td></tr></tbody></table></div><h3 class="dads-h3">5. Computational Geometry</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">Function</th><th scope="col">Syntax & Example</th><th scope="col">Description</th></tr></thead><tbody><tr><td><code class="clickable-code" data-copy="line_intersect" title="クリックしてコピー">line_intersect</code></td><td class="col-operator"><code class="clickable-code" data-copy="line_intersect([A1, B1, C1], [A2, B2, C2])" title="クリックしてコピー">line_intersect([A1, B1, C1], [A2, B2, C2])</code></td><td>Exact intersection point of two lines $Ax+By+C=0$ via Cramer's rule</td></tr><tr><td><code class="clickable-code" data-copy="circle_intersect" title="クリックしてコピー">circle_intersect</code></td><td class="col-operator"><code class="clickable-code" data-copy="circle_intersect(c1, r1, c2, r2)" title="クリックしてコピー">circle_intersect(c1, r1, c2, r2)</code></td><td>Exact intersection points of two circles via radical axis order reduction</td></tr><tr><td><code class="clickable-code" data-copy="triangle_area" title="クリックしてコピー">triangle_area</code></td><td class="col-operator"><code class="clickable-code" data-copy="triangle_area(p1, p2, p3)" title="クリックしてコピー">triangle_area(p1, p2, p3)</code></td><td>Exact area of a triangle given three vertices via Shoelace formula</td></tr><tr><td><code class="clickable-code" data-copy="triangle_centers" title="クリックしてコピー">triangle_centers</code></td><td class="col-operator"><code class="clickable-code" data-copy="triangle_centers(p1, p2, p3)" title="クリックしてコピー">triangle_centers(p1, p2, p3)</code></td><td>Triangle centers (centroid, circumcenter, orthocenter, incenter)</td></tr><tr><td><code class="clickable-code" data-copy="geo_prove" title="クリックしてコピー">geo_prove</code></td><td class="col-operator"><code class="clickable-code" data-copy="geo_prove(hypotheses, conclusion [, var_order])" title="クリックしてコピー">geo_prove(hypotheses, conclusion [, var_order])</code></td><td>Automated geometric theorem proving via Wu Wen-tsun's algebraic method (Wu's Method). Computes a triangular Characteristic Set (ascending chain) from geometric hypotheses and verifies whether successive pseudo-division remainder with respect to the conclusion polynomial vanishes ($R = 0$). Supports 3-tier non-degeneracy condition (NDG: Primary / Essential / Algebraic) generation and formal Lean 4 theorem transpilation</td></tr><tr><td><code class="clickable-code" data-copy="midpoint" title="クリックしてコピー">midpoint</code></td><td class="col-operator"><code class="clickable-code" data-copy="midpoint(M, A, B)" title="クリックしてコピー">midpoint(M, A, B)</code></td><td>Predicate asserting point $M$ is the midpoint of segment $AB$ ($2 M_x = A_x + B_x, 2 M_y = A_y + B_y$)</td></tr><tr><td><code class="clickable-code" data-copy="collinear" title="クリックしてコピー">collinear</code></td><td class="col-operator"><code class="clickable-code" data-copy="collinear(A, B, C)" title="クリックしてコピー">collinear(A, B, C)</code></td><td>Predicate asserting points $A, B, C$ are collinear (cross product determinant $(B_x - A_x)(C_y - A_y) - (B_y - A_y)(C_x - A_x) = 0$)</td></tr><tr><td><code class="clickable-code" data-copy="parallel" title="クリックしてコピー">parallel</code></td><td class="col-operator"><code class="clickable-code" data-copy="parallel(A, B, C, D)" title="クリックしてコピー">parallel(A, B, C, D)</code></td><td>Predicate asserting line $AB$ is parallel to line $CD$ (direction vector cross product $= 0$)</td></tr><tr><td><code class="clickable-code" data-copy="perpendicular" title="クリックしてコピー">perpendicular</code></td><td class="col-operator"><code class="clickable-code" data-copy="perpendicular(A, B, C, D)" title="クリックしてコピー">perpendicular(A, B, C, D)</code></td><td>Predicate asserting line $AB$ is perpendicular to line $CD$ (direction vector dot product $= 0$)</td></tr><tr><td><code class="clickable-code" data-copy="equal_length_sq" title="クリックしてコピー">equal_length_sq</code></td><td class="col-operator"><code class="clickable-code" data-copy="equal_length_sq(A, B, C, D)" title="クリックしてコピー">equal_length_sq(A, B, C, D)</code></td><td>Predicate asserting equality of squared segment lengths ($AB^2 = CD^2$)</td></tr><tr><td><code class="clickable-code" data-copy="circle_concyclic" title="クリックしてコピー">circle_concyclic</code></td><td class="col-operator"><code class="clickable-code" data-copy="circle_concyclic(A, B, C, D)" title="クリックしてコピー">circle_concyclic(A, B, C, D)</code></td><td>Predicate asserting points $A, B, C, D$ lie on a common circle (concyclic condition)</td></tr></tbody></table></div><h3 class="dads-h3">6. Exact Discrete Probability &amp; Statistics</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">Function</th><th scope="col">Syntax & Example</th><th scope="col">Description</th></tr></thead><tbody><tr><td><code class="clickable-code" data-copy="binom" title="クリックしてコピー">binom</code></td><td class="col-operator"><code class="clickable-code" data-copy="binom(n, k, p)" title="クリックしてコピー">binom(n, k, p)</code></td><td>Binomial distribution PMF $P(X=k) = \binom{n}{k} p^k (1-p)^{n-k}$</td></tr><tr><td><code class="clickable-code" data-copy="hyper" title="クリックしてコピー">hyper</code></td><td class="col-operator"><code class="clickable-code" data-copy="hyper(N, K, n, k)" title="クリックしてコピー">hyper(N, K, n, k)</code></td><td>Hypergeometric distribution PMF (without replacement)</td></tr><tr><td><code class="clickable-code" data-copy="geom" title="クリックしてコピー">geom</code></td><td class="col-operator"><code class="clickable-code" data-copy="geom(p, k)" title="クリックしてコピー">geom(p, k)</code></td><td>Geometric distribution PMF $P(X=k) = (1-p)^{k-1} p$</td></tr><tr><td><code class="clickable-code" data-copy="bayes" title="クリックしてコピー">bayes</code></td><td class="col-operator"><code class="clickable-code" data-copy="bayes(prior, likelihood, marginal)" title="クリックしてコピー">bayes(prior, likelihood, marginal)</code></td><td>Exact posterior probability $P(A\|B) = \frac{P(B\|A)P(A)}{P(B)}$ via Bayes' theorem</td></tr><tr><td><code class="clickable-code" data-copy="expect" title="クリックしてコピー">expect</code></td><td class="col-operator"><code class="clickable-code" data-copy="expect(binom, n, p)" title="クリックしてコピー">expect(binom, n, p)</code> / <code class="clickable-code" data-copy="expect([[x1, p1], ...])" title="クリックしてコピー">expect([[x1, p1], ...])</code></td><td>Expected value $E[X]$ of discrete distributions</td></tr><tr><td><code class="clickable-code" data-copy="variance" title="クリックしてコピー">variance</code></td><td class="col-operator"><code class="clickable-code" data-copy="variance(...)" title="クリックしてコピー">variance(...)</code></td><td>Variance $V[X] = E[X^2] - (E[X])^2$</td></tr><tr><td><code class="clickable-code" data-copy="stddev" title="クリックしてコピー">stddev</code></td><td class="col-operator"><code class="clickable-code" data-copy="stddev(...)" title="クリックしてコピー">stddev(...)</code></td><td>Standard deviation $\sigma = \sqrt{V[X]}$ (in exact radical form)</td></tr></tbody></table></div><h3 class="dads-h3">7. Symbolic Assumptions System</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">Command</th><th scope="col">Example</th><th scope="col">Description</th></tr></thead><tbody><tr><td><code class="clickable-code" data-copy="assume" title="クリックしてコピー">assume</code></td><td class="col-operator"><code class="clickable-code" data-copy="assume(x &gt; 0)" title="クリックしてコピー">assume(x &gt; 0)</code>, <code class="clickable-code" data-copy="assume(n, integer)" title="クリックしてコピー">assume(n, integer)</code></td><td>Sets domain constraints (<code class="clickable-code" data-copy="sqrt(x^2)" title="クリックしてコピー">sqrt(x^2)</code> → <code class="clickable-code" data-copy="x" title="クリックしてコピー">x</code>, <code class="clickable-code" data-copy="sin(n*pi)" title="クリックしてコピー">sin(n*pi)</code> → <code class="clickable-code" data-copy="0" title="クリックしてコピー">0</code>, etc.)</td></tr><tr><td><code class="clickable-code" data-copy="unassume" title="クリックしてコピー">unassume</code></td><td class="col-operator"><code class="clickable-code" data-copy="unassume(x)" title="クリックしてコピー">unassume(x)</code></td><td>Clears assumptions for the specified variable</td></tr><tr><td><code class="clickable-code" data-copy="assumptions" title="クリックしてコピー">assumptions</code></td><td class="col-operator"><code class="clickable-code" data-copy="assumptions()" title="クリックしてコピー">assumptions()</code></td><td>Displays all active domain constraints</td></tr><tr><td><code class="clickable-code" data-copy="clear_assumptions" title="クリックしてコピー">clear_assumptions</code></td><td class="col-operator"><code class="clickable-code" data-copy="clear_assumptions()" title="クリックしてコピー">clear_assumptions()</code></td><td>Clears all active domain constraints simultaneously</td></tr></tbody></table></div><h3 class="dads-h3">8. Real Algebraic Geometry, Mathematical Logic &amp; Quantifier Elimination</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">Function</th><th scope="col">Syntax & Example</th><th scope="col">Description</th></tr></thead><tbody><tr><td><code class="clickable-code" data-copy="qe" title="クリックしてコピー">qe</code></td><td class="col-operator"><code class="clickable-code" data-copy="qe(forall([x], x^2 + a*x + b &gt; 0))" title="クリックしてコピー">qe(forall([x], x^2 + a*x + b &gt; 0))</code></td><td>Full Quantifier Elimination via Cylindrical Algebraic Decomposition (CAD) (constructs equivalent quantifier-free conditions via Hong (1992) boundary polynomials)</td></tr><tr><td><code class="clickable-code" data-copy="forall" title="クリックしてコピー">forall</code></td><td class="col-operator"><code class="clickable-code" data-copy="forall([x], formula)" title="クリックしてコピー">forall([x], formula)</code></td><td>Universal quantifier formula constructor $\forall x \, \Phi(x)$</td></tr><tr><td><code class="clickable-code" data-copy="exists" title="クリックしてコピー">exists</code></td><td class="col-operator"><code class="clickable-code" data-copy="exists([x], formula)" title="クリックしてコピー">exists([x], formula)</code></td><td>Existential quantifier formula constructor $\exists x \, \Phi(x)$</td></tr><tr><td><code class="clickable-code" data-copy="cad" title="クリックしてコピー">cad</code></td><td class="col-operator"><code class="clickable-code" data-copy="cad([x^2 - 2], [x])" title="クリックしてコピー">cad([x^2 - 2], [x])</code></td><td>Direct execution of Cylindrical Algebraic Decomposition (1D cell decomposition and sample point derivation for semi-algebraic sets)</td></tr></tbody></table></div><h3 class="dads-h3">9. Elliptic Curves &amp; Arithmetic Geometry</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">Function</th><th scope="col">Syntax & Example</th><th scope="col">Description</th></tr></thead><tbody><tr><td><code class="clickable-code" data-copy="ec_add" title="クリックしてコピー">ec_add</code></td><td class="col-operator"><code class="clickable-code" data-copy="ec_add([A, B], P1, P2)" title="クリックしてコピー">ec_add([A, B], P1, P2)</code></td><td>Rational point addition on Weierstrass elliptic curve $y^2 = x^3 + Ax + B$ via Chord and Tangent method (handles point at infinity <code class="clickable-code" data-copy="O" title="クリックしてコピー">O</code>)</td></tr><tr><td><code class="clickable-code" data-copy="ec_mul" title="クリックしてコピー">ec_mul</code></td><td class="col-operator"><code class="clickable-code" data-copy="ec_mul([A, B], n, P)" title="クリックしてコピー">ec_mul([A, B], n, P)</code></td><td>Scalar multiplication $n P$ of rational points on elliptic curves via binary Double-and-Add algorithm</td></tr><tr><td><code class="clickable-code" data-copy="ec_torsion" title="クリックしてコピー">ec_torsion</code></td><td class="col-operator"><code class="clickable-code" data-copy="ec_torsion(A, B)" title="クリックしてコピー">ec_torsion(A, B)</code></td><td>Full determination of the rational torsion subgroup $E(\mathbb{Q})_{\text{tors}}$ based on the Nagell-Lutz and Mazur theorems</td></tr><tr><td><code class="clickable-code" data-copy="ec_p_order" title="クリックしてコピー">ec_p_order</code></td><td class="col-operator"><code class="clickable-code" data-copy="ec_p_order(A, B, p)" title="クリックしてコピー">ec_p_order(A, B, p)</code></td><td>Polynomial-time deterministic group order computation $\#E(\mathbb{F}_p)$ of non-singular elliptic curves over prime finite fields $\mathbb{F}_p$ via Schoof's algorithm (division polynomials, Frobenius endomorphism & CRT)</td></tr><tr><td><code class="clickable-code" data-copy="ec_p_trace" title="クリックしてコピー">ec_p_trace</code></td><td class="col-operator"><code class="clickable-code" data-copy="ec_p_trace(A, B, p)" title="クリックしてコピー">ec_p_trace(A, B, p)</code></td><td>Computes the Frobenius trace $a = p + 1 - \#E(\mathbb{F}_p)$ of elliptic curves over $\mathbb{F}_p$ (satisfying Hasse's bound $|a| \le 2\sqrt{p}$)</td></tr><tr><td><code class="clickable-code" data-copy="ec_p_add" title="クリックしてコピー">ec_p_add</code></td><td class="col-operator"><code class="clickable-code" data-copy="ec_p_add(A, B, p, P, Q)" title="クリックしてコピー">ec_p_add(A, B, p, P, Q)</code></td><td>Group point addition $P + Q$ on elliptic curves over prime finite field $\mathbb{F}_p$ (via modular inverse and Chord-and-Tangent law, supporting identity <code class="clickable-code" data-copy="O" title="クリックしてコピー">O</code>)</td></tr><tr><td><code class="clickable-code" data-copy="ec_p_mul" title="クリックしてコピー">ec_p_mul</code></td><td class="col-operator"><code class="clickable-code" data-copy="ec_p_mul(A, B, p, n, P)" title="クリックしてコピー">ec_p_mul(A, B, p, n, P)</code></td><td>Scalar point multiplication $n P$ on elliptic curves over prime finite field $\mathbb{F}_p$ (via Double-and-Add algorithm $\pmod p$)</td></tr><tr><td><code class="clickable-code" data-copy="ec_rank_bound" title="クリックしてコピー">ec_rank_bound</code></td><td class="col-operator"><code class="clickable-code" data-copy="ec_rank_bound(A, B)" title="クリックしてコピー">ec_rank_bound(A, B)</code></td><td>Computes deterministic Mordell-Weil rank bounds $[r_{\text{lower}}, r_{\text{upper}}]$ via 2-isogeny descent and Selmer group dimension calculation for curves with rational 2-torsion</td></tr><tr><td><code class="clickable-code" data-copy="ec_generators" title="クリックしてコピー">ec_generators</code></td><td class="col-operator"><code class="clickable-code" data-copy="ec_generators(A, B)" title="クリックしてコピー">ec_generators(A, B)</code></td><td>Extracts a set of linearly independent infinite-order rational points (generators of the lower-bound subgroup) via rational point search on 2-covering homogeneous spaces</td></tr></tbody></table></div><h3 class="dads-h3">10. Visualization &amp; Verification Tools</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">Function</th><th scope="col">Syntax & Example</th><th scope="col">Description</th></tr></thead><tbody><tr><td><code class="clickable-code" data-copy="verify" title="クリックしてコピー">verify</code></td><td class="col-operator"><code class="clickable-code" data-copy="verify(integrate(1/(x^2+1), x), atan(x))" title="クリックしてコピー">verify(integrate(1/(x^2+1), x), atan(x))</code></td><td>Independently verifies algebraic equivalence of two expressions and issues an algebraic verification certificate</td></tr><tr><td><code class="clickable-code" data-copy="plot" title="クリックしてコピー">plot</code></td><td class="col-operator"><code class="clickable-code" data-copy="plot(sin(x), [-pi, pi])" title="クリックしてコピー">plot(sin(x), [-pi, pi])</code></td><td>High-resolution terminal curve plotter using Unicode 2×4 Braille characters (automatic root/extrema detection, singularity discontinuity handling)</td></tr></tbody></table></div><h3 class="dads-h3">11. Lattice Basis Reduction &amp; Integer Relations (LLL)</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">Function</th><th scope="col">Syntax & Example</th><th scope="col">Description</th></tr></thead><tbody><tr><td><code class="clickable-code" data-copy="lll" title="クリックしてコピー">lll</code></td><td class="col-operator"><code class="clickable-code" data-copy="lll([[1, -1, 3], [1, 0, 5], [1, 2, 6]])" title="クリックしてコピー">lll([[1, -1, 3], [1, 0, 5], [1, 2, 6]])</code></td><td>Lenstra–Lenstra–Lovász (1982) lattice basis reduction algorithm over exact rationals</td></tr><tr><td><code class="clickable-code" data-copy="find_min_poly" title="クリックしてコピー">find_min_poly</code></td><td class="col-operator"><code class="clickable-code" data-copy="find_min_poly(sqrt(2) + sqrt(3), 4)" title="クリックしてコピー">find_min_poly(sqrt(2) + sqrt(3), 4)</code></td><td>Exact minimal polynomial reconstruction for algebraic numbers using LLL lattice reduction</td></tr></tbody></table></div><h3 class="dads-h3">12. p-adic Arithmetic, Local Algebra &amp; Hensel Lifting</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">Function</th><th scope="col">Syntax & Example</th><th scope="col">Description</th></tr></thead><tbody><tr><td><code class="clickable-code" data-copy="padic_val" title="クリックしてコピー">padic_val</code></td><td class="col-operator"><code class="clickable-code" data-copy="padic_val(50, 5)" title="クリックしてコピー">padic_val(50, 5)</code></td><td>Exact p-adic valuation $v_p(x) \in \mathbb{Z}$ for rational $x$ and prime base $p$ ($x=0$ yields infinity)</td></tr><tr><td><code class="clickable-code" data-copy="padic_norm" title="クリックしてコピー">padic_norm</code></td><td class="col-operator"><code class="clickable-code" data-copy="padic_norm(3/20, 2)" title="クリックしてコピー">padic_norm(3/20, 2)</code></td><td>Exact ultrametric norm $|x|_p = p^{-v_p(x)}$ as an exact rational (<code class="clickable-code" data-copy="big.Rat" title="クリックしてコピー">big.Rat</code>)</td></tr><tr><td><code class="clickable-code" data-copy="padic_expand" title="クリックしてコピー">padic_expand</code></td><td class="col-operator"><code class="clickable-code" data-copy="padic_expand(2/3, 5, 4)" title="クリックしてコピー">padic_expand(2/3, 5, 4)</code></td><td>Truncated p-adic power series expansion string $a_0 + a_1 p + a_2 p^2 + \dots + O(p^k)$</td></tr></tbody></table></div><h3 class="dads-h3">13. Local Algebraic Series &amp; Singularities (Puiseux Series)</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">Function</th><th scope="col">Syntax & Example</th><th scope="col">Description</th></tr></thead><tbody><tr><td><code class="clickable-code" data-copy="puiseux" title="クリックしてコピー">puiseux</code></td><td class="col-operator"><code class="clickable-code" data-copy="puiseux(y^2 - x^3, y, x, 3)" title="クリックしてコピー">puiseux(y^2 - x^3, y, x, 3)</code></td><td>Deterministically solves for local fractional power Puiseux series branches $y(x) = \sum c_k x^{p_k/q_k}$ around singularities/branch points of $F(x, y) = 0$ via the Newton polygon algorithm (default order 3)</td></tr></tbody></table></div><h3 class="dads-h3">14. Galois Theory, Solvability by Radicals &amp; Abel-Ruffini Certificates</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">Function</th><th scope="col">Syntax & Example</th><th scope="col">Description</th></tr></thead><tbody><tr><td><code class="clickable-code" data-copy="galois_group" title="クリックしてコピー">galois_group</code></td><td class="col-operator"><code class="clickable-code" data-copy="galois_group(x^3 - 2)" title="クリックしてコピー">galois_group(x^3 - 2)</code> / <code class="clickable-code" data-copy="galois_group(p, x)" title="クリックしてコピー">galois_group(p, x)</code></td><td>Deterministic Galois group $\mathrm{Gal}(f/\mathbb{Q})$ computation for polynomials up to degree 5 over $\mathbb{Q}$ (identifies permutation group isomorphism types such as $S_n, A_n, D_n, C_n, V_4, F_{20}$ via squarefree factorization, discriminants, cubic/sextic resolvents, and Dedekind-Frobenius cycle-type positive witnesses)</td></tr><tr><td><code class="clickable-code" data-copy="is_solvable_by_radicals" title="クリックしてコピー">is_solvable_by_radicals</code></td><td class="col-operator"><code class="clickable-code" data-copy="is_solvable_by_radicals(x^5 - 4*x + 2)" title="クリックしてコピー">is_solvable_by_radicals(x^5 - 4*x + 2)</code></td><td>Deterministic solvability by radicals test based on the Fundamental Theorem of Galois Theory and Abel-Ruffini Theorem. Returns <code class="clickable-code" data-copy="true" title="クリックしてコピー">true</code> for solvable Galois groups and <code class="clickable-code" data-copy="false" title="クリックしてコピー">false</code> for non-solvable groups ($A_5, S_5$). Under <code class="clickable-code" data-copy="--verify" title="クリックしてコピー">--verify</code>, emits an independently verifiable Abel-Ruffini Impossibility Certificate IR; under <code class="clickable-code" data-copy="--lean" title="クリックしてコピー">--lean</code>, generates formal Lean 4 (Mathlib4) proof code</td></tr></tbody></table></div><h3 class="dads-h3">15. Self-Verifying Certificates &amp; Formal Proof Infrastructure (ProofTrace / Explain / Verify / Lean 4)</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">Feature / Option</th><th scope="col">Syntax & Example</th><th scope="col">Description</th></tr></thead><tbody><tr><td><code class="clickable-code" data-copy="ProofTrace" title="クリックしてコピー">ProofTrace</code></td><td class="col-operator">Internal Data Structure</td><td>Data structure storing each step of the derivation (Before/After nodes, applied rule, residual expression, verification status). Acts as a shared representation for derivations, reverse-checks, and Lean 4 code generation</td></tr><tr><td><code class="clickable-code" data-copy="--explain" title="クリックしてコピー">--explain</code> / <code class="clickable-code" data-copy="explain" title="クリックしてコピー">explain</code> / <code class="clickable-code" data-copy="steps" title="クリックしてコピー">steps</code></td><td class="col-operator"><code class="clickable-code" data-copy="ihd --explain &quot;1/(sqrt(2)+1)&quot;" title="クリックしてコピー">ihd --explain &quot;1/(sqrt(2)+1)&quot;</code></td><td>Displays tree-formatted step-by-step algebraic derivations (radical denesting, rationalization, factoring, differentiation rules, etc.) based on derivation step sequences</td></tr><tr><td><code class="clickable-code" data-copy="--verify" title="クリックしてコピー">--verify</code> / <code class="clickable-code" data-copy="verify" title="クリックしてコピー">verify</code></td><td class="col-operator"><code class="clickable-code" data-copy="ihd --verify &quot;factor(x^2 - 1)&quot;" title="クリックしてコピー">ihd --verify &quot;factor(x^2 - 1)&quot;</code></td><td>Checks algebraic correctness for steps and results against defining relations and derivatives, confirming that residuals vanish</td></tr><tr><td><code class="clickable-code" data-copy="--certificate" title="クリックしてコピー">--certificate</code></td><td class="col-operator"><code class="clickable-code" data-copy="ihd --certificate [file] &quot;factor(x^2 - 1)&quot;" title="クリックしてコピー">ihd --certificate [file] &quot;factor(x^2 - 1)&quot;</code></td><td>Exports computation and rewriting sequence into a certificate JSON file (schema <code class="clickable-code" data-copy="ihd-proof-trace-v1" title="クリックしてコピー">ihd-proof-trace-v1</code>) to stdout or file</td></tr><tr><td><code class="clickable-code" data-copy="--replay" title="クリックしてコピー">--replay</code></td><td class="col-operator"><code class="clickable-code" data-copy="ihd --replay cert.json" title="クリックしてコピー">ihd --replay cert.json</code></td><td>Reads an exported certificate JSON file and verifies that residuals vanish without invoking CAS solver algorithms</td></tr><tr><td><code class="clickable-code" data-copy="--micro-verifier" title="クリックしてコピー">--micro-verifier</code></td><td class="col-operator"><code class="clickable-code" data-copy="ihd --micro-verifier &gt; micro_verifier.go" title="クリックしてコピー">ihd --micro-verifier &gt; micro_verifier.go</code></td><td>Emits self-contained Go verification source code (standard library only) that can verify certificate JSON files independently</td></tr><tr><td><code class="clickable-code" data-copy="--lean" title="クリックしてコピー">--lean</code> / <code class="clickable-code" data-copy="--lean-file" title="クリックしてコピー">--lean-file</code></td><td class="col-operator"><code class="clickable-code" data-copy="ihd --lean &quot;factor(x^2 - 1)&quot;" title="クリックしてコピー">ihd --lean &quot;factor(x^2 - 1)&quot;</code> / <code class="clickable-code" data-copy="ihd --lean-file p.lean &quot;factor(x^2 - 1)&quot;" title="クリックしてコピー">ihd --lean-file p.lean &quot;factor(x^2 - 1)&quot;</code></td><td>Automatically transpiles computation and proof traces into formal <strong>Lean 4 (Mathlib4)</strong> proof theorems (<code class="clickable-code" data-copy="by ring" title="クリックしてコピー">by ring</code>, <code class="clickable-code" data-copy="by ext &lt;;&gt; fin_cases" title="クリックしてコピー">by ext &lt;;&gt; fin_cases</code>, <code class="clickable-code" data-copy="by repeat constructor &lt;;&gt; norm_num" title="クリックしてコピー">by repeat constructor &lt;;&gt; norm_num</code>, <code class="clickable-code" data-copy="by simp" title="クリックしてコピー">by simp</code>, etc.)</td></tr></tbody></table></div><h3 class="dads-h3">16. Clifford Geometric Algebra &amp; Binary Cyclotomic Quantum Circuit Verification</h3><p class="body-p">Supports real Clifford geometric algebras $\mathrm{Cl}(p, q, r)$ equipped with orthogonal diagonal signatures $(p, q, r)$ ($p$ positive basis vectors $e_i^2 = +1$, $q$ negative basis vectors $e_i^2 = -1$, and $r$ degenerate/null basis vectors $e_i^2 = 0$), alongside zero-decimal Clifford+T quantum circuit equivalence verification over the binary cyclotomic ring $\mathbb{Z}[1/\sqrt{2}, i]$.</p><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">Function</th><th scope="col">Syntax & Example</th><th scope="col">Description</th></tr></thead><tbody><tr><td><code class="clickable-code" data-copy="clifford" title="クリックしてコピー">clifford</code></td><td class="col-operator"><code class="clickable-code" data-copy="clifford(e0 * e1 + e1 * e0, 3, 0)" title="クリックしてコピー">clifford(e0 * e1 + e1 * e0, 3, 0)</code> / <code class="clickable-code" data-copy="clifford(e0 * e0, 3, 0)" title="クリックしてコピー">clifford(e0 * e0, 3, 0)</code></td><td>Computes the Clifford geometric product and simplifies multivector expressions canonically under signature $(p, q, [r])$ (basis squaring and anti-commutation reduction). Basis generator symbols are <code class="clickable-code" data-copy="e0" title="クリックしてコピー">e0</code>, <code class="clickable-code" data-copy="e1" title="クリックしてコピー">e1</code>, <code class="clickable-code" data-copy="e2" title="クリックしてコピー">e2</code> ...</td></tr><tr><td><code class="clickable-code" data-copy="clifford_wedge" title="クリックしてコピー">clifford_wedge</code></td><td class="col-operator"><code class="clickable-code" data-copy="clifford_wedge(e0, e1, 3, 0)" title="クリックしてコピー">clifford_wedge(e0, e1, 3, 0)</code></td><td>Grassmann exterior product (wedge product) $A \wedge B$. Evaluates completely anti-symmetrized graded blades under metric $(p, q, [r])$</td></tr><tr><td><code class="clickable-code" data-copy="clifford_contract" title="クリックしてコピー">clifford_contract</code></td><td class="col-operator"><code class="clickable-code" data-copy="clifford_contract(e0, e0, &quot;left&quot;, 3, 0)" title="クリックしてコピー">clifford_contract(e0, e0, &quot;left&quot;, 3, 0)</code></td><td>Left/Right contractions (inner product extensions). The 3rd argument selects contraction direction (<code class="clickable-code" data-copy="&quot;left&quot;" title="クリックしてコピー">&quot;left&quot;</code>: left contraction $\lrcorner$, <code class="clickable-code" data-copy="&quot;right&quot;" title="クリックしてコピー">&quot;right&quot;</code>: right contraction $\llcorner$)</td></tr><tr><td><code class="clickable-code" data-copy="clifford_dual" title="クリックしてコピー">clifford_dual</code></td><td class="col-operator"><code class="clickable-code" data-copy="clifford_dual(e3, 3, 0, 1)" title="クリックしてコピー">clifford_dual(e3, 3, 0, 1)</code></td><td>Poincaré complement dual. Computes the dual multivector via contraction with the unit pseudoscalar blade $I$ (fully supports degenerate metrics $r > 0$)</td></tr><tr><td><code class="clickable-code" data-copy="quantum_equiv" title="クリックしてコピー">quantum_equiv</code></td><td class="col-operator"><code class="clickable-code" data-copy="quantum_equiv(c1, c2, n, [k])" title="クリックしてコピー">quantum_equiv(c1, c2, n, [k])</code></td><td>Strictly verifies algebraic equivalence between two $n$-qubit Clifford+T circuits $c1, c2$ over the binary cyclotomic ring $\mathbb{Z}[1/\sqrt{2}, i]$ up to global phase $\omega^k$ ($\omega = e^{i\pi/4}$). If inequivalent, extracts a concrete refuting witness basis state</td></tr><tr><td><code class="clickable-code" data-copy="quantum_eval" title="クリックしてコピー">quantum_eval</code></td><td class="col-operator"><code class="clickable-code" data-copy="quantum_eval(circuit, numQubits)" title="クリックしてコピー">quantum_eval(circuit, numQubits)</code></td><td>Exactly simulates and computes the symbolic unitary matrix of a Clifford+T quantum circuit over binary cyclotomic ring coefficients</td></tr></tbody></table></div><h3 class="dads-h3">17. CAS Iteration Control &amp; Multi-Radix Arithmetic</h3><p class="body-p">Provides list comprehension, discrete products, procedural loops, and multi-radix (bases 2 through 64) integer/rational literals and conversion functions.</p><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">Function / Syntax</th><th scope="col">Syntax & Example</th><th scope="col">Description</th></tr></thead><tbody><tr><td><code class="clickable-code" data-copy="table" title="クリックしてコピー">table</code></td><td class="col-operator"><code class="clickable-code" data-copy="table(x^2, x, 1, 5)" title="クリックしてコピー">table(x^2, x, 1, 5)</code> / <code class="clickable-code" data-copy="table(i + j, i, 1, 3, 1, j, 1, 2)" title="クリックしてコピー">table(i + j, i, 1, 3, 1, j, 1, 2)</code></td><td>Mathematica-style list comprehension. Evaluates <code class="clickable-code" data-copy="table(expr, var, start, end, [step])" title="クリックしてコピー">table(expr, var, start, end, [step])</code> under automatic dynamic scope protection</td></tr><tr><td><code class="clickable-code" data-copy="product" title="クリックしてコピー">product</code></td><td class="col-operator"><code class="clickable-code" data-copy="product(k, k, 1, 5)" title="クリックしてコピー">product(k, k, 1, 5)</code> / <code class="clickable-code" data-copy="product(2*k + 1, k, 0, 4)" title="クリックしてコピー">product(2*k + 1, k, 0, 4)</code></td><td>Discrete product computation ($\prod_{k=\text{start}}^{\text{end}} \text{expr}$) with dynamic scope protection and zero-short-circuiting</td></tr><tr><td><code class="clickable-code" data-copy="for" title="クリックしてコピー">for</code></td><td class="col-operator"><code class="clickable-code" data-copy="for(i, 1, 5, s = s + i)" title="クリックしてコピー">for(i, 1, 5, s = s + i)</code></td><td>Procedural iteration loop with syntax <code class="clickable-code" data-copy="for(var, start, end, [step], body)" title="クリックしてコピー">for(var, start, end, [step], body)</code>. Returns the evaluation result of the final iteration</td></tr><tr><td><code class="clickable-code" data-copy="to_base" title="クリックしてコピー">to_base</code></td><td class="col-operator"><code class="clickable-code" data-copy="to_base(255, 16)" title="クリックしてコピー">to_base(255, 16)</code> / <code class="clickable-code" data-copy="to_base(1/3, 2)" title="クリックしてコピー">to_base(1/3, 2)</code></td><td>Converts an integer or exact rational into a string representation in the specified base (2 to 64), outputting repeating fractional digits when periodic</td></tr><tr><td><code class="clickable-code" data-copy="from_base" title="クリックしてコピー">from_base</code></td><td class="col-operator"><code class="clickable-code" data-copy="from_base(&quot;FF&quot;, 16)" title="クリックしてコピー">from_base(&quot;FF&quot;, 16)</code> / <code class="clickable-code" data-copy="from_base(&quot;101.1&quot;, 2)" title="クリックしてコピー">from_base(&quot;101.1&quot;, 2)</code></td><td>Parses a base-$N$ string representation back into an exact arbitrary-precision rational or integer</td></tr><tr><td><code class="clickable-code" data-copy="bin" title="クリックしてコピー">bin</code>, <code class="clickable-code" data-copy="oct" title="クリックしてコピー">oct</code>, <code class="clickable-code" data-copy="hex" title="クリックしてコピー">hex</code></td><td class="col-operator"><code class="clickable-code" data-copy="bin(42)" title="クリックしてコピー">bin(42)</code>, <code class="clickable-code" data-copy="oct(42)" title="クリックしてコピー">oct(42)</code>, <code class="clickable-code" data-copy="hex(255)" title="クリックしてコピー">hex(255)</code></td><td>Convenience aliases for standard binary, octal, and hexadecimal radix conversions</td></tr><tr><td>Radix Literals</td><td class="col-operator"><code class="clickable-code" data-copy="16^^FF" title="クリックしてコピー">16^^FF</code>, <code class="clickable-code" data-copy="2^^1011" title="クリックしてコピー">2^^1011</code>, <code class="clickable-code" data-copy="0x1A" title="クリックしてコピー">0x1A</code>, <code class="clickable-code" data-copy="0b101" title="クリックしてコピー">0b101</code></td><td>Lexer support for arbitrary-radix literal constants ($2 \le \text{base} \le 64$)</td></tr></tbody></table></div><h3 class="dads-h3">18. REPL Syntax Highlighting, Themes &amp; Interactive Commands</h3><p class="body-p">Interactive control commands, high-contrast color themes, and real-time lexical syntax highlighting features available inside the REPL.</p><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">Command / Option</th><th scope="col">Syntax & Example</th><th scope="col">Description</th></tr></thead><tbody><tr><td><code class="clickable-code" data-copy="theme" title="クリックしてコピー">theme</code></td><td class="col-operator"><code class="clickable-code" data-copy="theme" title="クリックしてコピー">theme</code></td><td>Displays the currently active syntax highlight color theme (<code class="clickable-code" data-copy="dark" title="クリックしてコピー">dark</code>, <code class="clickable-code" data-copy="light" title="クリックしてコピー">light</code>, or <code class="clickable-code" data-copy="none" title="クリックしてコピー">none</code>)</td></tr><tr><td><code class="clickable-code" data-copy="theme dark" title="クリックしてコピー">theme dark</code></td><td class="col-operator"><code class="clickable-code" data-copy="theme dark" title="クリックしてコピー">theme dark</code></td><td>Switches to the dark-background palette (cyan/magenta/green/blue rainbow delimiters, yellow numbers, bright white operators), persisted to <code class="clickable-code" data-copy="~/.ihd/config.json" title="クリックしてコピー">~/.ihd/config.json</code></td></tr><tr><td><code class="clickable-code" data-copy="theme light" title="クリックしてコピー">theme light</code></td><td class="col-operator"><code class="clickable-code" data-copy="theme light" title="クリックしてコピー">theme light</code></td><td>Switches to the light-background palette (bold blue/magenta/green/cyan delimiters, red numbers, black operators), persisted to configuration</td></tr><tr><td><code class="clickable-code" data-copy="highlight" title="クリックしてコピー">highlight</code></td><td class="col-operator"><code class="clickable-code" data-copy="highlight" title="クリックしてコピー">highlight</code> / <code class="clickable-code" data-copy="color" title="クリックしてコピー">color</code></td><td>Shows current syntax highlight status (enabled / disabled)</td></tr><tr><td><code class="clickable-code" data-copy="highlight on" title="クリックしてコピー">highlight on</code> / <code class="clickable-code" data-copy="off" title="クリックしてコピー">off</code></td><td class="col-operator"><code class="clickable-code" data-copy="highlight on" title="クリックしてコピー">highlight on</code> / <code class="clickable-code" data-copy="highlight off" title="クリックしてコピー">highlight off</code></td><td>Toggles real-time lexical highlighting and nested rainbow delimiters dynamically</td></tr><tr><td><code class="clickable-code" data-copy="warn-loop" title="クリックしてコピー">warn-loop</code></td><td class="col-operator"><code class="clickable-code" data-copy="warn-loop &lt;N&gt;" title="クリックしてコピー">warn-loop &lt;N&gt;</code> / <code class="clickable-code" data-copy="warn-loop" title="クリックしてコピー">warn-loop</code></td><td>Configure and display warning threshold for iteration loops, persisted to <code class="clickable-code" data-copy="~/.ihd/config.json" title="クリックしてコピー">~/.ihd/config.json</code> (default: 100,000)</td></tr><tr><td><code class="clickable-code" data-copy="max-loop" title="クリックしてコピー">max-loop</code></td><td class="col-operator"><code class="clickable-code" data-copy="max-loop &lt;N&gt;" title="クリックしてコピー">max-loop &lt;N&gt;</code> / <code class="clickable-code" data-copy="max-loop" title="クリックしてコピー">max-loop</code></td><td>Configure and display maximum iteration limit for loops, persisted to <code class="clickable-code" data-copy="~/.ihd/config.json" title="クリックしてコピー">~/.ihd/config.json</code> (default: -1: unlimited)</td></tr><tr><td><code class="clickable-code" data-copy="config loop" title="クリックしてコピー">config loop</code></td><td class="col-operator"><code class="clickable-code" data-copy="config loop" title="クリックしてコピー">config loop</code></td><td>Display current loop warning threshold and maximum iteration safety limit</td></tr><tr><td><code class="clickable-code" data-copy="vars" title="クリックしてコピー">vars</code></td><td class="col-operator"><code class="clickable-code" data-copy="vars" title="クリックしてコピー">vars</code></td><td>Displays all currently bound user variables in the active environment</td></tr><tr><td><code class="clickable-code" data-copy="help" title="クリックしてコピー">help</code></td><td class="col-operator"><code class="clickable-code" data-copy="help" title="クリックしてコピー">help</code></td><td>Prints concise built-in help and a summary of interactive commands</td></tr><tr><td><code class="clickable-code" data-copy="exit" title="クリックしてコピー">exit</code> / <code class="clickable-code" data-copy="quit" title="クリックしてコピー">quit</code></td><td class="col-operator"><code class="clickable-code" data-copy="exit" title="クリックしてコピー">exit</code> / <code class="clickable-code" data-copy="quit" title="クリックしてコピー">quit</code> / <code class="clickable-code" data-copy="Ctrl+D" title="クリックしてコピー">Ctrl+D</code></td><td>Exits the interactive REPL session cleanly</td></tr><tr><td>CLI Options</td><td class="col-operator"><code class="clickable-code" data-copy="ihd --theme light" title="クリックしてコピー">ihd --theme light</code> / <code class="clickable-code" data-copy="--no-color" title="クリックしてコピー">--no-color</code> / <code class="clickable-code" data-copy="--warn-loop &lt;N&gt;" title="クリックしてコピー">--warn-loop &lt;N&gt;</code> / <code class="clickable-code" data-copy="--max-loop &lt;N&gt;" title="クリックしてコピー">--max-loop &lt;N&gt;</code></td><td>CLI startup flags to set initial color theme, disable color, or set loop thresholds</td></tr></tbody></table></div><h3 class="dads-h3">19. Multivariate Polynomial Ideals &amp; Primary Decomposition (GTZ)</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">Function</th><th scope="col">Syntax & Example</th><th scope="col">Description</th></tr></thead><tbody><tr><td><code class="clickable-code" data-copy="primary_decomposition" title="クリックしてコピー">primary_decomposition</code></td><td class="col-operator"><code class="clickable-code" data-copy="primary_decomposition([x^2 - 1, y], [x, y])" title="クリックしてコピー">primary_decomposition([x^2 - 1, y], [x, y])</code></td><td>Computes primary decomposition $I = \bigcap Q_i$ of multivariate polynomial ideal $I = \langle p_1, \dots \rangle$ via Gianni-Trager-Zacharias (GTZ) algorithm, returning a list of <code class="clickable-code" data-copy="[[Q_1, P_1], ...]" title="クリックしてコピー">[[Q_1, P_1], ...]</code> pairs of primary component $Q_i$ and associated prime $P_i = \sqrt{Q_i}$. Optional 3rd argument specifies monomial order (<code class="clickable-code" data-copy="&quot;grevlex&quot;" title="クリックしてコピー">&quot;grevlex&quot;</code> or <code class="clickable-code" data-copy="&quot;lex&quot;" title="クリックしてコピー">&quot;lex&quot;</code>).</td></tr><tr><td><code class="clickable-code" data-copy="ideal_radical" title="クリックしてコピー">ideal_radical</code></td><td class="col-operator"><code class="clickable-code" data-copy="ideal_radical([x^2, x*y], [x, y])" title="クリックしてコピー">ideal_radical([x^2, x*y], [x, y])</code></td><td>Computes generator list of radical ideal $\sqrt{I}$.</td></tr><tr><td><code class="clickable-code" data-copy="ideal_dimension" title="クリックしてコピー">ideal_dimension</code></td><td class="col-operator"><code class="clickable-code" data-copy="ideal_dimension([x*y, x*z], [x, y, z])" title="クリックしてコピー">ideal_dimension([x*y, x*z], [x, y, z])</code></td><td>Finds maximal independent variable set from leading monomial ideal of Groebner basis and returns Krull dimension as an integer.</td></tr><tr><td><code class="clickable-code" data-copy="ideal_intersection" title="クリックしてコピー">ideal_intersection</code></td><td class="col-operator"><code class="clickable-code" data-copy="ideal_intersection([x], [y], [x, y])" title="クリックしてコピー">ideal_intersection([x], [y], [x, y])</code></td><td>Computes ideal intersection $I \cap J$ via auxiliary variable elimination.</td></tr><tr><td><code class="clickable-code" data-copy="ideal_colon" title="クリックしてコピー">ideal_colon</code></td><td class="col-operator"><code class="clickable-code" data-copy="ideal_colon([x^2], x, [x])" title="クリックしてコピー">ideal_colon([x^2], x, [x])</code></td><td>Computes colon ideal (quotient ideal) $I : f = \{ g \mid f g \in I \}$ by polynomial $f$.</td></tr><tr><td><code class="clickable-code" data-copy="ideal_saturation" title="クリックしてコピー">ideal_saturation</code></td><td class="col-operator"><code class="clickable-code" data-copy="ideal_saturation([x^2], x, [x])" title="クリックしてコピー">ideal_saturation([x^2], x, [x])</code></td><td>Computes saturation ideal $I : f^\infty$ iteratively and returns generators upon reaching stabilization index $m$.</td></tr></tbody></table></div><h3 class="dads-h3">20. Collection Manipulation &amp; First-Class Lambda Expressions</h3><p class="body-p">Provides sequence generation, higher-order function mapping, predicate filtering, first-class lambda expressions, and array slicing.</p><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">Function / Syntax</th><th scope="col">Syntax & Example</th><th scope="col">Description</th></tr></thead><tbody><tr><td><code class="clickable-code" data-copy="range" title="クリックしてコピー">range</code></td><td class="col-operator"><code class="clickable-code" data-copy="range(5)" title="クリックしてコピー">range(5)</code> / <code class="clickable-code" data-copy="range(2, 6)" title="クリックしてコピー">range(2, 6)</code> / <code class="clickable-code" data-copy="range(0, 1, 1/3)" title="クリックしてコピー">range(0, 1, 1/3)</code></td><td>Generates an arithmetic sequence as a list. Syntax: <code class="clickable-code" data-copy="range(stop)" title="クリックしてコピー">range(stop)</code> or <code class="clickable-code" data-copy="range(start, stop, [step])" title="クリックしてコピー">range(start, stop, [step])</code>. The step argument accepts integers and exact rational fractions (step = 0 yields an error)</td></tr><tr><td><code class="clickable-code" data-copy="map" title="クリックしてコピー">map</code></td><td class="col-operator"><code class="clickable-code" data-copy="map(sin, [0, pi/2, pi])" title="クリックしてコピー">map(sin, [0, pi/2, pi])</code> / <code class="clickable-code" data-copy="map(lambda(x, x^2), range(5))" title="クリックしてコピー">map(lambda(x, x^2), range(5))</code></td><td>Applies a function or lambda expression to each element of a collection, returning a new list. Syntax: <code class="clickable-code" data-copy="map(fn, list)" title="クリックしてコピー">map(fn, list)</code>. Protects parent environment variables using a shadow scope</td></tr><tr><td><code class="clickable-code" data-copy="filter" title="クリックしてコピー">filter</code></td><td class="col-operator"><code class="clickable-code" data-copy="filter(is_prime, range(1, 11))" title="クリックしてコピー">filter(is_prime, range(1, 11))</code> / <code class="clickable-code" data-copy="filter(lambda(x, x &gt; 2), [1, 2, 3, 4])" title="クリックしてコピー">filter(lambda(x, x &gt; 2), [1, 2, 3, 4])</code></td><td>Extracts elements that satisfy a predicate function or boolean lambda expression. Syntax: <code class="clickable-code" data-copy="filter(pred, list)" title="クリックしてコピー">filter(pred, list)</code></td></tr><tr><td><code class="clickable-code" data-copy="lambda" title="クリックしてコピー">lambda</code></td><td class="col-operator"><code class="clickable-code" data-copy="lambda(x, x^2)" title="クリックしてコピー">lambda(x, x^2)</code> / <code class="clickable-code" data-copy="lambda([x, y], x + y)" title="クリックしてコピー">lambda([x, y], x + y)</code></td><td>Defines a first-class anonymous function. Syntax: <code class="clickable-code" data-copy="lambda(param, body)" title="クリックしてコピー">lambda(param, body)</code> or <code class="clickable-code" data-copy="lambda([p1, p2, ...], body)" title="クリックしてコピー">lambda([p1, p2, ...], body)</code>. Supports immediate calls <code class="clickable-code" data-copy="lambda(x, x+1)(5)" title="クリックしてコピー">lambda(x, x+1)(5)</code> and calls via bound variables <code class="clickable-code" data-copy="f = lambda(x, x^2); f(3)" title="クリックしてコピー">f = lambda(x, x^2); f(3)</code></td></tr><tr><td>Single Index</td><td class="col-operator"><code class="clickable-code" data-copy="list[0]" title="クリックしてコピー">list[0]</code>, <code class="clickable-code" data-copy="list[-1]" title="クリックしてコピー">list[-1]</code></td><td>0-indexed element access. Negative indices denote positions from the end ($-1$ is the last element). Out-of-bounds access returns an IndexError</td></tr><tr><td>Slice Syntax</td><td class="col-operator"><code class="clickable-code" data-copy="list[start:stop]" title="クリックしてコピー">list[start:stop]</code>, <code class="clickable-code" data-copy="list[start:stop:step]" title="クリックしてコピー">list[start:stop:step]</code></td><td>Subsequence extraction conforming to CPython <code class="clickable-code" data-copy="PySlice_GetIndicesEx" title="クリックしてコピー">PySlice_GetIndicesEx</code> normalization. Supports all 8 patterns (<code class="clickable-code" data-copy="[:]" title="クリックしてコピー">[:]</code>, <code class="clickable-code" data-copy="[:end]" title="クリックしてコピー">[:end]</code>, <code class="clickable-code" data-copy="[start:]" title="クリックしてコピー">[start:]</code>, <code class="clickable-code" data-copy="[start:end]" title="クリックしてコピー">[start:end]</code>, <code class="clickable-code" data-copy="[::step]" title="クリックしてコピー">[::step]</code>, <code class="clickable-code" data-copy="[start::step]" title="クリックしてコピー">[start::step]</code>, <code class="clickable-code" data-copy="[:end:step]" title="クリックしてコピー">[:end:step]</code>, <code class="clickable-code" data-copy="[start:end:step]" title="クリックしてコピー">[start:end:step]</code>), negative indices, negative steps, and boundary clipping (step = 0 yields an error)</td></tr></tbody></table></div><h3 class="dads-h3">21. Physical Units &amp; Dimensional Analysis</h3><p class="body-p">Performs dimensional analysis and physical unit calculations over the 7-dimensional rational vector space $\mathbb{Q}^7$ of SI base units without floating-point approximations.</p><p class="body-p">#### Supported Units &amp; Prefixes</p><p class="body-p">* <strong>SI Base Units</strong>: <code class="clickable-code" data-copy="m" title="クリックしてコピー">m</code> (length), <code class="clickable-code" data-copy="kg" title="クリックしてコピー">kg</code> (mass), <code class="clickable-code" data-copy="s" title="クリックしてコピー">s</code> (time), <code class="clickable-code" data-copy="A" title="クリックしてコピー">A</code> (electric current), <code class="clickable-code" data-copy="K" title="クリックしてコピー">K</code> (temperature), <code class="clickable-code" data-copy="mol" title="クリックしてコピー">mol</code> (amount of substance), <code class="clickable-code" data-copy="cd" title="クリックしてコピー">cd</code> (luminous intensity)</p><p class="body-p">* <strong>Derived Units</strong>: <code class="clickable-code" data-copy="N" title="クリックしてコピー">N</code> (force), <code class="clickable-code" data-copy="J" title="クリックしてコピー">J</code> (energy), <code class="clickable-code" data-copy="W" title="クリックしてコピー">W</code> (power), <code class="clickable-code" data-copy="Pa" title="クリックしてコピー">Pa</code> (pressure), <code class="clickable-code" data-copy="Hz" title="クリックしてコピー">Hz</code> (frequency), <code class="clickable-code" data-copy="C" title="クリックしてコピー">C</code> (charge), <code class="clickable-code" data-copy="V" title="クリックしてコピー">V</code> (voltage), <code class="clickable-code" data-copy="ohm" title="クリックしてコピー">ohm</code> (resistance), <code class="clickable-code" data-copy="F" title="クリックしてコピー">F</code> (capacitance), <code class="clickable-code" data-copy="S" title="クリックしてコピー">S</code> (conductance), <code class="clickable-code" data-copy="Wb" title="クリックしてコピー">Wb</code> (magnetic flux), <code class="clickable-code" data-copy="T" title="クリックしてコピー">T</code> (magnetic flux density), <code class="clickable-code" data-copy="H" title="クリックしてコピー">H</code> (inductance)</p><p class="body-p">* <strong>Accepted Non-SI Units</strong>: <code class="clickable-code" data-copy="min" title="クリックしてコピー">min</code> (minute, $60\text{ s}$), <code class="clickable-code" data-copy="h" title="クリックしてコピー">h</code> / <code class="clickable-code" data-copy="hour" title="クリックしてコピー">hour</code> (hour, $3600\text{ s}$), <code class="clickable-code" data-copy="d" title="クリックしてコピー">d</code> / <code class="clickable-code" data-copy="day" title="クリックしてコピー">day</code> (day, $86400\text{ s}$), <code class="clickable-code" data-copy="g" title="クリックしてコピー">g</code> (gram, $1/1000\text{ kg}$), <code class="clickable-code" data-copy="t" title="クリックしてコピー">t</code> (tonne, $1000\text{ kg}$), <code class="clickable-code" data-copy="L" title="クリックしてコピー">L</code> / <code class="clickable-code" data-copy="l" title="クリックしてコピー">l</code> (liter, $1/1000\text{ m}^3$)</p><p class="body-p">* <strong>SI Prefixes</strong>: <code class="clickable-code" data-copy="Y" title="クリックしてコピー">Y</code> ($10^{24}$), <code class="clickable-code" data-copy="Z" title="クリックしてコピー">Z</code> ($10^{21}$), <code class="clickable-code" data-copy="E" title="クリックしてコピー">E</code> ($10^{18}$), <code class="clickable-code" data-copy="P" title="クリックしてコピー">P</code> ($10^{15}$), <code class="clickable-code" data-copy="T" title="クリックしてコピー">T</code> ($10^{12}$), <code class="clickable-code" data-copy="G" title="クリックしてコピー">G</code> ($10^9$), <code class="clickable-code" data-copy="M" title="クリックしてコピー">M</code> ($10^6$), <code class="clickable-code" data-copy="k" title="クリックしてコピー">k</code> ($10^3$), <code class="clickable-code" data-copy="h" title="クリックしてコピー">h</code> ($10^2$), <code class="clickable-code" data-copy="da" title="クリックしてコピー">da</code> ($10^1$), <code class="clickable-code" data-copy="d" title="クリックしてコピー">d</code> ($10^{-1}$), <code class="clickable-code" data-copy="c" title="クリックしてコピー">c</code> ($10^{-2}$), <code class="clickable-code" data-copy="m" title="クリックしてコピー">m</code> ($10^{-3}$), <code class="clickable-code" data-copy="u" title="クリックしてコピー">u</code> ($10^{-6}$), <code class="clickable-code" data-copy="n" title="クリックしてコピー">n</code> ($10^{-9}$), <code class="clickable-code" data-copy="p" title="クリックしてコピー">p</code> ($10^{-12}$), <code class="clickable-code" data-copy="f" title="クリックしてコピー">f</code> ($10^{-15}$), <code class="clickable-code" data-copy="a" title="クリックしてコピー">a</code> ($10^{-18}$)</p><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">Function / Syntax</th><th scope="col">Syntax & Example</th><th scope="col">Description</th></tr></thead><tbody><tr><td><code class="clickable-code" data-copy="[unit]" title="クリックしてコピー">[unit]</code> Syntax</td><td class="col-operator"><code class="clickable-code" data-copy="10 [m/s]" title="クリックしてコピー">10 [m/s]</code>, <code class="clickable-code" data-copy="5 [kg*m/s^2]" title="クリックしてコピー">5 [kg*m/s^2]</code>, <code class="clickable-code" data-copy="(1/4) [h]" title="クリックしてコピー">(1/4) [h]</code></td><td>Attaches a unit expression to a value or expression. Operators <code class="clickable-code" data-copy="*" title="クリックしてコピー">*</code>, <code class="clickable-code" data-copy="/" title="クリックしてコピー">/</code>, <code class="clickable-code" data-copy="^" title="クリックしてコピー">^</code> are supported inside the unit expression. Use parentheses for fractions such as <code class="clickable-code" data-copy="(1/4) [h]" title="クリックしてコピー">(1/4) [h]</code></td></tr><tr><td><code class="clickable-code" data-copy="unit" title="クリックしてコピー">unit</code></td><td class="col-operator"><code class="clickable-code" data-copy="unit(m/s)" title="クリックしてコピー">unit(m/s)</code>, <code class="clickable-code" data-copy="unit(N)" title="クリックしてコピー">unit(N)</code></td><td>Constructs a unit quantity with magnitude 1</td></tr><tr><td><code class="clickable-code" data-copy="convert_unit" title="クリックしてコピー">convert_unit</code></td><td class="col-operator"><code class="clickable-code" data-copy="convert_unit(100 [km/h], m/s)" title="クリックしてコピー">convert_unit(100 [km/h], m/s)</code>, <code class="clickable-code" data-copy="convert_unit((1/4) [h], min)" title="クリックしてコピー">convert_unit((1/4) [h], min)</code></td><td>Converts a physical quantity to dimensionally compatible target units via exact rational ratio. Returns an error on dimension mismatch</td></tr><tr><td>Arithmetic Operations</td><td class="col-operator"><code class="clickable-code" data-copy="10 [m/s] * 5 [s]" title="クリックしてコピー">10 [m/s] * 5 [s]</code> $\to$ <code class="clickable-code" data-copy="50 [m]" title="クリックしてコピー">50 [m]</code>, <code class="clickable-code" data-copy="1 [km] - 200 [m]" title="クリックしてコピー">1 [km] - 200 [m]</code> $\to$ <code class="clickable-code" data-copy="4/5 [km]" title="クリックしてコピー">4/5 [km]</code></td><td>Validates dimensional consistency on addition/subtraction. Multiplies/divides rational dimension vectors. Automatically unboxes to standard numbers when dimensionless</td></tr><tr><td>Transcendental Guards</td><td class="col-operator"><code class="clickable-code" data-copy="sin(10 [m])" title="クリックしてコピー">sin(10 [m])</code> $\to$ Error</td><td>Rejects dimensioned arguments to elementary transcendental functions (<code class="clickable-code" data-copy="sin" title="クリックしてコピー">sin</code>, <code class="clickable-code" data-copy="cos" title="クリックしてコピー">cos</code>, <code class="clickable-code" data-copy="exp" title="クリックしてコピー">exp</code>, <code class="clickable-code" data-copy="ln" title="クリックしてコピー">ln</code>, etc.)</td></tr><tr><td>Verification (<code class="clickable-code" data-copy="--verify" title="クリックしてコピー">--verify</code>)</td><td class="col-operator"><code class="clickable-code" data-copy="ihd --verify &quot;convert_unit(100 [km/h], m/s)&quot;" title="クリックしてコピー">ihd --verify &quot;convert_unit(100 [km/h], m/s)&quot;</code></td><td>Verifies that source and target quantities have zero residual when expanded to SI base units</td></tr></tbody></table></div>
+        </div>
+      </details>
+    
+      </div>
+    </main>
+  </div>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // 1. トースト要素の準備
+    let toast = document.getElementById('copyToast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'copyToast';
+      toast.className = 'copy-toast';
+      toast.setAttribute('role', 'status');
+      toast.setAttribute('aria-live', 'polite');
+      toast.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="#98c379" aria-hidden="true"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg><span>クリップボードにコピーしました</span>';
+      document.body.appendChild(toast);
+    }
+
+    let toastTimer = null;
+    function showCopyToast(msg) {
+      if (msg) toast.querySelector('span').textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 1800);
+    }
+
+    // 2. コピー処理 (Clipboard API + フォールバック)
+    async function copyText(text) {
+      if (!text) return;
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const textarea = document.createElement('textarea');
+          textarea.value = text;
+          textarea.style.position = 'fixed';
+          textarea.style.opacity = '0';
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+        }
+        showCopyToast('コピーしました: ' + (text.length > 25 ? text.slice(0, 25) + '...' : text));
+      } catch (err) {
+        console.error('Copy failed:', err);
+      }
+    }
+
+    // 3. クリックコピーイベントの登録 (code.clickable-code)
+    document.querySelectorAll('code.clickable-code').forEach(el => {
+      el.addEventListener('click', () => {
+        const text = el.getAttribute('data-copy') || el.textContent.trim();
+        copyText(text);
+      });
+    });
+
+    // 4. アコーディオン一括開閉
+    const btnExpandAll = document.getElementById('btnExpandAll');
+    const btnCollapseAll = document.getElementById('btnCollapseAll');
+    const accordions = document.querySelectorAll('details.dads-accordion');
+
+    if (btnExpandAll) {
+      btnExpandAll.addEventListener('click', () => {
+        accordions.forEach(acc => acc.open = true);
+      });
+    }
+    if (btnCollapseAll) {
+      btnCollapseAll.addEventListener('click', () => {
+        accordions.forEach(acc => acc.open = false);
+      });
+    }
+
+    // 5. インクリメンタル検索
+    const searchInput = document.getElementById('searchInput');
+    const searchStatusBar = document.getElementById('searchStatusBar');
+    const searchResultText = document.getElementById('searchResultText');
+
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.trim().toLowerCase();
+        if (!query) {
+          accordions.forEach(acc => acc.style.display = '');
+          if (searchStatusBar) searchStatusBar.style.display = 'none';
+          return;
+        }
+
+        let hitCount = 0;
+        accordions.forEach(acc => {
+          const keywords = (acc.getAttribute('data-keywords') || '').toLowerCase();
+          const text = acc.textContent.toLowerCase();
+          if (keywords.includes(query) || text.includes(query)) {
+            acc.style.display = '';
+            acc.open = true;
+            hitCount++;
+          } else {
+            acc.style.display = 'none';
+          }
+        });
+
+        if (searchStatusBar && searchResultText) {
+          searchStatusBar.style.display = 'block';
+          searchResultText.innerHTML = 'キーワード: <span class="search-query-text">"' + query + '"</span> （一致セクション: <span class="search-count-badge">' + hitCount + ' 件</span>）';
+        }
+      });
+    }
+
+    // 6. スクロールスパイ (現在地TOCハイライト)
+    const tocLinks = document.querySelectorAll('.toc-link');
+    const observedSections = document.querySelectorAll('details[id]');
+
+    if ('IntersectionObserver' in window && observedSections.length > 0) {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const id = entry.target.getAttribute('id');
+            tocLinks.forEach(link => {
+              if (link.getAttribute('href') === '#' + id) {
+                link.classList.add('active');
+              } else {
+                link.classList.remove('active');
+              }
+            });
+          }
+        });
+      }, {
+        root: null,
+        rootMargin: '-80px 0px -70% 0px',
+        threshold: 0
+      });
+
+      observedSections.forEach(sec => observer.observe(sec));
+    }
+
+    // 7. モバイルドロワー開閉
+    const btnHamburger = document.getElementById('btnHamburger');
+    const drawerOverlay = document.getElementById('drawerOverlay');
+    const mobileDrawer = document.getElementById('mobileDrawer');
+    const btnCloseDrawer = document.getElementById('btnCloseDrawer');
+
+    function openDrawer() {
+      if (mobileDrawer) mobileDrawer.classList.add('open');
+      if (drawerOverlay) drawerOverlay.style.display = 'block';
+    }
+    function closeDrawer() {
+      if (mobileDrawer) mobileDrawer.classList.remove('open');
+      if (drawerOverlay) drawerOverlay.style.display = 'none';
+    }
+
+    if (btnHamburger) btnHamburger.addEventListener('click', openDrawer);
+    if (drawerOverlay) drawerOverlay.addEventListener('click', closeDrawer);
+    if (btnCloseDrawer) btnCloseDrawer.addEventListener('click', closeDrawer);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeDrawer();
+    });
+
+    document.querySelectorAll('.mobile-drawer .toc-link').forEach(link => {
+      link.addEventListener('click', closeDrawer);
+    });
+  });
+</script>
+</body>
+</html>

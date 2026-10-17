@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="小数を一切使用せず、任意精度有理数と代数的シンボル表現のみで厳密計算を行う CAS 電卓 `ihd`（i-hate-decimal-calc）の完全言語仕様および組み込み関数リファレンスです。">
+  <title>ihd 完全構文・演算子・関数リファレンス (Japanese Edition)</title>
+  <style>
+  :root {
+    --color-primary: #0055ff;
+    --color-primary-hover: #0040cc;
+    --color-primary-active: #0033aa;
+    --color-primary-text: #0044cc;
+    --color-primary-bg: #f2f6fc;
+    --color-text-main: #1a1a1c;
+    --color-text-muted: #535359;
+    --color-bg-base: #f9f9fb;
+    --color-bg-surface: #ffffff;
+    --color-bg-subtle: #f2f2f5;
+    --color-border: #d0d0d8;
+    --color-border-subtle: #e4e4eb;
+    --color-border-dark: #1a1a1c;
+    --color-focus: #0055ff;
+    --color-code-bg: #21252b;
+    --color-code-text: #abb2bf;
+    --color-notice-bg: #e6f0ff;
+    --color-notice-border: #0055ff;
+    --font-family-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", "Hiragino Sans", "Meiryo", sans-serif;
+    --font-family-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+    --space-8: 48px;
+    --sidebar-width: 280px;
+    --header-height: 56px;
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    font-size: 16px;
+  }
+
+  body {
+    font-family: var(--font-family-sans);
+    color: var(--color-text-main);
+    background-color: var(--color-bg-base);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 4px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .skip-link {
+    position: absolute;
+    top: -9999px;
+    left: var(--space-4);
+    background: var(--color-primary);
+    color: #fff;
+    padding: var(--space-2) var(--space-4);
+    z-index: 9999;
+    font-weight: 700;
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+  }
+  .skip-link:focus {
+    top: var(--space-4);
+  }
+
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    height: var(--header-height);
+    background-color: var(--color-bg-surface);
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--space-5);
+  }
+
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .logo-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    text-decoration: none;
+  }
+
+  .version-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    background-color: var(--color-primary-bg);
+    color: var(--color-primary-text);
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(0, 85, 255, 0.2);
+  }
+
+  .btn-hamburger {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--color-text-main);
+    border-radius: var(--radius-sm);
+  }
+  .btn-hamburger:hover {
+    background-color: var(--color-bg-subtle);
+  }
+
+  .page-container {
+    display: flex;
+    max-width: 1440px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .sidebar-toc {
+    width: var(--sidebar-width);
+    flex-shrink: 0;
+    height: calc(100vh - var(--header-height));
+    position: sticky;
+    top: var(--header-height);
+    overflow-y: auto;
+    padding: var(--space-5) var(--space-4);
+    border-right: 1px solid var(--color-border);
+    background-color: var(--color-bg-surface);
+  }
+
+  .toc-title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-3);
+  }
+
+  .toc-list {
+    list-style: none;
+  }
+  .toc-item {
+    margin-bottom: var(--space-1);
+  }
+  .toc-link {
+    display: block;
+    padding: var(--space-1) var(--space-2);
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+    line-height: 1.4;
+    transition: background-color 0.15s, color 0.15s;
+  }
+  .toc-link:hover {
+    color: var(--color-text-main);
+    background-color: var(--color-bg-subtle);
+  }
+  .toc-link.active {
+    color: var(--color-primary-text);
+    background-color: var(--color-primary-bg);
+    font-weight: 700;
+    border-left: 3px solid var(--color-primary);
+    padding-left: calc(var(--space-2) - 3px);
+  }
+
+  .main-content {
+    flex: 1;
+    min-width: 0;
+    padding: var(--space-6) var(--space-6) var(--space-8);
+  }
+
+  .search-wrapper {
+    margin-bottom: var(--space-5);
+  }
+
+  .search-bar-inner {
+    position: relative;
+    width: 100%;
+  }
+
+  .search-input {
+    width: 100%;
+    height: 48px;
+    padding: 0 var(--space-5) 0 44px;
+    font-size: 1rem;
+    font-family: inherit;
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background-color: var(--color-bg-surface);
+    color: var(--color-text-main);
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .search-input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(0, 85, 255, 0.2);
+    outline: none;
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    color: var(--color-text-muted);
+    pointer-events: none;
+  }
+
+  .search-status-bar {
+    display: none;
+    margin-top: var(--space-2);
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+  }
+
+  .search-summary-text {
+    font-weight: 600;
+  }
+
+  .search-count-badge {
+    background-color: var(--color-primary-bg);
+    color: var(--color-primary-text);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+  }
+
+  .section-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+  }
+
+  .btn-action-sm {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-height: 36px;
+    padding: 0 var(--space-3);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-text-main);
+    background-color: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s;
+  }
+  .btn-action-sm:hover {
+    background-color: var(--color-bg-subtle);
+    border-color: #b5b5be;
+  }
+
+  details.dads-accordion {
+    background-color: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-5);
+    overflow: hidden;
+  }
+
+  summary.accordion-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-4);
+    background-color: var(--color-bg-subtle);
+    cursor: pointer;
+    list-style: none;
+    -webkit-user-select: none;
+    user-select: none;
+    border-left: 5px solid var(--color-primary);
+  }
+  summary.accordion-summary::-webkit-details-marker {
+    display: none;
+  }
+  summary.accordion-summary:hover {
+    background-color: #ebebee;
+  }
+
+  .accordion-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .accordion-icon {
+    width: 20px;
+    height: 20px;
+    fill: var(--color-text-muted);
+    transition: transform 0.2s ease;
+  }
+  details.dads-accordion[open] .accordion-icon {
+    transform: rotate(180deg);
+    fill: var(--color-primary);
+  }
+
+  .accordion-content {
+    padding: var(--space-5) var(--space-5) var(--space-6);
+    border-top: 1px solid var(--color-border);
+  }
+
+  h1.dads-h1 {
+    font-size: 1.875rem;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: var(--space-4);
+    padding-bottom: var(--space-3);
+    border-bottom: 3px solid var(--color-primary);
+  }
+
+  h3.dads-h3 {
+    font-size: 1.125rem;
+    font-weight: 700;
+    line-height: 1.5;
+    margin-top: var(--space-5);
+    margin-bottom: var(--space-3);
+    padding-bottom: var(--space-1);
+    border-bottom: 1px solid var(--color-border-subtle);
+  }
+
+  .lead-text {
+    font-size: 1.0625rem;
+    margin-bottom: var(--space-5);
+    color: var(--color-text-muted);
+  }
+
+  /* テーブルコンテナ (アプローチ2: クリーン枠線のみ、不要なシャドウ完全撤去) */
+  .table-container {
+    width: 100%;
+    overflow-x: auto;
+    margin: var(--space-3) 0 var(--space-5);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background-color: var(--color-bg-surface);
+  }
+
+  table.dads-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+  }
+
+  /* テーブルヘッダー: 下部2px黒ボーダー ＋ 縦罫線 */
+  table.dads-table thead th {
+    background-color: var(--color-bg-subtle);
+    color: var(--color-text-main);
+    font-weight: 700;
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 2px solid var(--color-border-dark);
+    border-right: 1px solid var(--color-border);
+    white-space: nowrap;
+    vertical-align: top;
+  }
+  table.dads-table thead th:last-child {
+    border-right: none;
+  }
+
+  /* テーブルセル: 下部細罫線 ＋ 縦罫線 */
+  table.dads-table tbody td {
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--color-border-subtle);
+    border-right: 1px solid var(--color-border-subtle);
+    vertical-align: top;
+    color: var(--color-text-main);
+  }
+  table.dads-table tbody td:last-child {
+    border-right: none;
+  }
+  table.dads-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+  table.dads-table tbody tr:hover td {
+    background-color: var(--color-primary-bg);
+  }
+
+  .col-rank {
+    width: 60px;
+    text-align: center;
+    font-weight: 600;
+    color: var(--color-text-muted);
+  }
+
+  .col-operator {
+    white-space: nowrap;
+    font-family: var(--font-family-mono);
+    font-weight: 700;
+    color: var(--color-primary-text);
+  }
+
+  /* インラインコード & クリックコピー対応 */
+  code.clickable-code {
+    font-family: var(--font-family-mono);
+    font-size: 0.875rem;
+    background-color: var(--color-bg-subtle);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border-subtle);
+    color: var(--color-primary-text);
+    cursor: pointer;
+    display: inline-block;
+    transition: background-color 0.15s, border-color 0.15s, transform 0.1s;
+    user-select: all;
+    -webkit-user-select: all;
+  }
+  code.clickable-code:hover {
+    background-color: #e0ecff;
+    border-color: #99c2ff;
+    transform: translateY(-1px);
+  }
+  code.clickable-code:active {
+    transform: translateY(0);
+  }
+
+  /* コードブロック (REPLカードスタイル) */
+  .code-block-wrapper {
+    position: relative;
+    margin: var(--space-4) 0;
+    border-radius: var(--radius-md);
+    background-color: var(--color-code-bg);
+    border: 1px solid #3e4451;
+    overflow: hidden;
+  }
+  .code-block-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-2) var(--space-4);
+    background-color: #1e2227;
+    border-bottom: 1px solid #2c313a;
+  }
+  .code-block-title {
+    font-size: 0.75rem;
+    font-family: var(--font-family-mono);
+    font-weight: 700;
+    color: #9da5b4;
+    text-transform: uppercase;
+  }
+  pre.dads-code-pre {
+    padding: var(--space-4);
+    overflow-x: auto;
+    font-family: var(--font-family-mono);
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--color-code-text);
+  }
+
+  /* コピートースト通知 */
+  .copy-toast {
+    position: fixed;
+    bottom: var(--space-6);
+    right: var(--space-6);
+    background-color: #1a1a1c;
+    color: #ffffff;
+    padding: var(--space-3) var(--space-5);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+    z-index: 1000;
+  }
+  .copy-toast.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* モバイル対応ドロワー */
+  .drawer-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.4);
+    z-index: 200;
+    backdrop-filter: blur(2px);
+  }
+  .mobile-drawer {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 300px;
+    max-width: 80%;
+    background-color: var(--color-bg-surface);
+    z-index: 201;
+    padding: var(--space-5) var(--space-4);
+    overflow-y: auto;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    box-shadow: 2px 0 16px rgba(0, 0, 0, 0.15);
+  }
+  .mobile-drawer.open {
+    transform: translateX(0);
+  }
+
+  @media (max-width: 768px) {
+    .btn-hamburger {
+      display: inline-flex;
+    }
+    .sidebar-toc {
+      display: none;
+    }
+    .main-content {
+      padding: var(--space-4) var(--space-4) var(--space-6);
+    }
+    .drawer-overlay, .mobile-drawer {
+      display: block;
+    }
+  }
+</style>
+</head>
+<body>
+  <a class="skip-link" href="#mainContent">本文へスキップ</a>
+
+  <header class="site-header">
+    <div class="header-brand">
+      <button class="btn-hamburger" id="btnHamburger" aria-label="目次メニューを開く">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+      </button>
+      <a class="logo-title" href="#">ihd Reference</a>
+      <span class="version-badge">v2.18.1</span>
+    </div>
+  </header>
+
+  <!-- モバイル用スライドイン・ドロワー -->
+  <div class="drawer-overlay" id="drawerOverlay"></div>
+  <aside class="mobile-drawer" id="mobileDrawer" aria-label="モバイル目次ナビゲーション">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <span style="font-weight: 700; font-size: 1.125rem;">目次</span>
+      <button id="btnCloseDrawer" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--color-text-main);">&times;</button>
+    </div>
+    <ul class="toc-list"><li class="toc-item"><a class="toc-link" href="#sec-演算子と優先順位">演算子と優先順位</a></li><li class="toc-item"><a class="toc-link" href="#sec-数値リテラル構文-複数進数・循環小数">数値リテラル構文（複数進数・循環小数）</a></li><li class="toc-item"><a class="toc-link" href="#sec-予約定数">予約定数</a></li><li class="toc-item"><a class="toc-link" href="#sec-カテゴリ別-組み込み関数一覧">カテゴリ別 組み込み関数一覧</a></li></ul>
+  </aside>
+
+  <div class="page-container">
+    <nav class="sidebar-toc" id="sidebarToc" aria-label="デスクトップ目次ナビゲーション">
+      <h2 class="toc-title">目次</h2>
+      <ul class="toc-list"><li class="toc-item"><a class="toc-link" href="#sec-演算子と優先順位">演算子と優先順位</a></li><li class="toc-item"><a class="toc-link" href="#sec-数値リテラル構文-複数進数・循環小数">数値リテラル構文（複数進数・循環小数）</a></li><li class="toc-item"><a class="toc-link" href="#sec-予約定数">予約定数</a></li><li class="toc-item"><a class="toc-link" href="#sec-カテゴリ別-組み込み関数一覧">カテゴリ別 組み込み関数一覧</a></li></ul>
+    </nav>
+
+    <main class="main-content" id="mainContent">
+      <h1 class="dads-h1">ihd 完全構文・演算子・関数リファレンス (Japanese Edition)</h1>
+      <p class="lead-text">小数を一切使用せず、任意精度有理数と代数的シンボル表現のみで厳密計算を行う CAS 電卓 `ihd`（i-hate-decimal-calc）の完全言語仕様および組み込み関数リファレンスです。</p>
+
+      <div class="search-wrapper">
+        <div class="search-bar-inner">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 14z"/></svg>
+          <input type="search" class="search-input" id="searchInput" placeholder="関数名、演算子、キーワードで高速検索..." aria-label="リファレンス内を検索">
+        </div>
+        <div class="search-status-bar" id="searchStatusBar">
+          <span id="searchResultText"></span>
+        </div>
+      </div>
+
+      <div class="section-toolbar">
+        <button type="button" class="btn-action-sm" id="btnExpandAll">すべて展開</button>
+        <button type="button" class="btn-action-sm" id="btnCollapseAll">すべて折りたたむ</button>
+      </div>
+
+      <div class="sections-container">
+        
+      <details class="dads-accordion" id="sec-演算子と優先順位" open data-keywords="演算子と優先順位 関係演算子と代入・等式の区別">
+        <summary class="accordion-summary" aria-label="演算子と優先順位 を開閉">
+          <span class="accordion-title">演算子と優先順位</span>
+          <svg class="accordion-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/></svg>
+        </summary>
+        <div class="accordion-content">
+          <p class="body-p">乗算記号 <code class="clickable-code" data-copy="*" title="クリックしてコピー">*</code> の省略（例: <code class="clickable-code" data-copy="2pi" title="クリックしてコピー">2pi</code> や <code class="clickable-code" data-copy="(1+2)(3+4)" title="クリックしてコピー">(1+2)(3+4)</code>）は誤認識防止のため禁止されています。必ず明示的に <code class="clickable-code" data-copy="*" title="クリックしてコピー">*</code> を記述してください。</p><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">順位</th><th scope="col">演算子</th><th scope="col">結合性</th><th scope="col">説明・使用例</th></tr></thead><tbody><tr><td class="col-rank">1</td><td class="col-operator"><code class="clickable-code" data-copy="()" title="クリックしてコピー">()</code></td><td>-</td><td>グループ化括弧</td></tr><tr><td class="col-rank">2</td><td class="col-operator"><code class="clickable-code" data-copy="!" title="クリックしてコピー">!</code></td><td>後置単項</td><td>非負整数の階乗（例: <code class="clickable-code" data-copy="5! = 120" title="クリックしてコピー">5! = 120</code>。巨大階乗はルジャンドル素因数分解、二分木乗算、数論変換NTTにより高速計算）</td></tr><tr><td class="col-rank">3</td><td class="col-operator"><code class="clickable-code" data-copy="^" title="クリックしてコピー">^</code></td><td><strong>右結合</strong></td><td>べき乗（例: <code class="clickable-code" data-copy="2^3^2 = 2^(3^2) = 512" title="クリックしてコピー">2^3^2 = 2^(3^2) = 512</code>）</td></tr><tr><td class="col-rank">4</td><td class="col-operator"><code class="clickable-code" data-copy="-" title="クリックしてコピー">-</code></td><td>前置単項</td><td>単項マイナス（<code class="clickable-code" data-copy="^" title="クリックしてコピー">^</code> より低優先: <code class="clickable-code" data-copy="-3^2 = -(3^2) = -9" title="クリックしてコピー">-3^2 = -(3^2) = -9</code>）</td></tr><tr><td class="col-rank">5</td><td class="col-operator"><code class="clickable-code" data-copy="*" title="クリックしてコピー">*</code>, <code class="clickable-code" data-copy="/" title="クリックしてコピー">/</code></td><td>左結合</td><td>乗算・除算（乗算記号 <code class="clickable-code" data-copy="*" title="クリックしてコピー">*</code> 必須）</td></tr><tr><td class="col-rank">6</td><td class="col-operator"><code class="clickable-code" data-copy="+" title="クリックしてコピー">+</code>, <code class="clickable-code" data-copy="-" title="クリックしてコピー">-</code></td><td>左結合</td><td>加算・減算</td></tr><tr><td class="col-rank">7</td><td class="col-operator"><code class="clickable-code" data-copy="&lt;" title="クリックしてコピー">&lt;</code>, <code class="clickable-code" data-copy="&lt;=" title="クリックしてコピー">&lt;=</code>, <code class="clickable-code" data-copy="&gt;" title="クリックしてコピー">&gt;</code>, <code class="clickable-code" data-copy="&gt;=" title="クリックしてコピー">&gt;=</code>, <code class="clickable-code" data-copy="==" title="クリックしてコピー">==</code>, <code class="clickable-code" data-copy="!=" title="クリックしてコピー">!=</code></td><td>なし</td><td>関係演算・等式・不等式（有理区間論理および代数的同値証明による厳密判定）</td></tr></tbody></table></div><h3 class="dads-h3">関係演算子と代入・等式の区別</h3><p class="bullet-item">• <strong>代入演算子 (<code class="clickable-code" data-copy="=" title="クリックしてコピー">=</code>)</strong>: REPL やスクリプト環境における変数への束縛を行います（例: <code class="clickable-code" data-copy="x = 42" title="クリックしてコピー">x = 42</code>, <code class="clickable-code" data-copy="f = sin(x)" title="クリックしてコピー">f = sin(x)</code>）。</p><p class="bullet-item">• <strong>等価比較・関係演算子 (<code class="clickable-code" data-copy="==" title="クリックしてコピー">==</code>, <code class="clickable-code" data-copy="!=" title="クリックしてコピー">!=</code>)</strong>:</p><p class="body-p">  - トップレベル評価時: 代数的同値性（<code class="clickable-code" data-copy="lhs - rhs == 0" title="クリックしてコピー">lhs - rhs == 0</code> や恒等式証明）および有理区間解析に基づき、定数・同値式を <code class="clickable-code" data-copy="true" title="クリックしてコピー">true</code> または <code class="clickable-code" data-copy="false" title="クリックしてコピー">false</code> に厳密判定します（例: <code class="clickable-code" data-copy="1 == 2" title="クリックしてコピー">1 == 2</code> $\to$ <code class="clickable-code" data-copy="false" title="クリックしてコピー">false</code>、<code class="clickable-code" data-copy="0.(9) == 1" title="クリックしてコピー">0.(9) == 1</code> $\to$ <code class="clickable-code" data-copy="true" title="クリックしてコピー">true</code>、<code class="clickable-code" data-copy="sqrt(2)+sqrt(3) == sqrt(5+2*sqrt(6))" title="クリックしてコピー">sqrt(2)+sqrt(3) == sqrt(5+2*sqrt(6))</code> $\to$ <code class="clickable-code" data-copy="true" title="クリックしてコピー">true</code>、<code class="clickable-code" data-copy="1 != 2" title="クリックしてコピー">1 != 2</code> $\to$ <code class="clickable-code" data-copy="true" title="クリックしてコピー">true</code>）。</p><p class="body-p">  - ソルバー引数内 (<code class="clickable-code" data-copy="solve" title="クリックしてコピー">solve</code>, <code class="clickable-code" data-copy="dsolve" title="クリックしてコピー">dsolve</code>, <code class="clickable-code" data-copy="rsolve" title="クリックしてコピー">rsolve</code>, <code class="clickable-code" data-copy="verify" title="クリックしてコピー">verify</code> など): 方程式・関係式オブジェクトとしてそのまま保持され、未知数の求解や等価性検証の入力として安全に渡されます（例: <code class="clickable-code" data-copy="solve(2 == 0, x)" title="クリックしてコピー">solve(2 == 0, x)</code> は解なしエラーを報告し、<code class="clickable-code" data-copy="dsolve(y&amp;#39; == y, y, x)" title="クリックしてコピー">dsolve(y&amp;#39; == y, y, x)</code> は微分方程式として解かれます）。</p><p class="bullet-item">• <strong>階乗演算子 (<code class="clickable-code" data-copy="!" title="クリックしてコピー">!</code>) との区別</strong>: 階乗 <code class="clickable-code" data-copy="5!" title="クリックしてコピー">5!</code> の直後に関係演算子を続ける場合、<code class="clickable-code" data-copy="1!=2" title="クリックしてコピー">1!=2</code> は <code class="clickable-code" data-copy="1 != 2" title="クリックしてコピー">1 != 2</code>（非等価比較）として正しくトークナイズされます。明示的に階乗と比較を組み合わせる場合は <code class="clickable-code" data-copy="(5!) == 120" title="クリックしてコピー">(5!) == 120</code> または <code class="clickable-code" data-copy="5! != 120" title="クリックしてコピー">5! != 120</code> と記述できます。</p>
+        </div>
+      </details>
+    
+      <details class="dads-accordion" id="sec-数値リテラル構文-複数進数・循環小数" open data-keywords="数値リテラル構文（複数進数・循環小数）">
+        <summary class="accordion-summary" aria-label="数値リテラル構文（複数進数・循環小数） を開閉">
+          <span class="accordion-title">数値リテラル構文（複数進数・循環小数）</span>
+          <svg class="accordion-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/></svg>
+        </summary>
+        <div class="accordion-content">
+          <p class="body-p"><code class="clickable-code" data-copy="ihd" title="クリックしてコピー">ihd</code> は小数を排除した厳密有理数電卓であり、数値リテラルは構文解析時に即座に多倍長有理数（$\mathbb{Q}$）へ変換されます。</p><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">リテラル形式</th><th scope="col">表記例</th><th scope="col">変換結果（10進有理数）</th><th scope="col">説明</th></tr></thead><tbody><tr><td class="col-operator"><strong>標準10進数</strong></td><td class="col-operator"><code class="clickable-code" data-copy="42" title="クリックしてコピー">42</code>, <code class="clickable-code" data-copy="1/3" title="クリックしてコピー">1/3</code></td><td><code class="clickable-code" data-copy="42" title="クリックしてコピー">42</code>, <code class="clickable-code" data-copy="1/3" title="クリックしてコピー">1/3</code></td><td>通常の多倍長整数および有理数除算</td></tr><tr><td class="col-operator"><strong>有限小数・循環小数</strong></td><td class="col-operator"><code class="clickable-code" data-copy="0.75" title="クリックしてコピー">0.75</code>, <code class="clickable-code" data-copy="0.(3)" title="クリックしてコピー">0.(3)</code>, <code class="clickable-code" data-copy="1.1(6)" title="クリックしてコピー">1.1(6)</code></td><td><code class="clickable-code" data-copy="3/4" title="クリックしてコピー">3/4</code>, <code class="clickable-code" data-copy="1/3" title="クリックしてコピー">1/3</code>, <code class="clickable-code" data-copy="7/6" title="クリックしてコピー">7/6</code></td><td>小数点表記および循環節括弧表記。完全厳密な有理数に即時展開</td></tr><tr><td class="col-operator"><strong>2進数リテラル</strong></td><td class="col-operator"><code class="clickable-code" data-copy="0b1011" title="クリックしてコピー">0b1011</code>, <code class="clickable-code" data-copy="0B0" title="クリックしてコピー">0B0</code></td><td><code class="clickable-code" data-copy="11" title="クリックしてコピー">11</code>, <code class="clickable-code" data-copy="0" title="クリックしてコピー">0</code></td><td>接頭辞 <code class="clickable-code" data-copy="0b" title="クリックしてコピー">0b</code> / <code class="clickable-code" data-copy="0B" title="クリックしてコピー">0B</code> による2進数表記</td></tr><tr><td class="col-operator"><strong>8進数リテラル</strong></td><td class="col-operator"><code class="clickable-code" data-copy="0o755" title="クリックしてコピー">0o755</code>, <code class="clickable-code" data-copy="0O10" title="クリックしてコピー">0O10</code></td><td><code class="clickable-code" data-copy="493" title="クリックしてコピー">493</code>, <code class="clickable-code" data-copy="8" title="クリックしてコピー">8</code></td><td>接頭辞 <code class="clickable-code" data-copy="0o" title="クリックしてコピー">0o</code> / <code class="clickable-code" data-copy="0O" title="クリックしてコピー">0O</code> による8進数表記</td></tr><tr><td class="col-operator"><strong>16進数リテラル</strong></td><td class="col-operator"><code class="clickable-code" data-copy="0xff" title="クリックしてコピー">0xff</code>, <code class="clickable-code" data-copy="0X1A" title="クリックしてコピー">0X1A</code></td><td><code class="clickable-code" data-copy="255" title="クリックしてコピー">255</code>, <code class="clickable-code" data-copy="26" title="クリックしてコピー">26</code></td><td>接頭辞 <code class="clickable-code" data-copy="0x" title="クリックしてコピー">0x</code> / <code class="clickable-code" data-copy="0X" title="クリックしてコピー">0X</code> による16進数表記</td></tr><tr><td class="col-operator"><strong>任意進数リテラル</strong></td><td class="col-operator"><code class="clickable-code" data-copy="2^^101" title="クリックしてコピー">2^^101</code>, <code class="clickable-code" data-copy="16^^ff" title="クリックしてコピー">16^^ff</code>, <code class="clickable-code" data-copy="64^^@_" title="クリックしてコピー">64^^@_</code></td><td><code class="clickable-code" data-copy="5" title="クリックしてコピー">5</code>, <code class="clickable-code" data-copy="255" title="クリックしてコピー">255</code>, <code class="clickable-code" data-copy="4031" title="クリックしてコピー">4031</code></td><td>Mathematica構文準拠の任意進数記法 <code class="clickable-code" data-copy="base^^digits" title="クリックしてコピー">base^^digits</code>（$2 \le \text{base} \le 64$ 対応。Base 64はBash互換の <code class="clickable-code" data-copy="@" title="クリックしてコピー">@</code>=62, <code class="clickable-code" data-copy="_" title="クリックしてコピー">_</code>=63）</td></tr></tbody></table></div>
+        </div>
+      </details>
+    
+      <details class="dads-accordion" id="sec-予約定数" open data-keywords="予約定数">
+        <summary class="accordion-summary" aria-label="予約定数 を開閉">
+          <span class="accordion-title">予約定数</span>
+          <svg class="accordion-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/></svg>
+        </summary>
+        <div class="accordion-content">
+          <div class="table-container"><table class="dads-table"><thead><tr><th scope="col">定数名</th><th scope="col">記号</th><th scope="col">説明</th></tr></thead><tbody><tr><td><code class="clickable-code" data-copy="pi" title="クリックしてコピー">pi</code>, <code class="clickable-code" data-copy="π" title="クリックしてコピー">π</code></td><td class="col-operator">$\pi$</td><td>円周率（約 3.14159...。シンボルノードとして完全保持）</td></tr><tr><td><code class="clickable-code" data-copy="e" title="クリックしてコピー">e</code></td><td class="col-operator">$e$</td><td>自然対数の底（ネイピア数 約 2.71828...）</td></tr><tr><td><code class="clickable-code" data-copy="i" title="クリックしてコピー">i</code></td><td class="col-operator">$i$</td><td>虚数単位（$i^2 = -1$）</td></tr><tr><td><code class="clickable-code" data-copy="inf" title="クリックしてコピー">inf</code>, <code class="clickable-code" data-copy="infinity" title="クリックしてコピー">infinity</code></td><td class="col-operator">$\infty$</td><td>正の無限大（極限計算 <code class="clickable-code" data-copy="limit" title="クリックしてコピー">limit</code>、実根分離区間等で使用）</td></tr><tr><td><code class="clickable-code" data-copy="-inf" title="クリックしてコピー">-inf</code></td><td class="col-operator">$-\infty$</td><td>負の無限大</td></tr><tr><td><code class="clickable-code" data-copy="O" title="クリックしてコピー">O</code></td><td class="col-operator">$\mathcal{O}$</td><td>楕円曲線の群演算における単位元（無限遠点）</td></tr><tr><td><code class="clickable-code" data-copy="deg" title="クリックしてコピー">deg</code></td><td class="col-operator">-</td><td>度数法変換定数（$\pi/180$。<code class="clickable-code" data-copy="sin(30*deg)" title="クリックしてコピー">sin(30*deg)</code> などの記述が可能）</td></tr><tr><td><code class="clickable-code" data-copy="delta" title="クリックしてコピー">delta</code></td><td class="col-operator">$\delta$</td><td>ディラックのデルタ（ラプラス変換等の超関数）</td></tr><tr><td><code class="clickable-code" data-copy="true" title="クリックしてコピー">true</code>, <code class="clickable-code" data-copy="false" title="クリックしてコピー">false</code></td><td class="col-operator">-</td><td>ブール論理定数（関係演算やQE判定結果）</td></tr></tbody></table></div>
+        </div>
+      </details>
+    
+      <details class="dads-accordion" id="sec-カテゴリ別-組み込み関数一覧" data-keywords="カテゴリ別 組み込み関数一覧 1. 基本代数・数論・方程式 2. 三角関数・対数・複素数 3. 微積分・常微分方程式・初等特殊関数・離散数列 4. 線形代数・3次元ベクトル解析 5. 幾何学解析 6. 厳密離散確率・統計 7. 前提条件システム（仮定） 8. 実代数幾何・数理論理・量化子消去 9. 楕円曲線代数・数論幾何 10. ビジュアル・検証ツール 11. 格子基底縮小・代数的整数関係 (LLL) 12. p進数演算・局所代数・ヘンゼル補題 13. 局所代数級数・特異点解析（ピュイズー級数） 14. ガロア理論・代数的根号可解性・アーベル・ルフィニ代数的証明書 15. 自己検証証明書 &amp; 形式証明基盤（ProofTrace / Explain / Verify / Lean 4） 16. クリフォード幾何代数 &amp; 二進円分環・厳密量子回路等価性検証 17. CAS反復制御構文 &amp; 任意基数進数変換 18. REPL 構文ハイライト・テーマ・対話環境コマンド 19. 多変数多項式イデアル・準素分解 (GTZ法) 20. コレクション・リスト操作言語拡張 &amp; 第一級ラムダ式 21. 物理単位計算 &amp; 次元解析 (SI基本単位・組立単位・単位換算)">
+        <summary class="accordion-summary" aria-label="カテゴリ別 組み込み関数一覧 を開閉">
+          <span class="accordion-title">カテゴリ別 組み込み関数一覧</span>
+          <svg class="accordion-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/></svg>
+        </summary>
+        <div class="accordion-content">
+          <h3 class="dads-h3">1. 基本代数・数論・方程式</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">関数</th><th scope="col">書式・例</th><th scope="col">説明</th></tr></thead><tbody><tr><td class="col-operator"><code class="clickable-code" data-copy="abs" title="クリックしてコピー">abs</code></td><td class="col-operator"><code class="clickable-code" data-copy="abs(x)" title="クリックしてコピー">abs(x)</code></td><td>絶対値（実数は符号反転、複素数は $|a+bi| = \sqrt{a^2+b^2}$）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="sqrt" title="クリックしてコピー">sqrt</code> / <code class="clickable-code" data-copy="√" title="クリックしてコピー">√</code></td><td class="col-operator"><code class="clickable-code" data-copy="sqrt(x)" title="クリックしてコピー">sqrt(x)</code></td><td>平方根（平方因数のくくり出し、負数は複素数 $i$ へ自動昇格）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="cbrt" title="クリックしてコピー">cbrt</code></td><td class="col-operator"><code class="clickable-code" data-copy="cbrt(x)" title="クリックしてコピー">cbrt(x)</code></td><td>3乗根（立方因子のくくり出し、実数負数の符号抽出）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="gcd" title="クリックしてコピー">gcd</code> / <code class="clickable-code" data-copy="lcm" title="クリックしてコピー">lcm</code></td><td class="col-operator"><code class="clickable-code" data-copy="gcd(a, b)" title="クリックしてコピー">gcd(a, b)</code>, <code class="clickable-code" data-copy="lcm(a, b)" title="クリックしてコピー">lcm(a, b)</code></td><td>最大公約数・最小公倍数（整数）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="mod" title="クリックしてコピー">mod</code></td><td class="col-operator"><code class="clickable-code" data-copy="mod(a, b)" title="クリックしてコピー">mod(a, b)</code></td><td>整数剰余</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="perm" title="クリックしてコピー">perm</code> / <code class="clickable-code" data-copy="comb" title="クリックしてコピー">comb</code></td><td class="col-operator"><code class="clickable-code" data-copy="perm(n, r)" title="クリックしてコピー">perm(n, r)</code>, <code class="clickable-code" data-copy="comb(n, r)" title="クリックしてコピー">comb(n, r)</code></td><td>順列 $nPr$、組合せ $nCr$（非負整数）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="rand" title="クリックしてコピー">rand</code></td><td class="col-operator"><code class="clickable-code" data-copy="rand(max)" title="クリックしてコピー">rand(max)</code>, <code class="clickable-code" data-copy="rand(min, max)" title="クリックしてコピー">rand(min, max)</code>, <code class="clickable-code" data-copy="rand(seed, min, max)" title="クリックしてコピー">rand(seed, min, max)</code></td><td>PCGアルゴリズムによる厳密整数擬似乱数（小数を不使用、シード指定可）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="cfrac" title="クリックしてコピー">cfrac</code></td><td class="col-operator"><code class="clickable-code" data-copy="cfrac(expr)" title="クリックしてコピー">cfrac(expr)</code></td><td>連分数展開（有理数は有限リスト <code class="clickable-code" data-copy="[a0, a1, ...]" title="クリックしてコピー">[a0, a1, ...]</code>, 平方根は周期リスト <code class="clickable-code" data-copy="[a0, [a1, ...]]" title="クリックしてコピー">[a0, [a1, ...]]</code>）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="from_cfrac" title="クリックしてコピー">from_cfrac</code></td><td class="col-operator"><code class="clickable-code" data-copy="from_cfrac([3, 7, 16])" title="クリックしてコピー">from_cfrac([3, 7, 16])</code></td><td>連分数リストから厳密有理数への復元（例: <code class="clickable-code" data-copy="355/113" title="クリックしてコピー">355/113</code>）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="expand" title="クリックしてコピー">expand</code></td><td class="col-operator"><code class="clickable-code" data-copy="expand((x+1)^3)" title="クリックしてコピー">expand((x+1)^3)</code></td><td>多項式展開（分配法則・二項定理）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="factor" title="クリックしてコピー">factor</code></td><td class="col-operator"><code class="clickable-code" data-copy="factor(expr)" title="クリックしてコピー">factor(expr)</code> / <code class="clickable-code" data-copy="factor(expr, var)" title="クリックしてコピー">factor(expr, var)</code></td><td>整数素因数分解（ホイール法）および有理数係数多項式因数分解（無平方分解・有理根定理）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="apart" title="クリックしてコピー">apart</code></td><td class="col-operator"><code class="clickable-code" data-copy="apart(expr)" title="クリックしてコピー">apart(expr)</code> / <code class="clickable-code" data-copy="apart(expr, var)" title="クリックしてコピー">apart(expr, var)</code></td><td>部分分数分解（Kung-TongおよびHenriciアルゴリズムによる有理式の単項有理式分解）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="together" title="クリックしてコピー">together</code></td><td class="col-operator"><code class="clickable-code" data-copy="together(expr)" title="クリックしてコピー">together(expr)</code></td><td>有理式の通分・統合（最小公倍多項式による共通分母化と単一有理式への統合）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="poly_gcd" title="クリックしてコピー">poly_gcd</code></td><td class="col-operator"><code class="clickable-code" data-copy="poly_gcd(p, q)" title="クリックしてコピー">poly_gcd(p, q)</code> / <code class="clickable-code" data-copy="poly_gcd(p, q, var)" title="クリックしてコピー">poly_gcd(p, q, var)</code></td><td>多変数多項式の厳密最大公約因子（Collins/BrownのSubresultant PRSアルゴリズムによる除算フリー・係数爆発防止型GCD）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="poly_lcm" title="クリックしてコピー">poly_lcm</code></td><td class="col-operator"><code class="clickable-code" data-copy="poly_lcm(p, q)" title="クリックしてコピー">poly_lcm(p, q)</code> / <code class="clickable-code" data-copy="poly_lcm(p, q, var)" title="クリックしてコピー">poly_lcm(p, q, var)</code></td><td>多変数多項式の厳密最小公倍多項式（$\frac{p \cdot q}{\mathrm{GCD}(p, q)}$ による厳密多項式除算）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="resultant" title="クリックしてコピー">resultant</code></td><td class="col-operator"><code class="clickable-code" data-copy="resultant(p, q)" title="クリックしてコピー">resultant(p, q)</code> / <code class="clickable-code" data-copy="resultant(p, q, var)" title="クリックしてコピー">resultant(p, q, var)</code></td><td>シルベスター終結式（Sylvester (1840) の Dialytic Method による行列式評価と多変数代数方程式消去法）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="groebner" title="クリックしてコピー">groebner</code></td><td class="col-operator"><code class="clickable-code" data-copy="groebner([p1, p2, ...], [x, y, ...])" title="クリックしてコピー">groebner([p1, p2, ...], [x, y, ...])</code> / <code class="clickable-code" data-copy="groebner(..., [order])" title="クリックしてコピー">groebner(..., [order])</code></td><td>多変数多項式イデアルの既約グレブナー基底（Buchberger (1965/1979/1985)、Gebauer-Möller (1988) 基準、Giovini (1991) Sugar 戦略による高速算出。順序 <code class="clickable-code" data-copy="lex" title="クリックしてコピー">lex</code>/<code class="clickable-code" data-copy="grevlex" title="クリックしてコピー">grevlex</code>）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="sturm" title="クリックしてコピー">sturm</code></td><td class="col-operator"><code class="clickable-code" data-copy="sturm(p)" title="クリックしてコピー">sturm(p)</code> / <code class="clickable-code" data-copy="sturm(p, var)" title="クリックしてコピー">sturm(p, var)</code></td><td>厳密スツルム列（Sturm chain）の生成（$\mathbb{Q}[x]$ 上のPrimitive PRSによる係数爆発防止型スツルム多項式剰余列）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="root_count" title="クリックしてコピー">root_count</code></td><td class="col-operator"><code class="clickable-code" data-copy="root_count(p)" title="クリックしてコピー">root_count(p)</code> / <code class="clickable-code" data-copy="root_count(p, var, [a, b])" title="クリックしてコピー">root_count(p, var, [a, b])</code></td><td>スツルムの定理による実根の厳密な個数算定（区間 $[a, b]$ または $(-\infty, \infty)$ 内の相異なる実根数を符号変化数から決定）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="isolate_roots" title="クリックしてコピー">isolate_roots</code></td><td class="col-operator"><code class="clickable-code" data-copy="isolate_roots(p)" title="クリックしてコピー">isolate_roots(p)</code> / <code class="clickable-code" data-copy="isolate_roots(p, var, [a, b])" title="クリックしてコピー">isolate_roots(p, var, [a, b])</code></td><td>厳密代数的実根分離（無平方分解と有理二分法探索により、各実根をちょうど1個含む互いに素な有理数区間を確定）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="inv_mod" title="クリックしてコピー">inv_mod</code></td><td class="col-operator"><code class="clickable-code" data-copy="inv_mod(a, m)" title="クリックしてコピー">inv_mod(a, m)</code></td><td>拡張ユークリッド互除法によるモジュラ逆数（$a x \equiv 1 \pmod m$）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="crt" title="クリックしてコピー">crt</code></td><td class="col-operator"><code class="clickable-code" data-copy="crt([r1, r2], [m1, m2])" title="クリックしてコピー">crt([r1, r2], [m1, m2])</code></td><td>中国剰余定理（Garner法および非互いに素な合同式を解く一般化CRT拡張）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="totient" title="クリックしてコピー">totient</code></td><td class="col-operator"><code class="clickable-code" data-copy="totient(n)" title="クリックしてコピー">totient(n)</code></td><td>オイラーのトーシェント関数 $\phi(n) = n \prod_{p \mid n} (1 - 1/p)$</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="is_prime" title="クリックしてコピー">is_prime</code></td><td class="col-operator"><code class="clickable-code" data-copy="is_prime(n)" title="クリックしてコピー">is_prime(n)</code></td><td>決定論的素数判定（64bitはSorenson-Websterの12基底完全決定論的判定、巨大数はBaillie-PSW）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="solve" title="クリックしてコピー">solve</code></td><td class="col-operator"><code class="clickable-code" data-copy="solve(expr, var)" title="クリックしてコピー">solve(expr, var)</code></td><td>厳密代数・初等超越方程式ソルバー（1次・2次・3次・4次代数方程式の代数的根号求解に加え、ランバートW関数 <code class="clickable-code" data-copy="lambert_w" title="クリックしてコピー">lambert_w</code> による初等超越方程式 $f(x)e^{f(x)}=c$, $ax+b\ln x=c$, $x^x=c$, $a^x=bx$ の完全閉形式解に対応。カルダノ公式・フェラーリ法・チルンハウス変換・分解3次方程式レゾルベントによる厳密解、重解・複素数解対応）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="to_poly" title="クリックしてコピー">to_poly</code></td><td class="col-operator"><code class="clickable-code" data-copy="to_poly(expr, [x, y], &quot;lex&quot;)" title="クリックしてコピー">to_poly(expr, [x, y], &quot;lex&quot;)</code></td><td>式を指定変数・単項式順序（<code class="clickable-code" data-copy="lex" title="クリックしてコピー">lex</code>, <code class="clickable-code" data-copy="grevlex" title="クリックしてコピー">grevlex</code>）の正規形多項式ノード <code class="clickable-code" data-copy="PolyNode" title="クリックしてコピー">PolyNode</code> へ明示変換</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="to_alg" title="クリックしてコピー">to_alg</code></td><td class="col-operator"><code class="clickable-code" data-copy="to_alg(rep, min_poly, [var])" title="クリックしてコピー">to_alg(rep, min_poly, [var])</code></td><td>代数拡大体 $\mathbb{Q}(\alpha) \cong \mathbb{Q}[x]/\langle m(x) \rangle$ の代数数ノード <code class="clickable-code" data-copy="AlgNode" title="クリックしてコピー">AlgNode</code> を構築</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="alg_inv" title="クリックしてコピー">alg_inv</code></td><td class="col-operator"><code class="clickable-code" data-copy="alg_inv(rep, min_poly)" title="クリックしてコピー">alg_inv(rep, min_poly)</code></td><td>拡大ユークリッド互除法による代数数 $\beta \in \mathbb{Q}(\alpha)$ の乗法逆元 $\beta^{-1}$ 算出</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="min_poly" title="クリックしてコピー">min_poly</code></td><td class="col-operator"><code class="clickable-code" data-copy="min_poly(rep, min_poly)" title="クリックしてコピー">min_poly(rep, min_poly)</code></td><td>代数数の既約モニック最小多項式 $m(x) \in \mathbb{Q}[x]$ の導出</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="solve_diophantine" title="クリックしてコピー">solve_diophantine</code></td><td class="col-operator"><code class="clickable-code" data-copy="solve_diophantine(3*x + 5*y == 7, [x, y])" title="クリックしてコピー">solve_diophantine(3*x + 5*y == 7, [x, y])</code></td><td>不定整数方程式（ディオファントス方程式）の完全厳密ソルバー。1次線形不定方程式（拡張ユークリッド互除法およびベズーの等式に基づく整数パラメータ $t$ による一般解系）およびピタゴラス方程式（$x^2+y^2=z^2$ 等の代数曲線有理点媒介変数表示）を判定・求解。<code class="clickable-code" data-copy="--verify" title="クリックしてコピー">--verify</code> 時には代数的残差ゼロ証明書、<code class="clickable-code" data-copy="--lean" title="クリックしてコピー">--lean</code> 時には Lean 4 形式証明を出力</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="pell_solve" title="クリックしてコピー">pell_solve</code></td><td class="col-operator"><code class="clickable-code" data-copy="pell_solve(D)" title="クリックしてコピー">pell_solve(D)</code> / <code class="clickable-code" data-copy="pell_solve(D, 1)" title="クリックしてコピー">pell_solve(D, 1)</code> / <code class="clickable-code" data-copy="pell_solve(D, -1)" title="クリックしてコピー">pell_solve(D, -1)</code></td><td>ペル方程式 $x^2 - D y^2 = 1$（および負のペル方程式 $x^2 - D y^2 = -1$）の最小整数解（基本解 $(x_1, y_1)$）の完全厳密導出。非平方正整数 $D$ に対する連分数展開周期アルゴリズム（Continued Fraction Expansion）により巨大桁整数でも決定論的に求解。<code class="clickable-code" data-copy="--verify" title="クリックしてコピー">--verify</code> および <code class="clickable-code" data-copy="--lean" title="クリックしてコピー">--lean</code>（Mathlib4 <code class="clickable-code" data-copy="by decide" title="クリックしてコピー">by decide</code> 定理コード生成）に対応</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="to_primitive_element" title="クリックしてコピー">to_primitive_element</code> / <code class="clickable-code" data-copy="primitive_element" title="クリックしてコピー">primitive_element</code></td><td class="col-operator"><code class="clickable-code" data-copy="to_primitive_element([sqrt(2), sqrt(3)])" title="クリックしてコピー">to_primitive_element([sqrt(2), sqrt(3)])</code> / <code class="clickable-code" data-copy="to_primitive_element([x^2 - 2, x^2 - 3])" title="クリックしてコピー">to_primitive_element([x^2 - 2, x^2 - 3])</code></td><td>原始元定理（Primitive Element Theorem）に基づき、多重代数拡大体 $\mathbb{Q}(\alpha_1, \dots, \alpha_k)$ を単一の代数的数 $\theta$ による単拡大 $\mathbb{Q}(\theta)$ へ同型変換し、原始元シンボル、合成最小多項式 $m_\theta(x)$、および各生成元の表現多項式リスト $[P_{\alpha_1}(\theta), \dots, P_{\alpha_k}(\theta)]$ を導出。シルベスター終結式と拡大体上多項式GCDにより決定論的に求解。<code class="clickable-code" data-copy="--verify" title="クリックしてコピー">--verify</code> および <code class="clickable-code" data-copy="--lean" title="クリックしてコピー">--lean</code> による代数関係式検証に対応</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="fib" title="クリックしてコピー">fib</code> / <code class="clickable-code" data-copy="fibonacci" title="クリックしてコピー">fibonacci</code></td><td class="col-operator"><code class="clickable-code" data-copy="fib(n)" title="クリックしてコピー">fib(n)</code> / <code class="clickable-code" data-copy="fibonacci(n)" title="クリックしてコピー">fibonacci(n)</code></td><td>フィボナッチ数 $F_n$。Fast Doubling アルゴリズム（$O(\log n)$ 準線形時間ステップ）により数万〜十万番台の巨大フィボナッチ数を高速算出。負の整数引数に対するネガフィボナッチ数 $F_{-n} = (-1)^{n+1} F_n$ にも完全対応</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="digit_count" title="クリックしてコピー">digit_count</code></td><td class="col-operator"><code class="clickable-code" data-copy="digit_count(n)" title="クリックしてコピー">digit_count(n)</code> / <code class="clickable-code" data-copy="digit_count(n, base)" title="クリックしてコピー">digit_count(n, base)</code></td><td>巨大整数の厳密桁数算定。基数 <code class="clickable-code" data-copy="base" title="クリックしてコピー">base</code>（省略時10）における桁数を高速に算定（例: <code class="clickable-code" data-copy="digit_count(fib(10000))" title="クリックしてコピー">digit_count(fib(10000))</code> $\to$ <code class="clickable-code" data-copy="2090" title="クリックしてコピー">2090</code>）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="to_base" title="クリックしてコピー">to_base</code></td><td class="col-operator"><code class="clickable-code" data-copy="to_base(n, base)" title="クリックしてコピー">to_base(n, base)</code></td><td>任意基数進数変換（$2 \le \text{base} \le 64$）。整数の位取り記数法表現および有理数 $p/q$ の長除法余り追跡による循環小数展開（例: <code class="clickable-code" data-copy="to_base(255, 16)" title="クリックしてコピー">to_base(255, 16)</code> $\to$ <code class="clickable-code" data-copy="ff" title="クリックしてコピー">ff</code>、<code class="clickable-code" data-copy="to_base(1/3, 2)" title="クリックしてコピー">to_base(1/3, 2)</code> $\to$ <code class="clickable-code" data-copy="0.(01)_2" title="クリックしてコピー">0.(01)_2</code>、<code class="clickable-code" data-copy="to_base(1/3, 16)" title="クリックしてコピー">to_base(1/3, 16)</code> $\to$ <code class="clickable-code" data-copy="0.(5)_16" title="クリックしてコピー">0.(5)_16</code>、<code class="clickable-code" data-copy="to_base(4031, 64)" title="クリックしてコピー">to_base(4031, 64)</code> $\to$ <code class="clickable-code" data-copy="@_" title="クリックしてコピー">@_</code>）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="from_base" title="クリックしてコピー">from_base</code></td><td class="col-operator"><code class="clickable-code" data-copy="from_base(str, base)" title="クリックしてコピー">from_base(str, base)</code></td><td>任意基数進数表現（$2 \le \text{base} \le 64$）から多倍長整数への復元。<code class="clickable-code" data-copy="0x" title="クリックしてコピー">0x</code>, <code class="clickable-code" data-copy="0b" title="クリックしてコピー">0b</code>, <code class="clickable-code" data-copy="0o" title="クリックしてコピー">0o</code> 接頭辞の自動処理、および Base 64 の <code class="clickable-code" data-copy="@" title="クリックしてコピー">@</code>/<code class="clickable-code" data-copy="_" title="クリックしてコピー">_</code> または <code class="clickable-code" data-copy="+" title="クリックしてコピー">+</code>/<code class="clickable-code" data-copy="/" title="クリックしてコピー">/</code> 表記に対応（例: <code class="clickable-code" data-copy="from_base(&quot;ff&quot;, 16)" title="クリックしてコピー">from_base(&quot;ff&quot;, 16)</code> $\to$ <code class="clickable-code" data-copy="255" title="クリックしてコピー">255</code>、<code class="clickable-code" data-copy="from_base(&quot;@_&quot;, 64)" title="クリックしてコピー">from_base(&quot;@_&quot;, 64)</code> $\to$ <code class="clickable-code" data-copy="4031" title="クリックしてコピー">4031</code>）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="bin" title="クリックしてコピー">bin</code></td><td class="col-operator"><code class="clickable-code" data-copy="bin(n)" title="クリックしてコピー">bin(n)</code></td><td>2進数変換ショートカット（接頭辞 <code class="clickable-code" data-copy="0b" title="クリックしてコピー">0b</code> 付き、例: <code class="clickable-code" data-copy="bin(13)" title="クリックしてコピー">bin(13)</code> $\to$ <code class="clickable-code" data-copy="0b1101" title="クリックしてコピー">0b1101</code>）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="oct" title="クリックしてコピー">oct</code></td><td class="col-operator"><code class="clickable-code" data-copy="oct(n)" title="クリックしてコピー">oct(n)</code></td><td>8進数変換ショートカット（接頭辞 <code class="clickable-code" data-copy="0o" title="クリックしてコピー">0o</code> 付き、例: <code class="clickable-code" data-copy="oct(63)" title="クリックしてコピー">oct(63)</code> $\to$ <code class="clickable-code" data-copy="0o77" title="クリックしてコピー">0o77</code>）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="hex" title="クリックしてコピー">hex</code></td><td class="col-operator"><code class="clickable-code" data-copy="hex(n)" title="クリックしてコピー">hex(n)</code></td><td>16進数変換ショートカット（接頭辞 <code class="clickable-code" data-copy="0x" title="クリックしてコピー">0x</code> 付き、例: <code class="clickable-code" data-copy="hex(255)" title="クリックしてコピー">hex(255)</code> $\to$ <code class="clickable-code" data-copy="0xff" title="クリックしてコピー">0xff</code>）</td></tr></tbody></table></div><h3 class="dads-h3">2. 三角関数・対数・複素数</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">関数</th><th scope="col">書式・例</th><th scope="col">説明</th></tr></thead><tbody><tr><td class="col-operator"><code class="clickable-code" data-copy="sin" title="クリックしてコピー">sin</code>, <code class="clickable-code" data-copy="cos" title="クリックしてコピー">cos</code>, <code class="clickable-code" data-copy="tan" title="クリックしてコピー">tan</code></td><td class="col-operator"><code class="clickable-code" data-copy="sin(pi/6)" title="クリックしてコピー">sin(pi/6)</code></td><td>三角関数（$\pi$ の有理数倍による特殊角を代数的に厳密簡約）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="asin" title="クリックしてコピー">asin</code>, <code class="clickable-code" data-copy="acos" title="クリックしてコピー">acos</code>, <code class="clickable-code" data-copy="atan" title="クリックしてコピー">atan</code></td><td class="col-operator"><code class="clickable-code" data-copy="asin(1/2)" title="クリックしてコピー">asin(1/2)</code></td><td>逆三角関数（特殊角を $\pi$ の有理数倍として代数簡約、主値管理）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="trig_expand" title="クリックしてコピー">trig_expand</code></td><td class="col-operator"><code class="clickable-code" data-copy="trig_expand(sin(x+y))" title="クリックしてコピー">trig_expand(sin(x+y))</code> / <code class="clickable-code" data-copy="trig_expand(sin(2*x))" title="クリックしてコピー">trig_expand(sin(2*x))</code></td><td>加法定理・多倍角公式による展開（和積展開、2倍角・3倍角等）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="trig_reduce" title="クリックしてコピー">trig_reduce</code></td><td class="col-operator"><code class="clickable-code" data-copy="trig_reduce(sin(x)^2)" title="クリックしてコピー">trig_reduce(sin(x)^2)</code> / <code class="clickable-code" data-copy="trig_reduce(sin(x)+cos(x))" title="クリックしてコピー">trig_reduce(sin(x)+cos(x))</code></td><td>三角関数の次数下げ（半角公式）、積和変換、および有名角調和合成</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="exp" title="クリックしてコピー">exp</code></td><td class="col-operator"><code class="clickable-code" data-copy="exp(x)" title="クリックしてコピー">exp(x)</code></td><td>自然指数関数（$e^x$ の厳密表現、指数法則積合成 $e^A \cdot e^B = e^{A+B}$）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="log" title="クリックしてコピー">log</code></td><td class="col-operator"><code class="clickable-code" data-copy="log(x)" title="クリックしてコピー">log(x)</code> / <code class="clickable-code" data-copy="log(base, x)" title="クリックしてコピー">log(base, x)</code></td><td>常用対数（底10）および任意底の対数</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="ln" title="クリックしてコピー">ln</code></td><td class="col-operator"><code class="clickable-code" data-copy="ln(x)" title="クリックしてコピー">ln(x)</code></td><td>自然対数（底 $e$）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="arg" title="クリックしてコピー">arg</code></td><td class="col-operator"><code class="clickable-code" data-copy="arg(z)" title="クリックしてコピー">arg(z)</code></td><td>複素数の厳密偏角（主値 $\theta \in (-\pi, \pi]$。代数的特殊角比率逆引き）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="polar" title="クリックしてコピー">polar</code></td><td class="col-operator"><code class="clickable-code" data-copy="polar(1 + i)" title="クリックしてコピー">polar(1 + i)</code></td><td>複素数の極形式変換 $r(\cos\theta + i\sin\theta)$（例: <code class="clickable-code" data-copy="√2*(cos(π/4) + i*sin(π/4))" title="クリックしてコピー">√2*(cos(π/4) + i*sin(π/4))</code>）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="polar_exp" title="クリックしてコピー">polar_exp</code></td><td class="col-operator"><code class="clickable-code" data-copy="polar_exp(1 + i)" title="クリックしてコピー">polar_exp(1 + i)</code></td><td>オイラーの公式による指数形式変換 $r e^{i\theta}$（例: <code class="clickable-code" data-copy="√2*e^i*1/4*π" title="クリックしてコピー">√2*e^i*1/4*π</code>）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="rect" title="クリックしてコピー">rect</code></td><td class="col-operator"><code class="clickable-code" data-copy="rect(sqrt(2), pi/4)" title="クリックしてコピー">rect(sqrt(2), pi/4)</code></td><td>極形式（動径 $r$, 偏角 $\theta$）から直交形式 $a + bi$ への厳密逆変換（例: <code class="clickable-code" data-copy="1 + i" title="クリックしてコピー">1 + i</code>）</td></tr></tbody></table></div><h3 class="dads-h3">3. 微積分・常微分方程式・初等特殊関数・離散数列</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">関数</th><th scope="col">書式・例</th><th scope="col">説明</th></tr></thead><tbody><tr><td class="col-operator"><code class="clickable-code" data-copy="diff" title="クリックしてコピー">diff</code></td><td class="col-operator"><code class="clickable-code" data-copy="diff(sin(x)*x, x)" title="クリックしてコピー">diff(sin(x)*x, x)</code> / <code class="clickable-code" data-copy="diff(x^4, x, 2)" title="クリックしてコピー">diff(x^4, x, 2)</code></td><td>厳密記号微分（積の微分・商の微分・連鎖律、任意階数 $n$ 次微分対応）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="integrate" title="クリックしてコピー">integrate</code></td><td class="col-operator"><code class="clickable-code" data-copy="integrate(x^2, x)" title="クリックしてコピー">integrate(x^2, x)</code> / <code class="clickable-code" data-copy="integrate(sin(x), x, 0, pi)" title="クリックしてコピー">integrate(sin(x), x, 0, pi)</code></td><td>厳密不定積分（原始関数導出、ガウス積分 $\int e^{-a x^2} dx \to \frac{\sqrt{\pi}}{2\sqrt{a}} \operatorname{erf}(\sqrt{a}x)$ の誤差関数閉形式化、$\int W(x) dx$ 原始関数対応）および区間 $[a, b]$ による厳密定積分</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="risch_integrate" title="クリックしてコピー">risch_integrate</code></td><td class="col-operator"><code class="clickable-code" data-copy="risch_integrate(x*exp(x^2), x)" title="クリックしてコピー">risch_integrate(x*exp(x^2), x)</code></td><td>決定論的 Risch アルゴリズム（超越拡大体・Rothstein-Trager 法）による厳密不定積分</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="lambert_w" title="クリックしてコピー">lambert_w</code></td><td class="col-operator"><code class="clickable-code" data-copy="lambert_w(z)" title="クリックしてコピー">lambert_w(z)</code> / <code class="clickable-code" data-copy="lambert_w(z, k)" title="クリックしてコピー">lambert_w(z, k)</code></td><td>ランバートのW関数 $W_k(z)$（$w e^w = z$ の多価逆関数。主枝 $k=0$ をデフォルトとし、特殊引数 $W(0)=0, W(e)=1, W(-1/e)=-1$ 等の即時簡約、導関数 $\frac{d}{dz}W(z) = \frac{W(z)}{z(1+W(z))}$、原始関数 $\int W(x) dx = x W(x) - x + e^{W(x)}$、代数的等値消去 $W(z)e^{W(z)} \to z$ を提供）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="erf" title="クリックしてコピー">erf</code></td><td class="col-operator"><code class="clickable-code" data-copy="erf(z)" title="クリックしてコピー">erf(z)</code></td><td>ガウスの誤差関数 $\operatorname{erf}(z) = \frac{2}{\sqrt{\pi}}\int_0^z e^{-t^2} dt$（特殊値 $\operatorname{erf}(0)=0$、奇関数性 $\operatorname{erf}(-z) = -\operatorname{erf}(z)$、導関数 $\frac{d}{dz}\operatorname{erf}(z) = \frac{2}{\sqrt{\pi}} e^{-z^2}$、ガウス積分 $\int e^{-a x^2} dx$ の初等閉形式化基盤）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="limit" title="クリックしてコピー">limit</code></td><td class="col-operator"><code class="clickable-code" data-copy="limit(sin(x)/x, x, 0)" title="クリックしてコピー">limit(sin(x)/x, x, 0)</code> / <code class="clickable-code" data-copy="limit(1/x, x, 0, 1)" title="クリックしてコピー">limit(1/x, x, 0, 1)</code></td><td>厳密記号極限（$0/0$, $\infty/\infty$ の不定形解消、因数約分、ロピタルの定理、最高次数比較、片側極限）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="dsolve" title="クリックしてコピー">dsolve</code></td><td class="col-operator"><code class="clickable-code" data-copy="dsolve(diff(y, x) == y, y, x)" title="クリックしてコピー">dsolve(diff(y, x) == y, y, x)</code> / <code class="clickable-code" data-copy="dsolve(diff(y, x, 2) + 4*y == 0, y, x)" title="クリックしてコピー">dsolve(diff(y, x, 2) + 4*y == 0, y, x)</code></td><td>記号常微分方程式ソルバー（1階線形・変数分離形積分因子法、2階定数係数線形斉次・未定係数法特解による厳密求解）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="rsolve" title="クリックしてコピー">rsolve</code></td><td class="col-operator"><code class="clickable-code" data-copy="rsolve(a(n+1) == 2*a(n) + 1, a(n), [a(1) == 1])" title="クリックしてコピー">rsolve(a(n+1) == 2*a(n) + 1, a(n), [a(1) == 1])</code> / <code class="clickable-code" data-copy="rsolve(a(n+2) == a(n+1) + a(n), a(n), [a(0) == 0, a(1) == 1])" title="クリックしてコピー">rsolve(a(n+2) == a(n+1) + a(n), a(n), [a(0) == 0, a(1) == 1])</code></td><td>線形漸化式ソルバー（1階・2階定数係数線形斉次・非同次漸化式、特性根解析・未定係数法・初期条件線形連立解決による一般項閉形式導出）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="laplace" title="クリックしてコピー">laplace</code></td><td class="col-operator"><code class="clickable-code" data-copy="laplace(sin(2*t), t, s)" title="クリックしてコピー">laplace(sin(2*t), t, s)</code> / <code class="clickable-code" data-copy="laplace(exp(3*t)*t^2)" title="クリックしてコピー">laplace(exp(3*t)*t^2)</code></td><td>記号ラプラス変換 $\mathcal{L}\{f(t)\}$（線形性、多項式・指数・三角関数・減衰振動および周波数シフト則の厳密代数変換）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="inv_laplace" title="クリックしてコピー">inv_laplace</code></td><td class="col-operator"><code class="clickable-code" data-copy="inv_laplace(1/(s-3), s, t)" title="クリックしてコピー">inv_laplace(1/(s-3), s, t)</code> / <code class="clickable-code" data-copy="inv_laplace(1/(s^2+4))" title="クリックしてコピー">inv_laplace(1/(s^2+4))</code></td><td>記号逆ラプラス変換 $\mathcal{L}^{-1}\{F(s)\}$（部分分数分解 <code class="clickable-code" data-copy="apart" title="クリックしてコピー">apart</code> と留数極マッチングによる厳密時間領域復元）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="taylor" title="クリックしてコピー">taylor</code></td><td class="col-operator"><code class="clickable-code" data-copy="taylor(f, x, a, n)" title="クリックしてコピー">taylor(f, x, a, n)</code></td><td>テイラー展開・マクローリン展開（点 $x=a$ まわりで $n$ 次まで展開）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="fourier_series" title="クリックしてコピー">fourier_series</code></td><td class="col-operator"><code class="clickable-code" data-copy="fourier_series(f, [t, L, n])" title="クリックしてコピー">fourier_series(f, [t, L, n])</code></td><td>記号フーリエ級数展開（オイラー・フーリエ公式による厳密定積分、有限次数 $n$ までの三角級数部分和導出）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="residue" title="クリックしてコピー">residue</code></td><td class="col-operator"><code class="clickable-code" data-copy="residue(1/(z^2*(z+1)), z, 0)" title="クリックしてコピー">residue(1/(z^2*(z+1)), z, 0)</code> / <code class="clickable-code" data-copy="residue(exp(z)/z^3, z, 0)" title="クリックしてコピー">residue(exp(z)/z^3, z, 0)</code></td><td>複素解析における孤立特異点 $z_0$ まわりの厳密留数 $\mathrm{Res}(f, z_0)$（位数判定、テイラー級数漸化式、コーシー留数公式）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="gamma" title="クリックしてコピー">gamma</code></td><td class="col-operator"><code class="clickable-code" data-copy="gamma(5)" title="クリックしてコピー">gamma(5)</code> / <code class="clickable-code" data-copy="gamma(1/2)" title="クリックしてコピー">gamma(1/2)</code> / <code class="clickable-code" data-copy="gamma(-1/2)" title="クリックしてコピー">gamma(-1/2)</code></td><td>ガンマ関数 $\Gamma(z)$（正の整数で階乗 $(n-1)!$、半整数で $\sqrt{\pi}$ 展開、非正整数で極特異点検出）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="beta" title="クリックしてコピー">beta</code></td><td class="col-operator"><code class="clickable-code" data-copy="beta(2, 3)" title="クリックしてコピー">beta(2, 3)</code> / <code class="clickable-code" data-copy="beta(1/2, 1/2)" title="クリックしてコピー">beta(1/2, 1/2)</code></td><td>ベータ関数 $\mathrm{B}(p, q) = \frac{\Gamma(p)\Gamma(q)}{\Gamma(p+q)}$（整数・半整数の厳密有理・代数展開、例: $\mathrm{B}(1/2, 1/2) = \pi$）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="bernoulli" title="クリックしてコピー">bernoulli</code></td><td class="col-operator"><code class="clickable-code" data-copy="bernoulli(4)" title="クリックしてコピー">bernoulli(4)</code> / <code class="clickable-code" data-copy="bernoulli(10)" title="クリックしてコピー">bernoulli(10)</code></td><td>第 $n$ ベルヌーイ数 $B_n$（秋山・谷川アルゴリズムによる多倍長有理数厳密出力、例: $B_{10} = 5/66$）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="zeta" title="クリックしてコピー">zeta</code></td><td class="col-operator"><code class="clickable-code" data-copy="zeta(2)" title="クリックしてコピー">zeta(2)</code> / <code class="clickable-code" data-copy="zeta(4)" title="クリックしてコピー">zeta(4)</code> / <code class="clickable-code" data-copy="zeta(6)" title="クリックしてコピー">zeta(6)</code></td><td>リーマンゼータ関数 $\zeta(s)$（オイラーの公式による正の偶数値の完全厳密代数解、例: $\zeta(4) = \pi^4/90$、極 $s=1$ 検出）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="piecewise" title="クリックしてコピー">piecewise</code></td><td class="col-operator"><code class="clickable-code" data-copy="piecewise([[expr1, cond1], ...], default)" title="クリックしてコピー">piecewise([[expr1, cond1], ...], default)</code></td><td>区分定義関数（第一級 <code class="clickable-code" data-copy="PiecewiseNode" title="クリックしてコピー">PiecewiseNode</code>）。CADセル分解と連携し、条件領域ごとの微分（<code class="clickable-code" data-copy="diff" title="クリックしてコピー">diff</code>）、定積分（<code class="clickable-code" data-copy="integrate" title="クリックしてコピー">integrate</code>）、方程式求解（<code class="clickable-code" data-copy="solve" title="クリックしてコピー">solve</code>）を厳密代数処理</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="sum" title="クリックしてコピー">sum</code></td><td class="col-operator"><code class="clickable-code" data-copy="sum(expr, k, start, end)" title="クリックしてコピー">sum(expr, k, start, end)</code></td><td>離散和（有限整数範囲の合算、または Faulhaber 公式による $n$ に関する多項式閉形式）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="gosper_sum" title="クリックしてコピー">gosper_sum</code></td><td class="col-operator"><code class="clickable-code" data-copy="gosper_sum(t_k, k)" title="クリックしてコピー">gosper_sum(t_k, k)</code></td><td>超幾何級数に対する Gosper 不定和法による閉形式原始関数 $z_k$ 導出（$z_{k+1}-z_k=t_k$）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="wz_cert" title="クリックしてコピー">wz_cert</code></td><td class="col-operator"><code class="clickable-code" data-copy="wz_cert(F, n, k)" title="クリックしてコピー">wz_cert(F, n, k)</code></td><td>Wilf-Zeilberger (WZ) 対による超幾何恒等式の有理関数証明書 $R(n, k)$ 生成</td></tr></tbody></table></div><h3 class="dads-h3">4. 線形代数・3次元ベクトル解析</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">関数</th><th scope="col">書式・例</th><th scope="col">説明</th></tr></thead><tbody><tr><td class="col-operator"><code class="clickable-code" data-copy="det" title="クリックしてコピー">det</code></td><td class="col-operator"><code class="clickable-code" data-copy="det(A)" title="クリックしてコピー">det(A)</code></td><td>厳密行列式（余因子展開法、または整数行列に対するHadamard上界と有限体ガウス消去＋Garner CRTモジュラー合成による中間係数爆発防止型完全厳密計算）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="inv" title="クリックしてコピー">inv</code></td><td class="col-operator"><code class="clickable-code" data-copy="inv(A)" title="クリックしてコピー">inv(A)</code></td><td>厳密逆行列（余因子行列法による算出、特異行列時はエラー検出）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="transpose" title="クリックしてコピー">transpose</code></td><td class="col-operator"><code class="clickable-code" data-copy="transpose(A)" title="クリックしてコピー">transpose(A)</code></td><td>行列の転置（行と列の反転）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="rref" title="クリックしてコピー">rref</code></td><td class="col-operator"><code class="clickable-code" data-copy="rref(A)" title="クリックしてコピー">rref(A)</code></td><td>行簡約階段形（Reduced Row Echelon Form。Bareiss整数除算アルゴリズム）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="rank" title="クリックしてコピー">rank</code></td><td class="col-operator"><code class="clickable-code" data-copy="rank(A)" title="クリックしてコピー">rank(A)</code></td><td>行列の厳密な階数（ピボット列数）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="trace" title="クリックしてコピー">trace</code> / <code class="clickable-code" data-copy="tr" title="クリックしてコピー">tr</code></td><td class="col-operator"><code class="clickable-code" data-copy="trace(A)" title="クリックしてコピー">trace(A)</code>, <code class="clickable-code" data-copy="tr(A)" title="クリックしてコピー">tr(A)</code></td><td>行列のトレース（主対角成分の総和 $\sum_{i=1}^n A_{i,i}$）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="eigenvals" title="クリックしてコピー">eigenvals</code></td><td class="col-operator"><code class="clickable-code" data-copy="eigenvals(A)" title="クリックしてコピー">eigenvals(A)</code></td><td>厳密固有値解析（Faddeev-LeVerrier法による特性多項式導出と代数方程式ソルバーによる最大4×4行列の厳密根号解・固有値リスト）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="eigenvects" title="クリックしてコピー">eigenvects</code></td><td class="col-operator"><code class="clickable-code" data-copy="eigenvects(A)" title="クリックしてコピー">eigenvects(A)</code></td><td>厳密固有ベクトル解析（RREF零空間Null Space基底の厳密抽出による固有空間正規直交系リスト）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="lu" title="クリックしてコピー">lu</code></td><td class="col-operator"><code class="clickable-code" data-copy="lu(A)" title="クリックしてコピー">lu(A)</code></td><td>行ピボット付き厳密PLU分解 $PA=LU$（$P$ 置換行列、$L$ 単位下三角、$U$ 上三角）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="qr" title="クリックしてコピー">qr</code></td><td class="col-operator"><code class="clickable-code" data-copy="qr(A)" title="クリックしてコピー">qr(A)</code></td><td>2段階グラム・シュミット法による厳密QR分解 $A=QR$（$Q$ 正規直交、$R$ 上三角、$Q^T Q = I$）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="cholesky" title="クリックしてコピー">cholesky</code></td><td class="col-operator"><code class="clickable-code" data-copy="cholesky(A)" title="クリックしてコピー">cholesky(A)</code></td><td>実対称正定値行列に対する厳密コレスキー分解 $A=LL^T$（厳密根号代数表現）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="ldlt" title="クリックしてコピー">ldlt</code></td><td class="col-operator"><code class="clickable-code" data-copy="ldlt(A)" title="クリックしてコピー">ldlt(A)</code></td><td>平方根フリー厳密 $LDL^T$ 分解（$L$ 単位下三角、$D$ 正の有理数対角行列）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="pinv" title="クリックしてコピー">pinv</code></td><td class="col-operator"><code class="clickable-code" data-copy="pinv(A)" title="クリックしてコピー">pinv(A)</code></td><td>RREFフルランク分解によるムーア・ペンローズ擬似逆行列 $A^+$（小数を一切使わない有理厳密解）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="solve_linear" title="クリックしてコピー">solve_linear</code> / <code class="clickable-code" data-copy="linsolve" title="クリックしてコピー">linsolve</code></td><td class="col-operator"><code class="clickable-code" data-copy="solve_linear(A, b)" title="クリックしてコピー">solve_linear(A, b)</code></td><td>厳密連立一次方程式系ソルバー $Ax=b$（唯一解、不能、不定パラメータ解の厳密判別）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="hnf" title="クリックしてコピー">hnf</code></td><td class="col-operator"><code class="clickable-code" data-copy="hnf(A)" title="クリックしてコピー">hnf(A)</code></td><td>整数行列のエルミート標準形（Hermite Normal Form: HNF）。小数を一切使わない整数初等行変形と剰余簡約により行階段形（上三角型）$H$ を導出</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="hnf_transform" title="クリックしてコピー">hnf_transform</code></td><td class="col-operator"><code class="clickable-code" data-copy="hnf_transform(A)" title="クリックしてコピー">hnf_transform(A)</code></td><td>エルミート標準形と単模変換行列 $[H, U]$ を同時返却（$U \in \text{GL}_m(\mathbb{Z}), U A = H$）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="snf" title="クリックしてコピー">snf</code></td><td class="col-operator"><code class="clickable-code" data-copy="snf(A)" title="クリックしてコピー">snf(A)</code></td><td>整数行列のスミス標準形（Smith Normal Form: SNF）。整数初等行・列変形により主対角成分が整除鎖 $d_1 \mid d_2 \mid \dots \mid d_r$ を満たす対角行列 $D$ を導出</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="snf_transform" title="クリックしてコピー">snf_transform</code></td><td class="col-operator"><code class="clickable-code" data-copy="snf_transform(A)" title="クリックしてコピー">snf_transform(A)</code></td><td>スミス標準形と両側単模変換行列 $[D, U, V]$ を同時返却（$U \in \text{GL}_m(\mathbb{Z}), V \in \text{GL}_n(\mathbb{Z}), U A V = D$）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="invariant_factors" title="クリックしてコピー">invariant_factors</code></td><td class="col-operator"><code class="clickable-code" data-copy="invariant_factors(A)" title="クリックしてコピー">invariant_factors(A)</code></td><td>整数行列の不変因子リスト $[d_1, d_2, \dots, d_r]$（スミス標準形の正の対角要素）を抽出</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="abelian_group_structure" title="クリックしてコピー">abelian_group_structure</code></td><td class="col-operator"><code class="clickable-code" data-copy="abelian_group_structure(A)" title="クリックしてコピー">abelian_group_structure(A)</code></td><td>整数関係行列 $A$ が定める有限生成アーベル群 $G = \mathbb{Z}^m / \operatorname{Im}(A)$ の不変因子分解直和表現（例: <code class="clickable-code" data-copy="Z_2 + Z_6" title="クリックしてコピー">Z_2 + Z_6</code>、自由部分 <code class="clickable-code" data-copy="Z" title="クリックしてコピー">Z</code>）を同定</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="dot" title="クリックしてコピー">dot</code>, <code class="clickable-code" data-copy="cross" title="クリックしてコピー">cross</code></td><td class="col-operator"><code class="clickable-code" data-copy="dot(u, v)" title="クリックしてコピー">dot(u, v)</code>, <code class="clickable-code" data-copy="cross(u, v)" title="クリックしてコピー">cross(u, v)</code></td><td>ベクトル内積および3次元外積（クロス積）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="norm" title="クリックしてコピー">norm</code></td><td class="col-operator"><code class="clickable-code" data-copy="norm(v)" title="クリックしてコピー">norm(v)</code></td><td>ベクトルのユークリッドノルム（$\sqrt{\sum v_i^2}$、根号自動簡約）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="grad" title="クリックしてコピー">grad</code></td><td class="col-operator"><code class="clickable-code" data-copy="grad(f, [x, y, z])" title="クリックしてコピー">grad(f, [x, y, z])</code></td><td>スカラー場の勾配ベクトル（$\nabla f$）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="div" title="クリックしてコピー">div</code>, <code class="clickable-code" data-copy="curl" title="クリックしてコピー">curl</code></td><td class="col-operator"><code class="clickable-code" data-copy="div(F, [x, y, z])" title="クリックしてコピー">div(F, [x, y, z])</code>, <code class="clickable-code" data-copy="curl(F, ...)" title="クリックしてコピー">curl(F, ...)</code></td><td>ベクトル場の発散（$\nabla \cdot F$）・3次元ベクトル場の回転（$\nabla \times F$）</td></tr><tr><td class="col-operator">行列・ベクトル記法</td><td class="col-operator"><code class="clickable-code" data-copy="[[1, 2], [3, 4]]" title="クリックしてコピー">[[1, 2], [3, 4]]</code>, <code class="clickable-code" data-copy="[1, 2, 3]" title="クリックしてコピー">[1, 2, 3]</code></td><td>行列リテラルおよびベクトルリテラル</td></tr></tbody></table></div><h3 class="dads-h3">5. 幾何学解析</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">関数</th><th scope="col">書式・例</th><th scope="col">説明</th></tr></thead><tbody><tr><td class="col-operator"><code class="clickable-code" data-copy="line_intersect" title="クリックしてコピー">line_intersect</code></td><td class="col-operator"><code class="clickable-code" data-copy="line_intersect([A1, B1, C1], [A2, B2, C2])" title="クリックしてコピー">line_intersect([A1, B1, C1], [A2, B2, C2])</code></td><td>2直線 $Ax+By+C=0$ の交点（クラメルの公式による厳密交点 <code class="clickable-code" data-copy="[x, y]" title="クリックしてコピー">[x, y]</code>）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="circle_intersect" title="クリックしてコピー">circle_intersect</code></td><td class="col-operator"><code class="clickable-code" data-copy="circle_intersect(c1, r1, c2, r2)" title="クリックしてコピー">circle_intersect(c1, r1, c2, r2)</code></td><td>2円の交点（中心座標と半径から根軸次数下げにより交点座標リストを算出）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="triangle_area" title="クリックしてコピー">triangle_area</code></td><td class="col-operator"><code class="clickable-code" data-copy="triangle_area(p1, p2, p3)" title="クリックしてコピー">triangle_area(p1, p2, p3)</code></td><td>3頂点座標からなる三角形の厳密面積（外積・Shoelace公式）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="triangle_centers" title="クリックしてコピー">triangle_centers</code></td><td class="col-operator"><code class="clickable-code" data-copy="triangle_centers(p1, p2, p3)" title="クリックしてコピー">triangle_centers(p1, p2, p3)</code></td><td>三角形の五心解析（重心・外心・垂心・内心をリストで一括算出）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="geo_prove" title="クリックしてコピー">geo_prove</code></td><td class="col-operator"><code class="clickable-code" data-copy="geo_prove(hypotheses, conclusion [, var_order])" title="クリックしてコピー">geo_prove(hypotheses, conclusion [, var_order])</code></td><td>呉文俊（Wu Wen-tsun）の代数的幾何自動定理証明法（Wu's Method）。仮設多項式系から標数集合（Characteristic Set: 三角形式アセンダント列）を導出し、結論多項式に対する擬除算剰余（Pseudo-division remainder）が 0 となるかを判定。3段階NDG条件（Primary / Essential / Algebraic）導出および Lean 4 形式証明トランスパイル対応</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="midpoint" title="クリックしてコピー">midpoint</code></td><td class="col-operator"><code class="clickable-code" data-copy="midpoint(M, A, B)" title="クリックしてコピー">midpoint(M, A, B)</code></td><td>点 $M$ が線分 $AB$ の中点（$2 M_x = A_x + B_x, 2 M_y = A_y + B_y$）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="collinear" title="クリックしてコピー">collinear</code></td><td class="col-operator"><code class="clickable-code" data-copy="collinear(A, B, C)" title="クリックしてコピー">collinear(A, B, C)</code></td><td>3点 $A, B, C$ が同一直線上に存在（共線条件: 外積 $(B_x - A_x)(C_y - A_y) - (B_y - A_y)(C_x - A_x) = 0$）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="parallel" title="クリックしてコピー">parallel</code></td><td class="col-operator"><code class="clickable-code" data-copy="parallel(A, B, C, D)" title="クリックしてコピー">parallel(A, B, C, D)</code></td><td>直線 $AB$ と $CD$ が平行（方向ベクトルの外積 $= 0$）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="perpendicular" title="クリックしてコピー">perpendicular</code></td><td class="col-operator"><code class="clickable-code" data-copy="perpendicular(A, B, C, D)" title="クリックしてコピー">perpendicular(A, B, C, D)</code></td><td>直線 $AB$ と $CD$ が垂直直交（方向ベクトルの内積 $= 0$）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="equal_length_sq" title="クリックしてコピー">equal_length_sq</code></td><td class="col-operator"><code class="clickable-code" data-copy="equal_length_sq(A, B, C, D)" title="クリックしてコピー">equal_length_sq(A, B, C, D)</code></td><td>線分長の平方一致関係（距離自乗の等値関係: $AB^2 = CD^2$）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="circle_concyclic" title="クリックしてコピー">circle_concyclic</code></td><td class="col-operator"><code class="clickable-code" data-copy="circle_concyclic(A, B, C, D)" title="クリックしてコピー">circle_concyclic(A, B, C, D)</code></td><td>4点 $A, B, C, D$ が同一円周上に存在（共円条件）</td></tr></tbody></table></div><h3 class="dads-h3">6. 厳密離散確率・統計</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">関数</th><th scope="col">書式・例</th><th scope="col">説明</th></tr></thead><tbody><tr><td class="col-operator"><code class="clickable-code" data-copy="binom" title="クリックしてコピー">binom</code></td><td class="col-operator"><code class="clickable-code" data-copy="binom(n, k, p)" title="クリックしてコピー">binom(n, k, p)</code></td><td>二項分布の確率質量関数（PMF） $P(X=k) = \binom{n}{k} p^k (1-p)^{n-k}$</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="hyper" title="クリックしてコピー">hyper</code></td><td class="col-operator"><code class="clickable-code" data-copy="hyper(N, K, n, k)" title="クリックしてコピー">hyper(N, K, n, k)</code></td><td>超幾何分布の確率質量関数（非復元抽出の厳密有理数）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="geom" title="クリックしてコピー">geom</code></td><td class="col-operator"><code class="clickable-code" data-copy="geom(p, k)" title="クリックしてコピー">geom(p, k)</code></td><td>幾何分布の確率質量関数 $P(X=k) = (1-p)^{k-1} p$</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="bayes" title="クリックしてコピー">bayes</code></td><td class="col-operator"><code class="clickable-code" data-copy="bayes(prior, likelihood, marginal)" title="クリックしてコピー">bayes(prior, likelihood, marginal)</code></td><td>ベイズの定理による厳密事後確率 $P(A\|B) = \frac{P(B\|A)P(A)}{P(B)}$</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="expect" title="クリックしてコピー">expect</code></td><td class="col-operator"><code class="clickable-code" data-copy="expect(binom, n, p)" title="クリックしてコピー">expect(binom, n, p)</code> / <code class="clickable-code" data-copy="expect([[x1, p1], ...])" title="クリックしてコピー">expect([[x1, p1], ...])</code></td><td>離散確率変数の期待値 $E[X]$</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="variance" title="クリックしてコピー">variance</code></td><td class="col-operator"><code class="clickable-code" data-copy="variance(...)" title="クリックしてコピー">variance(...)</code></td><td>離散確率変数の分散 $V[X] = E[X^2] - (E[X])^2$</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="stddev" title="クリックしてコピー">stddev</code></td><td class="col-operator"><code class="clickable-code" data-copy="stddev(...)" title="クリックしてコピー">stddev(...)</code></td><td>離散確率変数の標準偏差 $\sigma = \sqrt{V[X]}$（根号形式代数簡約）</td></tr></tbody></table></div><h3 class="dads-h3">7. 前提条件システム（仮定）</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">コマンド</th><th scope="col">例</th><th scope="col">説明</th></tr></thead><tbody><tr><td><code class="clickable-code" data-copy="assume" title="クリックしてコピー">assume</code></td><td class="col-operator"><code class="clickable-code" data-copy="assume(x &gt; 0)" title="クリックしてコピー">assume(x &gt; 0)</code>, <code class="clickable-code" data-copy="assume(n, integer)" title="クリックしてコピー">assume(n, integer)</code></td><td>ドメイン制約を設定（<code class="clickable-code" data-copy="sqrt(x^2)" title="クリックしてコピー">sqrt(x^2)</code> → <code class="clickable-code" data-copy="x" title="クリックしてコピー">x</code>, <code class="clickable-code" data-copy="sin(n*pi)" title="クリックしてコピー">sin(n*pi)</code> → <code class="clickable-code" data-copy="0" title="クリックしてコピー">0</code> 等の簡約が活性化）</td></tr><tr><td><code class="clickable-code" data-copy="unassume" title="クリックしてコピー">unassume</code></td><td class="col-operator"><code class="clickable-code" data-copy="unassume(x)" title="クリックしてコピー">unassume(x)</code></td><td>指定した変数の仮定制約を解除</td></tr><tr><td><code class="clickable-code" data-copy="assumptions" title="クリックしてコピー">assumptions</code></td><td class="col-operator"><code class="clickable-code" data-copy="assumptions()" title="クリックしてコピー">assumptions()</code></td><td>現在設定されている前提条件の一覧を表示</td></tr><tr><td><code class="clickable-code" data-copy="clear_assumptions" title="クリックしてコピー">clear_assumptions</code></td><td class="col-operator"><code class="clickable-code" data-copy="clear_assumptions()" title="クリックしてコピー">clear_assumptions()</code></td><td>設定されているすべての前提条件（仮定）を一括クリア</td></tr></tbody></table></div><h3 class="dads-h3">8. 実代数幾何・数理論理・量化子消去</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">関数</th><th scope="col">書式・例</th><th scope="col">説明</th></tr></thead><tbody><tr><td class="col-operator"><code class="clickable-code" data-copy="qe" title="クリックしてコピー">qe</code></td><td class="col-operator"><code class="clickable-code" data-copy="qe(forall([x], x^2 + a*x + b &gt; 0))" title="クリックしてコピー">qe(forall([x], x^2 + a*x + b &gt; 0))</code></td><td>円筒代数分解（CAD）基盤の決定論的完全量化子消去（Hong (1992) 境界多項式による同値な量化子なしパラメータ条件式の導出）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="forall" title="クリックしてコピー">forall</code></td><td class="col-operator"><code class="clickable-code" data-copy="forall([x], formula)" title="クリックしてコピー">forall([x], formula)</code></td><td>全称量化子式 $\forall x \, \Phi(x)$ の構築</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="exists" title="クリックしてコピー">exists</code></td><td class="col-operator"><code class="clickable-code" data-copy="exists([x], formula)" title="クリックしてコピー">exists([x], formula)</code></td><td>存在量化子式 $\exists x \, \Phi(x)$ の構築</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="cad" title="クリックしてコピー">cad</code></td><td class="col-operator"><code class="clickable-code" data-copy="cad([x^2 - 2], [x])" title="クリックしてコピー">cad([x^2 - 2], [x])</code></td><td>円筒代数分解（CAD: Cylindrical Algebraic Decomposition）の直接実行（1次元セル分割・多変数射影と実根分離による半代数的集合表現）</td></tr></tbody></table></div><h3 class="dads-h3">9. 楕円曲線代数・数論幾何</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">関数</th><th scope="col">書式・例</th><th scope="col">説明</th></tr></thead><tbody><tr><td class="col-operator"><code class="clickable-code" data-copy="ec_add" title="クリックしてコピー">ec_add</code></td><td class="col-operator"><code class="clickable-code" data-copy="ec_add([A, B], P1, P2)" title="クリックしてコピー">ec_add([A, B], P1, P2)</code></td><td>ワイエルシュトラス標準形 $y^2 = x^3 + Ax + B$ 上の有理点加算（Chord and Tangent 法、単位元・無限遠点 <code class="clickable-code" data-copy="O" title="クリックしてコピー">O</code> 対応）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="ec_mul" title="クリックしてコピー">ec_mul</code></td><td class="col-operator"><code class="clickable-code" data-copy="ec_mul([A, B], n, P)" title="クリックしてコピー">ec_mul([A, B], n, P)</code></td><td>楕円曲線上の有理点のスカラー倍算 $n P$（バイナリ Double-and-Add アルゴリズム）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="ec_torsion" title="クリックしてコピー">ec_torsion</code></td><td class="col-operator"><code class="clickable-code" data-copy="ec_torsion(A, B)" title="クリックしてコピー">ec_torsion(A, B)</code></td><td>Nagell-Lutz の定理および Mazur の定理に基づく有限位数有理点群（捩れ群 $E(\mathbb{Q})_{\text{tors}}$）の完全決定アルゴリズム</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="ec_p_order" title="クリックしてコピー">ec_p_order</code></td><td class="col-operator"><code class="clickable-code" data-copy="ec_p_order(A, B, p)" title="クリックしてコピー">ec_p_order(A, B, p)</code></td><td>素有限体 $\mathbb{F}_p$ 上の非特異楕円曲線 $y^2 \equiv x^3 + Ax + B \pmod p$ の群位数 $\#E(\mathbb{F}_p)$ を決定論的 Schoof アルゴリズム（分割多項式・フロベニウス写像・CRT合成）により多項式時間で算定</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="ec_p_trace" title="クリックしてコピー">ec_p_trace</code></td><td class="col-operator"><code class="clickable-code" data-copy="ec_p_trace(A, B, p)" title="クリックしてコピー">ec_p_trace(A, B, p)</code></td><td>素有限体 $\mathbb{F}_p$ 上の楕円曲線のフロベニウストレース $a = p + 1 - \#E(\mathbb{F}_p)$ を決定論的に算出（Hasseの定理 $|a| \le 2\sqrt{p}$ を満たす整数）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="ec_p_add" title="クリックしてコピー">ec_p_add</code></td><td class="col-operator"><code class="clickable-code" data-copy="ec_p_add(A, B, p, P, Q)" title="クリックしてコピー">ec_p_add(A, B, p, P, Q)</code></td><td>素有限体 $\mathbb{F}_p$ 上の楕円曲線群における点加算 $P + Q$（$\pmod p$ の有理逆元とChord and Tangent幾何演算、単位元・無限遠点 <code class="clickable-code" data-copy="O" title="クリックしてコピー">O</code> 対応）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="ec_p_mul" title="クリックしてコピー">ec_p_mul</code></td><td class="col-operator"><code class="clickable-code" data-copy="ec_p_mul(A, B, p, n, P)" title="クリックしてコピー">ec_p_mul(A, B, p, n, P)</code></td><td>素有限体 $\mathbb{F}_p$ 上の楕円曲線群における点のスカラー倍算 $n P$（$\pmod p$ 上のDouble-and-Add高速累乗算）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="ec_rank_bound" title="クリックしてコピー">ec_rank_bound</code></td><td class="col-operator"><code class="clickable-code" data-copy="ec_rank_bound(A, B)" title="クリックしてコピー">ec_rank_bound(A, B)</code></td><td>有理数体上の楕円曲線 $y^2 = x^3 + Ax + B$ に対し、有理2等分点を用いた2降下法（2-isogeny descent）によりセルマー群次元を算定し、モーデル・ヴェイユ階数の保証区間 $[r_{\text{lower}}, r_{\text{upper}}]$ を決定論的に算出</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="ec_generators" title="クリックしてコピー">ec_generators</code></td><td class="col-operator"><code class="clickable-code" data-copy="ec_generators(A, B)" title="クリックしてコピー">ec_generators(A, B)</code></td><td>2降下法の等質空間有理点探索により得られた無限位数の独立有理点集合（階数下限を成す自由部分群の生成元）を抽出</td></tr></tbody></table></div><h3 class="dads-h3">10. ビジュアル・検証ツール</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">関数</th><th scope="col">書式・例</th><th scope="col">説明</th></tr></thead><tbody><tr><td class="col-operator"><code class="clickable-code" data-copy="verify" title="クリックしてコピー">verify</code></td><td class="col-operator"><code class="clickable-code" data-copy="verify(integrate(1/(x^2+1), x), atan(x))" title="クリックしてコピー">verify(integrate(1/(x^2+1), x), atan(x))</code></td><td>2つの式の代数的同値性を独立検証し、代数的証明書（Certificate）を発行</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="plot" title="クリックしてコピー">plot</code></td><td class="col-operator"><code class="clickable-code" data-copy="plot(sin(x), [-pi, pi])" title="クリックしてコピー">plot(sin(x), [-pi, pi])</code></td><td>Braille 2×4 サブピクセル高解像度ターミナルプロット（零点・極値自動検出・特異点漸近線偽結合防止）</td></tr></tbody></table></div><h3 class="dads-h3">11. 格子基底縮小・代数的整数関係 (LLL)</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">関数</th><th scope="col">書式・例</th><th scope="col">説明</th></tr></thead><tbody><tr><td class="col-operator"><code class="clickable-code" data-copy="lll" title="クリックしてコピー">lll</code></td><td class="col-operator"><code class="clickable-code" data-copy="lll([[1, -1, 3], [1, 0, 5], [1, 2, 6]])" title="クリックしてコピー">lll([[1, -1, 3], [1, 0, 5], [1, 2, 6]])</code></td><td>Lenstra–Lenstra–Lovász (1982) 格子基底縮小アルゴリズムによる簡約基底の厳密有理数算定</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="find_min_poly" title="クリックしてコピー">find_min_poly</code></td><td class="col-operator"><code class="clickable-code" data-copy="find_min_poly(sqrt(2) + sqrt(3), 4)" title="クリックしてコピー">find_min_poly(sqrt(2) + sqrt(3), 4)</code></td><td>LLL格子縮小を用いた代数的数の有理数係数最小多項式（Minimal Polynomial）の完全逆算</td></tr></tbody></table></div><h3 class="dads-h3">12. p進数演算・局所代数・ヘンゼル補題</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">関数</th><th scope="col">書式・例</th><th scope="col">説明</th></tr></thead><tbody><tr><td class="col-operator"><code class="clickable-code" data-copy="padic_val" title="クリックしてコピー">padic_val</code></td><td class="col-operator"><code class="clickable-code" data-copy="padic_val(50, 5)" title="クリックしてコピー">padic_val(50, 5)</code></td><td>有理数 $x$ に対する素数 $p$ を底とする $p$進付値 $v_p(x) \in \mathbb{Z}$ の完全厳密計算（$x=0$ は無限大）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="padic_norm" title="クリックしてコピー">padic_norm</code></td><td class="col-operator"><code class="clickable-code" data-copy="padic_norm(3/20, 2)" title="クリックしてコピー">padic_norm(3/20, 2)</code></td><td>有理数 $x$ に対する超距離ノルム $|x|_p = p^{-v_p(x)}$ の完全厳密有理数（<code class="clickable-code" data-copy="big.Rat" title="クリックしてコピー">big.Rat</code>）計算</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="padic_expand" title="クリックしてコピー">padic_expand</code></td><td class="col-operator"><code class="clickable-code" data-copy="padic_expand(2/3, 5, 4)" title="クリックしてコピー">padic_expand(2/3, 5, 4)</code></td><td>有理数 $x$ の指定精度 $k$ における $p$進切断級数展開 $a_0 + a_1 p + a_2 p^2 + \dots + O(p^k)$ の文字列生成</td></tr></tbody></table></div><h3 class="dads-h3">13. 局所代数級数・特異点解析（ピュイズー級数）</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">関数</th><th scope="col">書式・例</th><th scope="col">説明</th></tr></thead><tbody><tr><td class="col-operator"><code class="clickable-code" data-copy="puiseux" title="クリックしてコピー">puiseux</code></td><td class="col-operator"><code class="clickable-code" data-copy="puiseux(y^2 - x^3, y, x, 3)" title="クリックしてコピー">puiseux(y^2 - x^3, y, x, 3)</code></td><td>代数方程式 $F(x, y) = 0$ または多項式に対し、ニュートン多角形アルゴリズム（Newton Polygon）を用いて特異点・分岐点周りのピュイズー代数的分数冪級数解 $y(x) = \sum c_k x^{p_k/q_k}$ の局所分枝を完全決定論的導出（デフォルト次数3）</td></tr></tbody></table></div><h3 class="dads-h3">14. ガロア理論・代数的根号可解性・アーベル・ルフィニ代数的証明書</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">関数</th><th scope="col">書式・例</th><th scope="col">説明</th></tr></thead><tbody><tr><td class="col-operator"><code class="clickable-code" data-copy="galois_group" title="クリックしてコピー">galois_group</code></td><td class="col-operator"><code class="clickable-code" data-copy="galois_group(x^3 - 2)" title="クリックしてコピー">galois_group(x^3 - 2)</code> / <code class="clickable-code" data-copy="galois_group(p, x)" title="クリックしてコピー">galois_group(p, x)</code></td><td>有理数体 $\mathbb{Q}$ 上の次数5以下の多項式に対するガロア群 $\mathrm{Gal}(f/\mathbb{Q})$ の決定論的算定（無平方分解・判別式・3次/6次レゾルベント根探索・Dedekind-Frobenius巡回置換型正の証拠により、$S_n, A_n, D_n, C_n, V_4, F_{20}$ などの置換群構造を同型判定・特定）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="is_solvable_by_radicals" title="クリックしてコピー">is_solvable_by_radicals</code></td><td class="col-operator"><code class="clickable-code" data-copy="is_solvable_by_radicals(x^5 - 4*x + 2)" title="クリックしてコピー">is_solvable_by_radicals(x^5 - 4*x + 2)</code></td><td>ガロアの基本定理に基づく多項式方程式の代数的根号可解性の決定論的判定。可解群の場合は <code class="clickable-code" data-copy="true" title="クリックしてコピー">true</code>、非可解（$A_5, S_5$）の場合は <code class="clickable-code" data-copy="false" title="クリックしてコピー">false</code> を返し、<code class="clickable-code" data-copy="--verify" title="クリックしてコピー">--verify</code> 時には独立検証可能なアーベル・ルフィニ代数的不可解性証明書（Abel-Ruffini Impossibility Certificate IR）、<code class="clickable-code" data-copy="--lean" title="クリックしてコピー">--lean</code> 時には Lean 4（Mathlib4）形式の反証不可能定理コードを出力</td></tr></tbody></table></div><h3 class="dads-h3">15. 自己検証証明書 &amp; 形式証明基盤（ProofTrace / Explain / Verify / Lean 4）</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">機能・オプション</th><th scope="col">書式・例</th><th scope="col">説明</th></tr></thead><tbody><tr><td><code class="clickable-code" data-copy="ProofTrace" title="クリックしてコピー">ProofTrace</code></td><td class="col-operator">内部データ構造</td><td>計算過程の各ステップ（Before/After、適用規則、残差式、検証状態）を保持するデータ構造。途中式表示、逆算検算、Lean 4 証明コード生成の共通表現として機能</td></tr><tr><td><code class="clickable-code" data-copy="--explain" title="クリックしてコピー">--explain</code> / <code class="clickable-code" data-copy="explain" title="クリックしてコピー">explain</code> / <code class="clickable-code" data-copy="steps" title="クリックしてコピー">steps</code></td><td class="col-operator"><code class="clickable-code" data-copy="ihd --explain &quot;1/(sqrt(2)+1)&quot;" title="クリックしてコピー">ihd --explain &quot;1/(sqrt(2)+1)&quot;</code></td><td>導出ステップ列に基づき、代数的項書き換え（二重根号分解、有理化、因数分解、微分則等）をツリー形式で表示</td></tr><tr><td><code class="clickable-code" data-copy="--verify" title="クリックしてコピー">--verify</code> / <code class="clickable-code" data-copy="verify" title="クリックしてコピー">verify</code></td><td class="col-operator"><code class="clickable-code" data-copy="ihd --verify &quot;factor(x^2 - 1)&quot;" title="クリックしてコピー">ihd --verify &quot;factor(x^2 - 1)&quot;</code></td><td>各ステップや結果に対し、定義式や導関数に基づく逆算検算を行い、残差が0であることを確認</td></tr><tr><td><code class="clickable-code" data-copy="--certificate" title="クリックしてコピー">--certificate</code></td><td class="col-operator"><code class="clickable-code" data-copy="ihd --certificate [file] &quot;factor(x^2 - 1)&quot;" title="クリックしてコピー">ihd --certificate [file] &quot;factor(x^2 - 1)&quot;</code></td><td>計算結果と導出ステップ列を証明書 JSON（スキーマ <code class="clickable-code" data-copy="ihd-proof-trace-v1" title="クリックしてコピー">ihd-proof-trace-v1</code>）として出力またはファイルへ保存</td></tr><tr><td><code class="clickable-code" data-copy="--replay" title="クリックしてコピー">--replay</code></td><td class="col-operator"><code class="clickable-code" data-copy="ihd --replay cert.json" title="クリックしてコピー">ihd --replay cert.json</code></td><td>保存された証明書 JSON を読み込み、各ステップの残差が0かを再検証</td></tr><tr><td><code class="clickable-code" data-copy="--micro-verifier" title="クリックしてコピー">--micro-verifier</code></td><td class="col-operator"><code class="clickable-code" data-copy="ihd --micro-verifier &gt; micro_verifier.go" title="クリックしてコピー">ihd --micro-verifier &gt; micro_verifier.go</code></td><td>Go の標準ライブラリのみで動作する検証用コードを出力。証明書 JSON の残差検証を単体で実行可能</td></tr><tr><td><code class="clickable-code" data-copy="--lean" title="クリックしてコピー">--lean</code> / <code class="clickable-code" data-copy="--lean-file" title="クリックしてコピー">--lean-file</code></td><td class="col-operator"><code class="clickable-code" data-copy="ihd --lean &quot;factor(x^2 - 1)&quot;" title="クリックしてコピー">ihd --lean &quot;factor(x^2 - 1)&quot;</code> / <code class="clickable-code" data-copy="ihd --lean-file p.lean &quot;factor(x^2 - 1)&quot;" title="クリックしてコピー">ihd --lean-file p.lean &quot;factor(x^2 - 1)&quot;</code></td><td>計算結果や導出ステップを <strong>Lean 4（Mathlib4）</strong> の形式証明コード（<code class="clickable-code" data-copy="by ring" title="クリックしてコピー">by ring</code>, <code class="clickable-code" data-copy="by ext &lt;;&gt; fin_cases" title="クリックしてコピー">by ext &lt;;&gt; fin_cases</code>, <code class="clickable-code" data-copy="by repeat constructor &lt;;&gt; norm_num" title="クリックしてコピー">by repeat constructor &lt;;&gt; norm_num</code>, <code class="clickable-code" data-copy="by simp" title="クリックしてコピー">by simp</code> 等）として出力</td></tr><tr><td><code class="clickable-code" data-copy="--typst" title="クリックしてコピー">--typst</code> / <code class="clickable-code" data-copy="--format typst" title="クリックしてコピー">--format typst</code></td><td class="col-operator"><code class="clickable-code" data-copy="ihd --typst &quot;1/2 + sqrt(2)&quot;" title="クリックしてコピー">ihd --typst &quot;1/2 + sqrt(2)&quot;</code> / <code class="clickable-code" data-copy="ihd --format typst &quot;[[1, 2], [3, 4]]&quot;" title="クリックしてコピー">ihd --format typst &quot;[[1, 2], [3, 4]]&quot;</code></td><td>新世代組版システム <strong>Typst</strong> の数式モード記法（<code class="clickable-code" data-copy="$ ... $" title="クリックしてコピー">$ ... $</code>、分数 <code class="clickable-code" data-copy="/" title="クリックしてコピー">/</code>、根号 <code class="clickable-code" data-copy="sqrt(...)" title="クリックしてコピー">sqrt(...)</code>/<code class="clickable-code" data-copy="root(...)" title="クリックしてコピー">root(...)</code>、行列 <code class="clickable-code" data-copy="mat(...)" title="クリックしてコピー">mat(...)</code> 等）で出力</td></tr></tbody></table></div><h3 class="dads-h3">16. クリフォード幾何代数 &amp; 二進円分環・厳密量子回路等価性検証</h3><p class="body-p">直交対角計量 $(p, q, r)$（$p$ 個の正基底 $e_i^2 = +1$、$q$ 個の負基底 $e_i^2 = -1$、$r$ 個の退化・零基底 $e_i^2 = 0$）を持つ実クリフォード幾何代数 $\mathrm{Cl}(p, q, r)$ の演算系、および二進円分環 $\mathbb{Z}[1/\sqrt{2}, i]$ 上の厳密量子等価性判定を提供します。小数は一切介入せず、有理数係数および代数体上で厳密に計算されます。</p><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">関数</th><th scope="col">書式・例</th><th scope="col">説明</th></tr></thead><tbody><tr><td class="col-operator"><code class="clickable-code" data-copy="clifford" title="クリックしてコピー">clifford</code></td><td class="col-operator"><code class="clickable-code" data-copy="clifford(e0 * e1 + e1 * e0, 3, 0)" title="クリックしてコピー">clifford(e0 * e1 + e1 * e0, 3, 0)</code> / <code class="clickable-code" data-copy="clifford(e0 * e0, 3, 0)" title="クリックしてコピー">clifford(e0 * e0, 3, 0)</code></td><td>計量 $(p, q, [r])$ におけるクリフォード幾何積およびマルチベクトルの代数展開・正準簡約（基底自乗簡約・反交換関係整理）。基底記号は <code class="clickable-code" data-copy="e0" title="クリックしてコピー">e0</code>, <code class="clickable-code" data-copy="e1" title="クリックしてコピー">e1</code>, <code class="clickable-code" data-copy="e2" title="クリックしてコピー">e2</code> ... を使用</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="clifford_wedge" title="クリックしてコピー">clifford_wedge</code></td><td class="col-operator"><code class="clickable-code" data-copy="clifford_wedge(e0, e1, 3, 0)" title="クリックしてコピー">clifford_wedge(e0, e1, 3, 0)</code></td><td>グラスマン外積（ウェッジ積） $A \wedge B$。計量 $(p, q, [r])$ 上で完全反对称化された次数ブレードを算出</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="clifford_contract" title="クリックしてコピー">clifford_contract</code></td><td class="col-operator"><code class="clickable-code" data-copy="clifford_contract(e0, e0, &quot;left&quot;, 3, 0)" title="クリックしてコピー">clifford_contract(e0, e0, &quot;left&quot;, 3, 0)</code></td><td>左右縮約（内積拡張）。第3引数で方向（<code class="clickable-code" data-copy="&quot;left&quot;" title="クリックしてコピー">&quot;left&quot;</code>: 左縮約 $\lrcorner$、<code class="clickable-code" data-copy="&quot;right&quot;" title="クリックしてコピー">&quot;right&quot;</code>: 右縮約 $\llcorner$）を指定</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="clifford_dual" title="クリックしてコピー">clifford_dual</code></td><td class="col-operator"><code class="clickable-code" data-copy="clifford_dual(e3, 3, 0, 1)" title="クリックしてコピー">clifford_dual(e3, 3, 0, 1)</code></td><td>ポアンカレ補集合双対（Poincaré Complement Dual）。擬スカラー単位ブレード $I$ の縮約による双対マルチベクトルの導出（退化計量 $r > 0$ にも完全対応）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="quantum_equiv" title="クリックしてコピー">quantum_equiv</code></td><td class="col-operator"><code class="clickable-code" data-copy="quantum_equiv(c1, c2, n, [k])" title="クリックしてコピー">quantum_equiv(c1, c2, n, [k])</code></td><td>二進円分環 $\mathbb{Z}[1/\sqrt{2}, i]$ を用いた小数ゼロの Clifford+T 量子回路厳密等価性判定。$n$ 量子ビット回路 $c1, c2$ が大域位相 $\omega^k$（$\omega = e^{i\pi/4}$）を除いて等価であるかを判定。不等価時は反例基底状態（Witness State）を出力</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="quantum_eval" title="クリックしてコピー">quantum_eval</code></td><td class="col-operator"><code class="clickable-code" data-copy="quantum_eval(circuit, numQubits)" title="クリックしてコピー">quantum_eval(circuit, numQubits)</code></td><td>Clifford+T 量子回路の記号ユニタリ行列を二進円分環係数で厳密シミュレーション・導出</td></tr></tbody></table></div><h3 class="dads-h3">17. CAS反復制御構文 &amp; 任意基数進数変換</h3><p class="body-p">リスト内包表記、総乗計算、手続き型反復、および任意基数（2〜64進法）リテラル・進数変換を提供します。</p><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">関数・構文</th><th scope="col">書式・例</th><th scope="col">説明</th></tr></thead><tbody><tr><td class="col-operator"><code class="clickable-code" data-copy="table" title="クリックしてコピー">table</code></td><td class="col-operator"><code class="clickable-code" data-copy="table(x^2, x, 1, 5)" title="クリックしてコピー">table(x^2, x, 1, 5)</code> / <code class="clickable-code" data-copy="table(i + j, i, 1, 3, 1, j, 1, 2)" title="クリックしてコピー">table(i + j, i, 1, 3, 1, j, 1, 2)</code></td><td>Mathematica 準拠のリスト内包表記・反復リスト生成。引数 <code class="clickable-code" data-copy="table(expr, var, start, end, [step])" title="クリックしてコピー">table(expr, var, start, end, [step])</code> による動的スコープ反復</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="product" title="クリックしてコピー">product</code></td><td class="col-operator"><code class="clickable-code" data-copy="product(k, k, 1, 5)" title="クリックしてコピー">product(k, k, 1, 5)</code> / <code class="clickable-code" data-copy="product(2*k + 1, k, 0, 4)" title="クリックしてコピー">product(2*k + 1, k, 0, 4)</code></td><td>離散総乗（乗乗計算 $\prod_{k=\text{start}}^{\text{end}} \text{expr}$）。動的スコープ保護およびゼロ短絡評価対応</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="for" title="クリックしてコピー">for</code></td><td class="col-operator"><code class="clickable-code" data-copy="for(i, 1, 5, s = s + i)" title="クリックしてコピー">for(i, 1, 5, s = s + i)</code></td><td>手続き型反復ループ。引数 <code class="clickable-code" data-copy="for(var, start, end, [step], body)" title="クリックしてコピー">for(var, start, end, [step], body)</code> による順次実行（返却値は最終式の評価結果）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="to_base" title="クリックしてコピー">to_base</code></td><td class="col-operator"><code class="clickable-code" data-copy="to_base(255, 16)" title="クリックしてコピー">to_base(255, 16)</code> / <code class="clickable-code" data-copy="to_base(1/3, 2)" title="クリックしてコピー">to_base(1/3, 2)</code></td><td>任意基数（2〜64）への基底変換文字列生成。有理数の場合は循環小数表記を出力</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="from_base" title="クリックしてコピー">from_base</code></td><td class="col-operator"><code class="clickable-code" data-copy="from_base(&quot;FF&quot;, 16)" title="クリックしてコピー">from_base(&quot;FF&quot;, 16)</code> / <code class="clickable-code" data-copy="from_base(&quot;101.1&quot;, 2)" title="クリックしてコピー">from_base(&quot;101.1&quot;, 2)</code></td><td>任意基数（2〜64）の文字列から厳密有理数・整数への復元</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="bin" title="クリックしてコピー">bin</code>, <code class="clickable-code" data-copy="oct" title="クリックしてコピー">oct</code>, <code class="clickable-code" data-copy="hex" title="クリックしてコピー">hex</code></td><td class="col-operator"><code class="clickable-code" data-copy="bin(42)" title="クリックしてコピー">bin(42)</code>, <code class="clickable-code" data-copy="oct(42)" title="クリックしてコピー">oct(42)</code>, <code class="clickable-code" data-copy="hex(255)" title="クリックしてコピー">hex(255)</code></td><td>2進数、8進数、16進数への標準表記変換ショートカット</td></tr><tr><td class="col-operator">基数リテラル</td><td class="col-operator"><code class="clickable-code" data-copy="16^^FF" title="クリックしてコピー">16^^FF</code>, <code class="clickable-code" data-copy="2^^1011" title="クリックしてコピー">2^^1011</code>, <code class="clickable-code" data-copy="0x1A" title="クリックしてコピー">0x1A</code>, <code class="clickable-code" data-copy="0b101" title="クリックしてコピー">0b101</code></td><td>入力字句解析器による任意進数リテラル記法（$2 \le \text{base} \le 64$）</td></tr></tbody></table></div><h3 class="dads-h3">18. REPL 構文ハイライト・テーマ・対話環境コマンド</h3><p class="body-p">対話型 REPL セッション内でリアルタイムに実行できる制御コマンド、カラーパレットテーマ、および構文ハイライト機能です。</p><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">コマンド / 設定</th><th scope="col">書式・例</th><th scope="col">説明</th></tr></thead><tbody><tr><td><code class="clickable-code" data-copy="theme" title="クリックしてコピー">theme</code></td><td class="col-operator"><code class="clickable-code" data-copy="theme" title="クリックしてコピー">theme</code></td><td>現在適用されているカラーテーマ（<code class="clickable-code" data-copy="dark" title="クリックしてコピー">dark</code> / <code class="clickable-code" data-copy="light" title="クリックしてコピー">light</code> / <code class="clickable-code" data-copy="none" title="クリックしてコピー">none</code>）を表示</td></tr><tr><td><code class="clickable-code" data-copy="theme dark" title="クリックしてコピー">theme dark</code></td><td class="col-operator"><code class="clickable-code" data-copy="theme dark" title="クリックしてコピー">theme dark</code></td><td>暗め背景端末向けカラーパレット（明るいシアン・マゼンタ・グリーン・ブルーのレインボー括弧、黄色数値、白演算子）へ切り替え、<code class="clickable-code" data-copy="~/.ihd/config.json" title="クリックしてコピー">~/.ihd/config.json</code> に永続化</td></tr><tr><td><code class="clickable-code" data-copy="theme light" title="クリックしてコピー">theme light</code></td><td class="col-operator"><code class="clickable-code" data-copy="theme light" title="クリックしてコピー">theme light</code></td><td>明るめ・白背景端末向け高コントラストパレット（濃い青・マゼンタ・緑・シアンのレインボー括弧、赤数値、黒演算子）へ切り替え、永続化</td></tr><tr><td><code class="clickable-code" data-copy="highlight" title="クリックしてコピー">highlight</code></td><td class="col-operator"><code class="clickable-code" data-copy="highlight" title="クリックしてコピー">highlight</code> / <code class="clickable-code" data-copy="color" title="クリックしてコピー">color</code></td><td>現在の構文ハイライト有効/無効ステータスを表示</td></tr><tr><td><code class="clickable-code" data-copy="highlight on" title="クリックしてコピー">highlight on</code> / <code class="clickable-code" data-copy="off" title="クリックしてコピー">off</code></td><td class="col-operator"><code class="clickable-code" data-copy="highlight on" title="クリックしてコピー">highlight on</code> / <code class="clickable-code" data-copy="highlight off" title="クリックしてコピー">highlight off</code></td><td>リアルタイム構文ハイライトおよびネスト深度別レインボー括弧の有効化・無効化を動的切り替え</td></tr><tr><td><code class="clickable-code" data-copy="warn-loop" title="クリックしてコピー">warn-loop</code></td><td class="col-operator"><code class="clickable-code" data-copy="warn-loop &lt;N&gt;" title="クリックしてコピー">warn-loop &lt;N&gt;</code> / <code class="clickable-code" data-copy="warn-loop" title="クリックしてコピー">warn-loop</code></td><td>反復ループの非破壊警告ステップ数を指定・表示し、<code class="clickable-code" data-copy="~/.ihd/config.json" title="クリックしてコピー">~/.ihd/config.json</code> に永続化（デフォルト: 100,000）</td></tr><tr><td><code class="clickable-code" data-copy="max-loop" title="クリックしてコピー">max-loop</code></td><td class="col-operator"><code class="clickable-code" data-copy="max-loop &lt;N&gt;" title="クリックしてコピー">max-loop &lt;N&gt;</code> / <code class="clickable-code" data-copy="max-loop" title="クリックしてコピー">max-loop</code></td><td>反復ループの最大安全上限ステップ数を指定・表示し、<code class="clickable-code" data-copy="~/.ihd/config.json" title="クリックしてコピー">~/.ihd/config.json</code> に永続化（デフォルト: -1:無制限）</td></tr><tr><td><code class="clickable-code" data-copy="config loop" title="クリックしてコピー">config loop</code></td><td class="col-operator"><code class="clickable-code" data-copy="config loop" title="クリックしてコピー">config loop</code></td><td>現在の反復ループ警告閾値および最大安全上限の構成値を表示</td></tr><tr><td><code class="clickable-code" data-copy="vars" title="クリックしてコピー">vars</code></td><td class="col-operator"><code class="clickable-code" data-copy="vars" title="クリックしてコピー">vars</code></td><td>現在の REPL セッション環境に束縛されている変数・定数の一覧を表示</td></tr><tr><td><code class="clickable-code" data-copy="help" title="クリックしてコピー">help</code></td><td class="col-operator"><code class="clickable-code" data-copy="help" title="クリックしてコピー">help</code></td><td>REPL 内簡易ヘルプおよび主要コマンド一覧を表示</td></tr><tr><td><code class="clickable-code" data-copy="exit" title="クリックしてコピー">exit</code> / <code class="clickable-code" data-copy="quit" title="クリックしてコピー">quit</code></td><td class="col-operator"><code class="clickable-code" data-copy="exit" title="クリックしてコピー">exit</code> / <code class="clickable-code" data-copy="quit" title="クリックしてコピー">quit</code> / <code class="clickable-code" data-copy="Ctrl+D" title="クリックしてコピー">Ctrl+D</code></td><td>REPL セッションを終了</td></tr><tr><td>CLI オプション</td><td class="col-operator"><code class="clickable-code" data-copy="ihd --theme light" title="クリックしてコピー">ihd --theme light</code> / <code class="clickable-code" data-copy="--no-color" title="クリックしてコピー">--no-color</code> / <code class="clickable-code" data-copy="--warn-loop &lt;N&gt;" title="クリックしてコピー">--warn-loop &lt;N&gt;</code> / <code class="clickable-code" data-copy="--max-loop &lt;N&gt;" title="クリックしてコピー">--max-loop &lt;N&gt;</code></td><td>起動時のテーマ指定、カラー無効化、反復警告・最大上限指定フラグ</td></tr></tbody></table></div><h3 class="dads-h3">19. 多変数多項式イデアル・準素分解 (GTZ法)</h3><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">関数</th><th scope="col">書式・例</th><th scope="col">説明</th></tr></thead><tbody><tr><td class="col-operator"><code class="clickable-code" data-copy="primary_decomposition" title="クリックしてコピー">primary_decomposition</code></td><td class="col-operator"><code class="clickable-code" data-copy="primary_decomposition([x^2 - 1, y], [x, y])" title="クリックしてコピー">primary_decomposition([x^2 - 1, y], [x, y])</code></td><td>多変数多項式イデアル $I = \langle p_1, \dots \rangle$ に対し、Gianni-Trager-Zacharias (GTZ) 法により準素分解 $I = \bigcap Q_i$ を計算し、各準素成分 $Q_i$ とその素イデアル $P_i = \sqrt{Q_i}$ のペアリスト <code class="clickable-code" data-copy="[[Q_1, P_1], ...]" title="クリックしてコピー">[[Q_1, P_1], ...]</code> を返却。第3引数で単項式順序（<code class="clickable-code" data-copy="&quot;grevlex&quot;" title="クリックしてコピー">&quot;grevlex&quot;</code> または <code class="clickable-code" data-copy="&quot;lex&quot;" title="クリックしてコピー">&quot;lex&quot;</code>）を指定可能</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="ideal_radical" title="クリックしてコピー">ideal_radical</code></td><td class="col-operator"><code class="clickable-code" data-copy="ideal_radical([x^2, x*y], [x, y])" title="クリックしてコピー">ideal_radical([x^2, x*y], [x, y])</code></td><td>イデアル $I$ の根基イデアル $\sqrt{I}$ の生成元リストを計算（零次元成分にはSeidenbergの補題を適用）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="ideal_dimension" title="クリックしてコピー">ideal_dimension</code></td><td class="col-operator"><code class="clickable-code" data-copy="ideal_dimension([x*y, x*z], [x, y, z])" title="クリックしてコピー">ideal_dimension([x*y, x*z], [x, y, z])</code></td><td>グレブナー基底の先頭単項式イデアルから最大独立変数集合を求め、代数多様体（イデアル）のKrull次元を整数で返却</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="ideal_intersection" title="クリックしてコピー">ideal_intersection</code></td><td class="col-operator"><code class="clickable-code" data-copy="ideal_intersection([x], [y], [x, y])" title="クリックしてコピー">ideal_intersection([x], [y], [x, y])</code></td><td>2つのイデアルの交わり $I \cap J$ を補助変数消去法により計算</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="ideal_colon" title="クリックしてコピー">ideal_colon</code></td><td class="col-operator"><code class="clickable-code" data-copy="ideal_colon([x^2], x, [x])" title="クリックしてコピー">ideal_colon([x^2], x, [x])</code></td><td>多項式 $f$ による商イデアル（コロンイデアル） $I : f = \{ g \mid f g \in I \}$ を計算</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="ideal_saturation" title="クリックしてコピー">ideal_saturation</code></td><td class="col-operator"><code class="clickable-code" data-copy="ideal_saturation([x^2], x, [x])" title="クリックしてコピー">ideal_saturation([x^2], x, [x])</code></td><td>多項式 $f$ による飽和イデアル $I : f^\infty$ を逐次計算し、安定化指数 $m$ で終端した生成元リストを返却</td></tr></tbody></table></div><h3 class="dads-h3">20. コレクション・リスト操作言語拡張 &amp; 第一級ラムダ式</h3><p class="body-p">リスト・コレクションに対するシーケンス生成、高階関数適用、述語フィルタリング、第一級ラムダ式、およびインデックス・スライス構文を提供します。</p><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">関数・構文</th><th scope="col">書式・例</th><th scope="col">説明</th></tr></thead><tbody><tr><td class="col-operator"><code class="clickable-code" data-copy="range" title="クリックしてコピー">range</code></td><td class="col-operator"><code class="clickable-code" data-copy="range(5)" title="クリックしてコピー">range(5)</code> / <code class="clickable-code" data-copy="range(2, 6)" title="クリックしてコピー">range(2, 6)</code> / <code class="clickable-code" data-copy="range(0, 1, 1/3)" title="クリックしてコピー">range(0, 1, 1/3)</code></td><td>等差数列のリストを生成。引数 <code class="clickable-code" data-copy="range(stop)" title="クリックしてコピー">range(stop)</code> または <code class="clickable-code" data-copy="range(start, stop, [step])" title="クリックしてコピー">range(start, stop, [step])</code>。step には整数および有理数分数を指定可能（step = 0 はエラー）</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="map" title="クリックしてコピー">map</code></td><td class="col-operator"><code class="clickable-code" data-copy="map(sin, [0, pi/2, pi])" title="クリックしてコピー">map(sin, [0, pi/2, pi])</code> / <code class="clickable-code" data-copy="map(lambda(x, x^2), range(5))" title="クリックしてコピー">map(lambda(x, x^2), range(5))</code></td><td>コレクションの各要素に関数またはラムダ式を適用した新しいリストを返却。引数 <code class="clickable-code" data-copy="map(fn, list)" title="クリックしてコピー">map(fn, list)</code>。走査時は親環境変数を保護するシャドウスコープを適用</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="filter" title="クリックしてコピー">filter</code></td><td class="col-operator"><code class="clickable-code" data-copy="filter(is_prime, range(1, 11))" title="クリックしてコピー">filter(is_prime, range(1, 11))</code> / <code class="clickable-code" data-copy="filter(lambda(x, x &gt; 2), [1, 2, 3, 4])" title="クリックしてコピー">filter(lambda(x, x &gt; 2), [1, 2, 3, 4])</code></td><td>述語関数または真偽値を返すラムダ式を満たす要素のみを抽出したリストを返却。引数 <code class="clickable-code" data-copy="filter(pred, list)" title="クリックしてコピー">filter(pred, list)</code></td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="lambda" title="クリックしてコピー">lambda</code></td><td class="col-operator"><code class="clickable-code" data-copy="lambda(x, x^2)" title="クリックしてコピー">lambda(x, x^2)</code> / <code class="clickable-code" data-copy="lambda([x, y], x + y)" title="クリックしてコピー">lambda([x, y], x + y)</code></td><td>第一級無名関数（ラムダ式）を定義。引数 <code class="clickable-code" data-copy="lambda(param, body)" title="クリックしてコピー">lambda(param, body)</code> または <code class="clickable-code" data-copy="lambda([p1, p2, ...], body)" title="クリックしてコピー">lambda([p1, p2, ...], body)</code>。即時呼び出し <code class="clickable-code" data-copy="lambda(x, x+1)(5)" title="クリックしてコピー">lambda(x, x+1)(5)</code> や変数代入後の呼び出し <code class="clickable-code" data-copy="f = lambda(x, x^2); f(3)" title="クリックしてコピー">f = lambda(x, x^2); f(3)</code> に対応</td></tr><tr><td class="col-operator">単一インデックス</td><td class="col-operator"><code class="clickable-code" data-copy="list[0]" title="クリックしてコピー">list[0]</code>, <code class="clickable-code" data-copy="list[-1]" title="クリックしてコピー">list[-1]</code></td><td>0-indexed による要素取得。負のインデックスは末尾からの相対位置（$-1$ は末尾要素）。範囲外アクセス時は IndexError を送出</td></tr><tr><td class="col-operator">スライス記法</td><td class="col-operator"><code class="clickable-code" data-copy="list[start:stop]" title="クリックしてコピー">list[start:stop]</code>, <code class="clickable-code" data-copy="list[start:stop:step]" title="クリックしてコピー">list[start:stop:step]</code></td><td>CPython <code class="clickable-code" data-copy="PySlice_GetIndicesEx" title="クリックしてコピー">PySlice_GetIndicesEx</code> 準拠の部分リスト抽出。全8パターン（<code class="clickable-code" data-copy="[:]" title="クリックしてコピー">[:]</code>, <code class="clickable-code" data-copy="[:end]" title="クリックしてコピー">[:end]</code>, <code class="clickable-code" data-copy="[start:]" title="クリックしてコピー">[start:]</code>, <code class="clickable-code" data-copy="[start:end]" title="クリックしてコピー">[start:end]</code>, <code class="clickable-code" data-copy="[::step]" title="クリックしてコピー">[::step]</code>, <code class="clickable-code" data-copy="[start::step]" title="クリックしてコピー">[start::step]</code>, <code class="clickable-code" data-copy="[:end:step]" title="クリックしてコピー">[:end:step]</code>, <code class="clickable-code" data-copy="[start:end:step]" title="クリックしてコピー">[start:end:step]</code>）に対応。負のインデックス・逆順ステップ（step < 0）および範囲外クリッピングに対応（step = 0 はエラー）</td></tr></tbody></table></div><h3 class="dads-h3">21. 物理単位計算 &amp; 次元解析 (SI基本単位・組立単位・単位換算)</h3><p class="body-p">有理数体 $\mathbb{Q}$ 上の7次元ベクトル空間（SI基本7単位）に基づき、浮動小数点数を使わずに物理単位の加減乗除、単位換算、および次元整合性検証を行います。</p><p class="body-p">#### 対応単位・接頭辞</p><p class="body-p">* <strong>SI基本7単位</strong>: <code class="clickable-code" data-copy="m" title="クリックしてコピー">m</code> (長さ), <code class="clickable-code" data-copy="kg" title="クリックしてコピー">kg</code> (質量), <code class="clickable-code" data-copy="s" title="クリックしてコピー">s</code> (時間), <code class="clickable-code" data-copy="A" title="クリックしてコピー">A</code> (電流), <code class="clickable-code" data-copy="K" title="クリックしてコピー">K</code> (温度), <code class="clickable-code" data-copy="mol" title="クリックしてコピー">mol</code> (物質量), <code class="clickable-code" data-copy="cd" title="クリックしてコピー">cd</code> (光度)</p><p class="body-p">* <strong>組立単位</strong>: <code class="clickable-code" data-copy="N" title="クリックしてコピー">N</code> (力), <code class="clickable-code" data-copy="J" title="クリックしてコピー">J</code> (エネルギー), <code class="clickable-code" data-copy="W" title="クリックしてコピー">W</code> (仕事率), <code class="clickable-code" data-copy="Pa" title="クリックしてコピー">Pa</code> (圧力), <code class="clickable-code" data-copy="Hz" title="クリックしてコピー">Hz</code> (周波数), <code class="clickable-code" data-copy="C" title="クリックしてコピー">C</code> (電荷), <code class="clickable-code" data-copy="V" title="クリックしてコピー">V</code> (電位差), <code class="clickable-code" data-copy="ohm" title="クリックしてコピー">ohm</code> (電気抵抗), <code class="clickable-code" data-copy="F" title="クリックしてコピー">F</code> (静電容量), <code class="clickable-code" data-copy="S" title="クリックしてコピー">S</code> (コンダクタンス), <code class="clickable-code" data-copy="Wb" title="クリックしてコピー">Wb</code> (磁束), <code class="clickable-code" data-copy="T" title="クリックしてコピー">T</code> (磁束密度), <code class="clickable-code" data-copy="H" title="クリックしてコピー">H</code> (インダクタンス)</p><p class="body-p">* <strong>SI併用単位</strong>: <code class="clickable-code" data-copy="min" title="クリックしてコピー">min</code> (分, $60\text{ s}$), <code class="clickable-code" data-copy="h" title="クリックしてコピー">h</code> / <code class="clickable-code" data-copy="hour" title="クリックしてコピー">hour</code> (時, $3600\text{ s}$), <code class="clickable-code" data-copy="d" title="クリックしてコピー">d</code> / <code class="clickable-code" data-copy="day" title="クリックしてコピー">day</code> (日, $86400\text{ s}$), <code class="clickable-code" data-copy="g" title="クリックしてコピー">g</code> (グラム, $1/1000\text{ kg}$), <code class="clickable-code" data-copy="t" title="クリックしてコピー">t</code> (トン, $1000\text{ kg}$), <code class="clickable-code" data-copy="L" title="クリックしてコピー">L</code> / <code class="clickable-code" data-copy="l" title="クリックしてコピー">l</code> (リットル, $1/1000\text{ m}^3$)</p><p class="body-p">* <strong>SI接頭辞</strong>: <code class="clickable-code" data-copy="Y" title="クリックしてコピー">Y</code> ($10^{24}$), <code class="clickable-code" data-copy="Z" title="クリックしてコピー">Z</code> ($10^{21}$), <code class="clickable-code" data-copy="E" title="クリックしてコピー">E</code> ($10^{18}$), <code class="clickable-code" data-copy="P" title="クリックしてコピー">P</code> ($10^{15}$), <code class="clickable-code" data-copy="T" title="クリックしてコピー">T</code> ($10^{12}$), <code class="clickable-code" data-copy="G" title="クリックしてコピー">G</code> ($10^9$), <code class="clickable-code" data-copy="M" title="クリックしてコピー">M</code> ($10^6$), <code class="clickable-code" data-copy="k" title="クリックしてコピー">k</code> ($10^3$), <code class="clickable-code" data-copy="h" title="クリックしてコピー">h</code> ($10^2$), <code class="clickable-code" data-copy="da" title="クリックしてコピー">da</code> ($10^1$), <code class="clickable-code" data-copy="d" title="クリックしてコピー">d</code> ($10^{-1}$), <code class="clickable-code" data-copy="c" title="クリックしてコピー">c</code> ($10^{-2}$), <code class="clickable-code" data-copy="m" title="クリックしてコピー">m</code> ($10^{-3}$), <code class="clickable-code" data-copy="u" title="クリックしてコピー">u</code> ($10^{-6}$), <code class="clickable-code" data-copy="n" title="クリックしてコピー">n</code> ($10^{-9}$), <code class="clickable-code" data-copy="p" title="クリックしてコピー">p</code> ($10^{-12}$), <code class="clickable-code" data-copy="f" title="クリックしてコピー">f</code> ($10^{-15}$), <code class="clickable-code" data-copy="a" title="クリックしてコピー">a</code> ($10^{-18}$)</p><div class="table-container"><table class="dads-table"><thead><tr><th scope="col">関数・構文</th><th scope="col">書式・例</th><th scope="col">説明</th></tr></thead><tbody><tr><td class="col-operator"><code class="clickable-code" data-copy="[unit]" title="クリックしてコピー">[unit]</code> 記法</td><td class="col-operator"><code class="clickable-code" data-copy="10 [m/s]" title="クリックしてコピー">10 [m/s]</code>, <code class="clickable-code" data-copy="5 [kg*m/s^2]" title="クリックしてコピー">5 [kg*m/s^2]</code>, <code class="clickable-code" data-copy="(1/4) [h]" title="クリックしてコピー">(1/4) [h]</code></td><td>数値または数式に単位を付与。単位式内では乗算 <code class="clickable-code" data-copy="*" title="クリックしてコピー">*</code>、除算 <code class="clickable-code" data-copy="/" title="クリックしてコピー">/</code>、累乗 <code class="clickable-code" data-copy="^" title="クリックしてコピー">^</code> が使用可能。分数の場合は <code class="clickable-code" data-copy="(1/4) [h]" title="クリックしてコピー">(1/4) [h]</code> のように括弧で括る</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="unit" title="クリックしてコピー">unit</code></td><td class="col-operator"><code class="clickable-code" data-copy="unit(m/s)" title="クリックしてコピー">unit(m/s)</code>, <code class="clickable-code" data-copy="unit(N)" title="クリックしてコピー">unit(N)</code></td><td>単位表現から値 1 の物理量を生成</td></tr><tr><td class="col-operator"><code class="clickable-code" data-copy="convert_unit" title="クリックしてコピー">convert_unit</code></td><td class="col-operator"><code class="clickable-code" data-copy="convert_unit(100 [km/h], m/s)" title="クリックしてコピー">convert_unit(100 [km/h], m/s)</code>, <code class="clickable-code" data-copy="convert_unit((1/4) [h], min)" title="クリックしてコピー">convert_unit((1/4) [h], min)</code></td><td>物理量を同一の次元を持つ目標単位へ厳密有理数比率で換算。次元が異なる場合はエラー</td></tr><tr><td class="col-operator">代数演算</td><td class="col-operator"><code class="clickable-code" data-copy="10 [m/s] * 5 [s]" title="クリックしてコピー">10 [m/s] * 5 [s]</code> $\to$ <code class="clickable-code" data-copy="50 [m]" title="クリックしてコピー">50 [m]</code>, <code class="clickable-code" data-copy="1 [km] - 200 [m]" title="クリックしてコピー">1 [km] - 200 [m]</code> $\to$ <code class="clickable-code" data-copy="4/5 [km]" title="クリックしてコピー">4/5 [km]</code></td><td>加減算時は次元が一致していることを検証。乗除算時は有理数次数ベクトルを加減算。すべての次数が0となった場合は通常数値へ自動縮約</td></tr><tr><td class="col-operator">超越関数ガード</td><td class="col-operator"><code class="clickable-code" data-copy="sin(10 [m])" title="クリックしてコピー">sin(10 [m])</code> $\to$ エラー</td><td><code class="clickable-code" data-copy="sin" title="クリックしてコピー">sin</code>, <code class="clickable-code" data-copy="cos" title="クリックしてコピー">cos</code>, <code class="clickable-code" data-copy="exp" title="クリックしてコピー">exp</code>, <code class="clickable-code" data-copy="ln" title="クリックしてコピー">ln</code> 等の初等超越関数に有次元の引数を渡すとエラーを返却</td></tr><tr><td class="col-operator">検証 (<code class="clickable-code" data-copy="--verify" title="クリックしてコピー">--verify</code>)</td><td class="col-operator"><code class="clickable-code" data-copy="ihd --verify &quot;convert_unit(100 [km/h], m/s)&quot;" title="クリックしてコピー">ihd --verify &quot;convert_unit(100 [km/h], m/s)&quot;</code></td><td>換算前後の物理量をSI基本単位に展開し、残差が0であることを独立検証</td></tr></tbody></table></div>
+        </div>
+      </details>
+    
+      </div>
+    </main>
+  </div>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // 1. トースト要素の準備
+    let toast = document.getElementById('copyToast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'copyToast';
+      toast.className = 'copy-toast';
+      toast.setAttribute('role', 'status');
+      toast.setAttribute('aria-live', 'polite');
+      toast.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="#98c379" aria-hidden="true"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg><span>クリップボードにコピーしました</span>';
+      document.body.appendChild(toast);
+    }
+
+    let toastTimer = null;
+    function showCopyToast(msg) {
+      if (msg) toast.querySelector('span').textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 1800);
+    }
+
+    // 2. コピー処理 (Clipboard API + フォールバック)
+    async function copyText(text) {
+      if (!text) return;
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const textarea = document.createElement('textarea');
+          textarea.value = text;
+          textarea.style.position = 'fixed';
+          textarea.style.opacity = '0';
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+        }
+        showCopyToast('コピーしました: ' + (text.length > 25 ? text.slice(0, 25) + '...' : text));
+      } catch (err) {
+        console.error('Copy failed:', err);
+      }
+    }
+
+    // 3. クリックコピーイベントの登録 (code.clickable-code)
+    document.querySelectorAll('code.clickable-code').forEach(el => {
+      el.addEventListener('click', () => {
+        const text = el.getAttribute('data-copy') || el.textContent.trim();
+        copyText(text);
+      });
+    });
+
+    // 4. アコーディオン一括開閉
+    const btnExpandAll = document.getElementById('btnExpandAll');
+    const btnCollapseAll = document.getElementById('btnCollapseAll');
+    const accordions = document.querySelectorAll('details.dads-accordion');
+
+    if (btnExpandAll) {
+      btnExpandAll.addEventListener('click', () => {
+        accordions.forEach(acc => acc.open = true);
+      });
+    }
+    if (btnCollapseAll) {
+      btnCollapseAll.addEventListener('click', () => {
+        accordions.forEach(acc => acc.open = false);
+      });
+    }
+
+    // 5. インクリメンタル検索
+    const searchInput = document.getElementById('searchInput');
+    const searchStatusBar = document.getElementById('searchStatusBar');
+    const searchResultText = document.getElementById('searchResultText');
+
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.trim().toLowerCase();
+        if (!query) {
+          accordions.forEach(acc => acc.style.display = '');
+          if (searchStatusBar) searchStatusBar.style.display = 'none';
+          return;
+        }
+
+        let hitCount = 0;
+        accordions.forEach(acc => {
+          const keywords = (acc.getAttribute('data-keywords') || '').toLowerCase();
+          const text = acc.textContent.toLowerCase();
+          if (keywords.includes(query) || text.includes(query)) {
+            acc.style.display = '';
+            acc.open = true;
+            hitCount++;
+          } else {
+            acc.style.display = 'none';
+          }
+        });
+
+        if (searchStatusBar && searchResultText) {
+          searchStatusBar.style.display = 'block';
+          searchResultText.innerHTML = 'キーワード: <span class="search-query-text">"' + query + '"</span> （一致セクション: <span class="search-count-badge">' + hitCount + ' 件</span>）';
+        }
+      });
+    }
+
+    // 6. スクロールスパイ (現在地TOCハイライト)
+    const tocLinks = document.querySelectorAll('.toc-link');
+    const observedSections = document.querySelectorAll('details[id]');
+
+    if ('IntersectionObserver' in window && observedSections.length > 0) {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const id = entry.target.getAttribute('id');
+            tocLinks.forEach(link => {
+              if (link.getAttribute('href') === '#' + id) {
+                link.classList.add('active');
+              } else {
+                link.classList.remove('active');
+              }
+            });
+          }
+        });
+      }, {
+        root: null,
+        rootMargin: '-80px 0px -70% 0px',
+        threshold: 0
+      });
+
+      observedSections.forEach(sec => observer.observe(sec));
+    }
+
+    // 7. モバイルドロワー開閉
+    const btnHamburger = document.getElementById('btnHamburger');
+    const drawerOverlay = document.getElementById('drawerOverlay');
+    const mobileDrawer = document.getElementById('mobileDrawer');
+    const btnCloseDrawer = document.getElementById('btnCloseDrawer');
+
+    function openDrawer() {
+      if (mobileDrawer) mobileDrawer.classList.add('open');
+      if (drawerOverlay) drawerOverlay.style.display = 'block';
+    }
+    function closeDrawer() {
+      if (mobileDrawer) mobileDrawer.classList.remove('open');
+      if (drawerOverlay) drawerOverlay.style.display = 'none';
+    }
+
+    if (btnHamburger) btnHamburger.addEventListener('click', openDrawer);
+    if (drawerOverlay) drawerOverlay.addEventListener('click', closeDrawer);
+    if (btnCloseDrawer) btnCloseDrawer.addEventListener('click', closeDrawer);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeDrawer();
+    });
+
+    document.querySelectorAll('.mobile-drawer .toc-link').forEach(link => {
+      link.addEventListener('click', closeDrawer);
+    });
+  });
+</script>
+</body>
+</html>

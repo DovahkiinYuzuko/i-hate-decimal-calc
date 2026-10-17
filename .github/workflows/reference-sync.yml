@@ -1,0 +1,38 @@
+name: Reference HTML Sync Verification
+
+on:
+  push:
+    branches: [ main, 'issue-*', 'feature/*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-reference-sync:
+    name: Verify Reference HTML Sync
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build Single-File Reference HTML
+        run: |
+          node scripts/build-reference-html.js
+
+      - name: Verify No Git Diff (Markdown vs HTML Out-of-Sync Check)
+        run: |
+          if ! git diff --exit-code docs/references/; then
+            echo "::error::Reference HTML files are out of sync with Markdown sources!"
+            echo "Please run 'node scripts/build-reference-html.js' locally and commit the generated HTML files."
+            exit 1
+          fi
+          echo "Reference HTML files are perfectly synchronized with Markdown sources."
