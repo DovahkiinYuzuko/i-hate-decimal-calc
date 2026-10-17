@@ -397,6 +397,86 @@
     border-top: 1px solid var(--color-border);
   }
 
+  .accordion-content > :first-child {
+    margin-top: 0 !important;
+  }
+  .accordion-content > :last-child {
+    margin-bottom: 0 !important;
+  }
+
+  /* アコーディオン内 Markdown タイポグラフィ・余白定義 (DADS準拠) */
+  .accordion-content p {
+    margin-top: 0;
+    margin-bottom: var(--space-4);
+    line-height: 1.75;
+    color: var(--color-text-main);
+  }
+
+  .accordion-content h3 {
+    font-size: 1.1875rem;
+    font-weight: 700;
+    line-height: 1.5;
+    margin-top: var(--space-5);
+    margin-bottom: var(--space-3);
+    padding-bottom: var(--space-1);
+    border-bottom: 1px solid var(--color-border-subtle);
+    color: var(--color-text-main);
+  }
+
+  .accordion-content h4 {
+    font-size: 1.0625rem;
+    font-weight: 700;
+    line-height: 1.5;
+    margin-top: var(--space-5);
+    margin-bottom: var(--space-3);
+    color: var(--color-text-main);
+    border-left: 3px solid var(--color-primary);
+    padding-left: var(--space-2);
+  }
+
+  .accordion-content h5,
+  .accordion-content h6 {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    line-height: 1.5;
+    margin-top: var(--space-4);
+    margin-bottom: var(--space-2);
+    color: var(--color-text-main);
+  }
+
+  /* 箇条書きリスト (DADS components/list 準拠: パディング・マーカー余白・8px行間) */
+  .accordion-content ul,
+  .accordion-content ol {
+    margin-top: 0;
+    margin-bottom: var(--space-4);
+    padding-left: var(--space-5);
+  }
+
+  .accordion-content ul {
+    list-style-type: disc;
+  }
+
+  .accordion-content ol {
+    list-style-type: decimal;
+  }
+
+  .accordion-content li {
+    margin-bottom: var(--space-2);
+    padding-left: var(--space-1);
+    line-height: 1.75;
+  }
+
+  .accordion-content li:last-child {
+    margin-bottom: 0;
+  }
+
+  .accordion-content li > ul,
+  .accordion-content li > ol {
+    margin-top: var(--space-1);
+    margin-bottom: var(--space-1);
+    padding-left: var(--space-4);
+  }
+
   h1.dads-h1 {
     font-size: 1.875rem;
     font-weight: 700;
@@ -802,7 +882,6 @@
         <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
       </button>
       <a class="logo-title" href="#">ihd Reference</a>
-      <span class="version-badge">v2.18.1</span>
     </div>
   </header>
 
