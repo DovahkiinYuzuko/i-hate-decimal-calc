@@ -329,7 +329,7 @@ ihd --verify "convert_unit(100 [km/h], m/s)"
 
 > [!TIP]
 > 演算子と優先順位、予約定数、およびカテゴリ別全関数の詳細仕様・書式・使用例は専用リファレンスに網羅されています。  
-> **[構文・演算子・関数詳細リファレンス (Japanese Edition)](docs/references/ja/reference.ja.md)**
+> **[構文・演算子・関数詳細リファレンス](docs/references/ja/reference.ja.md)**
 
 #### 主なカテゴリと代表関数
 - **基本代数・数論・方程式**: `sqrt`, `cbrt`, `expand`, `factor`, `apart`, `together`, `abs`, `gcd`, `lcm`, `mod`, `inv_mod`, `crt`, `totient`, `is_prime`, `cfrac`, `from_cfrac`, `rand`, `fib`, `digit_count`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `sturm`, `root_count`, `isolate_roots`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `to_primitive_element`, `primitive_element`, `padic_val`, `padic_norm`, `padic_expand`, `solve`, `solve_diophantine`, `pell_solve`
@@ -747,7 +747,7 @@ ihd --verify "convert_unit(100 [km/h], m/s)"
 
 > [!TIP]
 > For complete operator precedence, constants, and exhaustive function specifications with mathematical examples:  
-> **[Syntax, Operators & Functions Comprehensive Reference (English Edition)](docs/references/en/reference.en.md)**
+> **[Syntax, Operators & Functions Comprehensive Reference](docs/references/en/reference.en.md)**
 
 #### Major Categories & Representative Functions
 - **Basic Algebra, Number Theory & Equations**: `sqrt`, `cbrt`, `expand`, `factor`, `apart`, `together`, `abs`, `gcd`, `lcm`, `mod`, `inv_mod`, `crt`, `totient`, `is_prime`, `cfrac`, `from_cfrac`, `rand`, `fib`, `digit_count`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `sturm`, `root_count`, `isolate_roots`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `to_primitive_element`, `primitive_element`, `padic_val`, `padic_norm`, `padic_expand`, `solve`, `solve_diophantine`, `pell_solve`

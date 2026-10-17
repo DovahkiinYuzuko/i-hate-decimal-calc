@@ -1,4 +1,4 @@
-# ihd Complete Syntax, Operators & Functions Reference (English Edition)
+# ihd Complete Syntax, Operators & Functions Reference
 
 Complete language specification and built-in function reference for `ihd` (i-hate-decimal-calc), a strict CAS calculator that rejects all decimal approximations and computes strictly using arbitrary-precision rational numbers and algebraic symbols.
 
