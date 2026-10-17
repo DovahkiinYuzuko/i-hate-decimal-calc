@@ -42,8 +42,16 @@ if ($Local) {
     if (Test-Path (Join-Path $LocalRoot "exam")) {
         Copy-Item -Path (Join-Path $LocalRoot "exam") -Destination $IhdHome -Recurse -Force
     }
-    if (Test-Path (Join-Path $LocalRoot "docs\references")) {
-        Copy-Item -Path (Join-Path $LocalRoot "docs\references") -Destination $ReferencesDir -Recurse -Force
+    $LocalRefSource = Join-Path $LocalRoot "docs\references"
+    if (Test-Path $LocalRefSource) {
+        if (-not (Test-Path $ReferencesDir)) {
+            New-Item -ItemType Directory -Path $ReferencesDir -Force | Out-Null
+        }
+        $NestedRef = Join-Path $ReferencesDir "references"
+        if (Test-Path $NestedRef) {
+            Remove-Item -Path $NestedRef -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        Copy-Item -Path (Join-Path $LocalRefSource "*") -Destination $ReferencesDir -Recurse -Force
     }
     foreach ($doc in @("LICENSE.MIT", "NOTICE.md", "README.md")) {
         $docPath = Join-Path $LocalRoot $doc
@@ -98,7 +106,14 @@ if ($Local) {
 
         $RefSource = Join-Path $TmpExtract "docs\references"
         if (Test-Path $RefSource) {
-            Copy-Item -Path $RefSource -Destination $ReferencesDir -Recurse -Force
+            if (-not (Test-Path $ReferencesDir)) {
+                New-Item -ItemType Directory -Path $ReferencesDir -Force | Out-Null
+            }
+            $NestedRef = Join-Path $ReferencesDir "references"
+            if (Test-Path $NestedRef) {
+                Remove-Item -Path $NestedRef -Recurse -Force -ErrorAction SilentlyContinue
+            }
+            Copy-Item -Path (Join-Path $RefSource "*") -Destination $ReferencesDir -Recurse -Force
         }
 
         foreach ($doc in @("LICENSE.MIT", "NOTICE.md", "README.md")) {
