@@ -12,6 +12,7 @@ REPO="DovahkiinYuzuko/i-hate-decimal-calc"
 IHD_HOME="$HOME/.ihd"
 INSTALL_DIR="$IHD_HOME/bin"
 EXAM_DIR="$IHD_HOME/exam"
+REFERENCES_DIR="$IHD_HOME/references"
 
 mkdir -p "$INSTALL_DIR"
 
@@ -23,12 +24,21 @@ if [ "$LOCAL_MODE" = true ]; then
     if [ -n "$GIT_TAG" ]; then
         LDFLAGS="$LDFLAGS -X github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/updater.BuildVersion=$GIT_TAG"
     fi
-    (cd "$SCRIPT_DIR" && go build -ldflags="$LDFLAGS" -o "$INSTALL_DIR/ihd" ./cmd/ihd)
+    (cd "$SCRIPT_DIR" && CGO_ENABLED=0 go build -ldflags="$LDFLAGS" -o "$INSTALL_DIR/ihd" ./cmd/ihd)
     chmod +x "$INSTALL_DIR/ihd"
     if [ -d "$SCRIPT_DIR/exam" ]; then
         cp -r "$SCRIPT_DIR/exam" "$IHD_HOME/"
         chmod +x "$EXAM_DIR/exam.sh" 2>/dev/null || true
     fi
+    if [ -d "$SCRIPT_DIR/docs/references" ]; then
+        mkdir -p "$REFERENCES_DIR"
+        cp -r "$SCRIPT_DIR/docs/references/"* "$REFERENCES_DIR/"
+    fi
+    for doc in LICENSE.MIT NOTICE.md README.md; do
+        if [ -f "$SCRIPT_DIR/$doc" ]; then
+            cp "$SCRIPT_DIR/$doc" "$IHD_HOME/"
+        fi
+    done
 else
     OS="$(uname -s)"
     ARCH="$(uname -m)"
@@ -99,10 +109,26 @@ else
         cp -r "$TMP_DIR/exam" "$IHD_HOME/"
         chmod +x "$EXAM_DIR/exam.sh" 2>/dev/null || true
     fi
+
+    if [ -d "$TMP_DIR/docs/references" ]; then
+        mkdir -p "$REFERENCES_DIR"
+        cp -r "$TMP_DIR/docs/references/"* "$REFERENCES_DIR/"
+    fi
+
+    for doc in LICENSE.MIT NOTICE.md README.md; do
+        if [ -f "$TMP_DIR/$doc" ]; then
+            cp "$TMP_DIR/$doc" "$IHD_HOME/"
+        fi
+    done
 fi
 
 echo ""
 echo "Successfully installed ihd to $INSTALL_DIR/ihd"
+if [ -d "$REFERENCES_DIR" ]; then
+    echo "Offline Reference Manuals installed to: $REFERENCES_DIR"
+    echo "  - Japanese: $REFERENCES_DIR/ja/reference.ja.html"
+    echo "  - English:  $REFERENCES_DIR/en/reference.en.html"
+fi
 if [ -d "$EXAM_DIR" ]; then
     echo "Mathematical Showcase & Cookbook installed to: $EXAM_DIR"
     echo "Run the live showcase: $EXAM_DIR/exam.sh"
