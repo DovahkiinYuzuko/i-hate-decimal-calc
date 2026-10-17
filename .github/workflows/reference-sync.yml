@@ -33,7 +33,7 @@ jobs:
 
       - name: Verify No Git Diff (Markdown vs HTML Out-of-Sync Check)
         run: |
-          if ! git diff --exit-code docs/references/; then
+          if ! git diff --ignore-space-at-eol --exit-code docs/references/; then
             echo "::error::Reference HTML files are out of sync with Markdown sources!"
             echo "Please run 'cd tools/reference-builder; npm ci; node index.js' locally and commit the generated HTML files."
             exit 1

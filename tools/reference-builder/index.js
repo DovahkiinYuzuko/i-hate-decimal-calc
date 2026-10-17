@@ -462,6 +462,9 @@ async function buildLanguageEdition(lang) {
     .replace(/\/\*\s*\{\{VIEWER_JS\}\}\s*\*\//g, viewerJs)
     .replace(/\{\{VIEWER_JS\}\}/g, viewerJs);
 
+  // OS非依存のクロスプラットフォーム決定論的ビルドを保証（改行コードを LF に統一）
+  html = html.replace(/\r\n/g, '\n');
+
   fs.writeFileSync(htmlFile, html, 'utf-8');
   const stats = fs.statSync(htmlFile);
   console.log(`[Build Success] Generated: ${htmlFile} (${(stats.size / 1024).toFixed(1)} KB)`);
