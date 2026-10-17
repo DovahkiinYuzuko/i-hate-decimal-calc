@@ -427,7 +427,9 @@ pwsh exam/exam.ps1
 ---
 
 ### LICENSE
-[MIT License](./LICENSE.MIT)
+[MIT](./LICENSE.MIT)
+
+Third-Party → [NOTICE.md](./NOTICE.md)
 
 ---
 
@@ -842,12 +844,7 @@ For complete problem statements, derivations, `ihd` input commands, and outputs,
 - [Japanese Edition Cookbook (exam/problems.ja.md)](./exam/problems.ja.md)
 - [English Edition Cookbook (exam/problems.en.md)](./exam/problems.en.md)
 
----
-
-### Third-Party Software Notices
-サードパーティ製ライブラリのライセンス表記については [NOTICE.md](./NOTICE.md) をご覧ください。
-
----
-
 ### LICENSE
-[MIT License](./LICENSE.MIT)
+[MIT](./LICENSE.MIT)
+
+Third-Party → [NOTICE.md](./NOTICE.md)

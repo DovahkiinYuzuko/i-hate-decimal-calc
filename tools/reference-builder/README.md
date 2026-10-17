@@ -1,4 +1,4 @@
-# reference-builder
+# reference-builder (`tools/reference-builder`)
 
 ihd のリファレンスドキュメント（Markdown）から DADS 準拠の単一 HTML を生成するビルドツール / Build tool that generates DADS-compliant single-file HTML from ihd reference Markdown
 
