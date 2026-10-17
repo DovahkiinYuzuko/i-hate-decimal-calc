@@ -1,0 +1,16 @@
+{
+  "skipLink": "本文へスキップ",
+  "hamburgerAria": "目次メニューを開く",
+  "drawerTitle": "目次",
+  "drawerCloseAria": "目次を閉じる",
+  "tocTitle": "目次",
+  "tocAria": "デスクトップ目次ナビゲーション",
+  "searchPlaceholder": "関数名、演算子、キーワードで高速検索...",
+  "searchAria": "リファレンス内を検索",
+  "btnExpandAll": "すべて展開",
+  "btnCollapseAll": "すべて折りたたむ",
+  "copyTooltip": "クリックしてコピー",
+  "copiedToast": "コピーしました",
+  "accordionToggleAria": "{title} を開閉",
+  "subAccordionToggleAria": "{title} のサブメニューを開閉"
+}

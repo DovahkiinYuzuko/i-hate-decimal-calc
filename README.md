@@ -329,7 +329,9 @@ ihd --verify "convert_unit(100 [km/h], m/s)"
 
 > [!TIP]
 > 演算子と優先順位、予約定数、およびカテゴリ別全関数の詳細仕様・書式・使用例は専用リファレンスに網羅されています。  
-> **[構文・演算子・関数詳細リファレンス](docs/references/ja/reference.ja.md)**
+> - **Markdown版**: [日本語版 (docs/references/ja/reference.ja.md)](docs/references/ja/reference.ja.md) / [英語版 (docs/references/en/reference.en.md)](docs/references/en/reference.en.md)  
+> - **オフラインSingle-File HTML版**: [日本語版 (docs/references/ja/reference.ja.html)](docs/references/ja/reference.ja.html) / [英語版 (docs/references/en/reference.en.html)](docs/references/en/reference.en.html)  
+> - *※ HTML版の再ビルド手順やツールアーキテクチャの詳細は [tools/reference-builder/README.md](tools/reference-builder/README.md) を参照してください。*
 
 #### 主なカテゴリと代表関数
 - **基本代数・数論・方程式**: `sqrt`, `cbrt`, `expand`, `factor`, `apart`, `together`, `abs`, `gcd`, `lcm`, `mod`, `inv_mod`, `crt`, `totient`, `is_prime`, `cfrac`, `from_cfrac`, `rand`, `fib`, `digit_count`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `sturm`, `root_count`, `isolate_roots`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `to_primitive_element`, `primitive_element`, `padic_val`, `padic_norm`, `padic_expand`, `solve`, `solve_diophantine`, `pell_solve`
@@ -839,6 +841,11 @@ pwsh exam/exam.ps1
 For complete problem statements, derivations, `ihd` input commands, and outputs, see:
 - [Japanese Edition Cookbook (exam/problems.ja.md)](./exam/problems.ja.md)
 - [English Edition Cookbook (exam/problems.en.md)](./exam/problems.en.md)
+
+---
+
+### Third-Party Software Notices
+サードパーティ製ライブラリのライセンス表記については [NOTICE.md](./NOTICE.md) をご覧ください。
 
 ---
 

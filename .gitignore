@@ -60,6 +60,21 @@
 !go.sum
 !*.go
 !install.*
-# .gitignores/scripts.gitignore
-!scripts/
-!scripts/build-reference-html.js
+!NOTICE.md
+# .gitignores/tools.gitignore
+!tools/
+!tools/micro-verifier/
+!tools/micro-verifier/main.go
+!tools/micro-verifier/main_test.go
+!tools/reference-builder/
+!tools/reference-builder/package.json
+!tools/reference-builder/package-lock.json
+!tools/reference-builder/index.js
+!tools/reference-builder/i18n/
+!tools/reference-builder/i18n/**
+!tools/reference-builder/templates/
+!tools/reference-builder/templates/**
+!tools/reference-builder/assets/
+!tools/reference-builder/assets/**
+!tools/reference-builder/README.md
+!tools/reference-builder/NOTICE.md
