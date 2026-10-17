@@ -1,14 +1,20 @@
 {
   "name": "reference-builder",
-  "version": "1.0.0",
-  "description": "",
+  "version": "0.7.2",
+  "description": "Single-File HTML documentation generator for ihd reference adhering to DADS and GFM",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "node index.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "ihd",
+    "dads",
+    "gfm",
+    "katex",
+    "markdown"
+  ],
+  "author": "Yuzuko Underson",
+  "license": "MIT",
   "type": "module",
   "dependencies": {
     "katex": "^0.19.0",

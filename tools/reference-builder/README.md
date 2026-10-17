@@ -32,9 +32,8 @@ tools/reference-builder/
 ├── assets/
 │   └── katex/
 │       └── katex-inline.css    # Base64 WebFont埋め込み済み KaTeX CSS
-├── i18n/
-│   ├── ja.json                 # 日本語外枠UI辞書
-│   └── en.json                 # 英語外枠UI辞書
+├── i18n/              
+│   └── {locales}.json          # 外枠UI辞書(元となるMDファイルにないテキストを登録)
 ├── templates/
 │   ├── layout.html             # HTML5骨格テンプレート
 │   ├── dads.css                # DADSデザイントークン＋GFMスタイル定義
@@ -64,8 +63,9 @@ npm ci
 node tools/reference-builder/index.js
 ```
 
-正常に完了すると、以下のファイルが自動更新されます：
-- `docs/references/ja/reference.ja.html`
-- `docs/references/en/reference.en.html`
+> [!NOTE]
+> 正常に完了すると、HTMLファイルが更新されます：  
+> `docs/references/{locale}/reference.{locale}.html`
+
 
 CI（GitHub Actions `reference-sync.yml`）においても、Markdown 原稿と HTML 生成物の同期状態が自動検証されます。
