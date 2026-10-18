@@ -837,4 +837,39 @@ func TestCLI_ThemeAndNoColorFlags(t *testing.T) {
 	}
 }
 
+func TestScriptExecution_Issue135(t *testing.T) {
+	tmpDir := t.TempDir()
+	scriptPath := filepath.Join(tmpDir, "test.ihd")
+	scriptContent := "a = (1 + 1 == 2)\na\n"
+	if err := os.WriteFile(scriptPath, []byte(scriptContent), 0644); err != nil {
+		t.Fatalf("failed to write script: %v", err)
+	}
+
+	out := new(bytes.Buffer)
+	errOut := new(bytes.Buffer)
+	leanPath := filepath.Join(tmpDir, "nested", "proofs", "out.lean")
+
+	code := run([]string{"--lean-file=" + leanPath, "run", scriptPath}, strings.NewReader(""), out, errOut)
+	if code != 0 {
+		t.Fatalf("run script failed with code %d. stderr: %s", code, errOut.String())
+	}
+
+	lines := strings.Split(strings.TrimSpace(out.String()), "\n")
+	foundTrue := false
+	for _, l := range lines {
+		if strings.TrimSpace(l) == "true" {
+			foundTrue = true
+			break
+		}
+	}
+	if !foundTrue {
+		t.Errorf("expected script output to contain 'true' for equality evaluation, got: %s", out.String())
+	}
+
+	// Verify nested lean proof file was created
+	if _, err := os.Stat(leanPath); err != nil {
+		t.Errorf("expected lean file to be created at %s: %v", leanPath, err)
+	}
+}
+
 

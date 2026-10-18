@@ -194,6 +194,9 @@ func evalComplex(n Node) (complex128, error) {
 				return 0, fmt.Errorf("%s", i18n.T("approx.err_factorial_requires_non_negative_integer"))
 			}
 			n := int64(real(val))
+			if n > 170 {
+				return complex(math.Inf(1), 0), nil
+			}
 			res := 1.0
 			for i := int64(2); i <= n; i++ {
 				res *= float64(i)

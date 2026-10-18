@@ -363,3 +363,20 @@ func TestPinvDecomposition(t *testing.T) {
 		}
 	})
 }
+
+func TestSymbolicLaplaceLimit(t *testing.T) {
+	// 3x3 symbolic matrix should succeed
+	res3, err := evalDecompExprErr("det([[x, 1, 0], [0, y, 1], [1, 0, z]])")
+	if err != nil {
+		t.Fatalf("3x3 symbolic det failed: %v", err)
+	}
+	if res3 == nil {
+		t.Fatalf("expected non-nil node for 3x3 symbolic det")
+	}
+
+	// 5x5 symbolic matrix should fail with Laplace limit error
+	_, err5 := evalDecompExprErr("det([[a, b, c, d, e], [1, 2, 3, 4, 5], [0, 1, 0, 1, 0], [2, 0, 1, 0, 1], [1, 1, 1, 1, 1]])")
+	if err5 == nil {
+		t.Fatalf("expected 5x5 symbolic det to fail with Laplace limit error")
+	}
+}

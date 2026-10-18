@@ -324,7 +324,7 @@ func FindPrimitiveElement(minPoly1, minPoly2 *ast.PolyNode, symbolTheta string) 
 	}
 
 	// Deterministic sequence of candidates for c: 1, -1, 2, -2, 3, -3, 4, -4, ...
-	candidateSequence := []int64{1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6, -6, 7, -7, 8, -8}
+	candidateSequence := []int64{1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6, -6, 7, -7, 8, -8, 9, -9, 10, -10, 11, -11, 12, -12, 13, -13, 14, -14, 15, -15, 16, -16}
 
 	targetVarX := symbolTheta
 	varY := "_y"
@@ -391,18 +391,12 @@ func FindPrimitiveElement(minPoly1, minPoly2 *ast.PolyNode, symbolTheta string) 
 		fyNode := substM1
 		fyPoly, err := NodeToPoly(fyNode, []string{varY, targetVarX}, ast.OrderLex)
 		if err != nil {
-			if c == 1 {
-				fmt.Printf("DEBUG c=1: fy NodeToPoly err: %v\n", err)
-			}
 			continue
 		}
 
 		// Group fy by powers of varY
 		degY := DegreeInVar(fyPoly, varY)
 		if degY < 0 {
-			if c == 1 {
-				fmt.Printf("DEBUG c=1: degY < 0\n")
-			}
 			continue
 		}
 		fyCoeffs := make([]*ast.PolyNode, degY+1)

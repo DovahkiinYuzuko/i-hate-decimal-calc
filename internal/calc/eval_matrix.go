@@ -98,6 +98,11 @@ func submatrix(m *MatrixNode, dropR, dropC int) *MatrixNode {
 
 // evalDet calculates the exact determinant using division-free Laplace expansion.
 func evalDet(m *MatrixNode) (Node, error) {
+	return evalDetWithLimit(m, 4)
+}
+
+// evalDetWithLimit calculates the exact determinant with a custom dimension limit for symbolic Laplace expansion.
+func evalDetWithLimit(m *MatrixNode, maxSymbolicDim int) (Node, error) {
 	if m.Rows != m.Cols {
 		return nil, fmt.Errorf("%s", i18n.T("matrix.err_matrix_dimension_error_det_requires", m.Rows, m.Cols))
 	}
@@ -147,6 +152,10 @@ func evalDet(m *MatrixNode) (Node, error) {
 		return &RationalNode{Val: new(big.Rat).SetInt(detInt)}, nil
 	}
 
+	if maxSymbolicDim > 0 && n > maxSymbolicDim {
+		return nil, fmt.Errorf("%s", i18n.T("matrix.err_symbolic_dimension_exceeds_laplace_limit", n, n))
+	}
+
 	// Symbolic / general n >= 3: Laplace expansion along row 0
 	var sumTerms []Node
 	for c := 0; c < n; c++ {
@@ -155,7 +164,7 @@ func evalDet(m *MatrixNode) (Node, error) {
 			continue
 		}
 		sub := submatrix(m, 0, c)
-		subDet, err := evalDet(sub)
+		subDet, err := evalDetWithLimit(sub, maxSymbolicDim)
 		if err != nil {
 			return nil, err
 		}

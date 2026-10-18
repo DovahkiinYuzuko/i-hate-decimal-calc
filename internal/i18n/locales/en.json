@@ -597,8 +597,10 @@
     "err_solve_linear_error_constant_vector": "solve_linear error: constant vector b must be 1D or column matrix, got %dx%d",
     "err_solve_linear_error_first_argument": "solve_linear error: first argument must be a matrix, got %T",
     "err_solve_linear_error_second_argument": "solve_linear error: second argument must be a vector or list, got %T",
+    "err_symbolic_dimension_exceeds_laplace_limit": "symbolic matrix dimension exceeds Laplace limit (max 4x4, got %dx%d)",
     "err_vector_length_mismatch": "vector length mismatch: %d vs %d"
   },
+  "err_disk_space_exceeded": "insufficient disk space for computation (estimated: %s, available: %s)",
   "matrix_dimension_error": "matrix dimension error: %s",
   "matrix_integer": {
     "err_abelian_group_structure_args": "abelian_group_structure requires 1 argument: abelian_group_structure(matrix)",

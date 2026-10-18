@@ -827,6 +827,11 @@ func executeScriptLine(line string, ro runOptions, env *calc.Env, suppressOutput
 			fmt.Fprintf(errOut, "%s:%d: %v\n", filePath, lineNum, err)
 			return err
 		}
+		if rel, ok := evaled.(*calc.RelOpNode); ok && (rel.Op == "==" || rel.Op == "!=") {
+			if resolved, errEq := calc.EvaluateRelOpEquality(rel, env); errEq == nil && resolved != nil {
+				evaled = resolved
+			}
+		}
 		env.Set(v.Name, evaled)
 		env.Set("ans", evaled)
 		if !suppressOutput {
@@ -848,7 +853,7 @@ func executeScriptLine(line string, ro runOptions, env *calc.Env, suppressOutput
 							fmt.Fprintln(out, leanCode)
 						}
 						if ro.leanFile != "" {
-							_ = os.WriteFile(ro.leanFile, []byte(leanCode), 0644)
+							_ = saveLeanProofFile(ro.leanFile, leanCode)
 						}
 					}
 				}
@@ -867,6 +872,11 @@ func executeScriptLine(line string, ro runOptions, env *calc.Env, suppressOutput
 		if err != nil {
 			fmt.Fprintf(errOut, "%s:%d: %v\n", filePath, lineNum, err)
 			return err
+		}
+		if rel, ok := evaled.(*calc.RelOpNode); ok && (rel.Op == "==" || rel.Op == "!=") {
+			if resolved, errEq := calc.EvaluateRelOpEquality(rel, env); errEq == nil && resolved != nil {
+				evaled = resolved
+			}
 		}
 		env.Set("ans", evaled)
 		if !suppressOutput {

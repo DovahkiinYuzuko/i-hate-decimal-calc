@@ -79,7 +79,12 @@ func (e *Env) GetIterationLimits() (*big.Int, *big.Int, io.Writer) {
 
 // IsPositive checks if variable name has positive assumption.
 func (e *Env) IsPositive(name string) bool {
-	if e == nil || e.assumptions == nil {
+	if e == nil {
+		return false
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	if e.assumptions == nil {
 		return false
 	}
 	return e.assumptions.IsPositive(name)
@@ -87,7 +92,12 @@ func (e *Env) IsPositive(name string) bool {
 
 // IsNegative checks if variable name has negative assumption.
 func (e *Env) IsNegative(name string) bool {
-	if e == nil || e.assumptions == nil {
+	if e == nil {
+		return false
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	if e.assumptions == nil {
 		return false
 	}
 	return e.assumptions.IsNegative(name)
@@ -95,7 +105,12 @@ func (e *Env) IsNegative(name string) bool {
 
 // IsNonNegative checks if variable name has non-negative assumption.
 func (e *Env) IsNonNegative(name string) bool {
-	if e == nil || e.assumptions == nil {
+	if e == nil {
+		return false
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	if e.assumptions == nil {
 		return false
 	}
 	return e.assumptions.IsNonNegative(name)
@@ -103,7 +118,12 @@ func (e *Env) IsNonNegative(name string) bool {
 
 // IsNonPositive checks if variable name has non-positive assumption.
 func (e *Env) IsNonPositive(name string) bool {
-	if e == nil || e.assumptions == nil {
+	if e == nil {
+		return false
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	if e.assumptions == nil {
 		return false
 	}
 	return e.assumptions.IsNonPositive(name)
@@ -111,7 +131,12 @@ func (e *Env) IsNonPositive(name string) bool {
 
 // IsInteger checks if variable name has integer assumption.
 func (e *Env) IsInteger(name string) bool {
-	if e == nil || e.assumptions == nil {
+	if e == nil {
+		return false
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	if e.assumptions == nil {
 		return false
 	}
 	return e.assumptions.IsInteger(name)
@@ -119,7 +144,12 @@ func (e *Env) IsInteger(name string) bool {
 
 // IsEven checks if variable name has even assumption.
 func (e *Env) IsEven(name string) bool {
-	if e == nil || e.assumptions == nil {
+	if e == nil {
+		return false
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	if e.assumptions == nil {
 		return false
 	}
 	return e.assumptions.IsEven(name)
@@ -127,7 +157,12 @@ func (e *Env) IsEven(name string) bool {
 
 // IsOdd checks if variable name has odd assumption.
 func (e *Env) IsOdd(name string) bool {
-	if e == nil || e.assumptions == nil {
+	if e == nil {
+		return false
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	if e.assumptions == nil {
 		return false
 	}
 	return e.assumptions.IsOdd(name)
@@ -135,7 +170,12 @@ func (e *Env) IsOdd(name string) bool {
 
 // IsReal checks if variable name has real assumption.
 func (e *Env) IsReal(name string) bool {
-	if e == nil || e.assumptions == nil {
+	if e == nil {
+		return false
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	if e.assumptions == nil {
 		return false
 	}
 	return e.assumptions.IsReal(name)

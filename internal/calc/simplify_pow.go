@@ -36,18 +36,40 @@ func simplifyPow(base, exp Node) (Node, error) {
 
 	// Rational^Integer
 	if baseIsRat && expIsRat && ratExp.Val.IsInt() {
-		expInt := ratExp.Val.Num().Int64()
-		if expInt < 0 {
+		expNum := ratExp.Val.Num()
+
+		// 1^n = 1
+		if ratBase.Val.Cmp(one) == 0 {
+			return mustRational(1, 1), nil
+		}
+
+		// (-1)^n = 1 (even) or -1 (odd)
+		minusOne := big.NewRat(-1, 1)
+		if ratBase.Val.Cmp(minusOne) == 0 {
+			if expNum.Bit(0) == 0 {
+				return mustRational(1, 1), nil
+			}
+			return mustRational(-1, 1), nil
+		}
+
+		if expNum.Sign() < 0 {
 			// Invert base
 			if ratBase.Val.Sign() == 0 {
 				return nil, NewZeroDivisionError("division by zero: reciprocal of 0")
 			}
 			inv := new(big.Rat).Inv(ratBase.Val)
-			return simplifyPow(&RationalNode{Val: inv}, &RationalNode{Val: big.NewRat(-expInt, 1)})
+			posExp := new(big.Int).Neg(expNum)
+			return simplifyPow(&RationalNode{Val: inv}, &RationalNode{Val: new(big.Rat).SetInt(posExp)})
 		}
 
-		numPow := new(big.Int).Exp(ratBase.Val.Num(), big.NewInt(expInt), nil)
-		denomPow := new(big.Int).Exp(ratBase.Val.Denom(), big.NewInt(expInt), nil)
+		numPow, err := PowBigIntWithSwap(ratBase.Val.Num(), expNum)
+		if err != nil {
+			return nil, err
+		}
+		denomPow, err := PowBigIntWithSwap(ratBase.Val.Denom(), expNum)
+		if err != nil {
+			return nil, err
+		}
 		return &RationalNode{Val: new(big.Rat).SetFrac(numPow, denomPow)}, nil
 	}
 
@@ -90,12 +112,12 @@ func simplifyPow(base, exp Node) (Node, error) {
 
 	// UnaryOp("-", A)^Integer: (-A)^n
 	if uop, ok := base.(*UnaryOpNode); ok && uop.Op == "-" && expIsRat && ratExp.Val.IsInt() {
-		expInt := ratExp.Val.Num().Int64()
+		expNum := ratExp.Val.Num()
 		innerPow, err := simplifyPow(uop.Expr, exp)
 		if err != nil {
 			return nil, err
 		}
-		if expInt%2 == 0 {
+		if expNum.Bit(0) == 0 {
 			return innerPow, nil
 		}
 		return simplifyUnaryOp("-", innerPow)
@@ -103,7 +125,12 @@ func simplifyPow(base, exp Node) (Node, error) {
 
 	// Complex^Integer
 	if c, ok := base.(*ComplexNode); ok && expIsRat && ratExp.Val.IsInt() {
-		expInt := ratExp.Val.Num().Int64()
+		expNum := ratExp.Val.Num()
+		if !expNum.IsInt64() {
+			// 超巨大複素数累乗は未評価記号ノードを返す
+			return NewPow(base, exp)
+		}
+		expInt := expNum.Int64()
 		if expInt == -1 {
 			// 1 / (a + bi) = (a - bi) / (a^2 + b^2)
 			a2, err := simplifyPow(c.Real, mustRational(2, 1))
@@ -140,13 +167,26 @@ func simplifyPow(base, exp Node) (Node, error) {
 			return simplifyPow(inv, mustRational(-expInt, 1))
 		}
 		if expInt > 1 {
-			res := Node(c)
-			for i := int64(1); i < expInt; i++ {
-				var err error
-				res, err = simplifyMul([]Node{res, c})
-				if err != nil {
-					return nil, err
+			// Exponentiation by squaring: O(log n)
+			res := Node(mustRational(1, 1))
+			curr := Node(c)
+			e := expInt
+			for e > 0 {
+				if e%2 == 1 {
+					var err error
+					res, err = simplifyMul([]Node{res, curr})
+					if err != nil {
+						return nil, err
+					}
 				}
+				if e > 1 {
+					var err error
+					curr, err = simplifyMul([]Node{curr, curr})
+					if err != nil {
+						return nil, err
+					}
+				}
+				e /= 2
 			}
 			return res, nil
 		}

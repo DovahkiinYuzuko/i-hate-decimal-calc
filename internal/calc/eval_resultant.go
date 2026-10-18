@@ -88,8 +88,8 @@ func EvalResultant(p, q Node, varName string, env *Env) (Node, error) {
 	// Construct Sylvester Matrix of size (m + n) x (m + n)
 	sylvesterMat := buildSylvesterMatrix(polyP, polyQ)
 
-	// Compute determinant
-	detVal, err := evalDet(sylvesterMat)
+	// Compute determinant (Sylvester matrices are sparse, allow up to 16x16)
+	detVal, err := evalDetWithLimit(sylvesterMat, 16)
 	if err != nil {
 		return nil, fmt.Errorf("%s", i18n.T("resultant.err_resultant_determinant_calculation_failed", err))
 	}

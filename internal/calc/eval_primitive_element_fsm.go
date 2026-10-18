@@ -61,10 +61,10 @@ func NewPrimitiveElementFSM() *PrimitiveElementFSM {
 
 	allow(PrimitiveStateInit, PrimitiveStateScanningC, PrimitiveStateFailure)
 	allow(PrimitiveStateScanningC, PrimitiveStateResultant, PrimitiveStateFailure)
-	allow(PrimitiveStateResultant, PrimitiveStateSquareFreeCheck, PrimitiveStateFailure)
+	allow(PrimitiveStateResultant, PrimitiveStateSquareFreeCheck, PrimitiveStateScanningC, PrimitiveStateFailure)
 	allow(PrimitiveStateSquareFreeCheck, PrimitiveStateSolveGenerators, PrimitiveStateScanningC, PrimitiveStateFailure)
 	allow(PrimitiveStateSolveGenerators, PrimitiveStateCertify, PrimitiveStateSuccess, PrimitiveStateScanningC, PrimitiveStateFailure)
-	allow(PrimitiveStateCertify, PrimitiveStateSuccess, PrimitiveStateFailure)
+	allow(PrimitiveStateCertify, PrimitiveStateSuccess, PrimitiveStateScanningC, PrimitiveStateFailure)
 	allow(PrimitiveStateSuccess)
 	allow(PrimitiveStateFailure)
 

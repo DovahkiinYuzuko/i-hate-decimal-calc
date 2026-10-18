@@ -597,8 +597,10 @@
     "err_solve_linear_error_constant_vector": "solve_linear エラー: 定数ベクトル b は1次元または列行列である必要があります (指定値: %dx%d)",
     "err_solve_linear_error_first_argument": "solve_linear エラー: 第1引数は行列である必要があります (指定値: %T)",
     "err_solve_linear_error_second_argument": "solve_linear エラー: 第2引数はベクトルまたはリストである必要があります (指定値: %T)",
+    "err_symbolic_dimension_exceeds_laplace_limit": "記号行列の次数がラプラス展開の上限を超えています (最大 4x4, 指定値: %dx%d)",
     "err_vector_length_mismatch": "ベクトルの長さが一致しません: %d vs %d"
   },
+  "err_disk_space_exceeded": "計算に必要なディスク容量が不足しています (必要推定: %s, 利用可能: %s)",
   "matrix_dimension_error": "行列次元エラー: %s",
   "matrix_integer": {
     "err_abelian_group_structure_args": "引数エラー: abelian_group_structure 関数は 1 つの引数が必要です: abelian_group_structure(matrix)",

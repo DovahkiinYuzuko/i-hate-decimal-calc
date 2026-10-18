@@ -40,3 +40,41 @@ func TestApprox_Basic(t *testing.T) {
 		}
 	}
 }
+
+func TestApprox_HugeFactorial(t *testing.T) {
+	// 170! should be finite float
+	node170, err := EvalString("170!")
+	if err != nil {
+		t.Fatalf("eval error: %v", err)
+	}
+	app170, err := Approx(node170)
+	if err != nil {
+		t.Fatalf("approx error for 170!: %v", err)
+	}
+	if strings.Contains(app170, "+Inf") {
+		t.Errorf("170! should be finite, got %s", app170)
+	}
+
+	// 171! should be +Inf immediately
+	node171, err := EvalString("171!")
+	if err != nil {
+		t.Fatalf("eval error: %v", err)
+	}
+	app171, err := Approx(node171)
+	if err != nil {
+		t.Fatalf("approx error for 171!: %v", err)
+	}
+	if !strings.Contains(app171, "+Inf") {
+		t.Errorf("171! should return +Inf, got %s", app171)
+	}
+
+	// 1000000000! should return +Inf immediately without freezing
+	nodeHuge := &UnaryOpNode{Op: "!", Expr: mustRational(1000000000, 1)}
+	appHuge, err := Approx(nodeHuge)
+	if err != nil {
+		t.Fatalf("approx error for 1000000000!: %v", err)
+	}
+	if !strings.Contains(appHuge, "+Inf") {
+		t.Errorf("1000000000! should return +Inf, got %s", appHuge)
+	}
+}
