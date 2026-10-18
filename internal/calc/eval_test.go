@@ -1192,6 +1192,56 @@ func TestEval_RelationalEqualityAndNotEqual(t *testing.T) {
 	}
 }
 
+func TestEvalCircularReference(t *testing.T) {
+	// Case 1: Direct self reference x = x
+	env1 := NewEnv()
+	env1.Set("x", &VarNode{Name: "x"})
+	_, err1 := EvalWithEnv(&VarNode{Name: "x"}, env1)
+	if err1 == nil {
+		t.Errorf("expected error for self-referential variable x = x, got nil")
+	}
+
+	// Case 2: Expression self reference x = x + 1
+	env2 := NewEnv()
+	env2.Set("x", &AddNode{Terms: []Node{&VarNode{Name: "x"}, mustRational(1, 1)}})
+	_, err2 := EvalWithEnv(&VarNode{Name: "x"}, env2)
+	if err2 == nil {
+		t.Errorf("expected error for self-referential expression x = x + 1, got nil")
+	}
+
+	// Case 3: Mutual circular reference a = b, b = a
+	env3 := NewEnv()
+	env3.Set("a", &VarNode{Name: "b"})
+	env3.Set("b", &VarNode{Name: "a"})
+	_, err3 := EvalWithEnv(&VarNode{Name: "a"}, env3)
+	if err3 == nil {
+		t.Errorf("expected error for mutual circular reference a = b, b = a, got nil")
+	}
+
+	// Case 4: 3-step cycle a -> b -> c -> a
+	env4 := NewEnv()
+	env4.Set("a", &VarNode{Name: "b"})
+	env4.Set("b", &VarNode{Name: "c"})
+	env4.Set("c", &VarNode{Name: "a"})
+	_, err4 := EvalWithEnv(&VarNode{Name: "a"}, env4)
+	if err4 == nil {
+		t.Errorf("expected error for 3-step circular reference, got nil")
+	}
+
+	// Case 5: Valid multi-step resolution without cycles: a = 1, b = a, c = b -> 1
+	env5 := NewEnv()
+	env5.Set("a", mustRational(1, 1))
+	env5.Set("b", &VarNode{Name: "a"})
+	env5.Set("c", &VarNode{Name: "b"})
+	res5, err5 := EvalWithEnv(&VarNode{Name: "c"}, env5)
+	if err5 != nil {
+		t.Fatalf("unexpected error for valid reference chain: %v", err5)
+	}
+	if Format(res5) != "1" {
+		t.Errorf("expected '1', got %q", Format(res5))
+	}
+}
+
 
 
 

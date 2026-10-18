@@ -67,6 +67,11 @@ func EvalWithEnv(n Node, env *Env) (Node, error) {
 	case *VarNode:
 		if env != nil {
 			if bound, ok := env.Get(v.Name); ok {
+				if env.IsEvaluatingVar(v.Name) {
+					return nil, fmt.Errorf("%s: circular variable reference detected: %s", i18n.T("errors.domain_error"), v.Name)
+				}
+				env.PushEvaluatingVar(v.Name)
+				defer env.PopEvaluatingVar(v.Name)
 				return EvalWithEnv(bound, env)
 			}
 		}

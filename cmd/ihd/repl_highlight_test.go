@@ -282,3 +282,28 @@ func TestBuildREPLHighlights_ThemeSequencesAndColorSeparation(t *testing.T) {
 		t.Errorf("expected empty highlights for theme 'none', got %d", len(noneHighlights))
 	}
 }
+
+func TestLexerHighlightFSM_TrailingEscape(t *testing.T) {
+	// Cases where a string literal ends with a single backslash or incomplete escape.
+	// Must NOT trigger index out of range panic.
+	inputs := []string{
+		`"`,
+		`"hello\`,
+		`"test\\`,
+		`"escaped \"`,
+		`"multiple \\\\ \`,
+		`"a\`,
+	}
+
+	for _, input := range inputs {
+		spans := TokenizeHighlightFSM(input, nil)
+		if len(spans) == 0 {
+			t.Errorf("input %q: expected at least one token span, got 0", input)
+		}
+		for _, s := range spans {
+			if s.Start < 0 || s.End > len(input) || s.Start > s.End {
+				t.Errorf("input %q: invalid span range [%d, %d]", input, s.Start, s.End)
+			}
+		}
+	}
+}

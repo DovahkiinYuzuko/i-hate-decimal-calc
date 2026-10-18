@@ -96,7 +96,11 @@ func TokenizeHighlightFSM(input string, env *calc.Env) []TokenSpan {
 			i++
 			for i < n {
 				if runes[i] == '\\' {
-					i += 2 // skip escaped character
+					if i+1 < n {
+						i += 2 // skip escaped character
+					} else {
+						i++ // trailing dangling backslash
+					}
 					continue
 				}
 				if runes[i] == '"' {
@@ -104,6 +108,9 @@ func TokenizeHighlightFSM(input string, env *calc.Env) []TokenSpan {
 					break
 				}
 				i++
+			}
+			if i > n {
+				i = n
 			}
 			spans = append(spans, TokenSpan{
 				Type:  TokenString,

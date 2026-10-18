@@ -1,13 +1,19 @@
 package updater
 
 import (
-	"encoding/json"
+	"io"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
+
+type roundTripFunc func(req *http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
 
 func TestParseSemVer(t *testing.T) {
 	tests := []struct {
@@ -76,18 +82,22 @@ func TestCheckUpdateWithClient_MockServer(t *testing.T) {
 	t.Setenv("IHD_NO_UPDATE_CHECK", "")
 
 	requestCount := 0
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestCount++
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"tag_name": "v1.5.0",
-			"html_url": "https://github.com/DovahkiinYuzuko/i-hate-decimal-calc/releases/tag/v1.5.0",
-		})
-	}))
-	defer ts.Close()
+	mockClient := &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			requestCount++
+			body := `{"tag_name":"v1.5.0","html_url":"https://github.com/DovahkiinYuzuko/i-hate-decimal-calc/releases/tag/v1.5.0"}`
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Status:     "200 OK",
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Body:       io.NopCloser(strings.NewReader(body)),
+			}, nil
+		}),
+	}
+	apiURL := "https://api.github.com/mock/releases/latest"
 
 	// Initial check: should fetch from server and return update
-	info, err := checkUpdateWithClient(false, ts.Client(), ts.URL)
+	info, err := checkUpdateWithClient(false, mockClient, apiURL)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -108,7 +118,7 @@ func TestCheckUpdateWithClient_MockServer(t *testing.T) {
 	}
 
 	// Second check: within 24 hours, should use cache and not make another HTTP request
-	info2, err := checkUpdateWithClient(false, ts.Client(), ts.URL)
+	info2, err := checkUpdateWithClient(false, mockClient, apiURL)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -120,7 +130,7 @@ func TestCheckUpdateWithClient_MockServer(t *testing.T) {
 	}
 
 	// Third check: with force=true, should re-query
-	_, err = checkUpdateWithClient(true, ts.Client(), ts.URL)
+	_, err = checkUpdateWithClient(true, mockClient, apiURL)
 	if err != nil {
 		t.Fatalf("unexpected error on force: %v", err)
 	}
@@ -134,13 +144,20 @@ func TestCheckUpdateWithClient_SilentFailOnServerError(t *testing.T) {
 	t.Setenv("IHD_DIR", tmpDir)
 	t.Setenv("IHD_NO_UPDATE_CHECK", "")
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-	}))
-	defer ts.Close()
+	mockClient := &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusInternalServerError,
+				Status:     "500 Internal Server Error",
+				Header:     http.Header{},
+				Body:       io.NopCloser(strings.NewReader("internal server error")),
+			}, nil
+		}),
+	}
+	apiURL := "https://api.github.com/mock/releases/latest"
 
 	// Should silently fail (return nil, nil)
-	info, err := checkUpdateWithClient(true, ts.Client(), ts.URL)
+	info, err := checkUpdateWithClient(true, mockClient, apiURL)
 	if err != nil {
 		t.Errorf("expected silent fail (nil error), got %v", err)
 	}
@@ -155,12 +172,19 @@ func TestCheckUpdateWithClient_DisabledByEnv(t *testing.T) {
 	t.Setenv("IHD_NO_UPDATE_CHECK", "1")
 
 	requestCount := 0
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestCount++
-	}))
-	defer ts.Close()
+	mockClient := &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			requestCount++
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Status:     "200 OK",
+				Body:       io.NopCloser(strings.NewReader("{}")),
+			}, nil
+		}),
+	}
+	apiURL := "https://api.github.com/mock/releases/latest"
 
-	info, err := checkUpdateWithClient(false, ts.Client(), ts.URL)
+	info, err := checkUpdateWithClient(false, mockClient, apiURL)
 	if err != nil {
 		t.Errorf("expected nil error, got %v", err)
 	}

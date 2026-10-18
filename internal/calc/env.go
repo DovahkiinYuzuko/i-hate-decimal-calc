@@ -12,6 +12,7 @@ import (
 type Env struct {
 	mu             sync.RWMutex
 	vars           map[string]Node
+	evaluatingVars map[string]bool
 	assumptions    *AssumptionStore
 	LastCert       *VerificationCertificate
 	WarnIterations *big.Int
@@ -22,9 +23,10 @@ type Env struct {
 // NewEnv creates a new, empty Env instance.
 func NewEnv() *Env {
 	return &Env{
-		vars:        make(map[string]Node),
-		assumptions: NewAssumptionStore(),
-		WarnWriter:  os.Stderr,
+		vars:           make(map[string]Node),
+		evaluatingVars: make(map[string]bool),
+		assumptions:    NewAssumptionStore(),
+		WarnWriter:     os.Stderr,
 	}
 }
 
@@ -168,6 +170,41 @@ func (e *Env) Delete(name string) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	delete(e.vars, name)
+}
+
+// IsEvaluatingVar returns true if the variable is currently being evaluated (cycle detection).
+func (e *Env) IsEvaluatingVar(name string) bool {
+	if e == nil {
+		return false
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.evaluatingVars != nil && e.evaluatingVars[name]
+}
+
+// PushEvaluatingVar marks a variable as currently being evaluated.
+func (e *Env) PushEvaluatingVar(name string) {
+	if e == nil {
+		return
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.evaluatingVars == nil {
+		e.evaluatingVars = make(map[string]bool)
+	}
+	e.evaluatingVars[name] = true
+}
+
+// PopEvaluatingVar unmarks a variable after evaluation finishes.
+func (e *Env) PopEvaluatingVar(name string) {
+	if e == nil {
+		return
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.evaluatingVars != nil {
+		delete(e.evaluatingVars, name)
+	}
 }
 
 // WithScopedVar executes fn within a dynamically scoped context where name is temporarily
