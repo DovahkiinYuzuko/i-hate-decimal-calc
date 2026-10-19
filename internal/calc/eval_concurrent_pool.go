@@ -1,7 +1,6 @@
 package calc
 
 import (
-	"math"
 	"runtime"
 )
 
@@ -13,18 +12,4 @@ func GetOptimalWorkers() int {
 		return 1
 	}
 	return w
-}
-
-// GetMaxTreeDepth calculates the optimal tree depth for recursive binary splitting
-// based on available CPU cores.
-func GetMaxTreeDepth() int {
-	workers := GetOptimalWorkers()
-	if workers <= 1 {
-		return 0
-	}
-	depth := int(math.Ceil(math.Log2(float64(workers)))) + 1
-	if depth < 1 {
-		return 1
-	}
-	return depth
 }

@@ -7,34 +7,13 @@ import (
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
-// extGCDInt computes the Extended Euclidean Algorithm on a and b,
-// returning gcd, x, and y such that a*x + b*y = gcd.
-func extGCDInt(a, b *big.Int) (*big.Int, *big.Int, *big.Int) {
-	if b.Sign() == 0 {
-		return new(big.Int).Set(a), big.NewInt(1), big.NewInt(0)
-	}
-	g, x1, y1 := extGCDInt(b, new(big.Int).Mod(a, b))
-	q := new(big.Int).Div(a, b)
-	x := new(big.Int).Set(y1)
-	y := new(big.Int).Sub(x1, new(big.Int).Mul(q, y1))
-	return g, x, y
-}
-
 // invModInt computes the modular inverse of a modulo m: a * x = 1 (mod m).
 func invModInt(a, m *big.Int) (*big.Int, error) {
-	modA := new(big.Int).Mod(a, m)
-	if modA.Sign() < 0 {
-		modA.Add(modA, m)
-	}
-	g, x, _ := extGCDInt(modA, m)
-	if g.Cmp(big.NewInt(1)) != 0 {
+	inv := new(big.Int).ModInverse(a, m)
+	if inv == nil {
 		return nil, fmt.Errorf("%s", i18n.T("domain.err_no_inverse", a.String()))
 	}
-	x.Mod(x, m)
-	if x.Sign() < 0 {
-		x.Add(x, m)
-	}
-	return x, nil
+	return inv, nil
 }
 
 // polyDegree returns the degree of a polynomial represented by []*big.Int.

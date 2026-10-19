@@ -22,7 +22,6 @@ type EngineState int
 const (
 	StateUninitialized EngineState = iota
 	StateReady
-	StateError
 )
 
 // LocaleMeta contains language metadata defined inside the JSON.
@@ -38,7 +37,6 @@ type Engine struct {
 	currentLocale  string
 	locales        map[string]map[string]any
 	metadata       map[string]LocaleMeta
-	availableList  []string
 }
 
 var globalEngine = &Engine{

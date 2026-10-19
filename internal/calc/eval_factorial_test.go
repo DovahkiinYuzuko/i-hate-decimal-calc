@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"math/big"
 	"testing"
 )
 
@@ -32,13 +33,16 @@ func TestFactorialLegendre_Basic(t *testing.T) {
 	}
 }
 
-func TestFactorialLegendre_MatchesProductTree(t *testing.T) {
+func TestFactorialLegendre_MatchesSequentialProduct(t *testing.T) {
 	checkPoints := []int64{25, 50, 100, 200, 500, 1000, 5000}
 	for _, n := range checkPoints {
-		expected := ParallelProductTree(1, n, 64)
+		expected := big.NewInt(1)
+		for i := int64(1); i <= n; i++ {
+			expected.Mul(expected, big.NewInt(i))
+		}
 		got := FactorialLegendre(n)
 		if got.Cmp(expected) != 0 {
-			t.Fatalf("FactorialLegendre(%d) mismatch with ParallelProductTree", n)
+			t.Fatalf("FactorialLegendre(%d) mismatch with sequential product", n)
 		}
 	}
 }

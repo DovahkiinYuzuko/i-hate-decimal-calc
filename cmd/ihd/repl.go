@@ -107,47 +107,13 @@ func runREPL(in io.Reader, out, errOut io.Writer, ro runOptions) int {
 			continue
 		}
 
-		lowerLine := strings.ToLower(line)
-		if lowerLine == "theme" {
-			fmt.Fprintf(out, i18n.T("cli.repl_theme_current")+"\n", currentTheme)
-			continue
-		}
-		if strings.HasPrefix(lowerLine, "theme ") {
-			target := strings.TrimSpace(lowerLine[6:])
-			if target == "dark" || target == "light" || target == "none" {
-				currentTheme = target
+		if handleThemeAndHighlightCommand(line, &currentTheme, &highlightEnabled, out, func() {
+			if highlightEnabled {
 				editor.Highlight = BuildREPLHighlights(currentTheme, env)
-				_ = i18n.SaveConfigTheme(currentTheme)
-				fmt.Fprintf(out, i18n.T("cli.repl_theme_set")+"\n", currentTheme)
 			} else {
-				fmt.Fprintln(out, i18n.T("cli.repl_theme_invalid"))
+				editor.Highlight = nil
 			}
-			continue
-		}
-
-		if lowerLine == "highlight" || lowerLine == "color" {
-			if highlightEnabled && editor.Highlight != nil {
-				fmt.Fprintf(out, i18n.T("cli.repl_highlight_status_on")+"\n", currentTheme)
-			} else {
-				fmt.Fprintln(out, i18n.T("cli.repl_highlight_status_off"))
-			}
-			continue
-		}
-		if lowerLine == "highlight on" || lowerLine == "color on" {
-			highlightEnabled = true
-			if currentTheme == "none" || currentTheme == "" {
-				currentTheme = "dark"
-			}
-			editor.Highlight = BuildREPLHighlights(currentTheme, env)
-			_ = i18n.SaveConfigHighlight(true)
-			fmt.Fprintln(out, i18n.T("cli.repl_highlight_on"))
-			continue
-		}
-		if lowerLine == "highlight off" || lowerLine == "color off" {
-			highlightEnabled = false
-			editor.Highlight = nil
-			_ = i18n.SaveConfigHighlight(false)
-			fmt.Fprintln(out, i18n.T("cli.repl_highlight_off"))
+		}) {
 			continue
 		}
 
@@ -198,43 +164,7 @@ func runScannerREPL(in io.Reader, out, errOut io.Writer, ro runOptions, env *cal
 			continue
 		}
 
-		lowerLine := strings.ToLower(line)
-		if lowerLine == "theme" {
-			fmt.Fprintf(out, i18n.T("cli.repl_theme_current")+"\n", currentTheme)
-			continue
-		}
-		if strings.HasPrefix(lowerLine, "theme ") {
-			target := strings.TrimSpace(lowerLine[6:])
-			if target == "dark" || target == "light" || target == "none" {
-				currentTheme = target
-				_ = i18n.SaveConfigTheme(target)
-				fmt.Fprintf(out, i18n.T("cli.repl_theme_set")+"\n", target)
-			} else {
-				fmt.Fprintln(out, i18n.T("cli.repl_theme_invalid"))
-			}
-			continue
-		}
-		if lowerLine == "highlight" || lowerLine == "color" {
-			if highlightEnabled {
-				fmt.Fprintf(out, i18n.T("cli.repl_highlight_status_on")+"\n", currentTheme)
-			} else {
-				fmt.Fprintln(out, i18n.T("cli.repl_highlight_status_off"))
-			}
-			continue
-		}
-		if lowerLine == "highlight on" || lowerLine == "color on" {
-			highlightEnabled = true
-			if currentTheme == "none" || currentTheme == "" {
-				currentTheme = "dark"
-			}
-			_ = i18n.SaveConfigHighlight(true)
-			fmt.Fprintln(out, i18n.T("cli.repl_highlight_on"))
-			continue
-		}
-		if lowerLine == "highlight off" || lowerLine == "color off" {
-			highlightEnabled = false
-			_ = i18n.SaveConfigHighlight(false)
-			fmt.Fprintln(out, i18n.T("cli.repl_highlight_off"))
+		if handleThemeAndHighlightCommand(line, &currentTheme, &highlightEnabled, out, nil) {
 			continue
 		}
 
@@ -316,5 +246,58 @@ func handleREPLCommand(line string, env *calc.Env, out io.Writer) bool {
 		return true
 	}
 
+	return false
+}
+
+func handleThemeAndHighlightCommand(line string, currentTheme *string, highlightEnabled *bool, out io.Writer, onThemeChange func()) bool {
+	lowerLine := strings.ToLower(line)
+	switch {
+	case lowerLine == "theme":
+		fmt.Fprintf(out, i18n.T("cli.repl_theme_current")+"\n", *currentTheme)
+		return true
+
+	case strings.HasPrefix(lowerLine, "theme "):
+		target := strings.TrimSpace(lowerLine[6:])
+		if target == "dark" || target == "light" || target == "none" {
+			*currentTheme = target
+			_ = i18n.SaveConfigTheme(target)
+			if onThemeChange != nil {
+				onThemeChange()
+			}
+			fmt.Fprintf(out, i18n.T("cli.repl_theme_set")+"\n", target)
+		} else {
+			fmt.Fprintln(out, i18n.T("cli.repl_theme_invalid"))
+		}
+		return true
+
+	case lowerLine == "highlight" || lowerLine == "color":
+		if *highlightEnabled {
+			fmt.Fprintf(out, i18n.T("cli.repl_highlight_status_on")+"\n", *currentTheme)
+		} else {
+			fmt.Fprintln(out, i18n.T("cli.repl_highlight_status_off"))
+		}
+		return true
+
+	case lowerLine == "highlight on" || lowerLine == "color on":
+		*highlightEnabled = true
+		if *currentTheme == "none" || *currentTheme == "" {
+			*currentTheme = "dark"
+		}
+		_ = i18n.SaveConfigHighlight(true)
+		if onThemeChange != nil {
+			onThemeChange()
+		}
+		fmt.Fprintln(out, i18n.T("cli.repl_highlight_on"))
+		return true
+
+	case lowerLine == "highlight off" || lowerLine == "color off":
+		*highlightEnabled = false
+		_ = i18n.SaveConfigHighlight(false)
+		if onThemeChange != nil {
+			onThemeChange()
+		}
+		fmt.Fprintln(out, i18n.T("cli.repl_highlight_off"))
+		return true
+	}
 	return false
 }

@@ -6,20 +6,6 @@ import (
 	"strings"
 )
 
-// extGCD computes the Extended Euclidean Algorithm on a and b,
-// returning gcd, x, and y such that a*x + b*y = gcd.
-func extGCD(a, b *big.Int) (*big.Int, *big.Int, *big.Int) {
-	if b.Sign() == 0 {
-		return new(big.Int).Set(a), big.NewInt(1), big.NewInt(0)
-	}
-	g, x1, y1 := extGCD(b, new(big.Int).Mod(a, b))
-	// x = y1, y = x1 - (a / b) * y1
-	q := new(big.Int).Div(a, b)
-	x := new(big.Int).Set(y1)
-	y := new(big.Int).Sub(x1, new(big.Int).Mul(q, y1))
-	return g, x, y
-}
-
 // EvalInvMod computes the modular inverse of a modulo m: a * x = 1 (mod m).
 // Both a and m must be integers with m >= 2.
 func EvalInvMod(aNode, mNode Node) (Node, error) {
@@ -37,29 +23,22 @@ func EvalInvMod(aNode, mNode Node) (Node, error) {
 		return nil, NewDomainError("", "inv_mod: modulus must be an integer >= 2, got %s", m.String())
 	}
 
-	a := new(big.Int).Mod(aRat.Val.Num(), m)
-	if a.Sign() < 0 {
-		a.Add(a, m)
+	a := aRat.Val.Num()
+	inv := new(big.Int).ModInverse(a, m)
+	if inv == nil {
+		g := new(big.Int).GCD(nil, nil, a, m)
+		return nil, NewDomainError("", "inv_mod: %s and %s are not coprime (gcd = %s), no modular inverse exists", a.String(), m.String(), g.String())
 	}
 
-	g, x, _ := extGCD(a, m)
-	if g.Cmp(big.NewInt(1)) != 0 {
-		return nil, NewDomainError("", "inv_mod: %s and %s are not coprime (gcd = %s), no modular inverse exists", aRat.Val.Num().String(), m.String(), g.String())
-	}
-
-	x.Mod(x, m)
-	if x.Sign() < 0 {
-		x.Add(x, m)
-	}
-
-	return &RationalNode{Val: new(big.Rat).SetInt(x)}, nil
+	return &RationalNode{Val: new(big.Rat).SetInt(inv)}, nil
 }
 
 // solvePairCRT merges two congruences x = r1 (mod m1) and x = r2 (mod m2)
 // into a single congruence x = R (mod M) where M = lcm(m1, m2).
 // Returns (R, M, error). If inconsistent, returns an error.
 func solvePairCRT(r1, m1, r2, m2 *big.Int) (*big.Int, *big.Int, error) {
-	g, p, _ := extGCD(m1, m2)
+	p := new(big.Int)
+	g := new(big.Int).GCD(p, nil, m1, m2)
 	diff := new(big.Int).Sub(r2, r1)
 	rem := new(big.Int).Mod(diff, g)
 	if rem.Sign() != 0 {

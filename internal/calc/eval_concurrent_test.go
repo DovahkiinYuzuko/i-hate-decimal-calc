@@ -2,7 +2,6 @@ package calc
 
 import (
 	"errors"
-	"math/big"
 	"testing"
 )
 
@@ -39,38 +38,6 @@ func TestTaskFSM_Lifecycle(t *testing.T) {
 	// Completed -> Running (terminal state violation)
 	if err := fsm.Transition(StateRunning); err == nil {
 		t.Fatalf("expected error on transition from Completed")
-	}
-}
-
-func TestParallelProductTree(t *testing.T) {
-	res := ParallelProductTree(1, 20, 4)
-
-	expected := big.NewInt(1)
-	for i := int64(1); i <= 20; i++ {
-		expected.Mul(expected, big.NewInt(i))
-	}
-
-	if res.Cmp(expected) != 0 {
-		t.Fatalf("ParallelProductTree(1, 20) = %s, want %s", res.String(), expected.String())
-	}
-
-	one := ParallelProductTree(5, 5, 4)
-	if one.Cmp(big.NewInt(5)) != 0 {
-		t.Errorf("expected 5, got %s", one.String())
-	}
-
-	empty := ParallelProductTree(10, 5, 4)
-	if empty.Cmp(big.NewInt(1)) != 0 {
-		t.Errorf("expected 1, got %s", empty.String())
-	}
-
-	resLarge := ParallelProductTree(1, 1000, 16)
-	expectedLarge := big.NewInt(1)
-	for i := int64(1); i <= 1000; i++ {
-		expectedLarge.Mul(expectedLarge, big.NewInt(i))
-	}
-	if resLarge.Cmp(expectedLarge) != 0 {
-		t.Fatalf("ParallelProductTree(1, 1000) mismatch with sequential")
 	}
 }
 
@@ -159,22 +126,5 @@ func TestParallelBatchSearch(t *testing.T) {
 	}, 4)
 	if errEmpty != nil || foundEmpty || resEmpty != nil {
 		t.Fatalf("expected nil result on empty slice")
-	}
-}
-
-func BenchmarkProductTree_Parallel(b *testing.B) {
-	for b.Loop() {
-		_ = ParallelProductTree(1, 10000, 64)
-	}
-}
-
-func BenchmarkProductTree_Sequential(b *testing.B) {
-	for b.Loop() {
-		res := big.NewInt(1)
-		cur := new(big.Int)
-		for i := int64(2); i <= 10000; i++ {
-			cur.SetInt64(i)
-			res.Mul(res, cur)
-		}
 	}
 }

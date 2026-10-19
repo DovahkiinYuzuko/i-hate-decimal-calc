@@ -48,114 +48,21 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 	var flagArgs []string
 	var exprArgs []string
 
+	valuedFlags := map[string]bool{
+		"lang": true, "warn-loop": true, "max-loop": true, "lean-file": true,
+		"certificate": true, "replay": true, "interval-eps": true, "theme": true, "format": true,
+	}
+
 	for i := 0; i < len(args); i++ {
 		a := args[i]
-		if a == "-lang" || a == "--lang" {
+		trimmed := strings.TrimLeft(a, "-")
+		name, _, hasEq := strings.Cut(trimmed, "=")
+		if valuedFlags[name] {
 			flagArgs = append(flagArgs, a)
-			if i+1 < len(args) {
+			if !hasEq && i+1 < len(args) {
 				i++
 				flagArgs = append(flagArgs, args[i])
 			}
-			continue
-		}
-		if strings.HasPrefix(a, "-lang=") || strings.HasPrefix(a, "--lang=") {
-			flagArgs = append(flagArgs, a)
-			continue
-		}
-		if a == "-warn-loop" || a == "--warn-loop" {
-			flagArgs = append(flagArgs, a)
-			if i+1 < len(args) {
-				i++
-				flagArgs = append(flagArgs, args[i])
-			}
-			continue
-		}
-		if strings.HasPrefix(a, "-warn-loop=") || strings.HasPrefix(a, "--warn-loop=") {
-			flagArgs = append(flagArgs, a)
-			continue
-		}
-		if a == "-max-loop" || a == "--max-loop" {
-			flagArgs = append(flagArgs, a)
-			if i+1 < len(args) {
-				i++
-				flagArgs = append(flagArgs, args[i])
-			}
-			continue
-		}
-		if strings.HasPrefix(a, "-max-loop=") || strings.HasPrefix(a, "--max-loop=") {
-			flagArgs = append(flagArgs, a)
-			continue
-		}
-		if a == "-lean-file" || a == "--lean-file" {
-			flagArgs = append(flagArgs, a)
-			if i+1 < len(args) {
-				i++
-				flagArgs = append(flagArgs, args[i])
-			}
-			continue
-		}
-		if strings.HasPrefix(a, "-lean-file=") || strings.HasPrefix(a, "--lean-file=") {
-			flagArgs = append(flagArgs, a)
-			continue
-		}
-		if a == "-certificate" || a == "--certificate" {
-			flagArgs = append(flagArgs, a)
-			if i+1 < len(args) {
-				i++
-				flagArgs = append(flagArgs, args[i])
-			}
-			continue
-		}
-		if strings.HasPrefix(a, "-certificate=") || strings.HasPrefix(a, "--certificate=") {
-			flagArgs = append(flagArgs, a)
-			continue
-		}
-		if a == "-replay" || a == "--replay" {
-			flagArgs = append(flagArgs, a)
-			if i+1 < len(args) {
-				i++
-				flagArgs = append(flagArgs, args[i])
-			}
-			continue
-		}
-		if strings.HasPrefix(a, "-replay=") || strings.HasPrefix(a, "--replay=") {
-			flagArgs = append(flagArgs, a)
-			continue
-		}
-		if a == "-interval-eps" || a == "--interval-eps" {
-			flagArgs = append(flagArgs, a)
-			if i+1 < len(args) {
-				i++
-				flagArgs = append(flagArgs, args[i])
-			}
-			continue
-		}
-		if strings.HasPrefix(a, "-interval-eps=") || strings.HasPrefix(a, "--interval-eps=") {
-			flagArgs = append(flagArgs, a)
-			continue
-		}
-		if a == "-theme" || a == "--theme" {
-			flagArgs = append(flagArgs, a)
-			if i+1 < len(args) {
-				i++
-				flagArgs = append(flagArgs, args[i])
-			}
-			continue
-		}
-		if strings.HasPrefix(a, "-theme=") || strings.HasPrefix(a, "--theme=") {
-			flagArgs = append(flagArgs, a)
-			continue
-		}
-		if a == "-format" || a == "--format" {
-			flagArgs = append(flagArgs, a)
-			if i+1 < len(args) {
-				i++
-				flagArgs = append(flagArgs, args[i])
-			}
-			continue
-		}
-		if strings.HasPrefix(a, "-format=") || strings.HasPrefix(a, "--format=") {
-			flagArgs = append(flagArgs, a)
 			continue
 		}
 		switch a {
@@ -542,8 +449,71 @@ func evaluateLine(line string, ro runOptions, out, errOut io.Writer) error {
 	return evaluateLineWithEnv(line, ro, env, out, errOut)
 }
 
-func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut io.Writer) error {
-	ensureEnvIterationLimits(env, ro, errOut)
+func handleEvaluationOutputs(origNode, evaled calc.Node, steps []calc.PedagogicalStep, line string, ro runOptions, env *calc.Env, suppressOutput bool, out, errOut io.Writer) {
+	if suppressOutput {
+		return
+	}
+	if ro.explain {
+		cert, errCert := calc.VerifyComputation(origNode, evaled, env)
+		if errCert == nil && cert != nil && cert.IsVerified {
+			trace, errTrace := cert.ToProofTrace()
+			if errTrace == nil && trace != nil && trace.StepCount() > 1 {
+				fmt.Fprint(out, trace.RenderExplain(i18n.CurrentLocale()))
+			} else {
+				fmt.Fprint(out, calc.FormatTrace(line, steps, evaled))
+			}
+		} else {
+			fmt.Fprint(out, calc.FormatTrace(line, steps, evaled))
+		}
+	} else {
+		_ = outputNode(out, evaled, ro)
+	}
+	if ro.verify {
+		cert, _ := calc.VerifyComputation(origNode, evaled, env)
+		fmt.Fprintln(out, cert.String())
+	}
+	if ro.lean || ro.leanFile != "" {
+		cert, _ := calc.VerifyComputation(origNode, evaled, env)
+		if cert != nil && cert.IsVerified {
+			leanCode, err := calc.GenerateLeanSource("ihd_certified_proof", cert, origNode, evaled)
+			if err == nil {
+				if ro.lean {
+					fmt.Fprintln(out, leanCode)
+				}
+				if ro.leanFile != "" {
+					if err := saveLeanProofFile(ro.leanFile, leanCode); err != nil {
+						fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), fmt.Sprintf(i18n.T("cli.err_write_file"), ro.leanFile, err))
+					} else {
+						fmt.Fprintln(out, fmt.Sprintf(i18n.T("cli.lean_file_saved"), ro.leanFile))
+					}
+				}
+			} else {
+				fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
+			}
+		} else {
+			if cert != nil && cert.Details != "" {
+				fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), fmt.Sprintf(i18n.T("lean.err_cannot_generate_lean_unverified"), cert.Details))
+			} else {
+				fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), i18n.T("lean.err_cannot_generate_lean_no_cert"))
+			}
+		}
+	}
+	if ro.certFile != "" {
+		cert, _ := calc.VerifyComputation(origNode, evaled, env)
+		if cert != nil {
+			trace, err := calc.ConvertVerificationCertificateToProofTrace(cert)
+			if err == nil && trace != nil {
+				if err := calc.SaveProofTraceJSON(trace, ro.certFile); err != nil {
+					fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), fmt.Sprintf(i18n.T("cli.err_write_file"), ro.certFile, err))
+				} else {
+					fmt.Fprintln(out, fmt.Sprintf(i18n.T("cli.cert_file_saved"), ro.certFile))
+				}
+			}
+		}
+	}
+}
+
+func evaluateLineInternal(line string, ro runOptions, env *calc.Env, suppressOutput bool, out, errOut io.Writer, errPrefix string) error {
 	lowerLine := strings.ToLower(line)
 	if strings.HasPrefix(lowerLine, "explain ") || strings.HasPrefix(lowerLine, "steps ") {
 		parts := strings.SplitN(line, " ", 2)
@@ -561,7 +531,7 @@ func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut 
 
 	parsed, err := calc.ParseStatement(line)
 	if err != nil {
-		fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
+		fmt.Fprintf(errOut, "%s%v\n", errPrefix, err)
 		return err
 	}
 
@@ -569,159 +539,49 @@ func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut 
 		parsed = calc.ApplyDegreeModeToStatement(parsed)
 	}
 
+	var evalTarget calc.Node
+	var assignName string
+
 	switch v := parsed.(type) {
 	case *calc.AssignStmt:
-		var evaled calc.Node
-		var steps []calc.PedagogicalStep
-		if ro.explain {
-			evaled, steps, err = calc.EvalWithTraceAndEnv(v.Value, env)
-		} else {
-			evaled, err = calc.EvalWithEnv(v.Value, env)
-		}
-		if err != nil {
-			fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
-			return err
-		}
-		if rel, ok := evaled.(*calc.RelOpNode); ok && (rel.Op == "==" || rel.Op == "!=") {
-			if resolved, errEq := calc.EvaluateRelOpEquality(rel, env); errEq == nil && resolved != nil {
-				evaled = resolved
-			}
-		}
-		env.Set(v.Name, evaled)
-		env.Set("ans", evaled)
-		if ro.explain {
-			fmt.Fprint(out, calc.FormatTrace(line, steps, evaled))
-		} else {
-			_ = outputNode(out, evaled, ro)
-		}
-		if ro.verify {
-			cert, _ := calc.VerifyComputation(v.Value, evaled, env)
-			fmt.Fprintln(out, cert.String())
-		}
-		if ro.lean || ro.leanFile != "" {
-			cert, _ := calc.VerifyComputation(v.Value, evaled, env)
-			if cert != nil && cert.IsVerified {
-				leanCode, err := calc.GenerateLeanSource("ihd_certified_proof", cert, v.Value, evaled)
-				if err == nil {
-					if ro.lean {
-						fmt.Fprintln(out, leanCode)
-					}
-					if ro.leanFile != "" {
-						if err := saveLeanProofFile(ro.leanFile, leanCode); err != nil {
-							fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), fmt.Sprintf(i18n.T("cli.err_write_file"), ro.leanFile, err))
-						} else {
-							fmt.Fprintln(out, fmt.Sprintf(i18n.T("cli.lean_file_saved"), ro.leanFile))
-						}
-					}
-				} else {
-					fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
-				}
-			} else {
-				if cert != nil && cert.Details != "" {
-					fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), fmt.Sprintf(i18n.T("lean.err_cannot_generate_lean_unverified"), cert.Details))
-				} else {
-					fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), i18n.T("lean.err_cannot_generate_lean_no_cert"))
-				}
-			}
-		}
-		if ro.certFile != "" {
-			cert, _ := calc.VerifyComputation(v.Value, evaled, env)
-			if cert != nil {
-				trace, err := calc.ConvertVerificationCertificateToProofTrace(cert)
-				if err == nil && trace != nil {
-					if err := calc.SaveProofTraceJSON(trace, ro.certFile); err != nil {
-						fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), fmt.Sprintf(i18n.T("cli.err_write_file"), ro.certFile, err))
-					} else {
-						fmt.Fprintln(out, fmt.Sprintf(i18n.T("cli.cert_file_saved"), ro.certFile))
-					}
-				}
-			}
-		}
-		return nil
-
+		evalTarget = v.Value
+		assignName = v.Name
 	case calc.Node:
-		var evaled calc.Node
-		var steps []calc.PedagogicalStep
-		if ro.explain {
-			evaled, steps, err = calc.EvalWithTraceAndEnv(v, env)
-		} else {
-			evaled, err = calc.EvalWithEnv(v, env)
-		}
-		if err != nil {
-			fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
-			return err
-		}
-		if rel, ok := evaled.(*calc.RelOpNode); ok && (rel.Op == "==" || rel.Op == "!=") {
-			if resolved, errEq := calc.EvaluateRelOpEquality(rel, env); errEq == nil && resolved != nil {
-				evaled = resolved
-			}
-		}
-		env.Set("ans", evaled)
-		if ro.explain {
-			cert, errCert := calc.VerifyComputation(v, evaled, env)
-			if errCert == nil && cert != nil && cert.IsVerified {
-				trace, errTrace := cert.ToProofTrace()
-				if errTrace == nil && trace != nil && trace.StepCount() > 1 {
-					fmt.Fprint(out, trace.RenderExplain(i18n.CurrentLocale()))
-				} else {
-					fmt.Fprint(out, calc.FormatTrace(line, steps, evaled))
-				}
-			} else {
-				fmt.Fprint(out, calc.FormatTrace(line, steps, evaled))
-			}
-		} else {
-			_ = outputNode(out, evaled, ro)
-		}
-		if ro.verify {
-			cert, _ := calc.VerifyComputation(v, evaled, env)
-			fmt.Fprintln(out, cert.String())
-		}
-		if ro.lean || ro.leanFile != "" {
-			cert, _ := calc.VerifyComputation(v, evaled, env)
-			if cert != nil && cert.IsVerified {
-				leanCode, err := calc.GenerateLeanSource("ihd_certified_proof", cert, v, evaled)
-				if err == nil {
-					if ro.lean {
-						fmt.Fprintln(out, leanCode)
-					}
-					if ro.leanFile != "" {
-						if err := saveLeanProofFile(ro.leanFile, leanCode); err != nil {
-							fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), fmt.Sprintf(i18n.T("cli.err_write_file"), ro.leanFile, err))
-						} else {
-							fmt.Fprintln(out, fmt.Sprintf(i18n.T("cli.lean_file_saved"), ro.leanFile))
-						}
-					}
-				} else {
-					fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
-				}
-			} else {
-				if cert != nil && cert.Details != "" {
-					fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), fmt.Sprintf(i18n.T("lean.err_cannot_generate_lean_unverified"), cert.Details))
-				} else {
-					fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), i18n.T("lean.err_cannot_generate_lean_no_cert"))
-				}
-			}
-		}
-		if ro.certFile != "" {
-			cert, _ := calc.VerifyComputation(v, evaled, env)
-			if cert != nil {
-				trace, err := calc.ConvertVerificationCertificateToProofTrace(cert)
-				if err == nil && trace != nil {
-					if err := calc.SaveProofTraceJSON(trace, ro.certFile); err != nil {
-						fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), fmt.Sprintf(i18n.T("cli.err_write_file"), ro.certFile, err))
-					} else {
-						fmt.Fprintln(out, fmt.Sprintf(i18n.T("cli.cert_file_saved"), ro.certFile))
-					}
-				}
-			}
-		}
-		return nil
-
+		evalTarget = v
 	default:
 		err := fmt.Errorf(i18n.T("cli.err_unknown_stmt"), parsed)
-		fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
+		fmt.Fprintf(errOut, "%s%v\n", errPrefix, err)
 		return err
 	}
+
+	var evaled calc.Node
+	var steps []calc.PedagogicalStep
+	if ro.explain {
+		evaled, steps, err = calc.EvalWithTraceAndEnv(evalTarget, env)
+	} else {
+		evaled, err = calc.EvalWithEnv(evalTarget, env)
+	}
+	if err != nil {
+		fmt.Fprintf(errOut, "%s%v\n", errPrefix, err)
+		return err
+	}
+	if rel, ok := evaled.(*calc.RelOpNode); ok && (rel.Op == "==" || rel.Op == "!=") {
+		if resolved, errEq := calc.EvaluateRelOpEquality(rel, env); errEq == nil && resolved != nil {
+			evaled = resolved
+		}
+	}
+	if assignName != "" {
+		env.Set(assignName, evaled)
+	}
+	env.Set("ans", evaled)
+
+	handleEvaluationOutputs(evalTarget, evaled, steps, line, ro, env, suppressOutput, out, errOut)
+	return nil
+}
+
+func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut io.Writer) error {
+	ensureEnvIterationLimits(env, ro, errOut)
+	return evaluateLineInternal(line, ro, env, false, out, errOut, i18n.T("cli.error_prefix"))
 }
 
 func runScriptFile(filePath string, ro runOptions, out, errOut io.Writer) int {
@@ -789,128 +649,8 @@ func runScriptFile(filePath string, ro runOptions, out, errOut io.Writer) int {
 }
 
 func executeScriptLine(line string, ro runOptions, env *calc.Env, suppressOutput bool, out, errOut io.Writer, filePath string, lineNum int) error {
-	lowerLine := strings.ToLower(line)
-	if strings.HasPrefix(lowerLine, "explain ") || strings.HasPrefix(lowerLine, "steps ") {
-		parts := strings.SplitN(line, " ", 2)
-		ro.explain = true
-		line = strings.TrimSpace(parts[1])
-	} else if strings.HasPrefix(lowerLine, "verify ") {
-		parts := strings.SplitN(line, " ", 2)
-		ro.verify = true
-		line = strings.TrimSpace(parts[1])
-	} else if strings.HasPrefix(lowerLine, "lean ") {
-		parts := strings.SplitN(line, " ", 2)
-		ro.lean = true
-		line = strings.TrimSpace(parts[1])
-	}
-
-	parsed, err := calc.ParseStatement(line)
-	if err != nil {
-		fmt.Fprintf(errOut, "%s:%d: %v\n", filePath, lineNum, err)
-		return err
-	}
-
-	if ro.deg {
-		parsed = calc.ApplyDegreeModeToStatement(parsed)
-	}
-
-	switch v := parsed.(type) {
-	case *calc.AssignStmt:
-		var evaled calc.Node
-		var steps []calc.PedagogicalStep
-		if ro.explain {
-			evaled, steps, err = calc.EvalWithTraceAndEnv(v.Value, env)
-		} else {
-			evaled, err = calc.EvalWithEnv(v.Value, env)
-		}
-		if err != nil {
-			fmt.Fprintf(errOut, "%s:%d: %v\n", filePath, lineNum, err)
-			return err
-		}
-		if rel, ok := evaled.(*calc.RelOpNode); ok && (rel.Op == "==" || rel.Op == "!=") {
-			if resolved, errEq := calc.EvaluateRelOpEquality(rel, env); errEq == nil && resolved != nil {
-				evaled = resolved
-			}
-		}
-		env.Set(v.Name, evaled)
-		env.Set("ans", evaled)
-		if !suppressOutput {
-			if ro.explain {
-				fmt.Fprint(out, calc.FormatTrace(line, steps, evaled))
-			} else {
-				_ = outputNode(out, evaled, ro)
-			}
-			if ro.verify {
-				cert, _ := calc.VerifyComputation(v.Value, evaled, env)
-				fmt.Fprintln(out, cert.String())
-			}
-			if ro.lean || ro.leanFile != "" {
-				cert, _ := calc.VerifyComputation(v.Value, evaled, env)
-				if cert != nil && cert.IsVerified {
-					leanCode, err := calc.GenerateLeanSource("ihd_certified_proof", cert, v.Value, evaled)
-					if err == nil {
-						if ro.lean {
-							fmt.Fprintln(out, leanCode)
-						}
-						if ro.leanFile != "" {
-							_ = saveLeanProofFile(ro.leanFile, leanCode)
-						}
-					}
-				}
-			}
-		}
-		return nil
-
-	case calc.Node:
-		var evaled calc.Node
-		var steps []calc.PedagogicalStep
-		if ro.explain {
-			evaled, steps, err = calc.EvalWithTraceAndEnv(v, env)
-		} else {
-			evaled, err = calc.EvalWithEnv(v, env)
-		}
-		if err != nil {
-			fmt.Fprintf(errOut, "%s:%d: %v\n", filePath, lineNum, err)
-			return err
-		}
-		if rel, ok := evaled.(*calc.RelOpNode); ok && (rel.Op == "==" || rel.Op == "!=") {
-			if resolved, errEq := calc.EvaluateRelOpEquality(rel, env); errEq == nil && resolved != nil {
-				evaled = resolved
-			}
-		}
-		env.Set("ans", evaled)
-		if !suppressOutput {
-			if ro.explain {
-				fmt.Fprint(out, calc.FormatTrace(line, steps, evaled))
-			} else {
-				_ = outputNode(out, evaled, ro)
-			}
-			if ro.verify {
-				cert, _ := calc.VerifyComputation(v, evaled, env)
-				fmt.Fprintln(out, cert.String())
-			}
-			if ro.lean || ro.leanFile != "" {
-				cert, _ := calc.VerifyComputation(v, evaled, env)
-				if cert != nil && cert.IsVerified {
-					leanCode, err := calc.GenerateLeanSource("ihd_certified_proof", cert, v, evaled)
-					if err == nil {
-						if ro.lean {
-							fmt.Fprintln(out, leanCode)
-						}
-						if ro.leanFile != "" {
-							_ = saveLeanProofFile(ro.leanFile, leanCode)
-						}
-					}
-				}
-			}
-		}
-		return nil
-
-	default:
-		err := fmt.Errorf(i18n.T("cli.err_unknown_stmt"), parsed)
-		fmt.Fprintf(errOut, "%s:%d: %v\n", filePath, lineNum, err)
-		return err
-	}
+	prefix := fmt.Sprintf("%s:%d: ", filePath, lineNum)
+	return evaluateLineInternal(line, ro, env, suppressOutput, out, errOut, prefix)
 }
 
 func saveLeanProofFile(path, code string) error {

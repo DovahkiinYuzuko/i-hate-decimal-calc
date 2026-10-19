@@ -201,22 +201,6 @@ func TestEvalIsPrime(t *testing.T) {
 	}
 }
 
-func TestExtGCD(t *testing.T) {
-	a := big.NewInt(240)
-	b := big.NewInt(46)
-	g, x, y := extGCD(a, b)
-	// 240*x + 46*y = g
-	term1 := new(big.Int).Mul(a, x)
-	term2 := new(big.Int).Mul(b, y)
-	sum := new(big.Int).Add(term1, term2)
-	if sum.Cmp(g) != 0 {
-		t.Errorf("extGCD identity failed: %s*%s + %s*%s = %s != %s", a, x, b, y, sum, g)
-	}
-	if g.Int64() != 2 {
-		t.Errorf("gcd(240, 46) expected 2, got %s", g)
-	}
-}
-
 func TestEvalFib(t *testing.T) {
 	tests := []struct {
 		input    string
