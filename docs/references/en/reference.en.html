@@ -2306,9 +2306,9 @@ M1001 80h400000v40h-400000z"></path></svg></span></span></span><span class="vlis
 <td align="left">Reads an exported certificate JSON file and verifies that residuals vanish without invoking CAS solver algorithms</td>
 </tr>
 <tr>
-<td align="left"><code class="clickable-code" data-copy="--micro-verifier" title="Click to copy">--micro-verifier</code></td>
-<td align="left"><code class="clickable-code" data-copy="ihd --micro-verifier > micro_verifier.go" title="Click to copy">ihd --micro-verifier > micro_verifier.go</code></td>
-<td align="left">Emits self-contained Go verification source code (standard library only) that can verify certificate JSON files independently</td>
+<td align="left"><code class="clickable-code" data-copy="micro-verifier" title="Click to copy">micro-verifier</code></td>
+<td align="left"><code class="clickable-code" data-copy="micro-verifier cert.json" title="Click to copy">micro-verifier cert.json</code></td>
+<td align="left">Standalone zero-dependency micro-verification binary built using only the Go standard library. Validates certificate JSON files (<code class="clickable-code" data-copy="ihd-proof-trace-v1" title="Click to copy">ihd-proof-trace-v1</code>) objectively without relying on the CAS solver itself</td>
 </tr>
 <tr>
 <td align="left"><code class="clickable-code" data-copy="--lean" title="Click to copy">--lean</code> / <code class="clickable-code" data-copy="--lean-file" title="Click to copy">--lean-file</code></td>

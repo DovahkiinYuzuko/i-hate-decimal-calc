@@ -26,6 +26,8 @@ if [ "$LOCAL_MODE" = true ]; then
     fi
     (cd "$SCRIPT_DIR" && CGO_ENABLED=0 go build -ldflags="$LDFLAGS" -o "$INSTALL_DIR/ihd" ./cmd/ihd)
     chmod +x "$INSTALL_DIR/ihd"
+    (cd "$SCRIPT_DIR" && CGO_ENABLED=0 go build -ldflags="-s -w" -o "$INSTALL_DIR/micro-verifier" ./tools/micro-verifier)
+    chmod +x "$INSTALL_DIR/micro-verifier"
     if [ -d "$SCRIPT_DIR/exam" ]; then
         cp -r "$SCRIPT_DIR/exam" "$IHD_HOME/"
         chmod +x "$EXAM_DIR/exam.sh" 2>/dev/null || true
@@ -104,6 +106,11 @@ else
 
     cp "$TMP_DIR/ihd" "$INSTALL_DIR/ihd"
     chmod +x "$INSTALL_DIR/ihd"
+
+    if [ -f "$TMP_DIR/micro-verifier" ]; then
+        cp "$TMP_DIR/micro-verifier" "$INSTALL_DIR/micro-verifier"
+        chmod +x "$INSTALL_DIR/micro-verifier"
+    fi
 
     if [ -d "$TMP_DIR/exam" ]; then
         cp -r "$TMP_DIR/exam" "$IHD_HOME/"

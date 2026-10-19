@@ -2295,9 +2295,9 @@ M1001 80h400000v40h-400000z"></path></svg></span></span></span><span class="vlis
 <td align="left">保存された証明書 JSON を読み込み、各ステップの残差が0かを再検証</td>
 </tr>
 <tr>
-<td align="left"><code class="clickable-code" data-copy="--micro-verifier" title="クリックしてコピー">--micro-verifier</code></td>
-<td align="left"><code class="clickable-code" data-copy="ihd --micro-verifier > micro_verifier.go" title="クリックしてコピー">ihd --micro-verifier > micro_verifier.go</code></td>
-<td align="left">Go の標準ライブラリのみで動作する検証用コードを出力。証明書 JSON の残差検証を単体で実行可能</td>
+<td align="left"><code class="clickable-code" data-copy="micro-verifier" title="クリックしてコピー">micro-verifier</code></td>
+<td align="left"><code class="clickable-code" data-copy="micro-verifier cert.json" title="クリックしてコピー">micro-verifier cert.json</code></td>
+<td align="left">外部依存ゼロ・Go 標準ライブラリのみで実装された極小独立検証バイナリ。証明書 JSON（<code class="clickable-code" data-copy="ihd-proof-trace-v1" title="クリックしてコピー">ihd-proof-trace-v1</code>）を読み込み、CAS本体に依存せず残差ゼロを客観的に再検証</td>
 </tr>
 <tr>
 <td align="left"><code class="clickable-code" data-copy="--lean" title="クリックしてコピー">--lean</code> / <code class="clickable-code" data-copy="--lean-file" title="クリックしてコピー">--lean-file</code></td>

@@ -34,6 +34,7 @@ if ($Local) {
             $LdFlags += " -X github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/updater.BuildVersion=$GitTag"
         }
         go build -ldflags="$LdFlags" -o (Join-Path $InstallDir "ihd.exe") ./cmd/ihd
+        go build -ldflags="-s -w" -o (Join-Path $InstallDir "micro-verifier.exe") ./tools/micro-verifier
     } finally {
         Pop-Location
         if ($null -ne $PrevCgo) { $env:CGO_ENABLED = $PrevCgo } else { Remove-Item env:CGO_ENABLED -ErrorAction SilentlyContinue }
@@ -98,6 +99,11 @@ if ($Local) {
         }
 
         Copy-Item -Path $ExeSource -Destination (Join-Path $InstallDir "ihd.exe") -Force
+
+        $VerifierSource = Join-Path $TmpExtract "micro-verifier.exe"
+        if (Test-Path $VerifierSource) {
+            Copy-Item -Path $VerifierSource -Destination (Join-Path $InstallDir "micro-verifier.exe") -Force
+        }
 
         $ExamSource = Join-Path $TmpExtract "exam"
         if (Test-Path $ExamSource) {

@@ -334,7 +334,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `--verify` / `verify` | `ihd --verify "factor(x^2 - 1)"` | Checks algebraic correctness for steps and results against defining relations and derivatives, confirming that residuals vanish |
 | `--certificate` | `ihd --certificate [file] "factor(x^2 - 1)"` | Exports computation and rewriting sequence into a certificate JSON file (schema `ihd-proof-trace-v1`) to stdout or file |
 | `--replay` | `ihd --replay cert.json` | Reads an exported certificate JSON file and verifies that residuals vanish without invoking CAS solver algorithms |
-| `--micro-verifier` | `ihd --micro-verifier > micro_verifier.go` | Emits self-contained Go verification source code (standard library only) that can verify certificate JSON files independently |
+| `micro-verifier` | `micro-verifier cert.json` | Standalone zero-dependency micro-verification binary built using only the Go standard library. Validates certificate JSON files (`ihd-proof-trace-v1`) objectively without relying on the CAS solver itself |
 | `--lean` / `--lean-file` | `ihd --lean "factor(x^2 - 1)"` / `ihd --lean-file p.lean "factor(x^2 - 1)"` | Automatically transpiles computation and proof traces into formal **Lean 4 (Mathlib4)** proof theorems (`by ring`, `by ext <;> fin_cases`, `by repeat constructor <;> norm_num`, `by simp`, etc.) |
 
 ---
