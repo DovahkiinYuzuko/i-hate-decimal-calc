@@ -334,12 +334,12 @@ ihd --verify "convert_unit(100 [km/h], m/s)"
 > - *※ HTML版の再ビルド手順やツールアーキテクチャの詳細は [tools/reference-builder/README.md](tools/reference-builder/README.md) を参照してください。*
 
 #### 主なカテゴリと代表関数
-- **基本代数・数論・方程式**: `sqrt`, `cbrt`, `expand`, `factor`, `apart`, `together`, `abs`, `gcd`, `lcm`, `mod`, `inv_mod`, `crt`, `totient`, `is_prime`, `cfrac`, `from_cfrac`, `rand`, `fib`, `digit_count`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `sturm`, `root_count`, `isolate_roots`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `to_primitive_element`, `primitive_element`, `padic_val`, `padic_norm`, `padic_expand`, `solve`, `solve_diophantine`, `pell_solve`
+- **基本代数・数論・方程式**: `sqrt`, `cbrt`, `expand`, `factor`, `apart`, `together`, `abs`, `gcd`, `lcm`, `mod`, `inv_mod`, `crt`, `totient`, `is_prime`, `cfrac`, `from_cfrac`, `rand`, `fib`, `fibonacci`, `digit_count`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `sturm`, `root_count`, `isolate_roots`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `find_min_poly`, `to_primitive_element`, `primitive_element`, `padic_val`, `padic_norm`, `padic_expand`, `solve`, `solve_diophantine`, `pell`, `pell_solve`, `interval`
 - **三角関数・対数・複素数**: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `trig_expand`, `trig_reduce`, `exp`, `log`, `ln`, `arg`, `polar`, `polar_exp`, `rect`
-- **微積分・常微分方程式・漸化式・特殊関数・級数**: `diff`, `integrate`, `piecewise`, `risch_integrate`, `limit`, `residue`, `lambert_w`, `erf`, `gamma`, `beta`, `bernoulli`, `zeta`, `dsolve`, `rsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`, `gosper_sum`, `wz_cert`, `puiseux`
-- **線形代数・整数標準形・3次元ベクトル解析**: `det`, `inv`, `transpose`, `rref`, `rank`, `trace`, `eigenvals`, `eigenvects`, `lu`, `qr`, `cholesky`, `ldlt`, `pinv`, `solve_linear`, `hnf`, `hnf_transform`, `snf`, `snf_transform`, `invariant_factors`, `abelian_group_structure`, `dot`, `cross`, `norm`, `grad`, `div`, `curl`
-- **幾何学解析**: `line_intersect`, `circle_intersect`, `triangle_area`, `triangle_centers`, `geo_prove`, `collinear`, `midpoint`, `parallel`, `perpendicular`, `equal_length_sq`, `circle_concyclic`
-- **厳密離散確率・統計**: `binom`, `hyper`, `geom`, `bayes`, `expect`, `variance`, `stddev`
+- **微積分・常微分方程式・漸化式・特殊関数・級数**: `diff`, `integrate`, `piecewise`, `risch_integrate`, `limit`, `residue`, `lambert_w`, `erf`, `gamma`, `beta`, `bernoulli`, `zeta`, `delta`, `dsolve`, `rsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`, `gosper_sum`, `wz_cert`, `puiseux`
+- **線形代数・整数標準形・3次元ベクトル解析**: `det`, `inv`, `transpose`, `rref`, `rank`, `trace`, `tr`, `eigenvals`, `eigenvects`, `lu`, `qr`, `cholesky`, `ldlt`, `pinv`, `solve_linear`, `linsolve`, `hnf`, `hnf_transform`, `snf`, `snf_transform`, `invariant_factors`, `abelian_group_structure`, `lll`, `dot`, `cross`, `norm`, `grad`, `div`, `curl`
+- **幾何学解析**: `line_intersect`, `circle_intersect`, `triangle_area`, `triangle_centers`, `geo_prove`, `collinear`, `midpoint`, `parallel`, `perpendicular`, `equal_length`, `equal_length_sq`, `circle_concyclic`
+- **厳密離散確率・統計**: `binom`, `comb`, `perm`, `hyper`, `geom`, `bayes`, `expect`, `variance`, `stddev`
 - **実代数幾何・数理論理・量化子消去**: `qe`, `forall`, `exists`, `cad`
 - **ガロア理論・代数的根号可解性**: `galois_group`, `is_solvable_by_radicals`
 - **楕円曲線代数・数論幾何・2降下法**: `ec_add`, `ec_mul`, `ec_torsion`, `ec_p_order`, `ec_p_trace`, `ec_p_add`, `ec_p_mul`, `ec_rank_bound`, `ec_generators`
@@ -375,7 +375,8 @@ ihd --verify "convert_unit(100 [km/h], m/s)"
 | `--verify`           | 計算結果（因数分解、逆行列、微積分、ODE、幾何証明等）に対し、定義式や導関数に基づく逆算検算を行い、残差が0であることを確認。<br>`ihd --verify "integrate(1/(x^2 + 1), x)"` $\to$ `atan(x)`<br>`[VERIFIED: diff(F, x) - f == 0]` |
 | `--certificate [file]` | 計算結果と導出ステップ列を証明書 JSON（`ihd-proof-trace-v1`）として出力またはファイルへ保存。<br>`ihd --certificate "factor(x^2 - 1)"`<br>`ihd --certificate cert.json "factor(x^2 - 1)"` |
 | `--replay <file>`    | 保存された証明書 JSON ファイルを読み込み、各ステップの残差が0かを再検証。<br>`ihd --replay cert.json` |
-| `--micro-verifier`   | Go の標準ライブラリのみで動作する最小限の検証器コード（`micro_verifier.go`）を標準出力に出力。<br>`ihd --micro-verifier > micro_verifier.go` |
+| `-i`, `--interval`   | 適応的区間細分化（Rational Interval Arithmetic）による包含区間を算出して出力。<br>`ihd -i "sin(1)"`                                                                  |
+| `--interval-eps <eps>` | 区間細分化の収束判定許容誤差を指定（有理数または小数、デフォルト: `1/1000000`）。<br>`ihd -i --interval-eps "1/1000000000" "sin(1)"`                                  |
 | `--lean`             | 計算結果や導出ステップ列を定理証明支援系 **Lean 4（Mathlib4）** の形式証明コード（`by ring`, `by ext <;> ring`, `by repeat constructor <;> norm_num` 等）として出力。<br>`ihd --lean "factor(x^2 - 1)"` |
 | `--lean-file <path>` | 生成された Lean 4 形式証明コードをスタンドアロンな `.lean` ファイルとして指定パスへ保存。<br>`ihd --lean-file proof.lean "factor(x^2 - 1)"`                                 |
 | `--lang <code/auto>` | 表示言語（ロケール）を指定（`ja`, `en`, `auto`）。設定は `~/.ihd/config.json` に永続化され、カスタム辞書（`~/.ihd/locales/`）にも対応。<br>`ihd --lang en "1/2 + 1/3"` |
@@ -754,12 +755,12 @@ ihd --verify "convert_unit(100 [km/h], m/s)"
 > **[Syntax, Operators & Functions Comprehensive Reference](docs/references/en/reference.en.md)**
 
 #### Major Categories & Representative Functions
-- **Basic Algebra, Number Theory & Equations**: `sqrt`, `cbrt`, `expand`, `factor`, `apart`, `together`, `abs`, `gcd`, `lcm`, `mod`, `inv_mod`, `crt`, `totient`, `is_prime`, `cfrac`, `from_cfrac`, `rand`, `fib`, `digit_count`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `sturm`, `root_count`, `isolate_roots`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `to_primitive_element`, `primitive_element`, `padic_val`, `padic_norm`, `padic_expand`, `solve`, `solve_diophantine`, `pell_solve`
+- **Basic Algebra, Number Theory & Equations**: `sqrt`, `cbrt`, `expand`, `factor`, `apart`, `together`, `abs`, `gcd`, `lcm`, `mod`, `inv_mod`, `crt`, `totient`, `is_prime`, `cfrac`, `from_cfrac`, `rand`, `fib`, `fibonacci`, `digit_count`, `poly_gcd`, `poly_lcm`, `resultant`, `groebner`, `sturm`, `root_count`, `isolate_roots`, `to_poly`, `to_alg`, `alg_inv`, `min_poly`, `find_min_poly`, `to_primitive_element`, `primitive_element`, `padic_val`, `padic_norm`, `padic_expand`, `solve`, `solve_diophantine`, `pell`, `pell_solve`, `interval`
 - **Trigonometric, Logarithmic & Complex Functions**: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `trig_expand`, `trig_reduce`, `exp`, `log`, `ln`, `arg`, `polar`, `polar_exp`, `rect`
-- **Calculus, ODEs, Recurrences, Special Functions & Series**: `diff`, `integrate`, `piecewise`, `risch_integrate`, `limit`, `residue`, `lambert_w`, `erf`, `gamma`, `beta`, `bernoulli`, `zeta`, `dsolve`, `rsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`, `gosper_sum`, `wz_cert`, `puiseux`
-- **Linear Algebra, Integer Normal Forms & 3D Vector Calculus**: `det`, `inv`, `transpose`, `rref`, `rank`, `trace`, `eigenvals`, `eigenvects`, `lu`, `qr`, `cholesky`, `ldlt`, `pinv`, `solve_linear`, `hnf`, `hnf_transform`, `snf`, `snf_transform`, `invariant_factors`, `abelian_group_structure`, `dot`, `cross`, `norm`, `grad`, `div`, `curl`
-- **Computational Geometry**: `line_intersect`, `circle_intersect`, `triangle_area`, `triangle_centers`, `geo_prove`, `collinear`, `midpoint`, `parallel`, `perpendicular`, `equal_length_sq`, `circle_concyclic`
-- **Exact Discrete Probability & Statistics**: `binom`, `hyper`, `geom`, `bayes`, `expect`, `variance`, `stddev`
+- **Calculus, ODEs, Recurrences, Special Functions & Series**: `diff`, `integrate`, `piecewise`, `risch_integrate`, `limit`, `residue`, `lambert_w`, `erf`, `gamma`, `beta`, `bernoulli`, `zeta`, `delta`, `dsolve`, `rsolve`, `laplace`, `inv_laplace`, `taylor`, `fourier_series`, `sum`, `gosper_sum`, `wz_cert`, `puiseux`
+- **Linear Algebra, Integer Normal Forms & 3D Vector Calculus**: `det`, `inv`, `transpose`, `rref`, `rank`, `trace`, `tr`, `eigenvals`, `eigenvects`, `lu`, `qr`, `cholesky`, `ldlt`, `pinv`, `solve_linear`, `linsolve`, `hnf`, `hnf_transform`, `snf`, `snf_transform`, `invariant_factors`, `abelian_group_structure`, `lll`, `dot`, `cross`, `norm`, `grad`, `div`, `curl`
+- **Computational Geometry**: `line_intersect`, `circle_intersect`, `triangle_area`, `triangle_centers`, `geo_prove`, `collinear`, `midpoint`, `parallel`, `perpendicular`, `equal_length`, `equal_length_sq`, `circle_concyclic`
+- **Exact Discrete Probability & Statistics**: `binom`, `comb`, `perm`, `hyper`, `geom`, `bayes`, `expect`, `variance`, `stddev`
 - **Real Algebraic Geometry & Quantifier Elimination**: `qe`, `forall`, `exists`, `cad`
 - **Galois Theory & Solvability by Radicals**: `galois_group`, `is_solvable_by_radicals`
 - **Elliptic Curves, Arithmetic Geometry & 2-Descent**: `ec_add`, `ec_mul`, `ec_torsion`, `ec_p_order`, `ec_p_trace`, `ec_p_add`, `ec_p_mul`, `ec_rank_bound`, `ec_generators`
@@ -795,7 +796,8 @@ ihd --verify "convert_unit(100 [km/h], m/s)"
 | `--verify`           | Reverse-verifies algebraic correctness (factorization, matrix inverses, calculus, ODE, geometric proofs) by checking that residuals vanish.<br>`ihd --verify "integrate(1/(x^2 + 1), x)"` $\to$ `atan(x)`<br>`[VERIFIED: diff(F, x) - f == 0]` |
 | `--certificate [file]` | Exports calculation steps and residuals into a certificate JSON file (`ihd-proof-trace-v1`).<br>`ihd --certificate "factor(x^2 - 1)"`<br>`ihd --certificate cert.json "factor(x^2 - 1)"` |
 | `--replay <file>`    | Reads a certificate JSON file and verifies that residuals vanish without relying on solver logic.<br>`ihd --replay cert.json` |
-| `--micro-verifier`   | Outputs a standalone Go verifier source (standard library only) to stdout.<br>`ihd --micro-verifier > micro_verifier.go` |
+| `-i`, `--interval`   | Evaluates expressions using adaptive rational interval arithmetic enclosures.<br>`ihd -i "sin(1)"`                                                |
+| `--interval-eps <eps>` | Specifies the convergence tolerance epsilon for interval refinement (default: `1/1000000`).<br>`ihd -i --interval-eps "1/1000000000" "sin(1)"    |
 | `--lean`             | Transpiles calculation results and rewriting steps into formal **Lean 4 (Mathlib4)** proof theorems (`by ring`, `by ext <;> ring`, `by repeat constructor <;> norm_num`, etc.).<br>`ihd --lean "factor(x^2 - 1)"` |
 | `--lean-file <path>` | Save generated Lean 4 proof code as a standalone, runnable `.lean` file.<br>`ihd --lean-file proof.lean "factor(x^2 - 1)"`                         |
 | `--lang <code/auto>` | Specify display language (`ja`, `en`, `auto`). Persisted to `~/.ihd/config.json`.<br>`ihd --lang en "1/2 + 1/3"`                                  |
