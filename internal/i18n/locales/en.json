@@ -1020,6 +1020,8 @@
     "lcm": "Least common multiple",
     "limit": "Symbolic limit of expression as variable approaches target",
     "linsolve": "Linear system of equations solver",
+    "lp_maximize": "Exact rational two-phase revised simplex linear programming maximization",
+    "lp_minimize": "Exact rational two-phase revised simplex linear programming minimization",
     "ln": "Natural logarithm (base e)",
     "log": "Logarithm with specified base",
     "matrix": "Construct a matrix from nested row lists",

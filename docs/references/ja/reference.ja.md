@@ -203,6 +203,8 @@
 | `ldlt` | `ldlt(A)` | 平方根フリー厳密 $LDL^T$ 分解（$L$ 単位下三角、$D$ 正の有理数対角行列） |
 | `pinv` | `pinv(A)` | RREFフルランク分解によるムーア・ペンローズ擬似逆行列 $A^+$（小数を一切使わない有理厳密解） |
 | `solve_linear` / `linsolve` | `solve_linear(A, b)` | 厳密連立一次方程式系ソルバー $Ax=b$（唯一解、不能、不定パラメータ解の厳密判別） |
+| `lp_maximize` | `lp_maximize(obj, constraints)` | 厳密有理数2段階改訂シンプレックス法による線形計画最大化問題ソルバー（Blandの最小添字規則、双対変数・Farkas証明書・後退方向 ray 返却） |
+| `lp_minimize` | `lp_minimize(obj, constraints)` | 厳密有理数2段階改訂シンプレックス法による線形計画最小化問題ソルバー |
 | `hnf` | `hnf(A)` | 整数行列のエルミート標準形（Hermite Normal Form: HNF）。小数を一切使わない整数初等行変形と剰余簡約により行階段形（上三角型）$H$ を導出 |
 | `hnf_transform` | `hnf_transform(A)` | エルミート標準形と単模変換行列 $[H, U]$ を同時返却（$U \in \text{GL}_m(\mathbb{Z}), U A = H$） |
 | `snf` | `snf(A)` | 整数行列のスミス標準形（Smith Normal Form: SNF）。整数初等行・列変形により主対角成分が整除鎖 $d_1 \mid d_2 \mid \dots \mid d_r$ を満たす対角行列 $D$ を導出 |
