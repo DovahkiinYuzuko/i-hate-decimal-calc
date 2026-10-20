@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
 func TestSupportedShells(t *testing.T) {
@@ -96,5 +98,27 @@ func TestRunCompletion_InvalidShell(t *testing.T) {
 	err := RunCompletion("unsupported_shell", &buf)
 	if err == nil {
 		t.Errorf("expected error for unsupported shell, got nil")
+	}
+}
+
+func TestRunCompletion_I18n(t *testing.T) {
+	_ = i18n.Init("ja")
+	var jaBuf bytes.Buffer
+	if err := RunCompletion("powershell", &jaBuf); err != nil {
+		t.Fatalf("RunCompletion ja failed: %v", err)
+	}
+	jaOutput := jaBuf.String()
+	if !strings.Contains(jaOutput, "指定変数に関する記号的微分を計算") {
+		t.Errorf("expected Japanese description for diff in ja locale, got: %s", jaOutput)
+	}
+
+	_ = i18n.Init("en")
+	var enBuf bytes.Buffer
+	if err := RunCompletion("powershell", &enBuf); err != nil {
+		t.Fatalf("RunCompletion en failed: %v", err)
+	}
+	enOutput := enBuf.String()
+	if !strings.Contains(enOutput, "Symbolic differentiation with respect to variable") {
+		t.Errorf("expected English description for diff in en locale, got: %s", enOutput)
 	}
 }

@@ -8,51 +8,20 @@ import (
 	"text/template"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc"
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
-var cliFlags = []string{
-	"--lang",
-	"--ascii",
-	"--approx",
-	"--latex",
-	"--typst",
-	"--pretty",
-	"--deg",
-	"--explain",
-	"--format",
-	"--verify",
-	"--certificate",
-	"--replay",
-	"--lean",
-	"--lean-file",
-	"--theme",
-	"--no-color",
-	"--no-update-check",
-	"--warn-loop",
-	"--max-loop",
-	"-h",
-	"--help",
-	"-v",
-	"--version",
-}
-
-var subCommands = []string{
-	"run",
-	"completion",
-}
-
-var reservedConstants = []string{
-	"pi",
-	"e",
-	"i",
-	"ans",
+type completionItem struct {
+	Name string
+	Desc string
 }
 
 type completionData struct {
-	Flags       []string
-	Subcommands []string
-	Functions   []string
-	Constants   []string
+	Flags       []completionItem
+	Subcommands []completionItem
+	Functions   []completionItem
+	Constants   []completionItem
+	Labels      map[string]string
 }
 
 // SupportedShells returns the list of shells supported for completion script generation.
@@ -64,12 +33,120 @@ func SupportedShells() []string {
 func RunCompletion(shell string, w io.Writer) error {
 	shell = strings.ToLower(strings.TrimSpace(shell))
 
-	funcs := calc.AllFunctionNames()
+	flagDefinitions := []struct {
+		name    string
+		i18nKey string
+	}{
+		{"--lang", "cli.flag_lang"},
+		{"--ascii", "cli.flag_ascii"},
+		{"--approx", "cli.flag_approx"},
+		{"--latex", "cli.flag_latex"},
+		{"--typst", "cli.flag_typst"},
+		{"--pretty", "cli.flag_pretty"},
+		{"--deg", "cli.flag_deg"},
+		{"--explain", "cli.flag_explain"},
+		{"--format", "cli.flag_format"},
+		{"--verify", "cli.flag_verify"},
+		{"--certificate", "cli.flag_certificate"},
+		{"--replay", "cli.flag_replay"},
+		{"--lean", "cli.flag_lean"},
+		{"--lean-file", "cli.flag_lean_file"},
+		{"--theme", "cli.flag_theme"},
+		{"--no-color", "cli.flag_no_color"},
+		{"--no-update-check", "cli.flag_no_update_check"},
+		{"--warn-loop", "cli.flag_warn_loop"},
+		{"--max-loop", "cli.flag_max_loop"},
+		{"-h", "cli.flag_help"},
+		{"--help", "cli.flag_help"},
+		{"-v", "cli.flag_version"},
+		{"--version", "cli.flag_version"},
+	}
+
+	var flags []completionItem
+	for _, f := range flagDefinitions {
+		flags = append(flags, completionItem{
+			Name: f.name,
+			Desc: i18n.T(f.i18nKey),
+		})
+	}
+
+	subcommandDefinitions := []struct {
+		name    string
+		i18nKey string
+	}{
+		{"run", "cli.subcmd_run"},
+		{"completion", "cli.subcmd_completion"},
+	}
+
+	var subcommands []completionItem
+	for _, s := range subcommandDefinitions {
+		subcommands = append(subcommands, completionItem{
+			Name: s.name,
+			Desc: i18n.T(s.i18nKey),
+		})
+	}
+
+	constantDefinitions := []struct {
+		name    string
+		i18nKey string
+	}{
+		{"pi", "cli.const_pi"},
+		{"e", "cli.const_e"},
+		{"i", "cli.const_i"},
+		{"ans", "cli.const_ans"},
+	}
+
+	var constants []completionItem
+	for _, c := range constantDefinitions {
+		constants = append(constants, completionItem{
+			Name: c.name,
+			Desc: i18n.T(c.i18nKey),
+		})
+	}
+
+	defaultFnDesc := i18n.T("cli.completion_builtin_func")
+	var functions []completionItem
+	for _, fn := range calc.AllFunctionNames() {
+		fnDesc := i18n.T("fn." + fn)
+		if fnDesc == "fn."+fn || fnDesc == "" {
+			fnDesc = defaultFnDesc
+		}
+		functions = append(functions, completionItem{
+			Name: fn,
+			Desc: fnDesc,
+		})
+	}
+
+	labels := map[string]string{
+		"Format": i18n.T("cli.completion_label_format"),
+		"Theme":  i18n.T("cli.completion_label_theme"),
+		"Lang":   i18n.T("cli.completion_label_lang"),
+		"Shell":  i18n.T("cli.completion_label_shell"),
+	}
+
 	data := completionData{
-		Flags:       cliFlags,
-		Subcommands: subCommands,
-		Functions:   funcs,
-		Constants:   reservedConstants,
+		Flags:       flags,
+		Subcommands: subcommands,
+		Functions:   functions,
+		Constants:   constants,
+		Labels:      labels,
+	}
+
+	funcMap := template.FuncMap{
+		"escapePs": func(s string) string {
+			return strings.ReplaceAll(s, "'", "''")
+		},
+		"escapeFish": func(s string) string {
+			s = strings.ReplaceAll(s, "\\", "\\\\")
+			return strings.ReplaceAll(s, "\"", "\\\"")
+		},
+		"escapeZsh": func(s string) string {
+			s = strings.ReplaceAll(s, ":", "\\:")
+			s = strings.ReplaceAll(s, "[", "\\[")
+			s = strings.ReplaceAll(s, "]", "\\]")
+			return strings.ReplaceAll(s, "'", "\\'")
+		},
+		"trimPrefix": strings.TrimPrefix,
 	}
 
 	var tmplStr string
@@ -86,7 +163,7 @@ func RunCompletion(shell string, w io.Writer) error {
 		return fmt.Errorf("unsupported shell %q (supported: %s)", shell, strings.Join(SupportedShells(), ", "))
 	}
 
-	tmpl, err := template.New(shell).Parse(tmplStr)
+	tmpl, err := template.New(shell).Funcs(funcMap).Parse(tmplStr)
 	if err != nil {
 		return fmt.Errorf("failed to parse completion template: %w", err)
 	}
@@ -111,10 +188,10 @@ _ihd_completion() {
         cword=$COMP_CWORD
     }
 
-    local subcommands="{{range .Subcommands}}{{.}} {{end}}"
-    local flags="{{range .Flags}}{{.}} {{end}}"
-    local funcs="{{range .Functions}}{{.}} {{end}}"
-    local constants="{{range .Constants}}{{.}} {{end}}"
+    local subcommands="{{range .Subcommands}}{{.Name}} {{end}}"
+    local flags="{{range .Flags}}{{.Name}} {{end}}"
+    local funcs="{{range .Functions}}{{.Name}} {{end}}"
+    local constants="{{range .Constants}}{{.Name}} {{end}}"
 
     case "${prev}" in
         --format)
@@ -161,47 +238,53 @@ const zshTemplate = `#compdef ihd
 _ihd() {
     local -a subcommands
     subcommands=(
-        'run:Execute calculations from an ihd script file'
-        'completion:Generate shell completion script'
-    )
+{{range .Subcommands}}        '{{.Name}}:{{escapeZsh .Desc}}'
+{{end}}    )
 
     local -a formats
-    formats=('typst:Typst mathematical formatting' 'latex:LaTeX math formatting' 'ascii:Pure ASCII notation' 'pretty:2D Unicode pretty print')
+    formats=('typst' 'latex' 'ascii' 'pretty')
 
     local -a themes
-    themes=('dark:Dark terminal color theme' 'light:Light terminal color theme' 'none:Disable syntax color')
+    themes=('dark' 'light' 'none')
 
     local -a langs
-    langs=('en:English' 'ja:Japanese')
+    langs=('en' 'ja')
 
     local -a shells
-    shells=('bash:Bash completion' 'zsh:Zsh completion' 'fish:Fish completion' 'powershell:PowerShell completion')
+    shells=('bash' 'zsh' 'fish' 'powershell')
 
     local -a functions
-    functions=({{range .Functions}}'{{.}}' {{end}})
+    functions=(
+{{range .Functions}}        '{{.Name}}:{{escapeZsh .Desc}}'
+{{end}}    )
+
+    local -a constants
+    constants=(
+{{range .Constants}}        '{{.Name}}:{{escapeZsh .Desc}}'
+{{end}}    )
 
     _arguments -C \
-        '(-h --help)'{-h,--help}'[Show help message]' \
-        '(-v --version)'{-v,--version}'[Show version]' \
-        '--lang[Set locale]:language:(en ja)' \
-        '--format[Output format]:format:(typst latex ascii pretty)' \
-        '--theme[REPL theme]:theme:(dark light none)' \
-        '--ascii[ASCII output]' \
-        '--approx[Show decimal approximation]' \
-        '--latex[LaTeX output]' \
-        '--typst[Typst output]' \
-        '--pretty[2D pretty print]' \
-        '--deg[Trigonometric degree mode]' \
-        '--explain[Step-by-step derivation]' \
-        '--verify[Algebraic verification]' \
-        '--certificate[Save proof certificate]:file:_files' \
-        '--replay[Replay proof certificate]:file:_files' \
-        '--lean[Lean 4 proof generation]' \
-        '--lean-file[Save Lean 4 proof]:file:_files' \
-        '--no-color[Disable colors]' \
-        '--no-update-check[Disable update check]' \
-        '--warn-loop[Iteration warning limit]:limit:' \
-        '--max-loop[Iteration maximum limit]:limit:' \
+        '(-h --help)'{-h,--help}'[{{escapeZsh (index .Flags 19).Desc}}]' \
+        '(-v --version)'{-v,--version}'[{{escapeZsh (index .Flags 21).Desc}}]' \
+        '--lang[{{escapeZsh (index .Flags 0).Desc}}]:language:(en ja)' \
+        '--format[{{escapeZsh (index .Flags 8).Desc}}]:format:(typst latex ascii pretty)' \
+        '--theme[{{escapeZsh (index .Flags 14).Desc}}]:theme:(dark light none)' \
+        '--ascii[{{escapeZsh (index .Flags 1).Desc}}]' \
+        '--approx[{{escapeZsh (index .Flags 2).Desc}}]' \
+        '--latex[{{escapeZsh (index .Flags 3).Desc}}]' \
+        '--typst[{{escapeZsh (index .Flags 4).Desc}}]' \
+        '--pretty[{{escapeZsh (index .Flags 5).Desc}}]' \
+        '--deg[{{escapeZsh (index .Flags 6).Desc}}]' \
+        '--explain[{{escapeZsh (index .Flags 7).Desc}}]' \
+        '--verify[{{escapeZsh (index .Flags 9).Desc}}]' \
+        '--certificate[{{escapeZsh (index .Flags 10).Desc}}]:file:_files' \
+        '--replay[{{escapeZsh (index .Flags 11).Desc}}]:file:_files' \
+        '--lean[{{escapeZsh (index .Flags 12).Desc}}]' \
+        '--lean-file[{{escapeZsh (index .Flags 13).Desc}}]:file:_files' \
+        '--no-color[{{escapeZsh (index .Flags 15).Desc}}]' \
+        '--no-update-check[{{escapeZsh (index .Flags 16).Desc}}]' \
+        '--warn-loop[{{escapeZsh (index .Flags 17).Desc}}]:limit:' \
+        '--max-loop[{{escapeZsh (index .Flags 18).Desc}}]:limit:' \
         '1: :->cmd' \
         '*:: :->args'
 
@@ -209,6 +292,7 @@ _ihd() {
         cmd)
             _describe -t subcommands 'subcommands' subcommands
             _describe -t functions 'builtin functions' functions
+            _describe -t constants 'constants' constants
             ;;
         args)
             case $words[1] in
@@ -232,41 +316,28 @@ const fishTemplate = `# fish completion for ihd
 complete -c ihd -f
 
 # Subcommands
-complete -c ihd -n "__fish_use_subcommand" -a "run" -d "Execute script file"
-complete -c ihd -n "__fish_use_subcommand" -a "completion" -d "Generate completion script"
-
+{{range .Subcommands}}complete -c ihd -n "__fish_use_subcommand" -a "{{.Name}}" -d "{{escapeFish .Desc}}"
+{{end}}
 # Shell choices for completion
-complete -c ihd -n "__fish_seen_subcommand_from completion" -a "bash zsh fish powershell" -d "Target shell"
+complete -c ihd -n "__fish_seen_subcommand_from completion" -a "bash zsh fish powershell"
 
-# Global options
-complete -c ihd -s h -l help -d "Show help"
-complete -c ihd -s v -l version -d "Show version"
-complete -c ihd -l lang -x -a "en ja" -d "Language locale"
-complete -c ihd -l format -x -a "typst latex ascii pretty" -d "Output format"
-complete -c ihd -l theme -x -a "dark light none" -d "REPL syntax theme"
-complete -c ihd -l ascii -d "Output ASCII only"
-complete -c ihd -l approx -d "Display decimal approximation"
-complete -c ihd -l latex -d "Output in LaTeX format"
-complete -c ihd -l typst -d "Output in Typst format"
-complete -c ihd -l pretty -d "Output in 2D pretty print"
-complete -c ihd -l deg -d "Degree mode"
-complete -c ihd -l explain -d "Step-by-step algebraic explanation"
-complete -c ihd -l verify -d "Autonomously verify algebraic correctness"
-complete -c ihd -l certificate -r -d "Save proof certificate JSON"
-complete -c ihd -l replay -r -d "Replay proof certificate JSON"
-complete -c ihd -l lean -d "Output Lean 4 formal proof"
-complete -c ihd -l lean-file -r -d "Save Lean 4 proof file"
-complete -c ihd -l no-color -d "Disable syntax colors"
-complete -c ihd -l no-update-check -d "Disable update check"
-complete -c ihd -l warn-loop -d "Loop step warning limit"
-complete -c ihd -l max-loop -d "Loop maximum step limit"
+# Argument files for run
+complete -c ihd -n "__fish_seen_subcommand_from run" -F
 
-# Built-in functions & constants
-{{range .Functions}}complete -c ihd -n "__fish_use_subcommand" -a "{{.}}" -d "Builtin function"
+# Flags
+{{range .Flags}}complete -c ihd -l "{{trimPrefix .Name "--"}}" -d "{{escapeFish .Desc}}"
 {{end}}
-{{range .Constants}}complete -c ihd -n "__fish_use_subcommand" -a "{{.}}" -d "Mathematical constant"
+# Flag choices
+complete -c ihd -l format -a "typst latex ascii pretty"
+complete -c ihd -l theme -a "dark light none"
+complete -c ihd -l lang -a "en ja"
+
+# Built-in functions
+{{range .Functions}}complete -c ihd -a "{{.Name}}" -d "{{escapeFish .Desc}}"
 {{end}}
-`
+# Constants
+{{range .Constants}}complete -c ihd -a "{{.Name}}" -d "{{escapeFish .Desc}}"
+{{end}}`
 
 const powershellTemplate = `using namespace System.Management.Automation
 using namespace System.Management.Automation.Language
@@ -275,42 +346,19 @@ Register-ArgumentCompleter -Native -CommandName 'ihd' -ScriptBlock {
     param($wordToComplete, $commandAst, $cursorPosition)
 
     $subcommands = @(
-        [CompletionResult]::new('run', 'run', [CompletionResultType]::Command, 'Execute script file')
-        [CompletionResult]::new('completion', 'completion', [CompletionResultType]::Command, 'Generate shell completion script')
-    )
+{{range .Subcommands}}        [CompletionResult]::new('{{.Name}}', '{{.Name}}', [CompletionResultType]::Command, '{{escapePs .Desc}}')
+{{end}}    )
 
     $flags = @(
-        [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Specify output format (typst, latex, ascii, pretty)')
-        [CompletionResult]::new('--approx', '--approx', [CompletionResultType]::ParameterName, 'Show approximate decimal value')
-        [CompletionResult]::new('--ascii', '--ascii', [CompletionResultType]::ParameterName, 'Output ASCII characters only')
-        [CompletionResult]::new('--latex', '--latex', [CompletionResultType]::ParameterName, 'Output expression in LaTeX')
-        [CompletionResult]::new('--typst', '--typst', [CompletionResultType]::ParameterName, 'Output expression in Typst')
-        [CompletionResult]::new('--pretty', '--pretty', [CompletionResultType]::ParameterName, 'Output expression in 2D pretty-printed format')
-        [CompletionResult]::new('--deg', '--deg', [CompletionResultType]::ParameterName, 'Use degree mode')
-        [CompletionResult]::new('--explain', '--explain', [CompletionResultType]::ParameterName, 'Show step-by-step algebraic derivation')
-        [CompletionResult]::new('--verify', '--verify', [CompletionResultType]::ParameterName, 'Verify algebraic correctness')
-        [CompletionResult]::new('--certificate', '--certificate', [CompletionResultType]::ParameterName, 'Save proof certificate JSON')
-        [CompletionResult]::new('--replay', '--replay', [CompletionResultType]::ParameterName, 'Replay proof certificate JSON')
-        [CompletionResult]::new('--lean', '--lean', [CompletionResultType]::ParameterName, 'Output Lean 4 formal proof')
-        [CompletionResult]::new('--lean-file', '--lean-file', [CompletionResultType]::ParameterName, 'Save Lean 4 code to file')
-        [CompletionResult]::new('--theme', '--theme', [CompletionResultType]::ParameterName, 'Set REPL theme (dark, light, none)')
-        [CompletionResult]::new('--lang', '--lang', [CompletionResultType]::ParameterName, 'Set locale (en, ja)')
-        [CompletionResult]::new('--no-color', '--no-color', [CompletionResultType]::ParameterName, 'Disable syntax highlighting')
-        [CompletionResult]::new('--no-update-check', '--no-update-check', [CompletionResultType]::ParameterName, 'Disable update check')
-        [CompletionResult]::new('--warn-loop', '--warn-loop', [CompletionResultType]::ParameterName, 'Iteration warning limit')
-        [CompletionResult]::new('--max-loop', '--max-loop', [CompletionResultType]::ParameterName, 'Iteration max limit')
-        [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Show help')
-        [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Show help')
-        [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Show version')
-        [CompletionResult]::new('--version', '--version', [CompletionResultType]::ParameterName, 'Show version')
-    )
+{{range .Flags}}        [CompletionResult]::new('{{.Name}}', '{{.Name}}', [CompletionResultType]::ParameterName, '{{escapePs .Desc}}')
+{{end}}    )
 
     $functions = @(
-{{range .Functions}}        [CompletionResult]::new('{{.}}', '{{.}}', [CompletionResultType]::Method, 'Builtin function')
+{{range .Functions}}        [CompletionResult]::new('{{.Name}}', '{{.Name}}', [CompletionResultType]::Method, '{{escapePs .Desc}}')
 {{end}}    )
 
     $constants = @(
-{{range .Constants}}        [CompletionResult]::new('{{.}}', '{{.}}', [CompletionResultType]::Variable, 'Constant')
+{{range .Constants}}        [CompletionResult]::new('{{.Name}}', '{{.Name}}', [CompletionResultType]::Variable, '{{escapePs .Desc}}')
 {{end}}    )
 
     $elements = $commandAst.CommandElements
@@ -318,22 +366,22 @@ Register-ArgumentCompleter -Native -CommandName 'ihd' -ScriptBlock {
 
     if ($prev -eq '--format') {
         return @('typst', 'latex', 'ascii', 'pretty') | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
-            [CompletionResult]::new($_, $_, [CompletionResultType]::ParameterValue, "Format: $_")
+            [CompletionResult]::new($_, $_, [CompletionResultType]::ParameterValue, "{{.Labels.Format}}$_")
         }
     }
     if ($prev -eq '--theme') {
         return @('dark', 'light', 'none') | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
-            [CompletionResult]::new($_, $_, [CompletionResultType]::ParameterValue, "Theme: $_")
+            [CompletionResult]::new($_, $_, [CompletionResultType]::ParameterValue, "{{.Labels.Theme}}$_")
         }
     }
     if ($prev -eq '--lang') {
         return @('en', 'ja') | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
-            [CompletionResult]::new($_, $_, [CompletionResultType]::ParameterValue, "Language: $_")
+            [CompletionResult]::new($_, $_, [CompletionResultType]::ParameterValue, "{{.Labels.Lang}}$_")
         }
     }
     if ($prev -eq 'completion') {
         return @('bash', 'zsh', 'fish', 'powershell') | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
-            [CompletionResult]::new($_, $_, [CompletionResultType]::ParameterValue, "Shell: $_")
+            [CompletionResult]::new($_, $_, [CompletionResultType]::ParameterValue, "{{.Labels.Shell}}$_")
         }
     }
 
