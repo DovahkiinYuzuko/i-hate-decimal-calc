@@ -2,10 +2,10 @@ name: Lean 4 Proof Verification
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, 'issue-*' ]
     tags: [ 'v*' ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, 'issue-*' ]
   workflow_dispatch:
     inputs:
       custom_expr:

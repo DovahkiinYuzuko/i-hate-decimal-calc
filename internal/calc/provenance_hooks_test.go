@@ -125,3 +125,24 @@ func TestProvenanceHooks_Solve(t *testing.T) {
 		t.Errorf("expected solve root solver.solve, got %+v", solveRoot)
 	}
 }
+
+
+func TestProvenanceHooks_LeanCalcExpand(t *testing.T) {
+	node, err := Parse("expand((x + 1)^2)")
+	if err != nil {
+		t.Fatalf("Parse error: %v", err)
+	}
+	env := NewEnv()
+	_, root, err := EvalWithProvenanceAndEnv(node, env)
+	if err != nil {
+		t.Fatalf("eval error: %v", err)
+	}
+	leanVis := provenance.NewLeanCalcVisitor()
+	code, err := leanVis.RenderCalc(root, "test_expand")
+	if err != nil {
+		t.Fatalf("RenderCalc failed: %v", err)
+	}
+	if code == "" {
+		t.Fatalf("expected non-empty code")
+	}
+}

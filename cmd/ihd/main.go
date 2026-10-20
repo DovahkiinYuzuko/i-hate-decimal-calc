@@ -498,6 +498,21 @@ func handleEvaluationOutputs(origNode, evaled calc.Node, steps []calc.Pedagogica
 		fmt.Fprintln(out, cert.String())
 	}
 	if ro.lean || ro.leanFile != "" {
+		if ro.explain {
+			if tracer := env.GetLastTrace(); tracer != nil && tracer.Root() != nil {
+				leanVis := provenance.NewLeanCalcVisitor()
+				code, err := leanVis.RenderCalc(tracer.Root(), "ihd_certified_derivation")
+				if err == nil {
+					if ro.lean {
+						fmt.Fprintln(out, code)
+					}
+					if ro.leanFile != "" {
+						_ = saveLeanProofFile(ro.leanFile, code)
+					}
+					return
+				}
+			}
+		}
 		cert, _ := calc.VerifyComputation(origNode, evaled, env)
 		if cert != nil && cert.IsVerified {
 			leanCode, err := calc.GenerateLeanSource("ihd_certified_proof", cert, origNode, evaled)
