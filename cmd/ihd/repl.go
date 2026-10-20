@@ -70,10 +70,23 @@ func runREPL(in io.Reader, out, errOut io.Writer, ro runOptions) int {
 		Highlight:  BuildREPLHighlights(currentTheme, env),
 		ResetColor:   "\x1B[0m",
 		DefaultColor: "\x1B[0m",
+		OnAfterRender: func(B *readline.Buffer, availWidth int) {
+			if currentTheme == "none" || !highlightEnabled {
+				_ = ClearSignatureGuide(out)
+				return
+			}
+			ctx, ok := ParseSignatureContext(B.String(), B.Cursor)
+			if ok {
+				_ = RenderSignatureGuide(out, ctx, currentTheme)
+			} else {
+				_ = ClearSignatureGuide(out)
+			}
+		},
 	}
 
 	for {
 		line, err := editor.ReadLine(context.Background())
+		_ = ClearSignatureGuide(out)
 		// Ensure any active terminal attributes or background colors are cleanly reset immediately
 		fmt.Fprint(out, "\x1B[0m")
 		if err != nil {

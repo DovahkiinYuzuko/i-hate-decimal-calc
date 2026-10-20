@@ -215,6 +215,19 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 			return runScriptFile(exprArgs[1], ro, out, errOut)
 		}
 
+		// Explicit 'completion' subcommand: ihd completion <shell>
+		if exprArgs[0] == "completion" {
+			if len(exprArgs) < 2 {
+				fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), i18n.T("cli.err_completion_shell_required"))
+				return 1
+			}
+			if err := RunCompletion(exprArgs[1], out); err != nil {
+				fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
+				return 1
+			}
+			return 0
+		}
+
 		// 2. Direct script file invocation: ihd <file.ihd> [flags]
 		if len(exprArgs) == 1 {
 			target := exprArgs[0]

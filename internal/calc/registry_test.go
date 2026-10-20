@@ -144,3 +144,39 @@ func TestRegistry_CaseInsensitive(t *testing.T) {
 		}
 	}
 }
+
+
+func TestRegistry_SignaturesAndNames(t *testing.T) {
+	names := AllFunctionNames()
+	if len(names) < 50 {
+		t.Errorf("expected at least 50 function names, got %d", len(names))
+	}
+
+	sigs := AllFunctionSignatures()
+	if len(sigs) < 50 {
+		t.Errorf("expected at least 50 function signatures, got %d", len(sigs))
+	}
+
+	// Test specific representative functions
+	diffSig, ok := LookupSignature("diff")
+	if !ok {
+		t.Fatalf("expected signature for 'diff' to be found")
+	}
+	if diffSig.Name != "diff" || len(diffSig.Args) < 2 {
+		t.Errorf("unexpected diff signature: %+v", diffSig)
+	}
+
+	sinSig, ok := LookupSignature("sin")
+	if !ok {
+		t.Fatalf("expected signature for 'sin' to be found")
+	}
+	if sinSig.Name != "sin" || len(sinSig.Args) != 1 {
+		t.Errorf("unexpected sin signature: %+v", sinSig)
+	}
+
+	// Case insensitivity
+	_, okCase := LookupSignature("DIFF")
+	if !okCase {
+		t.Errorf("expected LookupSignature to be case-insensitive")
+	}
+}

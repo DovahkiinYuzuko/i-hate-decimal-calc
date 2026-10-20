@@ -3,6 +3,7 @@ package calc
 import (
 	"fmt"
 	"math/big"
+	"sort"
 	"strings"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
@@ -16,6 +17,8 @@ type FunctionSpec struct {
 	Name             string
 	MinArgs          int
 	MaxArgs          int
+	Args             []string
+	DescKey          string
 	AllowBareSymbol  bool // If true, can appear without parens as a distribution symbol (e.g. expect(binom, ...))
 	LazyArgs         bool // If true, arguments are not evaluated eagerly before calling Handler (e.g. dsolve)
 	Validate         func(args []Node) error
@@ -135,6 +138,149 @@ func EvaluateFunction(name string, args []Node) (Node, error) {
 		return nil, fmt.Errorf("%s", i18n.T("registry.err_function", name))
 	}
 	return spec.Evaluate(args)
+}
+
+// SignatureInfo holds metadata and parameter names for auto-completion and REPL signature guidance.
+type SignatureInfo struct {
+	Name    string
+	Args    []string
+	MinArgs int
+	MaxArgs int
+	DescKey string
+}
+
+// defaultFunctionArgs maps known function names to human-friendly parameter names.
+var defaultFunctionArgs = map[string][]string{
+	"sqrt":             {"x"},
+	"cbrt":             {"x"},
+	"exp":              {"x"},
+	"ln":               {"x"},
+	"log":              {"base", "x"},
+	"sin":              {"x"},
+	"cos":              {"x"},
+	"tan":              {"x"},
+	"asin":             {"x"},
+	"acos":             {"x"},
+	"atan":             {"x"},
+	"atan2":            {"y", "x"},
+	"sinh":             {"x"},
+	"cosh":             {"x"},
+	"tanh":             {"x"},
+	"asinh":            {"x"},
+	"acosh":            {"x"},
+	"atanh":            {"x"},
+	"abs":              {"x"},
+	"floor":            {"x"},
+	"ceil":             {"x"},
+	"round":            {"x"},
+	"sign":             {"x"},
+	"diff":             {"expr", "var"},
+	"integrate":        {"expr", "var", "from", "to"},
+	"limit":            {"expr", "var", "target", "dir"},
+	"taylor":           {"expr", "var", "point", "order"},
+	"sum":              {"expr", "var", "from", "to"},
+	"product":          {"expr", "var", "from", "to"},
+	"solve":            {"eq", "var"},
+	"linsolve":         {"eqs", "vars"},
+	"solve_linear":     {"eqs", "vars"},
+	"dsolve":           {"ode", "var"},
+	"factor":           {"poly", "var"},
+	"expand":           {"expr"},
+	"simplify":         {"expr"},
+	"gcd":              {"a", "b"},
+	"lcm":              {"a", "b"},
+	"mod":              {"a", "b"},
+	"modpow":           {"base", "exp", "mod"},
+	"modinv":           {"a", "mod"},
+	"perm":             {"n", "k"},
+	"comb":             {"n", "k"},
+	"matrix":           {"rows"},
+	"det":              {"matrix"},
+	"inv":              {"matrix"},
+	"transpose":        {"matrix"},
+	"trace":            {"matrix"},
+	"rank":             {"matrix"},
+	"rref":             {"matrix"},
+	"eigenvalues":      {"matrix"},
+	"eigenvectors":     {"matrix"},
+	"dot":              {"v1", "v2"},
+	"cross":            {"v1", "v2"},
+	"norm":             {"v"},
+	"grad":             {"expr", "vars"},
+	"div":              {"vector", "vars"},
+	"curl":             {"vector", "vars"},
+	"laplacian":        {"expr", "vars"},
+	"line_intersect":   {"line1", "line2"},
+	"circle_intersect": {"circle1", "circle2"},
+	"triangle_area":    {"a", "b", "c"},
+	"triangle_centers": {"a", "b", "c"},
+	"plot":             {"expr", "range"},
+	"cad":              {"formula", "vars"},
+	"qe":               {"formula"},
+	"clifford":         {"expr", "p", "q", "r"},
+	"rsolve":           {"eq", "func"},
+	"verify":           {"expr"},
+	"approx":           {"expr"},
+	"interval":         {"expr"},
+}
+
+// AllFunctionNames returns a sorted list of all registered built-in function names.
+func AllFunctionNames() []string {
+	names := make([]string, 0, len(builtInFunctions))
+	for name := range builtInFunctions {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// LookupSignature returns signature information for the named function.
+func LookupSignature(name string) (SignatureInfo, bool) {
+	spec, ok := LookupFunction(name)
+	if !ok {
+		return SignatureInfo{}, false
+	}
+
+	args := spec.Args
+	if len(args) == 0 {
+		if defArgs, found := defaultFunctionArgs[strings.ToLower(spec.Name)]; found {
+			args = defArgs
+		} else {
+			count := spec.MinArgs
+			if count <= 0 {
+				count = 1
+			}
+			args = make([]string, count)
+			for i := 0; i < count; i++ {
+				args[i] = fmt.Sprintf("arg%d", i+1)
+			}
+		}
+	}
+
+	descKey := spec.DescKey
+	if descKey == "" {
+		descKey = "fn." + strings.ToLower(spec.Name)
+	}
+
+	return SignatureInfo{
+		Name:    spec.Name,
+		Args:    args,
+		MinArgs: spec.MinArgs,
+		MaxArgs: spec.MaxArgs,
+		DescKey: descKey,
+	}, true
+}
+
+// AllFunctionSignatures returns sorted signature info for all registered functions.
+func AllFunctionSignatures() []SignatureInfo {
+	names := AllFunctionNames()
+	sigs := make([]SignatureInfo, 0, len(names))
+	for _, name := range names {
+		if sig, ok := LookupSignature(name); ok {
+			sigs = append(sigs, sig)
+		}
+	}
+	return sigs
 }
 
 func init() {

@@ -873,3 +873,35 @@ func TestScriptExecution_Issue135(t *testing.T) {
 }
 
 
+
+
+func TestCLI_CompletionSubcommand(t *testing.T) {
+	shells := []string{"bash", "zsh", "fish", "powershell"}
+	for _, shell := range shells {
+		var out bytes.Buffer
+		var errOut bytes.Buffer
+		code := run([]string{"completion", shell}, strings.NewReader(""), &out, &errOut)
+		if code != 0 {
+			t.Errorf("expected exit code 0 for completion %s, got %d, stderr: %s", shell, code, errOut.String())
+		}
+		if out.Len() == 0 {
+			t.Errorf("expected non-empty output for completion %s", shell)
+		}
+	}
+
+	// Missing shell argument
+	var out bytes.Buffer
+	var errOut bytes.Buffer
+	code := run([]string{"completion"}, strings.NewReader(""), &out, &errOut)
+	if code != 1 {
+		t.Errorf("expected exit code 1 for missing shell argument, got %d", code)
+	}
+
+	// Unsupported shell
+	out.Reset()
+	errOut.Reset()
+	code = run([]string{"completion", "unknown_shell"}, strings.NewReader(""), &out, &errOut)
+	if code != 1 {
+		t.Errorf("expected exit code 1 for unsupported shell, got %d", code)
+	}
+}

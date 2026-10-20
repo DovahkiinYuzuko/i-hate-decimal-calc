@@ -247,8 +247,9 @@ ihd "plot(sin(x), [-pi, pi])"
 
 </details>
 
-#### 4. REPL 構文ハイライト & レインボー括弧
-外部依存ライブラリを使用せず、単一レキシカル有限状態機械（FSM）により入力文字列の色分け表示を行います。
+#### 4. REPL リアルタイム引数ガイド & 構文ハイライト
+外部依存ライブラリを使用せず、単一レキシカル有限状態機械（FSM）により入力文字列の色分け表示およびリアルタイムな引数案内を行います。
+- **リアルタイム引数ガイド & シグネチャヘルパー**: 関数入力中、現在カーソルがある引数を強調表示し、プロンプト直下に引数名・多言語解説を動的に表示します。
 - **ネスト深度別レインボー括弧**: 括弧 `()` および角括弧 `[]` のネスト深度（4色循環）に応じたハイライト。括弧の不整合（ミスマッチ）はエラー警告色（赤背景）で表示。
 - **カスタム変数ハイライト**: 未束縛の記号（$x, y$ 等）は標準色を維持し、現在のセッション環境に定義された変数のみを識別して着色（Darkテーマ時は淡いシアン）。
 - **テーマ設定 & 永続化**: `dark`（暗め背景向け）および `light`（明るめ背景向け）テーマに対応。REPL 内コマンド（`theme dark` / `theme light`）で切り替え可能で、設定は `~/.ihd/config.json` に保存。
@@ -380,6 +381,7 @@ ihd --verify "convert_unit(100 [km/h], m/s)"
 | `--lean`             | 計算結果や導出ステップ列を定理証明支援系 **Lean 4（Mathlib4）** の形式証明コード（`by ring`, `by ext <;> ring`, `by repeat constructor <;> norm_num` 等）として出力。<br>`ihd --lean "factor(x^2 - 1)"` |
 | `--lean-file <path>` | 生成された Lean 4 形式証明コードをスタンドアロンな `.lean` ファイルとして指定パスへ保存。<br>`ihd --lean-file proof.lean "factor(x^2 - 1)"`                                 |
 | `--lang <code/auto>` | 表示言語（ロケール）を指定（`ja`, `en`, `auto`）。設定は `~/.ihd/config.json` に永続化され、カスタム辞書（`~/.ihd/locales/`）にも対応。<br>`ihd --lang en "1/2 + 1/3"` |
+| `completion <shell>` | 主要4大シェル（`bash`, `zsh`, `fish`, `powershell`）向けのタブ自動補完スクリプトをゼロ依存で生成。<br>`ihd completion powershell \| Out-String \| Invoke-Expression` |
 | `-h`, `--help`       | コマンドのヘルプメッセージを表示。                                                                                                                                     |
 | `-v`, `--version`    | バージョン情報を表示（新リリースが存在する場合は更新案内を表示）。                                                                                                     |
 | `--no-update-check`  | 新リリースの自動検知・更新チェックを無効化（環境変数 `IHD_NO_UPDATE_CHECK=1` でも設定可能）。                                                                          |
@@ -670,8 +672,9 @@ ihd "plot(sin(x), [-pi, pi])"
 
 </details>
 
-#### 4. REPL Syntax Highlighting & Rainbow Delimiters
-Lexical syntax highlighting powered by a finite-state machine (FSM):
+#### 4. REPL Real-time Signature Guide & Syntax Highlighting
+Lexical syntax highlighting and argument guidance powered by a zero-dependency finite-state machine (FSM):
+- **Real-time Signature Guide**: As you type function calls, the REPL dynamically analyzes the active argument index and displays parameter names and localized documentation directly below the prompt.
 - **Rainbow Nested Delimiters**: Delimiter depths across parentheses `()` and brackets `[]` rotate through 4 cyclic colors. Bracket mismatches are highlighted with an error background.
 - **Custom Variable Highlighting**: Unbound symbols ($x, y$) retain the neutral base text color, while user-defined custom variables in the active session environment are highlighted.
 - **Dual Themes & Persistence**: Supports `dark` and `light` themes. Configurable inside the REPL (`theme dark` / `theme light`), persisted to `~/.ihd/config.json`.
@@ -801,6 +804,7 @@ ihd --verify "convert_unit(100 [km/h], m/s)"
 | `--lean`             | Transpiles calculation results and rewriting steps into formal **Lean 4 (Mathlib4)** proof theorems (`by ring`, `by ext <;> ring`, `by repeat constructor <;> norm_num`, etc.).<br>`ihd --lean "factor(x^2 - 1)"` |
 | `--lean-file <path>` | Save generated Lean 4 proof code as a standalone, runnable `.lean` file.<br>`ihd --lean-file proof.lean "factor(x^2 - 1)"`                         |
 | `--lang <code/auto>` | Specify display language (`ja`, `en`, `auto`). Persisted to `~/.ihd/config.json`.<br>`ihd --lang en "1/2 + 1/3"`                                  |
+| `completion <shell>` | Generate zero-dependency tab completion script for `bash`, `zsh`, `fish`, or `powershell`.<br>`ihd completion powershell \| Out-String \| Invoke-Expression` |
 | `-h`, `--help`       | Display command help message.                                                                                                                     |
 | `-v`, `--version`    | Display version information (checks for newer releases if available).                                                                             |
 | `--no-update-check`  | Disable checking for newer releases (can also be disabled via `IHD_NO_UPDATE_CHECK=1`).                                                           |
