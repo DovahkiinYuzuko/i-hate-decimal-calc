@@ -196,6 +196,8 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `ldlt` | `ldlt(A)` | Exact square-root-free $LDL^T$ decomposition ($L$ unit lower, $D$ positive diagonal rational matrix) |
 | `pinv` | `pinv(A)` | Exact Moore-Penrose pseudoinverse $A^+$ via RREF full-rank factorization |
 | `solve_linear` / `linsolve` | `solve_linear(A, b)` | Exact linear system solver $Ax=b$ (unique, inconsistent, or parametric solutions) |
+| `lp_maximize` | `lp_maximize(obj, constraints)` | Exact rational two-phase revised simplex linear programming maximization (Bland's rule, dual multipliers, Farkas certificates, and recession rays) |
+| `lp_minimize` | `lp_minimize(obj, constraints)` | Exact rational two-phase revised simplex linear programming minimization |
 | `hnf` | `hnf(A)` | Hermite Normal Form (HNF) of integer matrices via fraction-free elementary row operations and modulo reduction to row echelon upper triangular form $H$ |
 | `hnf_transform` | `hnf_transform(A)` | Hermite Normal Form with unimodular transform $[H, U]$ ($U \in \text{GL}_m(\mathbb{Z}), U A = H$) |
 | `snf` | `snf(A)` | Smith Normal Form (SNF) of integer matrices via elementary row/column operations with invariant factor divisibility chain $d_1 \mid d_2 \mid \dots \mid d_r$ |
