@@ -123,6 +123,25 @@ func (r *TraceRecorder) RecordStep(
 	}
 }
 
+// RecordNormalize records an algebraic normalization step (term sorting, associativity, commutativity)
+// as a collapsed structural node to prevent derivation tree explosion (FMCAD 2022).
+func (r *TraceRecorder) RecordNormalize(path []PathElem, before, after ast.Node) {
+	if r == nil {
+		return
+	}
+	r.RecordStep(
+		RuleAlgebraNormalize,
+		RelationEq,
+		path,
+		before,
+		after,
+		nil,
+		nil,
+		TrustCertified,
+		VisStructural,
+	)
+}
+
 // AttachSubtree attaches an independently recorded child tree into the current scope.
 // This is used for parallel evaluations where subtasks produce their own TraceRecorder.
 func (r *TraceRecorder) AttachSubtree(child *DerivationNode) {

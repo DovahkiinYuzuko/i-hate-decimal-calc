@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/provenance"
 )
 
 func init() {
@@ -34,23 +35,38 @@ func handleDiff(args []Node, env *Env) (Node, error) {
 	} else {
 		return nil, fmt.Errorf("%s", i18n.T("errors.arg_must_be_var", "diff", "second", args[1].String()))
 	}
+	tracer := env.GetTracer()
+	if tracer != nil {
+		tracer.StartScope("calculus.diff", provenance.RelationEq, nil, args[0], provenance.VisPresentable)
+	}
+	var res Node
+	var err error
 	if len(args) == 3 {
 		r, ok := args[2].(*RationalNode)
 		if !ok || !r.Val.IsInt() || r.Val.Sign() < 0 {
+			if tracer != nil {
+				tracer.EndScope(args[0], nil)
+			}
 			return nil, fmt.Errorf("%s", i18n.T("errors.diff_order_non_negative", args[2].String()))
 		}
 		order := r.Val.Num().Int64()
-		res := args[0]
+		res = args[0]
 		for k := int64(0); k < order; k++ {
-			var err error
 			res, err = differentiate(res, varName)
 			if err != nil {
+				if tracer != nil {
+					tracer.EndScope(res, nil)
+				}
 				return nil, err
 			}
 		}
-		return res, nil
+	} else {
+		res, err = differentiate(args[0], varName)
 	}
-	return differentiate(args[0], varName)
+	if tracer != nil {
+		tracer.EndScope(res, nil)
+	}
+	return res, err
 }
 
 func handleIntegrate(args []Node, env *Env) (Node, error) {
@@ -60,10 +76,33 @@ func handleIntegrate(args []Node, env *Env) (Node, error) {
 	} else {
 		return nil, fmt.Errorf("%s", i18n.T("errors.arg_must_be_var", "integrate", "second", args[1].String()))
 	}
+	tracer := env.GetTracer()
 	if len(args) == 2 {
-		return evalIndefiniteIntegral(args[0], varName)
+		if tracer != nil {
+			tracer.StartScope("calculus.integrate", provenance.RelationEquivalentModuloC, nil, args[0], provenance.VisPresentable)
+		}
+		res, err := evalIndefiniteIntegral(args[0], varName)
+		if tracer != nil {
+			var cert provenance.AlgebraicCertificate
+			if err == nil && res != nil {
+				cert = &provenance.AntiderivativeCertificate{
+					Integrand:      args[0],
+					Antiderivative: res,
+					Variable:       varName,
+				}
+			}
+			tracer.EndScope(res, cert)
+		}
+		return res, err
 	}
-	return evalDefiniteIntegral(args[0], varName, args[2], args[3])
+	if tracer != nil {
+		tracer.StartScope("calculus.integrate_definite", provenance.RelationEq, nil, args[0], provenance.VisPresentable)
+	}
+	res, err := evalDefiniteIntegral(args[0], varName, args[2], args[3])
+	if tracer != nil {
+		tracer.EndScope(res, nil)
+	}
+	return res, err
 }
 
 func handleLimit(args []Node, env *Env) (Node, error) {
@@ -71,7 +110,15 @@ func handleLimit(args []Node, env *Env) (Node, error) {
 	if len(args) == 4 {
 		dirNode = args[3]
 	}
-	return EvalLimit(args[0], args[1], args[2], dirNode)
+	tracer := env.GetTracer()
+	if tracer != nil {
+		tracer.StartScope(provenance.RuleCalcLHopital, provenance.RelationEq, nil, args[0], provenance.VisPresentable)
+	}
+	res, err := EvalLimit(args[0], args[1], args[2], dirNode)
+	if tracer != nil {
+		tracer.EndScope(res, nil)
+	}
+	return res, err
 }
 
 func handleTaylor(args []Node, env *Env) (Node, error) {
@@ -83,20 +130,42 @@ func handleSum(args []Node, env *Env) (Node, error) {
 }
 
 func handleExpand(args []Node, env *Env) (Node, error) {
-	return expandNode(args[0]), nil
+	tracer := env.GetTracer()
+	if tracer != nil {
+		tracer.StartScope(provenance.RuleAlgebraExpand, provenance.RelationEq, nil, args[0], provenance.VisPresentable)
+	}
+	res := expandNode(args[0])
+	if tracer != nil {
+		tracer.EndScope(res, nil)
+	}
+	return res, nil
 }
 
 func handleFactor(args []Node, env *Env) (Node, error) {
+	tracer := env.GetTracer()
+	if tracer != nil {
+		tracer.StartScope(provenance.RuleAlgebraFactor, provenance.RelationEq, nil, args[0], provenance.VisPresentable)
+	}
+	var res Node
+	var err error
 	if len(args) == 1 {
-		return Factor(args[0])
-	}
-	varName := "x"
-	if v, ok := args[1].(*VarNode); ok {
-		varName = v.Name
+		res, err = Factor(args[0])
 	} else {
-		return nil, fmt.Errorf("%s", i18n.T("errors.arg_must_be_var", "factor", "second", args[1].String()))
+		varName := "x"
+		if v, ok := args[1].(*VarNode); ok {
+			varName = v.Name
+		} else {
+			if tracer != nil {
+				tracer.EndScope(args[0], nil)
+			}
+			return nil, fmt.Errorf("%s", i18n.T("errors.arg_must_be_var", "factor", "second", args[1].String()))
+		}
+		res, err = Factor(args[0], varName)
 	}
-	return Factor(args[0], varName)
+	if tracer != nil {
+		tracer.EndScope(res, nil)
+	}
+	return res, err
 }
 
 func handleSolve(args []Node, env *Env) (Node, error) {
@@ -104,11 +173,19 @@ func handleSolve(args []Node, env *Env) (Node, error) {
 		return v, nil
 	}
 
+	tracer := env.GetTracer()
+	if tracer != nil {
+		tracer.StartScope("solver.solve", provenance.RelationIff, nil, args[0], provenance.VisPresentable)
+	}
+
 	varName := "x"
 	if len(args) >= 2 {
 		if v, ok := args[1].(*VarNode); ok {
 			varName = v.Name
 		} else {
+			if tracer != nil {
+				tracer.EndScope(args[0], nil)
+			}
 			return nil, fmt.Errorf("%s", i18n.T("errors.arg_must_be_var", "solve", "second", args[1].String()))
 		}
 	} else {
@@ -119,42 +196,73 @@ func handleSolve(args []Node, env *Env) (Node, error) {
 		}
 	}
 
+	var res Node
+	var err error
+
 	// Check if relational inequality or equality
 	if rel, ok := args[0].(*RelOpNode); ok {
 		if rel.Op == "<" || rel.Op == "<=" || rel.Op == ">" || rel.Op == ">=" {
-			return SolveInequality(rel, varName, env)
-		}
-		if rel.Op == "==" {
-			negRHS, err := simplifyUnaryOp("-", rel.RHS)
-			if err != nil {
+			res, err = SolveInequality(rel, varName, env)
+		} else if rel.Op == "==" {
+			negRHS, negErr := simplifyUnaryOp("-", rel.RHS)
+			if negErr != nil {
 				negRHS = &UnaryOpNode{Op: "-", Expr: rel.RHS}
 			}
-			diff, err := simplifyAdd([]Node{rel.LHS, negRHS})
-			if err != nil {
+			diff, addErr := simplifyAdd([]Node{rel.LHS, negRHS})
+			if addErr != nil {
 				diff = NewAdd([]Node{rel.LHS, negRHS})
 			}
-			return solveEquation(diff, varName)
+			res, err = solveEquation(diff, varName)
+		} else {
+			res, err = solveEquation(args[0], varName)
 		}
+	} else {
+		res, err = solveEquation(args[0], varName)
 	}
 
-	return solveEquation(args[0], varName)
+	if tracer != nil {
+		tracer.EndScope(res, nil)
+	}
+	return res, err
 }
 
 func handleApart(args []Node, env *Env) (Node, error) {
+	tracer := env.GetTracer()
+	if tracer != nil {
+		tracer.StartScope(provenance.RuleAlgebraApart, provenance.RelationEq, nil, args[0], provenance.VisPresentable)
+	}
+	var res Node
+	var err error
 	if len(args) == 1 {
-		return EvalApart(args[0])
-	}
-	varName := ""
-	if v, ok := args[1].(*VarNode); ok {
-		varName = v.Name
+		res, err = EvalApart(args[0])
 	} else {
-		return nil, fmt.Errorf("%s", i18n.T("errors.arg_must_be_var", "apart", "second", args[1].String()))
+		varName := ""
+		if v, ok := args[1].(*VarNode); ok {
+			varName = v.Name
+		} else {
+			if tracer != nil {
+				tracer.EndScope(args[0], nil)
+			}
+			return nil, fmt.Errorf("%s", i18n.T("errors.arg_must_be_var", "apart", "second", args[1].String()))
+		}
+		res, err = EvalApart(args[0], varName)
 	}
-	return EvalApart(args[0], varName)
+	if tracer != nil {
+		tracer.EndScope(res, nil)
+	}
+	return res, err
 }
 
 func handleTogether(args []Node, env *Env) (Node, error) {
-	return EvalTogether(args[0])
+	tracer := env.GetTracer()
+	if tracer != nil {
+		tracer.StartScope(provenance.RuleAlgebraTogether, provenance.RelationEq, nil, args[0], provenance.VisPresentable)
+	}
+	res, err := EvalTogether(args[0])
+	if tracer != nil {
+		tracer.EndScope(res, nil)
+	}
+	return res, err
 }
 
 func handleTrigExpand(args []Node, env *Env) (Node, error) {
@@ -269,4 +377,3 @@ func handleVerify(args []Node, env *Env) (Node, error) {
 	}
 	return &VarNode{Name: cert.String()}, nil
 }
-

@@ -12,6 +12,7 @@ func TestNilRecorderZeroOverhead(t *testing.T) {
 	// Ensure calling methods on nil pointer does not panic
 	rec.StartScope("TestScope", provenance.RelationEq, nil, nil, provenance.VisPresentable)
 	rec.RecordStep("TestRule", provenance.RelationEq, nil, nil, nil, nil, nil, provenance.TrustCertified, provenance.VisPresentable)
+	rec.RecordNormalize(nil, nil, nil)
 	rec.EndScope(nil, nil)
 	rec.AttachSubtree(nil)
 
@@ -64,6 +65,25 @@ func TestHierarchicalScope(t *testing.T) {
 	}
 	if root.Certificate == nil || root.Certificate.CertificateKind() != "Antiderivative" {
 		t.Errorf("expected AntiderivativeCertificate on root, got %+v", root.Certificate)
+	}
+}
+
+func TestRecordNormalize(t *testing.T) {
+	rec := provenance.NewTraceRecorder()
+	nodeBefore, _ := ast.NewRational(2, 4)
+	nodeAfter, _ := ast.NewRational(1, 2)
+
+	rec.RecordNormalize(nil, nodeBefore, nodeAfter)
+
+	root := rec.Root()
+	if root == nil {
+		t.Fatalf("expected non-nil root")
+	}
+	if root.RuleID != provenance.RuleAlgebraNormalize {
+		t.Errorf("expected %s, got %s", provenance.RuleAlgebraNormalize, root.RuleID)
+	}
+	if root.Vis != provenance.VisStructural {
+		t.Errorf("expected VisStructural, got %s", root.Vis)
 	}
 }
 

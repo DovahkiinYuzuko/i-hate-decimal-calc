@@ -85,3 +85,28 @@ type DerivationNode struct {
 	Certificate AlgebraicCertificate
 	Children    []*DerivationNode
 }
+
+// Canonical rule identifiers for algebraic and calculus derivations.
+const (
+	RuleAlgebraNormalize   = "algebra.normalize"
+	RuleAlgebraExpand      = "algebra.expand"
+	RuleAlgebraFactor      = "algebra.factor"
+	RuleAlgebraApart       = "algebra.apart"
+	RuleAlgebraTogether    = "algebra.together"
+	RuleAlgebraRationalize = "algebra.rationalize"
+
+	RuleCalcDiffPower          = "calculus.diff_power"
+	RuleCalcDiffProduct        = "calculus.diff_product"
+	RuleCalcDiffQuotient       = "calculus.diff_quotient"
+	RuleCalcDiffChain          = "calculus.diff_chain"
+	RuleCalcDiffTrig           = "calculus.diff_trig"
+	RuleCalcParts              = "calculus.parts"
+	RuleCalcSubstitution       = "calculus.substitution"
+	RuleCalcAntiderivativeCert = "calculus.antiderivative_cert"
+	RuleCalcLHopital           = "calculus.lhopital"
+
+	RuleSolveLinear    = "solver.linear"
+	RuleSolveQuadratic = "solver.quadratic"
+	RuleSolveCubic     = "solver.cubic"
+	RuleSolveQuartic   = "solver.quartic"
+)
