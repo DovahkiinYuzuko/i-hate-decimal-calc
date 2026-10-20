@@ -53,6 +53,8 @@
 !internal/i18n/locales/*.json
 !internal/updater/
 !internal/updater/*.go
+!internal/provenance/
+!internal/provenance/*.go
 # .gitignores/root.gitignore
 !README.md
 !LICENSE.*

@@ -121,6 +121,7 @@ func TestEvalIteration_Table_SameNameNested(t *testing.T) {
 }
 
 func TestEvalIteration_Product_Basic(t *testing.T) {
+	t.Setenv("IHD_DIR", t.TempDir())
 	tests := []struct {
 		input    string
 		expected string
@@ -220,6 +221,7 @@ func TestEvalIteration_For_EmptyLoop(t *testing.T) {
 }
 
 func TestEvalIteration_For_StressFastAccumulation(t *testing.T) {
+	t.Setenv("IHD_DIR", t.TempDir())
 	env := NewEnv()
 	env.Set("c", mustRational(0, 1))
 	res, err := EvalStringWithEnv("for(k, 1, 10000, c = c + 1)", env)
@@ -232,6 +234,7 @@ func TestEvalIteration_For_StressFastAccumulation(t *testing.T) {
 }
 
 func TestEvalIteration_Product_BinaryTreeNTT(t *testing.T) {
+	t.Setenv("IHD_DIR", t.TempDir())
 	// 1. Compare product(k, k, 1, 500) with 500!
 	prodNode, err := EvalString("product(k, k, 1, 500)")
 	if err != nil {

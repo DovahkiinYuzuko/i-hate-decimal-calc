@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"os"
 	"sync"
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/provenance"
 )
 
 // Env represents a symbol table mapping variable names to AST nodes and assumptions.
@@ -18,6 +19,7 @@ type Env struct {
 	WarnIterations *big.Int
 	MaxIterations  *big.Int
 	WarnWriter     io.Writer
+	Tracer         *provenance.TraceRecorder
 }
 
 // NewEnv creates a new, empty Env instance.
@@ -28,6 +30,14 @@ func NewEnv() *Env {
 		assumptions:    NewAssumptionStore(),
 		WarnWriter:     os.Stderr,
 	}
+}
+
+// GetTracer safely returns the active provenance tracer or nil.
+func (e *Env) GetTracer() *provenance.TraceRecorder {
+	if e == nil {
+		return nil
+	}
+	return e.Tracer
 }
 
 // Assumptions returns the assumption store of this environment.

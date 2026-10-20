@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/provenance"
 )
 
 // RuleID identifies a specific algebraic term-rewriting rule or algorithm.
@@ -70,13 +71,15 @@ type TraceSink interface {
 // MemoryTraceSink buffers rewrite events in memory.
 type MemoryTraceSink struct {
 	mu     sync.Mutex
-	events []RewriteEvent
+	events   []RewriteEvent
+	recorder *provenance.TraceRecorder
 }
 
 // NewMemoryTraceSink creates a new in-memory trace sink.
 func NewMemoryTraceSink() *MemoryTraceSink {
 	return &MemoryTraceSink{
-		events: make([]RewriteEvent, 0),
+		events:   make([]RewriteEvent, 0),
+		recorder: provenance.NewTraceRecorder(),
 	}
 }
 
@@ -84,12 +87,39 @@ func NewMemoryTraceSink() *MemoryTraceSink {
 func (s *MemoryTraceSink) RecordRewrite(rule RuleID, before Node, after Node, note string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.mirrorProvenance(rule, before, after)
 	s.events = append(s.events, RewriteEvent{
 		Rule:   rule,
 		Before: before,
 		After:  after,
 		Note:   note,
 	})
+}
+
+// Recorder returns the underlying provenance.TraceRecorder instance.
+func (s *MemoryTraceSink) Recorder() *provenance.TraceRecorder {
+	if s == nil {
+		return nil
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.recorder
+}
+
+func (s *MemoryTraceSink) mirrorProvenance(rule RuleID, before Node, after Node) {
+	if s.recorder != nil {
+		s.recorder.RecordStep(
+			string(rule),
+			provenance.RelationEq,
+			nil,
+			before,
+			after,
+			nil,
+			nil,
+			provenance.TrustCertified,
+			provenance.VisPresentable,
+		)
+	}
 }
 
 // Events returns a slice copy of recorded events.
@@ -223,6 +253,29 @@ func FormatTrace(inputExpr string, steps []PedagogicalStep, result Node) string 
 	return b.String()
 }
 
+// EvalWithProvenanceAndEnv evaluates an AST node and returns the root DerivationNode.
+func EvalWithProvenanceAndEnv(node Node, env *Env) (Node, *provenance.DerivationNode, error) {
+	sink := NewMemoryTraceSink()
+	var res Node
+	var err error
+	WithTraceSink(sink, func() {
+		if env != nil {
+			oldTracer := env.Tracer
+			env.Tracer = sink.Recorder()
+			defer func() { env.Tracer = oldTracer }()
+			res, err = EvalWithEnv(node, env)
+		} else {
+			tempEnv := NewEnv()
+			tempEnv.Tracer = sink.Recorder()
+			res, err = EvalWithEnv(node, tempEnv)
+		}
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	return res, sink.Recorder().Root(), nil
+}
+
 // EvalWithTrace evaluates an AST node while recording rewrite events into pedagogical steps.
 func EvalWithTrace(node Node) (Node, []PedagogicalStep, error) {
 	return EvalWithTraceAndEnv(node, nil)
@@ -235,9 +288,14 @@ func EvalWithTraceAndEnv(node Node, env *Env) (Node, []PedagogicalStep, error) {
 	var err error
 	WithTraceSink(sink, func() {
 		if env != nil {
+			oldTracer := env.Tracer
+			env.Tracer = sink.Recorder()
+			defer func() { env.Tracer = oldTracer }()
 			res, err = EvalWithEnv(node, env)
 		} else {
-			res, err = Eval(node)
+			tempEnv := NewEnv()
+			tempEnv.Tracer = sink.Recorder()
+			res, err = EvalWithEnv(node, tempEnv)
 		}
 	})
 	if err != nil {
