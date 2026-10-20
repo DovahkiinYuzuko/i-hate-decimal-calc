@@ -1044,6 +1044,37 @@
     "transpose": "Matrix transpose",
     "verify": "Autonomous algebraic proof verification"
   },
+  "lp": {
+    "err_requires_at_least_2_args": "lp solver requires at least 2 arguments: objective and constraints",
+    "err_internal_certificate_failed": "internal LP certificate verification failed: %s",
+    "err_expected_constraints_list": "expected list of constraints as second argument, got %T",
+    "err_no_decision_variables": "no decision variables found in linear program",
+    "err_invalid_objective": "invalid objective expression: %s",
+    "err_constraint_not_relational": "constraint %d is not a relational expression (expected <=, >=, or ==)",
+    "err_unsupported_rel_op": "unsupported relational operator %q in constraint %d",
+    "err_constraint_not_linear": "constraint %d is not linear: %s",
+    "err_expected_objective_list": "expected list for objective vector c, got %T",
+    "err_matrix_row_must_be_list": "constraint matrix row %d must be a list, got %T",
+    "err_expected_matrix_or_lists": "expected matrix or list of lists for constraint matrix A, got %T",
+    "err_expected_rel_list": "expected list of relation strings, got %T",
+    "err_expected_rhs_list": "expected list for RHS vector b, got %T",
+    "err_matrix_dim_mismatch": "matrix dimension mismatch: A has %d rows, rels has %d, b has %d",
+    "err_obj_coeff_not_rational": "objective coefficient %d is not a valid rational: %s",
+    "err_row_element_count_mismatch": "constraint matrix row %d must have %d elements, got %d",
+    "err_a_elem_not_rational": "A[%d][%d] is not a valid rational: %s",
+    "err_unsupported_relation_string": "unsupported relation string %q in row %d",
+    "err_rhs_not_rational": "RHS b[%d] is not a valid rational: %s",
+    "err_unknown_variable": "unknown variable %q in term %s",
+    "err_incompatible_physical_dim": "incompatible physical dimensions across terms: %s vs %s",
+    "err_var_dim_mismatch": "dimension mismatch for variable %q: %s vs %s",
+    "err_unsupported_unary_op": "unsupported unary operator %s",
+    "err_nonlinear_term_multiple_vars": "non-linear term with multiple variables: %s * %s",
+    "err_nonlinear_term": "non-linear term with multiple variables",
+    "err_unsupported_factor": "unsupported factor %T (%s) in term",
+    "err_unsupported_term_type": "unsupported term type %T: %s",
+    "step_pivot": "Phase %d Iteration %d: Enter %s, Leave %s",
+    "err_cannot_convert_to_rational": "cannot convert %T (%s) to rational"
+  },
   "warnings": {
     "iteration_limit_exceeded": "warning: %s iteration exceeded %s steps (continuing execution...)"
   }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc/ast"
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc/units"
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/lp"
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/provenance"
 )
@@ -42,7 +43,7 @@ func EvalLPMinimize(args []Node, env *Env) (Node, error) {
 
 func evalLPWithSense(sense lp.OptSense, args []Node, env *Env) (Node, error) {
 	if len(args) < 2 {
-		return nil, fmt.Errorf("lp solver requires at least 2 arguments: objective and constraints")
+		return nil, fmt.Errorf("%s", i18n.T("lp.err_requires_at_least_2_args"))
 	}
 
 	tracer := env.GetTracer()
@@ -75,14 +76,14 @@ func evalLPWithSense(sense lp.OptSense, args []Node, env *Env) (Node, error) {
 		if tracer != nil {
 			tracer.EndScope(nil, nil)
 		}
-		return nil, fmt.Errorf("internal LP certificate verification failed: %w", err)
+		return nil, fmt.Errorf("%s", i18n.T("lp.err_internal_certificate_failed", err.Error()))
 	}
 
 	// Record pivot history into provenance tracer if active
 	if tracer != nil {
 		for _, step := range res.PivotHistory {
-			stepDesc := fmt.Sprintf("Phase %d Iteration %d: Enter %s, Leave %s",
-				step.Phase, step.Iteration, step.EnteringVar, step.LeavingVar)
+			stepDesc := fmt.Sprintf("%s", i18n.T("lp.step_pivot",
+				step.Phase, step.Iteration, step.EnteringVar, step.LeavingVar))
 			tracer.RecordStep("lp.pivot", provenance.RelationEq, nil,
 				ast.NewVar(stepDesc), ast.NewRationalFromBigRat(step.ObjVal),
 				nil, nil, provenance.TrustCertified, provenance.VisPresentable)
@@ -118,7 +119,7 @@ func parseLPExpressionMode(sense lp.OptSense, objNode, consNode Node, env *Env) 
 
 	consList, ok := consEval.(*ast.ListNode)
 	if !ok {
-		return nil, nil, fmt.Errorf("expected list of constraints as second argument, got %T", consEval)
+		return nil, nil, fmt.Errorf("%s", i18n.T("lp.err_expected_constraints_list", consEval))
 	}
 
 	varSet := make(map[string]bool)
@@ -137,7 +138,7 @@ func parseLPExpressionMode(sense lp.OptSense, objNode, consNode Node, env *Env) 
 	sort.Strings(varNames)
 
 	if len(varNames) == 0 {
-		return nil, nil, fmt.Errorf("no decision variables found in linear program")
+		return nil, nil, fmt.Errorf("%s", i18n.T("lp.err_no_decision_variables"))
 	}
 
 	varIdx := make(map[string]int, len(varNames))
@@ -147,14 +148,14 @@ func parseLPExpressionMode(sense lp.OptSense, objNode, consNode Node, env *Env) 
 
 	objCoeffs, objConst, varUnits, err := extractLinearCoeffs(objEval, varNames, varIdx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("invalid objective expression: %w", err)
+		return nil, nil, fmt.Errorf("%s", i18n.T("lp.err_invalid_objective", err.Error()))
 	}
 
 	constraints := make([]lp.Constraint, 0, len(consList.Elements))
 	for i, cNode := range consList.Elements {
 		relOp, ok := cNode.(*ast.RelOpNode)
 		if !ok {
-			return nil, nil, fmt.Errorf("constraint %d is not a relational expression (expected <=, >=, or ==)", i+1)
+			return nil, nil, fmt.Errorf("%s", i18n.T("lp.err_constraint_not_relational", i+1))
 		}
 
 		var relSense lp.RelSense
@@ -166,7 +167,7 @@ func parseLPExpressionMode(sense lp.OptSense, objNode, consNode Node, env *Env) 
 		case "==", "=":
 			relSense = lp.RelEq
 		default:
-			return nil, nil, fmt.Errorf("unsupported relational operator %q in constraint %d", relOp.Op, i+1)
+			return nil, nil, fmt.Errorf("%s", i18n.T("lp.err_unsupported_rel_op", relOp.Op, i+1))
 		}
 
 		negRHS, _ := ast.NewUnaryOp("-", relOp.RHS)
@@ -178,7 +179,7 @@ func parseLPExpressionMode(sense lp.OptSense, objNode, consNode Node, env *Env) 
 
 		coeffs, constTerm, _, err := extractLinearCoeffs(diffSimp, varNames, varIdx)
 		if err != nil {
-			return nil, nil, fmt.Errorf("constraint %d is not linear: %w", i+1, err)
+			return nil, nil, fmt.Errorf("%s", i18n.T("lp.err_constraint_not_linear", i+1, err.Error()))
 		}
 
 		rhs := new(big.Rat).Neg(constTerm)
@@ -203,7 +204,7 @@ func parseLPExpressionMode(sense lp.OptSense, objNode, consNode Node, env *Env) 
 func parseLPMatrixMode(sense lp.OptSense, args []Node, env *Env) (*lp.Problem, map[string]ast.DimensionVector, error) {
 	cList, ok := args[0].(*ast.ListNode)
 	if !ok {
-		return nil, nil, fmt.Errorf("expected list for objective vector c, got %T", args[0])
+		return nil, nil, fmt.Errorf("%s", i18n.T("lp.err_expected_objective_list", args[0]))
 	}
 
 	var AData [][]Node
@@ -214,27 +215,27 @@ func parseLPMatrixMode(sense lp.OptSense, args []Node, env *Env) (*lp.Problem, m
 		for i, rowElem := range aList.Elements {
 			rowList, ok := rowElem.(*ast.ListNode)
 			if !ok {
-				return nil, nil, fmt.Errorf("constraint matrix row %d must be a list, got %T", i+1, rowElem)
+				return nil, nil, fmt.Errorf("%s", i18n.T("lp.err_matrix_row_must_be_list", i+1, rowElem))
 			}
 			AData[i] = rowList.Elements
 		}
 	} else {
-		return nil, nil, fmt.Errorf("expected matrix or list of lists for constraint matrix A, got %T", args[1])
+		return nil, nil, fmt.Errorf("%s", i18n.T("lp.err_expected_matrix_or_lists", args[1]))
 	}
 
 	relList, ok := args[2].(*ast.ListNode)
 	if !ok {
-		return nil, nil, fmt.Errorf("expected list of relation strings, got %T", args[2])
+		return nil, nil, fmt.Errorf("%s", i18n.T("lp.err_expected_rel_list", args[2]))
 	}
 	bList, ok := args[3].(*ast.ListNode)
 	if !ok {
-		return nil, nil, fmt.Errorf("expected list for RHS vector b, got %T", args[3])
+		return nil, nil, fmt.Errorf("%s", i18n.T("lp.err_expected_rhs_list", args[3]))
 	}
 
 	n := len(cList.Elements)
 	m := len(AData)
 	if len(relList.Elements) != m || len(bList.Elements) != m {
-		return nil, nil, fmt.Errorf("matrix dimension mismatch: A has %d rows, rels has %d, b has %d", m, len(relList.Elements), len(bList.Elements))
+		return nil, nil, fmt.Errorf("%s", i18n.T("lp.err_matrix_dim_mismatch", m, len(relList.Elements), len(bList.Elements)))
 	}
 
 	varNames := make([]string, n)
@@ -246,7 +247,7 @@ func parseLPMatrixMode(sense lp.OptSense, args []Node, env *Env) (*lp.Problem, m
 	for j, elem := range cList.Elements {
 		ratVal, err := nodeToRational(elem)
 		if err != nil {
-			return nil, nil, fmt.Errorf("objective coefficient %d is not a valid rational: %w", j+1, err)
+			return nil, nil, fmt.Errorf("%s", i18n.T("lp.err_obj_coeff_not_rational", j+1, err.Error()))
 		}
 		objCoeffs[j] = ratVal
 	}
@@ -254,13 +255,13 @@ func parseLPMatrixMode(sense lp.OptSense, args []Node, env *Env) (*lp.Problem, m
 	constraints := make([]lp.Constraint, m)
 	for i, rowList := range AData {
 		if len(rowList) != n {
-			return nil, nil, fmt.Errorf("constraint matrix row %d must have %d elements, got %d", i+1, n, len(rowList))
+			return nil, nil, fmt.Errorf("%s", i18n.T("lp.err_row_element_count_mismatch", i+1, n, len(rowList)))
 		}
 		rowCoeffs := make([]*big.Rat, n)
 		for j, aVal := range rowList {
 			ratVal, err := nodeToRational(aVal)
 			if err != nil {
-				return nil, nil, fmt.Errorf("A[%d][%d] is not a valid rational: %w", i+1, j+1, err)
+				return nil, nil, fmt.Errorf("%s", i18n.T("lp.err_a_elem_not_rational", i+1, j+1, err.Error()))
 			}
 			rowCoeffs[j] = ratVal
 		}
@@ -276,12 +277,12 @@ func parseLPMatrixMode(sense lp.OptSense, args []Node, env *Env) (*lp.Problem, m
 		case "==", "=":
 			relSense = lp.RelEq
 		default:
-			return nil, nil, fmt.Errorf("unsupported relation string %q in row %d", relStr, i+1)
+			return nil, nil, fmt.Errorf("%s", i18n.T("lp.err_unsupported_relation_string", relStr, i+1))
 		}
 
 		bVal, err := nodeToRational(bList.Elements[i])
 		if err != nil {
-			return nil, nil, fmt.Errorf("RHS b[%d] is not a valid rational: %w", i+1, err)
+			return nil, nil, fmt.Errorf("%s", i18n.T("lp.err_rhs_not_rational", i+1, err.Error()))
 		}
 
 		constraints[i] = lp.Constraint{
@@ -323,19 +324,19 @@ func extractLinearCoeffs(expr Node, varNames []string, varIdx map[string]int) ([
 		} else {
 			idx, ok := varIdx[v]
 			if !ok {
-				return nil, nil, nil, fmt.Errorf("unknown variable %q in term %s", v, term.String())
+				return nil, nil, nil, fmt.Errorf("%s", i18n.T("lp.err_unknown_variable", v, term.String()))
 			}
 			coeffs[idx].Add(coeffs[idx], c)
 			if !u.IsZero() {
 				if objTotalDim == nil {
 					objTotalDim = &u
 				} else if !objTotalDim.Equal(u) {
-					return nil, nil, nil, fmt.Errorf("incompatible physical dimensions across terms: %s vs %s", objTotalDim.String(), u.String())
+					return nil, nil, nil, fmt.Errorf("%s", i18n.T("lp.err_incompatible_physical_dim", objTotalDim.String(), u.String()))
 				}
 
 				if existingU, ok := varUnits[v]; ok {
 					if !existingU.Equal(u) {
-						return nil, nil, nil, fmt.Errorf("dimension mismatch for variable %q: %s vs %s", v, existingU.String(), u.String())
+						return nil, nil, nil, fmt.Errorf("%s", i18n.T("lp.err_var_dim_mismatch", v, existingU.String(), u.String()))
 					}
 				} else {
 					varUnits[v] = u
@@ -363,7 +364,7 @@ func extractSingleTerm(term Node) (*big.Rat, string, ast.DimensionVector, error)
 			c.Neg(c)
 			return c, v, u, nil
 		}
-		return nil, "", zeroDim, fmt.Errorf("unsupported unary operator %s", t.Op)
+		return nil, "", zeroDim, fmt.Errorf("%s", i18n.T("lp.err_unsupported_unary_op", t.Op))
 	case *ast.MulNode:
 		coeff := big.NewRat(1, 1)
 		var varName string
@@ -386,7 +387,7 @@ func extractSingleTerm(term Node) (*big.Rat, string, ast.DimensionVector, error)
 					}
 				} else {
 					if varName != "" {
-						return nil, "", zeroDim, fmt.Errorf("non-linear term with multiple variables: %s * %s", varName, f.Name)
+						return nil, "", zeroDim, fmt.Errorf("%s", i18n.T("lp.err_nonlinear_term_multiple_vars", varName, f.Name))
 					}
 					varName = f.Name
 				}
@@ -404,7 +405,7 @@ func extractSingleTerm(term Node) (*big.Rat, string, ast.DimensionVector, error)
 					coeff.Mul(coeff, c)
 					if v != "" {
 						if varName != "" {
-							return nil, "", zeroDim, fmt.Errorf("non-linear term with multiple variables")
+							return nil, "", zeroDim, fmt.Errorf("%s", i18n.T("lp.err_nonlinear_term"))
 						}
 						varName = v
 					}
@@ -413,14 +414,14 @@ func extractSingleTerm(term Node) (*big.Rat, string, ast.DimensionVector, error)
 					}
 				}
 			default:
-				return nil, "", zeroDim, fmt.Errorf("unsupported factor %T (%s) in term", factor, factor.String())
+				return nil, "", zeroDim, fmt.Errorf("%s", i18n.T("lp.err_unsupported_factor", factor, factor.String()))
 			}
 		}
 		return coeff, varName, dims, nil
 	case *ast.QuantityNode:
 		return new(big.Rat).Set(t.Scale), "", t.Dimensions.Clone(), nil
 	default:
-		return nil, "", zeroDim, fmt.Errorf("unsupported term type %T: %s", term, term.String())
+		return nil, "", zeroDim, fmt.Errorf("%s", i18n.T("lp.err_unsupported_term_type", term, term.String()))
 	}
 }
 
@@ -546,7 +547,7 @@ func nodeToRational(node Node) (*big.Rat, error) {
 			return new(big.Rat).Neg(val), nil
 		}
 	}
-	return nil, fmt.Errorf("cannot convert %T (%s) to rational", node, node.String())
+	return nil, fmt.Errorf("%s", i18n.T("lp.err_cannot_convert_to_rational", node, node.String()))
 }
 
 func formatLPResult(prob *lp.Problem, res *lp.Result, varUnits map[string]ast.DimensionVector) Node {
