@@ -55,6 +55,8 @@
 !internal/updater/*.go
 !internal/provenance/
 !internal/provenance/*.go
+!internal/lp/
+!internal/lp/*.go
 # .gitignores/root.gitignore
 !README.md
 !LICENSE.*
