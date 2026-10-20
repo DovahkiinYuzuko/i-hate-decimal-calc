@@ -262,6 +262,7 @@ func EvalWithProvenanceAndEnv(node Node, env *Env) (Node, *provenance.Derivation
 		if env != nil {
 			oldTracer := env.Tracer
 			env.Tracer = sink.Recorder()
+			env.LastTrace = sink.Recorder()
 			defer func() { env.Tracer = oldTracer }()
 			res, err = EvalWithEnv(node, env)
 		} else {
@@ -290,6 +291,7 @@ func EvalWithTraceAndEnv(node Node, env *Env) (Node, []PedagogicalStep, error) {
 		if env != nil {
 			oldTracer := env.Tracer
 			env.Tracer = sink.Recorder()
+			env.LastTrace = sink.Recorder()
 			defer func() { env.Tracer = oldTracer }()
 			res, err = EvalWithEnv(node, env)
 		} else {

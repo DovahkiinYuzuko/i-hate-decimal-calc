@@ -434,6 +434,8 @@
     "rule_solvequadratic": "Quadratic Equation Solving",
     "rule_solvecubic": "Cubic Equation Solving",
     "rule_solvequartic": "Quartic Equation Solving",
+    "label_requires": "Requires",
+    "label_certificate": "Certificate",
     "slice_step_detail": "Slice resolution on length %d: start=%s, stop=%s, step=%s => extracted indices [%s]",
     "map_step_detail": "Element %d: %s(%s) => %s",
     "filter_step_detail": "Element %d: %s(%s) => %s (%s)",

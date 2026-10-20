@@ -20,6 +20,7 @@ type Env struct {
 	MaxIterations  *big.Int
 	WarnWriter     io.Writer
 	Tracer         *provenance.TraceRecorder
+	LastTrace      *provenance.TraceRecorder
 }
 
 // NewEnv creates a new, empty Env instance.
@@ -38,6 +39,14 @@ func (e *Env) GetTracer() *provenance.TraceRecorder {
 		return nil
 	}
 	return e.Tracer
+}
+
+// GetLastTrace returns the trace recorder from the most recent evaluation pass.
+func (e *Env) GetLastTrace() *provenance.TraceRecorder {
+	if e == nil {
+		return nil
+	}
+	return e.LastTrace
 }
 
 // Assumptions returns the assumption store of this environment.

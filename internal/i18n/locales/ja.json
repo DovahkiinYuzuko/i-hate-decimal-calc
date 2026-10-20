@@ -434,6 +434,8 @@
     "rule_solvequadratic": "二次方程式の求解（解の公式）",
     "rule_solvecubic": "三次方程式の求解（カルダノの公式）",
     "rule_solvequartic": "四次方程式の求解（フェラーリの公式）",
+    "label_requires": "前提条件",
+    "label_certificate": "証明書",
     "slice_step_detail": "長さ %d に対するスライス境界解決: start=%s, stop=%s, step=%s => 抽出インデックス [%s]",
     "map_step_detail": "要素 %d: %s(%s) => %s",
     "filter_step_detail": "要素 %d: %s(%s) => %s (%s)",

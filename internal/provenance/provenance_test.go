@@ -1,6 +1,7 @@
 package provenance_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc/ast"
@@ -107,5 +108,112 @@ func TestAttachSubtree(t *testing.T) {
 	}
 	if mainRoot.Children[0].RuleID != "SubTaskRule" {
 		t.Errorf("expected attached subtree with rule SubTaskRule, got %s", mainRoot.Children[0].RuleID)
+	}
+}
+
+func TestExplainVisitor_RenderTreeAndJSON(t *testing.T) {
+	rec := provenance.NewTraceRecorder()
+	n1, _ := ast.NewRational(1, 2)
+	n2, _ := ast.NewRational(1, 4)
+	n3, _ := ast.NewRational(3, 4)
+
+	rec.StartScope("algebra.expand", provenance.RelationEq, nil, n1, provenance.VisPresentable)
+	rec.RecordStep(
+		"algebra.normalize",
+		provenance.RelationEq,
+		nil,
+		n1,
+		n2,
+		nil,
+		nil,
+		provenance.TrustCertified,
+		provenance.VisPresentable,
+	)
+	rec.EndScope(n3, nil)
+
+	root := rec.Root()
+	ev := provenance.NewExplainVisitor()
+
+	treeStr := ev.RenderTree(root, "1/2 + 1/4")
+	if !strings.Contains(treeStr, "[Result]") {
+		t.Errorf("expected tree output to contain [Result], got:\n%s", treeStr)
+	}
+	if !strings.Contains(treeStr, "Step 1") {
+		t.Errorf("expected tree output to contain Step 1, got:\n%s", treeStr)
+	}
+
+	jsonBytes, err := ev.RenderJSON(root, "1/2 + 1/4")
+	if err != nil {
+		t.Fatalf("RenderJSON error: %v", err)
+	}
+	jsonStr := string(jsonBytes)
+	if !strings.Contains(jsonStr, `"steps"`) || !strings.Contains(jsonStr, `"result"`) {
+		t.Errorf("expected valid JSON structure, got:\n%s", jsonStr)
+	}
+}
+
+func TestVerifyVisitor_Verify(t *testing.T) {
+	rec := provenance.NewTraceRecorder()
+	n1, _ := ast.NewRational(1, 2)
+	n2, _ := ast.NewRational(2, 4)
+
+	rec.RecordStep(
+		"fraction_simplify",
+		provenance.RelationEq,
+		nil,
+		n2,
+		n1,
+		nil,
+		nil,
+		provenance.TrustCertified,
+		provenance.VisPresentable,
+	)
+
+	root := rec.Root()
+	vv := provenance.NewVerifyVisitor()
+	report := vv.Verify(root)
+
+	if !report.AllVerified {
+		t.Errorf("expected all verified, got report: %+v", report)
+	}
+	if report.TotalSteps != 1 || report.VerifiedSteps != 1 {
+		t.Errorf("expected 1/1 verified, got %d/%d", report.VerifiedSteps, report.TotalSteps)
+	}
+	if !strings.Contains(report.Summary(), "100% derivation verified") {
+		t.Errorf("unexpected summary string: %s", report.Summary())
+	}
+}
+
+func TestTypstVisitor_Render(t *testing.T) {
+	rec := provenance.NewTraceRecorder()
+	n1, _ := ast.NewRational(1, 2)
+	n2, _ := ast.NewRational(2, 4)
+
+	rec.RecordStep(
+		"algebra.expand",
+		provenance.RelationEq,
+		nil,
+		n1,
+		n2,
+		nil,
+		nil,
+		provenance.TrustCertified,
+		provenance.VisPresentable,
+	)
+
+	root := rec.Root()
+	tv := provenance.NewTypstVisitor()
+
+	mathBlock := tv.RenderTypst(root)
+	if !strings.HasPrefix(mathBlock, "$") || !strings.HasSuffix(strings.TrimSpace(mathBlock), "$") {
+		t.Errorf("expected Typst math block, got:\n%s", mathBlock)
+	}
+
+	doc := tv.RenderDocument(root, "1/2")
+	if !strings.Contains(doc, "= Mathematical Derivation Report") {
+		t.Errorf("expected document header, got:\n%s", doc)
+	}
+	if !strings.Contains(doc, "== Final Result") {
+		t.Errorf("expected final result block, got:\n%s", doc)
 	}
 }

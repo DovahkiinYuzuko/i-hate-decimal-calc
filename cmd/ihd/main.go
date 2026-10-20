@@ -12,6 +12,7 @@ import (
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc"
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/provenance"
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/updater"
 )
 
@@ -118,7 +119,6 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 	noUpdateCheckFlag := fs.Bool("no-update-check", false, i18n.T("cli.flag_no_update_check"))
 	helpFlag := fs.Bool("help", false, i18n.T("cli.flag_help"))
 	fs.BoolVar(helpFlag, "h", false, i18n.T("cli.flag_help"))
-
 
 	if err := fs.Parse(flagArgs); err != nil {
 		return 1
@@ -348,7 +348,6 @@ func isTerminal(r io.Reader) bool {
 	return false
 }
 
-
 func formatOutput(node calc.Node, ro runOptions) string {
 	if ro.interval {
 		eps := big.NewRat(1, 1000000)
@@ -462,22 +461,35 @@ func evaluateLine(line string, ro runOptions, out, errOut io.Writer) error {
 	return evaluateLineWithEnv(line, ro, env, out, errOut)
 }
 
+func renderExplainOutput(origNode, evaled calc.Node, steps []calc.PedagogicalStep, line string, ro runOptions, env *calc.Env, out io.Writer) {
+	tracer := env.GetLastTrace()
+	if ro.typst && tracer != nil && tracer.Root() != nil {
+		typstVis := provenance.NewTypstVisitor()
+		fmt.Fprint(out, typstVis.RenderDocument(tracer.Root(), line))
+		return
+	}
+	if len(steps) == 0 && tracer != nil && tracer.Root() != nil && (len(tracer.Root().Children) > 0 || tracer.Root().RuleID != "") {
+		explainVis := provenance.NewExplainVisitor()
+		fmt.Fprintln(out, explainVis.RenderTree(tracer.Root(), line))
+		return
+	}
+	cert, errCert := calc.VerifyComputation(origNode, evaled, env)
+	if errCert == nil && cert != nil && cert.IsVerified {
+		trace, errTrace := cert.ToProofTrace()
+		if errTrace == nil && trace != nil && trace.StepCount() > 1 {
+			fmt.Fprint(out, trace.RenderExplain(i18n.CurrentLocale()))
+			return
+		}
+	}
+	fmt.Fprint(out, calc.FormatTrace(line, steps, evaled))
+}
+
 func handleEvaluationOutputs(origNode, evaled calc.Node, steps []calc.PedagogicalStep, line string, ro runOptions, env *calc.Env, suppressOutput bool, out, errOut io.Writer) {
 	if suppressOutput {
 		return
 	}
 	if ro.explain {
-		cert, errCert := calc.VerifyComputation(origNode, evaled, env)
-		if errCert == nil && cert != nil && cert.IsVerified {
-			trace, errTrace := cert.ToProofTrace()
-			if errTrace == nil && trace != nil && trace.StepCount() > 1 {
-				fmt.Fprint(out, trace.RenderExplain(i18n.CurrentLocale()))
-			} else {
-				fmt.Fprint(out, calc.FormatTrace(line, steps, evaled))
-			}
-		} else {
-			fmt.Fprint(out, calc.FormatTrace(line, steps, evaled))
-		}
+		renderExplainOutput(origNode, evaled, steps, line, ro, env, out)
 	} else {
 		_ = outputNode(out, evaled, ro)
 	}
