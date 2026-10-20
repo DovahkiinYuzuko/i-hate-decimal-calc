@@ -97,6 +97,15 @@ func evalFiniteLimit(expr Node, varName string, a Node, dir int, depth int) (Nod
 
 	// Step 1: Separate into rational fraction P(x) / Q(x)
 	num, den := toRationalFraction(expr)
+	return evalFiniteLimitFrac(expr, num, den, varName, a, dir, depth)
+}
+
+// evalFiniteLimitFrac evaluates finite limit while maintaining explicit numerator and denominator
+// expressions, preventing catastrophic term explosion caused by distributing division across sums.
+func evalFiniteLimitFrac(origExpr Node, num Node, den Node, varName string, a Node, dir int, depth int) (Node, error) {
+	if depth > 5 {
+		return nil, fmt.Errorf("%s", i18n.T("errors.err_limit_recursion_depth_exceeded_possible"))
+	}
 
 	// Evaluate numerator and denominator at x = a
 	numSub := Substitute(num, varName, a)
@@ -124,7 +133,7 @@ func evalFiniteLimit(expr Node, varName string, a Node, dir int, depth int) (Nod
 		// 3.1 Try polynomial division / factor cancellation by (x - a)
 		cancelledExpr, cancelled := tryCancelLinearFactor(num, den, varName, a)
 		if cancelled {
-			RecordTraceRewrite(RuleLimit, expr, cancelledExpr, i18n.T("explain.limit_cancel_factor", varName, a.String()))
+			RecordTraceRewrite(RuleLimit, origExpr, cancelledExpr, i18n.T("explain.limit_cancel_factor", varName, a.String()))
 			return evalFiniteLimit(cancelledExpr, varName, a, dir, depth+1)
 		}
 
@@ -134,8 +143,9 @@ func evalFiniteLimit(expr Node, varName string, a Node, dir int, depth int) (Nod
 		if errD1 == nil && errD2 == nil && !isZero(dDen) {
 			invDDen, _ := simplifyPow(dDen, mustRational(-1, 1))
 			lhopitalExpr, _ := simplifyMul([]Node{dNum, invDDen})
-			RecordTraceRewrite(RuleLimit, expr, lhopitalExpr, i18n.T("explain.limit_lhopital", varName, num.String(), varName, den.String(), dNum.String(), dDen.String()))
-			return evalFiniteLimit(lhopitalExpr, varName, a, dir, depth+1)
+			RecordTraceRewrite(RuleLimit, origExpr, lhopitalExpr, i18n.T("explain.limit_lhopital", varName, num.String(), varName, den.String(), dNum.String(), dDen.String()))
+			// Pass dNum and dDen directly as fraction pair without naive redistribution/re-fractioning
+			return evalFiniteLimitFrac(lhopitalExpr, dNum, dDen, varName, a, dir, depth+1)
 		}
 	}
 
@@ -145,7 +155,7 @@ func evalFiniteLimit(expr Node, varName string, a Node, dir int, depth int) (Nod
 	}
 
 	// Fallback to direct substitution if not already covered
-	sub := Substitute(expr, varName, a)
+	sub := Substitute(origExpr, varName, a)
 	val, err := Eval(sub)
 	if err == nil && isValidLimitValue(val) {
 		return val, nil

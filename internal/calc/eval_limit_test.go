@@ -161,3 +161,19 @@ func TestEvalLimit_Explain(t *testing.T) {
 		t.Fatalf("FormatTrace output is empty")
 	}
 }
+
+func TestEvalLimit_RadicalLHopitalSecondOrder(t *testing.T) {
+	ast, err := Parse("limit((sqrt(1 + x) - 1 - x/2) / x^2, x, 0)")
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+	res, err := Eval(ast)
+	if err != nil {
+		t.Fatalf("Eval failed: %v", err)
+	}
+	got := Format(res)
+	if got != "-1/8" {
+		t.Fatalf("expected -1/8, got %s", got)
+	}
+}
+
