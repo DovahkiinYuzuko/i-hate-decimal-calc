@@ -149,6 +149,55 @@ if (($env:PATH -split ';') -notcontains $InstallDir) {
     $env:PATH = "$env:PATH;$InstallDir"
 }
 
+# Shell Completion Setup
+$CompletionsDir = "$IhdHome\completions"
+if (-not (Test-Path $CompletionsDir)) {
+    New-Item -ItemType Directory -Path $CompletionsDir -Force | Out-Null
+}
+$PsCompletionFile = Join-Path $CompletionsDir "ihd.ps1"
+$IhdExe = Join-Path $InstallDir "ihd.exe"
+
+if (Test-Path $IhdExe) {
+    try {
+        & $IhdExe completion powershell | Out-File -FilePath $PsCompletionFile -Encoding utf8
+        Write-Host "Generated PowerShell completion script: $PsCompletionFile" -ForegroundColor Cyan
+
+        # Register in $PROFILE if not already registered
+        if ($PROFILE) {
+            $ProfileDir = Split-Path -Path $PROFILE -Parent
+            if ($ProfileDir -and -not (Test-Path $ProfileDir)) {
+                New-Item -ItemType Directory -Path $ProfileDir -Force | Out-Null
+            }
+            if (-not (Test-Path $PROFILE)) {
+                New-Item -ItemType File -Path $PROFILE -Force | Out-Null
+            }
+
+            $ProfileContent = Get-Content -Path $PROFILE -Raw -ErrorAction SilentlyContinue
+            if ($null -eq $ProfileContent) { $ProfileContent = "" }
+            $CompletionMarker = "# i-hate-decimal-calc shell completion"
+
+            if ($ProfileContent -notmatch [regex]::Escape($CompletionMarker)) {
+                $AutoloadSnippet = @"
+
+$CompletionMarker
+if (Test-Path "$PsCompletionFile") {
+    . "$PsCompletionFile"
+}
+"@
+                Add-Content -Path $PROFILE -Value $AutoloadSnippet -Encoding utf8
+                Write-Host "Added completion autoload to PowerShell profile: $PROFILE" -ForegroundColor Cyan
+            }
+        }
+
+        # Source completion in current session so it works immediately
+        if (Test-Path $PsCompletionFile) {
+            . $PsCompletionFile
+        }
+    } catch {
+        Write-Warning "Shell completion setup failed: $_"
+    }
+}
+
 Write-Host "`nSuccessfully installed ihd to $InstallDir\ihd.exe!" -ForegroundColor Green
 if (Test-Path $ReferencesDir) {
     Write-Host "Offline Reference Manuals installed to: $ReferencesDir" -ForegroundColor Cyan

@@ -130,6 +130,34 @@ else
 fi
 
 echo ""
+# Shell Completion Setup
+COMPLETIONS_DIR="$IHD_HOME/completions"
+mkdir -p "$COMPLETIONS_DIR"
+IHD_BIN="$INSTALL_DIR/ihd"
+
+if [ -x "$IHD_BIN" ]; then
+    # Generate completion scripts
+    "$IHD_BIN" completion bash > "$COMPLETIONS_DIR/ihd.bash" 2>/dev/null || true
+    "$IHD_BIN" completion zsh > "$COMPLETIONS_DIR/_ihd" 2>/dev/null || true
+    "$IHD_BIN" completion fish > "$COMPLETIONS_DIR/ihd.fish" 2>/dev/null || true
+
+    # Fish: auto-load from standard path
+    if [ -d "$HOME/.config/fish" ]; then
+        mkdir -p "$HOME/.config/fish/completions"
+        cp "$COMPLETIONS_DIR/ihd.fish" "$HOME/.config/fish/completions/ihd.fish" 2>/dev/null || true
+    fi
+
+    # Bash: auto-load from standard user completion path
+    if [ -d "$HOME/.local/share/bash-completion/completions" ]; then
+        cp "$COMPLETIONS_DIR/ihd.bash" "$HOME/.local/share/bash-completion/completions/ihd" 2>/dev/null || true
+    fi
+
+    # Zsh: copy to ~/.zfunc if present
+    if [ -d "$HOME/.zfunc" ]; then
+        cp "$COMPLETIONS_DIR/_ihd" "$HOME/.zfunc/_ihd" 2>/dev/null || true
+    fi
+fi
+
 echo "Successfully installed ihd to $INSTALL_DIR/ihd"
 if [ -d "$REFERENCES_DIR" ]; then
     echo "Offline Reference Manuals installed to: $REFERENCES_DIR"
@@ -139,6 +167,12 @@ fi
 if [ -d "$EXAM_DIR" ]; then
     echo "Mathematical Showcase & Cookbook installed to: $EXAM_DIR"
     echo "Run the live showcase: $EXAM_DIR/exam.sh"
+fi
+if [ -d "$COMPLETIONS_DIR" ]; then
+    echo "Shell completion scripts generated in: $COMPLETIONS_DIR"
+    echo "  - Bash: source \"$COMPLETIONS_DIR/ihd.bash\" (or add to ~/.bashrc)"
+    echo "  - Zsh:  fpath=(\"$COMPLETIONS_DIR\" \$fpath); autoload -Uz compinit; compinit"
+    echo "  - Fish: Automatically loaded if ~/.config/fish/completions/ihd.fish exists"
 fi
 echo ""
 
