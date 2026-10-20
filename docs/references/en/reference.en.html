@@ -2315,6 +2315,21 @@ M1001 80h400000v40h-400000z"></path></svg></span></span></span><span class="vlis
 <td align="left"><code class="clickable-code" data-copy="ihd --lean &#x22;factor(x^2 - 1)&#x22;" title="Click to copy">ihd --lean "factor(x^2 - 1)"</code> / <code class="clickable-code" data-copy="ihd --lean-file p.lean &#x22;factor(x^2 - 1)&#x22;" title="Click to copy">ihd --lean-file p.lean "factor(x^2 - 1)"</code></td>
 <td align="left">Automatically transpiles computation and proof traces into formal <strong>Lean 4 (Mathlib4)</strong> proof theorems (<code class="clickable-code" data-copy="by ring" title="Click to copy">by ring</code>, <code class="clickable-code" data-copy="by ext <;> fin_cases" title="Click to copy">by ext &#x3C;;> fin_cases</code>, <code class="clickable-code" data-copy="by repeat constructor <;> norm_num" title="Click to copy">by repeat constructor &#x3C;;> norm_num</code>, <code class="clickable-code" data-copy="by simp" title="Click to copy">by simp</code>, etc.)</td>
 </tr>
+<tr>
+<td align="left"><code class="clickable-code" data-copy="--typst" title="Click to copy">--typst</code> / <code class="clickable-code" data-copy="--format typst" title="Click to copy">--format typst</code></td>
+<td align="left"><code class="clickable-code" data-copy="ihd --typst &#x22;1/2 + sqrt(2)&#x22;" title="Click to copy">ihd --typst "1/2 + sqrt(2)"</code> / <code class="clickable-code" data-copy="ihd --format typst &#x22;[[1, 2], [3, 4]]&#x22;" title="Click to copy">ihd --format typst "[[1, 2], [3, 4]]"</code></td>
+<td align="left">Formats output expressions in modern <strong>Typst</strong> math mode syntax (<code class="clickable-code" data-copy="$ ... $" title="Click to copy">$ ... $</code>, <code class="clickable-code" data-copy="/" title="Click to copy">/</code> for fraction, <code class="clickable-code" data-copy="mat(...)" title="Click to copy">mat(...)</code> for matrices, etc.)</td>
+</tr>
+<tr>
+<td align="left"><code class="clickable-code" data-copy="--explain --lean" title="Click to copy">--explain --lean</code></td>
+<td align="left"><code class="clickable-code" data-copy="ihd --explain --lean &#x22;factor(x^4 + 4)&#x22;" title="Click to copy">ihd --explain --lean "factor(x^4 + 4)"</code></td>
+<td align="left">Projects from the single provenance DAG into a <strong>Lean 4 (Mathlib4)</strong> transitive equational derivation <code class="clickable-code" data-copy="calc" title="Click to copy">calc</code> block (<code class="clickable-code" data-copy="by ring" title="Click to copy">by ring</code>, <code class="clickable-code" data-copy="by norm_num" title="Click to copy">by norm_num</code>, etc.) with zero sorry assertions</td>
+</tr>
+<tr>
+<td align="left"><code class="clickable-code" data-copy="--explain --typst" title="Click to copy">--explain --typst</code></td>
+<td align="left"><code class="clickable-code" data-copy="ihd --explain --typst &#x22;expand((x + 1)^2)&#x22;" title="Click to copy">ihd --explain --typst "expand((x + 1)^2)"</code></td>
+<td align="left">Projects from the single provenance DAG into a beautifully formatted <strong>Typst</strong> Mathematical Derivation Report document (<code class="clickable-code" data-copy="= Mathematical Derivation Report" title="Click to copy">= Mathematical Derivation Report</code>)</td>
+</tr>
 </tbody>
 </table></div>
 <hr>

@@ -344,6 +344,8 @@
 | `micro-verifier` | `micro-verifier cert.json` | 外部依存ゼロ・Go 標準ライブラリのみで実装された極小独立検証バイナリ。証明書 JSON（`ihd-proof-trace-v1`）を読み込み、CAS本体に依存せず残差ゼロを客観的に再検証 |
 | `--lean` / `--lean-file` | `ihd --lean "factor(x^2 - 1)"` / `ihd --lean-file p.lean "factor(x^2 - 1)"` | 計算結果や導出ステップを **Lean 4（Mathlib4）** の形式証明コード（`by ring`, `by ext <;> fin_cases`, `by repeat constructor <;> norm_num`, `by simp` 等）として出力 |
 | `--typst` / `--format typst` | `ihd --typst "1/2 + sqrt(2)"` / `ihd --format typst "[[1, 2], [3, 4]]"` | 新世代組版システム **Typst** の数式モード記法（`$ ... $`、分数 `/`、根号 `sqrt(...)`/`root(...)`、行列 `mat(...)` 等）で出力 |
+| `--explain --lean` | `ihd --explain --lean "factor(x^4 + 4)"` | 単一の証明DAGから **Lean 4（Mathlib4）** の推移的等式連鎖 `calc` ブロック（`by ring`, `by norm_num` 等）を生成（Zero-sorry 契約遵守） |
+| `--explain --typst` | `ihd --explain --typst "expand((x + 1)^2)"` | 単一の証明DAGから **Typst** 組版による美しい数学導出レポートドキュメント（`= Mathematical Derivation Report`）を生成 |
 
 ---
 

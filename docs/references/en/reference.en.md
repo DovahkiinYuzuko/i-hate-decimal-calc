@@ -336,6 +336,9 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `--replay` | `ihd --replay cert.json` | Reads an exported certificate JSON file and verifies that residuals vanish without invoking CAS solver algorithms |
 | `micro-verifier` | `micro-verifier cert.json` | Standalone zero-dependency micro-verification binary built using only the Go standard library. Validates certificate JSON files (`ihd-proof-trace-v1`) objectively without relying on the CAS solver itself |
 | `--lean` / `--lean-file` | `ihd --lean "factor(x^2 - 1)"` / `ihd --lean-file p.lean "factor(x^2 - 1)"` | Automatically transpiles computation and proof traces into formal **Lean 4 (Mathlib4)** proof theorems (`by ring`, `by ext <;> fin_cases`, `by repeat constructor <;> norm_num`, `by simp`, etc.) |
+| `--typst` / `--format typst` | `ihd --typst "1/2 + sqrt(2)"` / `ihd --format typst "[[1, 2], [3, 4]]"` | Formats output expressions in modern **Typst** math mode syntax (`$ ... $`, `/` for fraction, `mat(...)` for matrices, etc.) |
+| `--explain --lean` | `ihd --explain --lean "factor(x^4 + 4)"` | Projects from the single provenance DAG into a **Lean 4 (Mathlib4)** transitive equational derivation `calc` block (`by ring`, `by norm_num`, etc.) with zero sorry assertions |
+| `--explain --typst` | `ihd --explain --typst "expand((x + 1)^2)"` | Projects from the single provenance DAG into a beautifully formatted **Typst** Mathematical Derivation Report document (`= Mathematical Derivation Report`) |
 
 ---
 
