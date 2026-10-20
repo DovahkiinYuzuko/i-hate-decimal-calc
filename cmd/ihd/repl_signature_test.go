@@ -115,7 +115,7 @@ func TestParseSignatureContext(t *testing.T) {
 	}
 }
 
-func TestRenderAndClearSignatureGuide(t *testing.T) {
+func TestRenderSignatureInline(t *testing.T) {
 	ctx := &SignatureContext{
 		FuncName:      "diff",
 		ArgIndex:      1,
@@ -127,12 +127,20 @@ func TestRenderAndClearSignatureGuide(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	err := RenderSignatureGuide(&buf, ctx, "dark")
+	err := RenderSignatureInline(&buf, ctx, "dark", 80)
 	if err != nil {
-		t.Fatalf("RenderSignatureGuide failed: %v", err)
+		t.Fatalf("RenderSignatureInline failed: %v", err)
 	}
 
 	rendered := buf.String()
+	// Must NOT contain any vertical cursor movements or newlines that break the terminal
+	if strings.Contains(rendered, "\n") || strings.Contains(rendered, "\r") {
+		t.Errorf("rendered guide must not contain newlines or CR, got: %q", rendered)
+	}
+	if strings.Contains(rendered, "\x1B[1B") || strings.Contains(rendered, "\x1B7") || strings.Contains(rendered, "\x1B8") {
+		t.Errorf("rendered guide must not contain vertical cursor movement codes, got: %q", rendered)
+	}
+
 	if !strings.Contains(rendered, "diff") {
 		t.Errorf("rendered guide should contain function name 'diff', got: %q", rendered)
 	}
@@ -143,13 +151,13 @@ func TestRenderAndClearSignatureGuide(t *testing.T) {
 		t.Errorf("rendered guide should contain description, got: %q", rendered)
 	}
 
-	// Test clear
+	// Test insufficient width suppression
 	buf.Reset()
-	err = ClearSignatureGuide(&buf)
+	err = RenderSignatureInline(&buf, ctx, "dark", 5)
 	if err != nil {
-		t.Fatalf("ClearSignatureGuide failed: %v", err)
+		t.Fatalf("RenderSignatureInline with small width failed: %v", err)
 	}
-	if len(buf.Bytes()) == 0 {
-		t.Errorf("ClearSignatureGuide should output escape codes")
+	if buf.Len() != 0 {
+		t.Errorf("RenderSignatureInline should output nothing when availWidth <= 6, got: %q", buf.String())
 	}
 }

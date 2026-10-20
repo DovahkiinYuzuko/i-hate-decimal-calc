@@ -8,6 +8,7 @@ import (
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc"
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
+	"github.com/nyaosorg/go-readline-ny/moji"
 )
 
 // SignatureContext holds parsed signature metadata for the currently focused function call.
@@ -148,7 +149,6 @@ func ParseSignatureContext(line string, cursor int) (*SignatureContext, bool) {
 			// Retrieve localized description
 			desc := i18n.T(sig.DescKey)
 			if desc == sig.DescKey || strings.HasPrefix(desc, "fn.") {
-				// Fallback description if translation key is missing
 				desc = fmt.Sprintf("Function %s", sig.Name)
 			}
 
@@ -167,27 +167,31 @@ func ParseSignatureContext(line string, cursor int) (*SignatureContext, bool) {
 	return nil, false
 }
 
-// RenderSignatureGuide prints the formatted signature guide below the current line using ANSI codes.
-func RenderSignatureGuide(w io.Writer, ctx *SignatureContext, theme string) error {
-	if ctx == nil {
+// RenderSignatureInline prints a single-line dimmed signature hint directly on the current row
+// within the remaining availWidth column budget, strictly avoiding newlines or vertical cursor moves.
+func RenderSignatureInline(w io.Writer, ctx *SignatureContext, theme string, availWidth int) error {
+	if ctx == nil || availWidth <= 6 {
 		return nil
 	}
 
-	// ANSI color palette
-	nameColor := "\x1B[1;36m" // Bold Cyan
+	// ANSI color palette (strictly SGR styling only, no cursor movement)
+	prefixColor := "\x1B[90m"     // Dim Gray
+	nameColor := "\x1B[1;36m"     // Bold Cyan
 	activeColor := "\x1B[1;4;33m" // Bold Underline Yellow
-	normalColor := "\x1B[37m" // White
-	dimColor := "\x1B[90m" // Gray
-	descColor := "\x1B[32m" // Green
+	normalColor := "\x1B[37m"     // White
+	dimColor := "\x1B[90m"        // Dim Gray
+	descColor := "\x1B[32m"       // Green
 	resetColor := "\x1B[0m"
 
 	if theme == "light" {
-		nameColor = "\x1B[1;34m" // Bold Blue
+		prefixColor = "\x1B[90m"
+		nameColor = "\x1B[1;34m"     // Bold Blue
 		activeColor = "\x1B[1;4;35m" // Bold Underline Magenta
-		normalColor = "\x1B[30m" // Black
+		normalColor = "\x1B[30m"     // Black
 		dimColor = "\x1B[90m"
 		descColor = "\x1B[32m"
 	} else if theme == "none" {
+		prefixColor = ""
 		nameColor = ""
 		activeColor = ""
 		normalColor = ""
@@ -196,38 +200,103 @@ func RenderSignatureGuide(w io.Writer, ctx *SignatureContext, theme string) erro
 		resetColor = ""
 	}
 
-	// Build arguments representation
-	var argsBuilder strings.Builder
+	// Build plain text for width calculation
+	var plainArgs []string
+	for i, arg := range ctx.Args {
+		if i == ctx.ArgIndex {
+			plainArgs = append(plainArgs, "*"+arg+"*")
+		} else {
+			plainArgs = append(plainArgs, arg)
+		}
+	}
+	if ctx.ArgIndex >= len(ctx.Args) && ctx.ActiveArgName != "" {
+		plainArgs = append(plainArgs, "*"+ctx.ActiveArgName+"*")
+	}
+
+	// Format: "  [diff(expr, *var*) - Description]"
+	rawHint := fmt.Sprintf("  [%s(%s) - %s]", ctx.FuncName, strings.Join(plainArgs, ", "), ctx.Description)
+	rawShortHint := fmt.Sprintf("  [%s(%s)]", ctx.FuncName, strings.Join(plainArgs, ", "))
+
+	// Check width using moji cell width
+	targetRaw := rawHint
+	if getDisplayWidth(targetRaw) > availWidth-1 {
+		targetRaw = rawShortHint
+	}
+	if getDisplayWidth(targetRaw) > availWidth-1 {
+		// Truncate cleanly to fit within availWidth - 2
+		targetRaw = truncateDisplayWidth(targetRaw, availWidth-2) + "…]"
+		if getDisplayWidth(targetRaw) > availWidth-1 {
+			return nil
+		}
+	}
+
+	// Now build styled ANSI string matching the target display text
+	var styled strings.Builder
+	styled.WriteString("  ")
+	styled.WriteString(prefixColor + "[" + resetColor)
+	styled.WriteString(nameColor + ctx.FuncName + resetColor)
+	styled.WriteString(dimColor + "(" + resetColor)
+
 	for i, arg := range ctx.Args {
 		if i > 0 {
-			argsBuilder.WriteString(dimColor + ", " + resetColor)
+			styled.WriteString(dimColor + ", " + resetColor)
 		}
 		if i == ctx.ArgIndex {
-			argsBuilder.WriteString(activeColor + arg + resetColor)
+			styled.WriteString(activeColor + arg + resetColor)
 		} else {
-			argsBuilder.WriteString(normalColor + arg + resetColor)
+			styled.WriteString(normalColor + arg + resetColor)
 		}
 	}
 	if ctx.ArgIndex >= len(ctx.Args) && ctx.ActiveArgName != "" {
 		if len(ctx.Args) > 0 {
-			argsBuilder.WriteString(dimColor + ", " + resetColor)
+			styled.WriteString(dimColor + ", " + resetColor)
 		}
-		argsBuilder.WriteString(activeColor + ctx.ActiveArgName + resetColor)
+		styled.WriteString(activeColor + ctx.ActiveArgName + resetColor)
 	}
+	styled.WriteString(dimColor + ")" + resetColor)
 
-	guideText := fmt.Sprintf("%s[%s]%s %s%s(%s)%s - %s%s%s",
-		dimColor, ctx.FuncName, resetColor,
-		nameColor, ctx.FuncName, argsBuilder.String(), resetColor,
-		descColor, ctx.Description, resetColor,
-	)
+	// If full hint fit, add description
+	if targetRaw == rawHint {
+		styled.WriteString(dimColor + " - " + resetColor)
+		styled.WriteString(descColor + ctx.Description + resetColor)
+	}
+	styled.WriteString(prefixColor + "]" + resetColor)
 
-	// Save cursor -> move down 1 line -> clear line -> print guide -> restore cursor
-	_, err := fmt.Fprintf(w, "\x1B7\x1B[1B\r\x1B[2K%s\x1B8", guideText)
+	_, err := io.WriteString(w, styled.String())
 	return err
 }
 
-// ClearSignatureGuide clears the status line below the current cursor without disturbing input.
+// RenderSignatureGuide is maintained for backward compatibility. It proxies to RenderSignatureInline.
+func RenderSignatureGuide(w io.Writer, ctx *SignatureContext, theme string) error {
+	return RenderSignatureInline(w, ctx, theme, 120)
+}
+
+// ClearSignatureGuide is maintained for backward compatibility. Since go-readline-ny's
+// B.repaint() clears with B.eraseline() automatically before OnAfterRender, this is a clean no-op.
 func ClearSignatureGuide(w io.Writer) error {
-	_, err := fmt.Fprint(w, "\x1B7\x1B[1B\r\x1B[2K\x1B8")
-	return err
+	return nil
+}
+
+func getDisplayWidth(s string) int {
+	mojis := moji.StringToMoji(s)
+	w := 0
+	for _, m := range mojis {
+		w += int(m.Width())
+	}
+	return w
+}
+
+func truncateDisplayWidth(s string, maxW int) string {
+	mojis := moji.StringToMoji(s)
+	var sb strings.Builder
+	w := 0
+	for _, m := range mojis {
+		mw := int(m.Width())
+		if w+mw > maxW {
+			break
+		}
+		m.WriteTo(&sb)
+		w += mw
+	}
+	return sb.String()
 }

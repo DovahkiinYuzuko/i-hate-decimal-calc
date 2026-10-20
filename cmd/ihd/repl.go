@@ -72,14 +72,11 @@ func runREPL(in io.Reader, out, errOut io.Writer, ro runOptions) int {
 		DefaultColor: "\x1B[0m",
 		OnAfterRender: func(B *readline.Buffer, availWidth int) {
 			if currentTheme == "none" || !highlightEnabled {
-				_ = ClearSignatureGuide(out)
 				return
 			}
 			ctx, ok := ParseSignatureContext(B.String(), B.Cursor)
 			if ok {
-				_ = RenderSignatureGuide(out, ctx, currentTheme)
-			} else {
-				_ = ClearSignatureGuide(out)
+				_ = RenderSignatureInline(B.Out, ctx, currentTheme, availWidth)
 			}
 		},
 	}
