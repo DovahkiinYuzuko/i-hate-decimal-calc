@@ -15,6 +15,7 @@ import (
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/updater"
 	"github.com/nyaosorg/go-readline-ny"
+	"github.com/nyaosorg/go-readline-ny/keys"
 	"github.com/nyaosorg/go-readline-ny/simplehistory"
 )
 
@@ -61,6 +62,7 @@ func runREPL(in io.Reader, out, errOut io.Writer, ro runOptions) int {
 	}
 
 	history := simplehistory.New()
+	completionFSM := NewCompletionFSM(env)
 	editor := readline.Editor{
 		PromptWriter: func(w io.Writer) (int, error) {
 			return fmt.Fprint(w, i18n.T("cli.prompt"))
@@ -81,8 +83,11 @@ func runREPL(in io.Reader, out, errOut io.Writer, ro runOptions) int {
 		},
 	}
 
+	editor.BindKey(keys.CtrlI, NewCompletionCommand(completionFSM))
+
 	for {
 		line, err := editor.ReadLine(context.Background())
+		completionFSM.Reset()
 		_ = ClearSignatureGuide(out)
 		// Ensure any active terminal attributes or background colors are cleanly reset immediately
 		fmt.Fprint(out, "\x1B[0m")
