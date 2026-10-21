@@ -115,3 +115,43 @@ func TestIdentical(t *testing.T) {
 		t.Fatal("expected Identical to return false for different nodes")
 	}
 }
+
+func TestCanonical_Symbols(t *testing.T) {
+	pool := NewInternPool()
+
+	x1 := pool.CanonicalVar("x")
+	x2 := pool.CanonicalVar("x")
+	y := pool.CanonicalVar("y")
+
+	if x1 != x2 {
+		t.Fatalf("expected x1 (%p) == x2 (%p)", x1, x2)
+	}
+	if x1 == y {
+		t.Fatal("expected x != y")
+	}
+}
+
+func TestCanonical_CommutativeOrder(t *testing.T) {
+	pool := NewInternPool()
+
+	x := pool.CanonicalVar("x")
+	y := pool.CanonicalVar("y")
+
+	// x + y と y + x
+	add1 := pool.CanonicalAdd([]Node{x, y})
+	add2 := pool.CanonicalAdd([]Node{y, x})
+
+	if add1 != add2 {
+		t.Fatalf("expected commutative canonical addition add1 (%p) == add2 (%p)", add1, add2)
+	}
+
+	// 結合則: (x + y) + z と x + (y + z)
+	z := pool.CanonicalVar("z")
+	add3 := pool.CanonicalAdd([]Node{add1, z})
+	add4 := pool.CanonicalAdd([]Node{x, pool.CanonicalAdd([]Node{y, z})})
+
+	if add3 != add4 {
+		t.Fatalf("expected associative canonical addition add3 (%p) == add4 (%p)", add3, add4)
+	}
+}
+
