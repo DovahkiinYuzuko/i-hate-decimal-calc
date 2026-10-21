@@ -7,6 +7,8 @@ import (
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc"
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc/ast"
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc/units"
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/lp"
 )
 
 // ProfileType represents the target domain profile for AST generation.
@@ -20,6 +22,9 @@ const (
 	ProfileSpecial
 	ProfilePolynomial
 	ProfileRational
+	ProfileUnits
+	ProfileSimplex
+	ProfileMatrix
 )
 
 // ByteStreamProvider decodes an arbitrary byte stream into deterministic primitives and AST nodes.
@@ -273,6 +278,51 @@ func (p *ByteStreamProvider) GenNode(maxDepth int, nodeBudget *int, profile Prof
 		}
 	}
 
+	if profile == ProfileUnits {
+		// Physical units expressions: combinations of quantities with +, -, *, /, ^
+		choice := p.NextChoice(5)
+		switch choice {
+		case 0: // Add
+			t1 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			t2 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			return ast.NewAdd([]ast.Node{t1, t2})
+		case 1: // Mul
+			f1 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			f2 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			return ast.NewMul([]ast.Node{f1, f2})
+		case 2: // Div (f1 * f2^(-1))
+			f1 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			f2 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			invF2, err := ast.NewPow(f2, ast.NewRationalFromBigRat(big.NewRat(-1, 1)))
+			if err != nil {
+				return f1
+			}
+			return ast.NewMul([]ast.Node{f1, invF2})
+		case 3: // Pow with small integer exponent [-2, 2]
+			base := p.GenNode(maxDepth-1, nodeBudget, profile)
+			expVal := p.NextInt(-2, 2)
+			if expVal == 0 {
+				expVal = 1
+			}
+			pow, err := ast.NewPow(base, ast.NewRationalFromBigRat(big.NewRat(expVal, 1)))
+			if err != nil {
+				return base
+			}
+			return pow
+		default: // Leaf
+			return p.genLeafNode(profile)
+		}
+	}
+
+	if profile == ProfileMatrix {
+		dim := p.NextChoice(2) + 2 // 2x2 or 3x3
+		return p.GenMatrixNode(dim, dim, maxDepth-1, nodeBudget)
+	}
+
+	if profile == ProfileSimplex {
+		return p.genLeafNode(profile)
+	}
+
 	// 25 distinct AST node types supported across ihd
 	nodeChoice := p.NextChoice(25)
 
@@ -518,6 +568,20 @@ func (p *ByteStreamProvider) genLeafNode(profile ProfileType) ast.Node {
 		default:
 			return ast.NewVar("y")
 		}
+	case ProfileUnits:
+		return p.GenQuantityLeaf()
+	case ProfileSimplex:
+		return ast.NewRationalFromBigRat(p.NextSmallRat())
+	case ProfileMatrix:
+		choice := p.NextChoice(3)
+		switch choice {
+		case 0:
+			return ast.NewRationalFromBigRat(big.NewRat(0, 1))
+		case 1:
+			return ast.NewRationalFromBigRat(big.NewRat(1, 1))
+		default:
+			return ast.NewRationalFromBigRat(big.NewRat(p.NextInt(-3, 3), 1))
+		}
 	default:
 		choice := p.NextChoice(5)
 		switch choice {
@@ -575,6 +639,9 @@ func TestByteStreamProvider_TotalityAndRepair(t *testing.T) {
 				ProfileSpecial,
 				ProfilePolynomial,
 				ProfileRational,
+				ProfileUnits,
+				ProfileSimplex,
+				ProfileMatrix,
 			}
 			for _, prof := range profiles {
 				for maxDepth := 0; maxDepth <= 3; maxDepth++ {
@@ -592,6 +659,168 @@ func TestByteStreamProvider_TotalityAndRepair(t *testing.T) {
 	}
 }
 
+// NextSmallRat returns a deterministic small rational number.
+func (p *ByteStreamProvider) NextSmallRat() *big.Rat {
+	num := p.NextInt(-5, 5)
+	den := p.NextInt(1, 4)
+	return big.NewRat(num, den)
+}
+
+// GenQuantityLeaf returns a deterministic physical quantity with SI base or derived units and prefix.
+func (p *ByteStreamProvider) GenQuantityLeaf() *ast.QuantityNode {
+	val := ast.NewRationalFromBigRat(p.NextSmallRat())
+	if val.Val.Sign() == 0 {
+		val = ast.NewRationalFromBigRat(big.NewRat(1, 1))
+	}
+
+	unitsList := []string{
+		"m", "kg", "s", "A", "K", "mol", "cd",
+		"N", "Pa", "J", "W", "C", "V", "Hz",
+		"km", "cm", "mm", "ms", "h", "min", "kN", "kJ",
+	}
+	unitChoice := unitsList[p.NextChoice(len(unitsList))]
+
+	scale, dims, err := units.ResolveUnitSymbol(unitChoice)
+	if err != nil {
+		scale = big.NewRat(1, 1)
+		dims = ast.NewDimensionVector()
+		dims[0] = big.NewRat(1, 1)
+		unitChoice = "m"
+	}
+	return ast.NewQuantityNode(val, scale, dims, unitChoice)
+}
+
+// GenSimplexLP generates a deterministic linear programming problem in standard form.
+func (p *ByteStreamProvider) GenSimplexLP(n, m int) *lp.Problem {
+	if n <= 0 {
+		n = 2
+	}
+	if m <= 0 {
+		m = 2
+	}
+
+	varNames := make([]string, n)
+	for j := 0; j < n; j++ {
+		varNames[j] = fmt.Sprintf("x%d", j+1)
+	}
+
+	objCoeffs := make([]*big.Rat, n)
+	for j := 0; j < n; j++ {
+		objCoeffs[j] = p.NextSmallRat()
+	}
+
+	constraints := make([]lp.Constraint, m)
+	for i := 0; i < m; i++ {
+		rowCoeffs := make([]*big.Rat, n)
+		for j := 0; j < n; j++ {
+			rowCoeffs[j] = p.NextSmallRat()
+		}
+		// ensure RHS >= 0 for easy initial feasibility
+		rhsNum := p.NextInt(1, 10)
+		rhsDen := p.NextInt(1, 3)
+		rhs := big.NewRat(rhsNum, rhsDen)
+
+		constraints[i] = lp.Constraint{
+			Name:   fmt.Sprintf("c%d", i+1),
+			Coeffs: rowCoeffs,
+			Sense:  lp.RelLe,
+			RHS:    rhs,
+		}
+	}
+
+	return &lp.Problem{
+		Sense:       lp.OptMaximize,
+		Objective:   objCoeffs,
+		ObjConstant: new(big.Rat),
+		VarNames:    varNames,
+		Constraints: constraints,
+	}
+}
+
+// GenMatrixNode generates a deterministic MatrixNode of size rows x cols.
+func (p *ByteStreamProvider) GenMatrixNode(rows, cols int, maxDepth int, nodeBudget *int) *ast.MatrixNode {
+	if rows <= 0 {
+		rows = 2
+	}
+	if cols <= 0 {
+		cols = 2
+	}
+
+	data := make([][]ast.Node, rows)
+	for r := 0; r < rows; r++ {
+		data[r] = make([]ast.Node, cols)
+		for c := 0; c < cols; c++ {
+			if p.NextBool() || maxDepth <= 0 || (nodeBudget != nil && *nodeBudget <= 0) {
+				// Rational element
+				val := p.NextInt(-4, 4)
+				data[r][c] = ast.NewRationalFromBigRat(big.NewRat(val, 1))
+			} else {
+				// Symbolic element
+				vars := []string{"x", "y", "a", "b"}
+				data[r][c] = ast.NewVar(vars[p.NextChoice(len(vars))])
+			}
+		}
+	}
+
+	mat, err := ast.NewMatrix(rows, cols, data)
+	if err != nil {
+		// Fallback to identity matrix
+		idData := make([][]ast.Node, rows)
+		for r := 0; r < rows; r++ {
+			idData[r] = make([]ast.Node, cols)
+			for c := 0; c < cols; c++ {
+				if r == c {
+					idData[r][c] = ast.NewRationalFromBigRat(big.NewRat(1, 1))
+				} else {
+					idData[r][c] = ast.NewRationalFromBigRat(big.NewRat(0, 1))
+				}
+			}
+		}
+		fallback, _ := ast.NewMatrix(rows, cols, idData)
+		return fallback
+	}
+	return mat
+}
+
+// GenRationalMatrix generates a deterministic purely rational MatrixNode.
+func (p *ByteStreamProvider) GenRationalMatrix(rows, cols int) *ast.MatrixNode {
+	if rows <= 0 {
+		rows = 2
+	}
+	if cols <= 0 {
+		cols = 2
+	}
+
+	data := make([][]ast.Node, rows)
+	for r := 0; r < rows; r++ {
+		data[r] = make([]ast.Node, cols)
+		for c := 0; c < cols; c++ {
+			num := p.NextInt(-4, 4)
+			den := p.NextInt(1, 3)
+			data[r][c] = ast.NewRationalFromBigRat(big.NewRat(num, den))
+		}
+	}
+	mat, err := ast.NewMatrix(rows, cols, data)
+	if err != nil {
+		idData := make([][]ast.Node, rows)
+		for r := 0; r < rows; r++ {
+			idData[r] = make([]ast.Node, cols)
+			for c := 0; c < cols; c++ {
+				if r == c {
+					idData[r][c] = ast.NewRationalFromBigRat(big.NewRat(1, 1))
+				} else {
+					idData[r][c] = ast.NewRationalFromBigRat(big.NewRat(0, 1))
+				}
+			}
+		}
+		fallback, _ := ast.NewMatrix(rows, cols, idData)
+		return fallback
+	}
+	return mat
+}
+
 // Suppress unused import errors if any
 var _ = fmt.Sprintf
 var _ = calc.NewEnv
+var _ = units.FindUnit
+var _ = lp.Solve
