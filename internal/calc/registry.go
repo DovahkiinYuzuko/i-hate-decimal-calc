@@ -866,6 +866,22 @@ func init() {
 		MaxArgs: 1,
 	})
 
+	RegisterFunction(FunctionSpec{
+		Name:    "u",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "ztrans",
+		MinArgs: 1,
+		MaxArgs: 3,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "iztrans",
+		MinArgs: 1,
+		MaxArgs: 3,
+	})
+
 	// Eigenvalues, Eigenvectors & Trace Pack (issue-49)
 	RegisterFunction(FunctionSpec{
 		Name:    "eigenvals",
