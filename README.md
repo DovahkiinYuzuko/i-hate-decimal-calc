@@ -46,7 +46,7 @@ irm https://raw.githubusercontent.com/DovahkiinYuzuko/i-hate-decimal-calc/main/i
 ```
 
 #### ソースコードからのビルド
-Go 1.22 以上がインストールされている環境で、リポジトリルートにてビルドを実行します。
+Go 1.24 以上がインストールされている環境で、リポジトリルートにてビルドを実行します。
 
 ```bash
 go build -o ihd ./cmd/ihd
