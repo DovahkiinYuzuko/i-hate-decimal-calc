@@ -16,6 +16,7 @@ const (
 	ProfileGeneral ProfileType = iota
 	ProfileAlgebra
 	ProfileCalculus
+	ProfileTransforms
 	ProfileSpecial
 	ProfilePolynomial
 	ProfileRational
@@ -87,6 +88,117 @@ func (p *ByteStreamProvider) GenNode(maxDepth int, nodeBudget *int, profile Prof
 
 	*nodeBudget--
 
+	if profile == ProfileCalculus {
+		// Composite expression tree of polynomials, trig, rational exponents, exp, and ln
+		choice := p.NextChoice(8)
+		switch choice {
+		case 0: // Add
+			t1 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			t2 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			return ast.NewAdd([]ast.Node{t1, t2})
+		case 1: // Mul
+			f1 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			f2 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			return ast.NewMul([]ast.Node{f1, f2})
+		case 2: // Pow with rational exponent (p/q with q in {1, 2, 3})
+			base := p.GenNode(maxDepth-1, nodeBudget, profile)
+			num := p.NextInt(-2, 3)
+			den := p.NextInt(1, 3)
+			exp := ast.NewRationalFromBigRat(big.NewRat(num, den))
+			pow, err := ast.NewPow(base, exp)
+			if err != nil {
+				return p.genLeafNode(profile)
+			}
+			return pow
+		case 3: // UnaryOp (-)
+			expr := p.GenNode(maxDepth-1, nodeBudget, profile)
+			uop, err := ast.NewUnaryOp("-", expr)
+			if err != nil {
+				return p.genLeafNode(profile)
+			}
+			return uop
+		case 4: // Trig: sin or cos
+			arg := p.GenNode(maxDepth-1, nodeBudget, profile)
+			trigFunc := "sin"
+			if p.NextBool() {
+				trigFunc = "cos"
+			}
+			fn, err := ast.NewFunc(trigFunc, []ast.Node{arg})
+			if err != nil {
+				return p.genLeafNode(profile)
+			}
+			return fn
+		case 5: // exp
+			arg := p.GenNode(maxDepth-1, nodeBudget, profile)
+			fn, err := ast.NewFunc("exp", []ast.Node{arg})
+			if err != nil {
+				return p.genLeafNode(profile)
+			}
+			return fn
+		case 6: // ln
+			arg := p.GenNode(maxDepth-1, nodeBudget, profile)
+			fn, err := ast.NewFunc("ln", []ast.Node{arg})
+			if err != nil {
+				return p.genLeafNode(profile)
+			}
+			return fn
+		default: // Leaf
+			return p.genLeafNode(profile)
+		}
+	}
+
+	if profile == ProfileTransforms {
+		// Discrete sequence terms: a^n, n^k, delta(n), u(n), shifted delta(n-k), linear combinations
+		choice := p.NextChoice(7)
+		switch choice {
+		case 0: // Add
+			t1 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			t2 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			return ast.NewAdd([]ast.Node{t1, t2})
+		case 1: // Mul (e.g. constant * term or n * a^n)
+			f1 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			f2 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			return ast.NewMul([]ast.Node{f1, f2})
+		case 2: // Geometric a^n with rational base
+			baseNum := p.NextInt(-4, 4)
+			if baseNum == 0 {
+				baseNum = 2
+			}
+			baseDen := p.NextInt(1, 3)
+			base := ast.NewRationalFromBigRat(big.NewRat(baseNum, baseDen))
+			pow, err := ast.NewPow(base, ast.NewVar("n"))
+			if err != nil {
+				return p.genLeafNode(profile)
+			}
+			return pow
+		case 3: // Ramp / Polynomial n^k
+			expVal := p.NextInt(1, 3)
+			pow, err := ast.NewPow(ast.NewVar("n"), ast.NewRationalFromBigRat(big.NewRat(expVal, 1)))
+			if err != nil {
+				return ast.NewVar("n")
+			}
+			return pow
+		case 4: // delta(n) or shifted delta(n - k)
+			shift := p.NextInt(0, 3)
+			var arg ast.Node = ast.NewVar("n")
+			if shift > 0 {
+				arg = ast.NewAdd([]ast.Node{ast.NewVar("n"), ast.NewRationalFromBigRat(big.NewRat(-shift, 1))})
+			}
+			fn, err := ast.NewFunc("delta", []ast.Node{arg})
+			if err != nil {
+				return p.genLeafNode(profile)
+			}
+			return fn
+		case 5: // Step function u(n)
+			fn, err := ast.NewFunc("u", []ast.Node{ast.NewVar("n")})
+			if err != nil {
+				return p.genLeafNode(profile)
+			}
+			return fn
+		default: // Leaf
+			return p.genLeafNode(profile)
+		}
+	}
 	if profile == ProfilePolynomial {
 		choice := p.NextChoice(5)
 		switch choice {
@@ -364,6 +476,36 @@ func (p *ByteStreamProvider) GenNode(maxDepth int, nodeBudget *int, profile Prof
 // genLeafNode creates a deterministic terminal leaf node to guarantee Totality.
 func (p *ByteStreamProvider) genLeafNode(profile ProfileType) ast.Node {
 	switch profile {
+	case ProfileCalculus:
+		choice := p.NextChoice(4)
+		switch choice {
+		case 0:
+			return ast.NewRationalFromBigRat(big.NewRat(p.NextInt(-3, 3), 1))
+		case 1:
+			return ast.NewRationalFromBigRat(big.NewRat(1, 1))
+		case 2:
+			return ast.NewVar("x")
+		default:
+			c, err := ast.NewConst("e")
+			if err == nil {
+				return c
+			}
+			return ast.NewVar("x")
+		}
+	case ProfileTransforms:
+		choice := p.NextChoice(3)
+		switch choice {
+		case 0:
+			return ast.NewRationalFromBigRat(big.NewRat(p.NextInt(1, 3), 1))
+		case 1:
+			return ast.NewVar("n")
+		default:
+			fn, err := ast.NewFunc("delta", []ast.Node{ast.NewVar("n")})
+			if err == nil {
+				return fn
+			}
+			return ast.NewVar("n")
+		}
 	case ProfileAlgebra, ProfilePolynomial, ProfileRational:
 		choice := p.NextChoice(4)
 		switch choice {
@@ -424,15 +566,26 @@ func TestByteStreamProvider_TotalityAndRepair(t *testing.T) {
 			_ = p.NextChoice(10)
 			_ = p.NextInt(-10, 10)
 
-			// Node budget and maxDepth variations
-			for maxDepth := 0; maxDepth <= 4; maxDepth++ {
-				budget := 16
-				node := p.GenNode(maxDepth, &budget, ProfileGeneral)
-				if node == nil {
-					t.Fatalf("[%s] GenNode returned nil at maxDepth=%d", tc.name, maxDepth)
-				}
-				if node.String() == "" {
-					t.Fatalf("[%s] GenNode returned node with empty string representation: %v", tc.name, node)
+			// Node budget and maxDepth variations across all profiles
+			profiles := []ProfileType{
+				ProfileGeneral,
+				ProfileAlgebra,
+				ProfileCalculus,
+				ProfileTransforms,
+				ProfileSpecial,
+				ProfilePolynomial,
+				ProfileRational,
+			}
+			for _, prof := range profiles {
+				for maxDepth := 0; maxDepth <= 3; maxDepth++ {
+					budget := 16
+					node := p.GenNode(maxDepth, &budget, prof)
+					if node == nil {
+						t.Fatalf("[%s] GenNode returned nil at maxDepth=%d, prof=%v", tc.name, maxDepth, prof)
+					}
+					if node.String() == "" {
+						t.Fatalf("[%s] GenNode returned node with empty string representation: %v", tc.name, node)
+					}
 				}
 			}
 		})
