@@ -80,14 +80,17 @@ func (p *ByteStreamProvider) NextInt(min, max int64) int64 {
 }
 
 // GenNode constructs a valid ast.Node within the given depth and node budget limits.
-// If maxDepth <= 0 or *nodeBudget <= 0, a terminal leaf node is immediately returned.
+// If maxDepth <= 0, *nodeBudget <= 1, or the byte stream is depleted, a terminal leaf node is immediately returned.
 func (p *ByteStreamProvider) GenNode(maxDepth int, nodeBudget *int, profile ProfileType) ast.Node {
 	if nodeBudget == nil {
 		defaultBudget := 16
 		nodeBudget = &defaultBudget
 	}
 
-	if maxDepth <= 0 || *nodeBudget <= 0 {
+	if maxDepth <= 0 || *nodeBudget <= 1 || p.offset >= len(p.data) {
+		if *nodeBudget > 0 {
+			*nodeBudget--
+		}
 		return p.genLeafNode(profile)
 	}
 
@@ -98,15 +101,16 @@ func (p *ByteStreamProvider) GenNode(maxDepth int, nodeBudget *int, profile Prof
 		choice := p.NextChoice(8)
 		switch choice {
 		case 0: // Add
-			t1 := p.GenNode(maxDepth-1, nodeBudget, profile)
-			t2 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			t1, t2 := p.genBinaryChildren(maxDepth, nodeBudget, profile)
 			return ast.NewAdd([]ast.Node{t1, t2})
 		case 1: // Mul
-			f1 := p.GenNode(maxDepth-1, nodeBudget, profile)
-			f2 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			f1, f2 := p.genBinaryChildren(maxDepth, nodeBudget, profile)
 			return ast.NewMul([]ast.Node{f1, f2})
 		case 2: // Pow with rational exponent (p/q with q in {1, 2, 3})
 			base := p.GenNode(maxDepth-1, nodeBudget, profile)
+			if *nodeBudget > 0 {
+				*nodeBudget--
+			}
 			num := p.NextInt(-2, 3)
 			den := p.NextInt(1, 3)
 			exp := ast.NewRationalFromBigRat(big.NewRat(num, den))
@@ -157,14 +161,17 @@ func (p *ByteStreamProvider) GenNode(maxDepth int, nodeBudget *int, profile Prof
 		choice := p.NextChoice(7)
 		switch choice {
 		case 0: // Add
-			t1 := p.GenNode(maxDepth-1, nodeBudget, profile)
-			t2 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			t1, t2 := p.genBinaryChildren(maxDepth, nodeBudget, profile)
 			return ast.NewAdd([]ast.Node{t1, t2})
 		case 1: // Mul (e.g. constant * term or n * a^n)
-			f1 := p.GenNode(maxDepth-1, nodeBudget, profile)
-			f2 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			f1, f2 := p.genBinaryChildren(maxDepth, nodeBudget, profile)
 			return ast.NewMul([]ast.Node{f1, f2})
 		case 2: // Geometric a^n with rational base
+			if *nodeBudget >= 2 {
+				*nodeBudget -= 2
+			} else {
+				*nodeBudget = 0
+			}
 			baseNum := p.NextInt(-4, 4)
 			if baseNum == 0 {
 				baseNum = 2
@@ -177,6 +184,11 @@ func (p *ByteStreamProvider) GenNode(maxDepth int, nodeBudget *int, profile Prof
 			}
 			return pow
 		case 3: // Ramp / Polynomial n^k
+			if *nodeBudget >= 2 {
+				*nodeBudget -= 2
+			} else {
+				*nodeBudget = 0
+			}
 			expVal := p.NextInt(1, 3)
 			pow, err := ast.NewPow(ast.NewVar("n"), ast.NewRationalFromBigRat(big.NewRat(expVal, 1)))
 			if err != nil {
@@ -186,8 +198,11 @@ func (p *ByteStreamProvider) GenNode(maxDepth int, nodeBudget *int, profile Prof
 		case 4: // delta(n) or shifted delta(n - k)
 			shift := p.NextInt(0, 3)
 			var arg ast.Node = ast.NewVar("n")
-			if shift > 0 {
+			if shift > 0 && *nodeBudget >= 3 {
+				*nodeBudget -= 3
 				arg = ast.NewAdd([]ast.Node{ast.NewVar("n"), ast.NewRationalFromBigRat(big.NewRat(-shift, 1))})
+			} else if *nodeBudget > 0 {
+				*nodeBudget--
 			}
 			fn, err := ast.NewFunc("delta", []ast.Node{arg})
 			if err != nil {
@@ -195,6 +210,9 @@ func (p *ByteStreamProvider) GenNode(maxDepth int, nodeBudget *int, profile Prof
 			}
 			return fn
 		case 5: // Step function u(n)
+			if *nodeBudget > 0 {
+				*nodeBudget--
+			}
 			fn, err := ast.NewFunc("u", []ast.Node{ast.NewVar("n")})
 			if err != nil {
 				return p.genLeafNode(profile)
@@ -208,15 +226,16 @@ func (p *ByteStreamProvider) GenNode(maxDepth int, nodeBudget *int, profile Prof
 		choice := p.NextChoice(5)
 		switch choice {
 		case 0: // Add
-			t1 := p.GenNode(maxDepth-1, nodeBudget, profile)
-			t2 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			t1, t2 := p.genBinaryChildren(maxDepth, nodeBudget, profile)
 			return ast.NewAdd([]ast.Node{t1, t2})
 		case 1: // Mul
-			f1 := p.GenNode(maxDepth-1, nodeBudget, profile)
-			f2 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			f1, f2 := p.genBinaryChildren(maxDepth, nodeBudget, profile)
 			return ast.NewMul([]ast.Node{f1, f2})
 		case 2: // Pow with integer exp [0, 4]
 			base := p.GenNode(maxDepth-1, nodeBudget, profile)
+			if *nodeBudget > 0 {
+				*nodeBudget--
+			}
 			exp := ast.NewRationalFromBigRat(big.NewRat(p.NextInt(0, 4), 1))
 			pow, err := ast.NewPow(base, exp)
 			if err != nil {
@@ -239,15 +258,16 @@ func (p *ByteStreamProvider) GenNode(maxDepth int, nodeBudget *int, profile Prof
 		choice := p.NextChoice(6)
 		switch choice {
 		case 0: // Add
-			t1 := p.GenNode(maxDepth-1, nodeBudget, profile)
-			t2 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			t1, t2 := p.genBinaryChildren(maxDepth, nodeBudget, profile)
 			return ast.NewAdd([]ast.Node{t1, t2})
 		case 1: // Mul
-			f1 := p.GenNode(maxDepth-1, nodeBudget, profile)
-			f2 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			f1, f2 := p.genBinaryChildren(maxDepth, nodeBudget, profile)
 			return ast.NewMul([]ast.Node{f1, f2})
 		case 2: // Pow with integer exp [-2, 3]
 			base := p.GenNode(maxDepth-1, nodeBudget, profile)
+			if *nodeBudget > 0 {
+				*nodeBudget--
+			}
 			expVal := p.NextInt(-2, 3)
 			if expVal == 0 {
 				expVal = 1
@@ -259,8 +279,12 @@ func (p *ByteStreamProvider) GenNode(maxDepth int, nodeBudget *int, profile Prof
 			}
 			return pow
 		case 3: // Rational fraction / division
-			num := p.GenNode(maxDepth-1, nodeBudget, profile)
-			den := p.GenNode(maxDepth-1, nodeBudget, profile)
+			num, den := p.genBinaryChildren(maxDepth, nodeBudget, profile)
+			if *nodeBudget >= 2 {
+				*nodeBudget -= 2
+			} else {
+				*nodeBudget = 0
+			}
 			invDen, err := ast.NewPow(den, ast.NewRationalFromBigRat(big.NewRat(-1, 1)))
 			if err != nil {
 				return num
@@ -283,16 +307,18 @@ func (p *ByteStreamProvider) GenNode(maxDepth int, nodeBudget *int, profile Prof
 		choice := p.NextChoice(5)
 		switch choice {
 		case 0: // Add
-			t1 := p.GenNode(maxDepth-1, nodeBudget, profile)
-			t2 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			t1, t2 := p.genBinaryChildren(maxDepth, nodeBudget, profile)
 			return ast.NewAdd([]ast.Node{t1, t2})
 		case 1: // Mul
-			f1 := p.GenNode(maxDepth-1, nodeBudget, profile)
-			f2 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			f1, f2 := p.genBinaryChildren(maxDepth, nodeBudget, profile)
 			return ast.NewMul([]ast.Node{f1, f2})
 		case 2: // Div (f1 * f2^(-1))
-			f1 := p.GenNode(maxDepth-1, nodeBudget, profile)
-			f2 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			f1, f2 := p.genBinaryChildren(maxDepth, nodeBudget, profile)
+			if *nodeBudget >= 2 {
+				*nodeBudget -= 2
+			} else {
+				*nodeBudget = 0
+			}
 			invF2, err := ast.NewPow(f2, ast.NewRationalFromBigRat(big.NewRat(-1, 1)))
 			if err != nil {
 				return f1
@@ -300,6 +326,9 @@ func (p *ByteStreamProvider) GenNode(maxDepth int, nodeBudget *int, profile Prof
 			return ast.NewMul([]ast.Node{f1, invF2})
 		case 3: // Pow with small integer exponent [-2, 2]
 			base := p.GenNode(maxDepth-1, nodeBudget, profile)
+			if *nodeBudget > 0 {
+				*nodeBudget--
+			}
 			expVal := p.NextInt(-2, 2)
 			if expVal == 0 {
 				expVal = 1
@@ -360,23 +389,19 @@ func (p *ByteStreamProvider) GenNode(maxDepth int, nodeBudget *int, profile Prof
 		return fn
 
 	case 4: // Complex
-		re := p.GenNode(maxDepth-1, nodeBudget, profile)
-		im := p.GenNode(maxDepth-1, nodeBudget, profile)
+		re, im := p.genBinaryChildren(maxDepth, nodeBudget, profile)
 		return ast.NewComplex(re, im)
 
 	case 5: // Add
-		t1 := p.GenNode(maxDepth-1, nodeBudget, profile)
-		t2 := p.GenNode(maxDepth-1, nodeBudget, profile)
+		t1, t2 := p.genBinaryChildren(maxDepth, nodeBudget, profile)
 		return ast.NewAdd([]ast.Node{t1, t2})
 
 	case 6: // Mul
-		f1 := p.GenNode(maxDepth-1, nodeBudget, profile)
-		f2 := p.GenNode(maxDepth-1, nodeBudget, profile)
+		f1, f2 := p.genBinaryChildren(maxDepth, nodeBudget, profile)
 		return ast.NewMul([]ast.Node{f1, f2})
 
 	case 7: // Pow
-		base := p.GenNode(maxDepth-1, nodeBudget, profile)
-		exp := p.GenNode(maxDepth-1, nodeBudget, profile)
+		base, exp := p.genBinaryChildren(maxDepth, nodeBudget, profile)
 		pow, err := ast.NewPow(base, exp)
 		if err != nil {
 			return p.genLeafNode(profile)
@@ -400,27 +425,28 @@ func (p *ByteStreamProvider) GenNode(maxDepth int, nodeBudget *int, profile Prof
 
 	case 10: // List
 		elemCount := p.NextChoice(3) + 1
+		if elemCount > *nodeBudget {
+			elemCount = *nodeBudget
+		}
+		if elemCount <= 0 {
+			elemCount = 1
+		}
 		elems := make([]ast.Node, elemCount)
+		perElem := *nodeBudget / elemCount
 		for i := 0; i < elemCount; i++ {
-			elems[i] = p.GenNode(maxDepth-1, nodeBudget, profile)
+			subBudget := perElem
+			if i == elemCount-1 {
+				subBudget = *nodeBudget
+			}
+			elems[i] = p.GenNode(maxDepth-1, &subBudget, profile)
+			*nodeBudget -= (perElem - subBudget)
 		}
 		return ast.NewList(elems)
 
 	case 11: // Matrix
 		rows := p.NextChoice(2) + 1
 		cols := p.NextChoice(2) + 1
-		data := make([][]ast.Node, rows)
-		for r := 0; r < rows; r++ {
-			data[r] = make([]ast.Node, cols)
-			for c := 0; c < cols; c++ {
-				data[r][c] = p.GenNode(maxDepth-1, nodeBudget, profile)
-			}
-		}
-		mat, err := ast.NewMatrix(rows, cols, data)
-		if err != nil {
-			return p.genLeafNode(profile)
-		}
-		return mat
+		return p.GenMatrixNode(rows, cols, maxDepth-1, nodeBudget)
 
 	case 12: // Plot
 		plots := []string{"sin(x)", "cos(x)", "x^2"}
@@ -429,8 +455,7 @@ func (p *ByteStreamProvider) GenNode(maxDepth int, nodeBudget *int, profile Prof
 	case 13: // RelOp
 		ops := []string{"==", "!=", "<", "<=", ">", ">="}
 		op := ops[p.NextChoice(len(ops))]
-		lhs := p.GenNode(maxDepth-1, nodeBudget, profile)
-		rhs := p.GenNode(maxDepth-1, nodeBudget, profile)
+		lhs, rhs := p.genBinaryChildren(maxDepth, nodeBudget, profile)
 		return ast.NewRelOp(lhs, op, rhs)
 
 	case 14: // Poly
@@ -476,12 +501,21 @@ func (p *ByteStreamProvider) GenNode(maxDepth int, nodeBudget *int, profile Prof
 		return ast.NewQuantifier(kind, []string{"x"}, body)
 
 	case 17: // Piecewise
-		expr := p.GenNode(maxDepth-1, nodeBudget, profile)
+		if *nodeBudget >= 4 {
+			*nodeBudget -= 4
+		} else {
+			*nodeBudget = 0
+		}
+		expr, otherwise := p.genBinaryChildren(maxDepth, nodeBudget, profile)
 		cond := ast.NewRelOp(ast.NewVar("x"), ">", ast.NewRationalFromBigRat(big.NewRat(0, 1)))
-		otherwise := p.GenNode(maxDepth-1, nodeBudget, profile)
 		return ast.NewPiecewiseNode([]ast.PiecewiseCase{{Expr: expr, Condition: cond}}, otherwise)
 
 	case 18: // Interval
+		if *nodeBudget >= 2 {
+			*nodeBudget -= 2
+		} else {
+			*nodeBudget = 0
+		}
 		low := big.NewRat(p.NextInt(-10, 0), 1)
 		high := big.NewRat(p.NextInt(1, 10), 1)
 		return ast.NewIntervalNode(low, high)
@@ -491,11 +525,21 @@ func (p *ByteStreamProvider) GenNode(maxDepth int, nodeBudget *int, profile Prof
 		return ast.NewStringNode(strs[p.NextChoice(len(strs))])
 
 	case 20: // Index
+		if *nodeBudget >= 4 {
+			*nodeBudget -= 4
+		} else {
+			*nodeBudget = 0
+		}
 		target := ast.NewList([]ast.Node{p.genLeafNode(profile), p.genLeafNode(profile)})
 		idxNode := ast.NewRationalFromBigRat(big.NewRat(0, 1))
 		return ast.NewIndexNode(target, idxNode)
 
 	case 21: // Slice
+		if *nodeBudget >= 7 {
+			*nodeBudget -= 7
+		} else {
+			*nodeBudget = 0
+		}
 		target := ast.NewList([]ast.Node{p.genLeafNode(profile), p.genLeafNode(profile), p.genLeafNode(profile)})
 		start := ast.NewRationalFromBigRat(big.NewRat(0, 1))
 		stop := ast.NewRationalFromBigRat(big.NewRat(2, 1))
@@ -507,11 +551,19 @@ func (p *ByteStreamProvider) GenNode(maxDepth int, nodeBudget *int, profile Prof
 		return ast.NewLambdaNode([]string{"x"}, body)
 
 	case 23: // Apply
+		if *nodeBudget >= 2 {
+			*nodeBudget -= 2
+		} else {
+			*nodeBudget = 0
+		}
 		callee := ast.NewLambdaNode([]string{"x"}, ast.NewVar("x"))
 		arg := p.GenNode(maxDepth-1, nodeBudget, profile)
 		return ast.NewApplyNode(callee, []ast.Node{arg})
 
 	case 24: // Quantity
+		if *nodeBudget > 0 {
+			*nodeBudget--
+		}
 		val := p.genLeafNode(profile)
 		dims := ast.NewDimensionVector()
 		dims[0] = big.NewRat(1, 1) // e.g. Length
@@ -521,6 +573,26 @@ func (p *ByteStreamProvider) GenNode(maxDepth int, nodeBudget *int, profile Prof
 	default:
 		return p.genLeafNode(profile)
 	}
+}
+
+// genBinaryChildren explicitly splits the remaining nodeBudget between the left and right subtrees
+// so the left child cannot starve the right child or exceed the overall budget.
+func (p *ByteStreamProvider) genBinaryChildren(maxDepth int, nodeBudget *int, profile ProfileType) (ast.Node, ast.Node) {
+	if nodeBudget == nil || *nodeBudget < 2 {
+		if nodeBudget != nil {
+			*nodeBudget = 0
+		}
+		return p.genLeafNode(profile), p.genLeafNode(profile)
+	}
+	remaining := *nodeBudget
+	leftBudget := (remaining + 1) / 2
+	rightBudget := remaining - leftBudget
+
+	left := p.GenNode(maxDepth-1, &leftBudget, profile)
+	rightBudget += leftBudget
+	right := p.GenNode(maxDepth-1, &rightBudget, profile)
+	*nodeBudget = rightBudget
+	return left, right
 }
 
 // genLeafNode creates a deterministic terminal leaf node to guarantee Totality.
@@ -715,8 +787,8 @@ func (p *ByteStreamProvider) GenSimplexLP(n, m int) *lp.Problem {
 		for j := 0; j < n; j++ {
 			rowCoeffs[j] = p.NextSmallRat()
 		}
-		// ensure RHS >= 0 for easy initial feasibility
-		rhsNum := p.NextInt(1, 10)
+		// Include negative, zero, and positive RHS to exercise Phase I (artificial variables) and infeasible/feasible regions
+		rhsNum := p.NextInt(-3, 10)
 		rhsDen := p.NextInt(1, 3)
 		rhs := big.NewRat(rhsNum, rhsDen)
 
@@ -737,7 +809,7 @@ func (p *ByteStreamProvider) GenSimplexLP(n, m int) *lp.Problem {
 	}
 }
 
-// GenMatrixNode generates a deterministic MatrixNode of size rows x cols.
+// GenMatrixNode generates a deterministic MatrixNode of size rows x cols while respecting nodeBudget.
 func (p *ByteStreamProvider) GenMatrixNode(rows, cols int, maxDepth int, nodeBudget *int) *ast.MatrixNode {
 	if rows <= 0 {
 		rows = 2
@@ -750,7 +822,10 @@ func (p *ByteStreamProvider) GenMatrixNode(rows, cols int, maxDepth int, nodeBud
 	for r := 0; r < rows; r++ {
 		data[r] = make([]ast.Node, cols)
 		for c := 0; c < cols; c++ {
-			if p.NextBool() || maxDepth <= 0 || (nodeBudget != nil && *nodeBudget <= 0) {
+			if nodeBudget != nil && *nodeBudget > 0 {
+				*nodeBudget--
+			}
+			if p.offset >= len(p.data) || p.NextBool() || maxDepth <= 0 || (nodeBudget != nil && *nodeBudget <= 0) {
 				// Rational element
 				val := p.NextInt(-4, 4)
 				data[r][c] = ast.NewRationalFromBigRat(big.NewRat(val, 1))
@@ -824,3 +899,40 @@ var _ = fmt.Sprintf
 var _ = calc.NewEnv
 var _ = units.FindUnit
 var _ = lp.Solve
+
+// TestByteStreamProvider_BudgetAndDepletion verifies that depleted byte streams immediately
+// produce a leaf node and that node generation strictly respects nodeBudget.
+func TestByteStreamProvider_BudgetAndDepletion(t *testing.T) {
+	// 1. Empty byte stream should immediately terminate with a single leaf node
+	emptyProvider := NewByteStreamProvider([]byte{})
+	budget := 16
+	node := emptyProvider.GenNode(4, &budget, ProfilePolynomial)
+	if count := CountNodes(node); count != 1 {
+		t.Fatalf("Expected depleted stream to immediately return 1 leaf node, got %d nodes (%s)", count, node.String())
+	}
+
+	// 2. Non-empty byte streams must never exceed the initial nodeBudget
+	streams := [][]byte{
+		{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01},
+		{0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10},
+	}
+	profiles := []ProfileType{
+		ProfilePolynomial,
+		ProfileRational,
+		ProfileCalculus,
+		ProfileTransforms,
+		ProfileUnits,
+	}
+	for _, s := range streams {
+		for _, prof := range profiles {
+			p := NewByteStreamProvider(s)
+			initialBudget := 12
+			b := initialBudget
+			n := p.GenNode(4, &b, prof)
+			if actual := CountNodes(n); actual > initialBudget {
+				t.Fatalf("Profile %v exceeded node budget %d: got %d nodes (%s)", prof, initialBudget, actual, n.String())
+			}
+		}
+	}
+}

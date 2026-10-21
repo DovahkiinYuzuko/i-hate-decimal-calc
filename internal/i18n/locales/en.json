@@ -242,6 +242,8 @@
   "err_unknown_node_type_for_evaluation": "unknown node type for evaluation: %T",
   "errors": {
     "arg_must_be_var": "%s error: %s argument must be a variable name, got %s",
+    "err_unknown_node_type_for_evaluation": "unknown node type for evaluation: %T",
+    "err_cannot_evaluate_nil_node": "cannot evaluate nil node",
     "dimension_mismatch": "dimension mismatch: cannot add, subtract, or compare %s and %s with different dimensions",
     "transcendental_dimension": "transcendental function %s requires a dimensionless argument, got: %s",
     "unknown_unit": "unknown physical unit or prefix: %s",

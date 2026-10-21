@@ -445,8 +445,6 @@ func (fsm *SimplexFSM) buildOptimalResult() (*Result, error) {
 	}
 
 	// Extract dual variables y*
-	// In canonical standard form tableau, the dual multiplier for constraint i corresponds to the
-	// reduced cost of the slack variable associated with row i.
 	dualVec := make([]*big.Rat, m)
 	dualMap := make(map[string]*big.Rat)
 	slackMap := make(map[string]*big.Rat)
@@ -474,13 +472,16 @@ func (fsm *SimplexFSM) buildOptimalResult() (*Result, error) {
 				redCost := t.Data[objRow][targetCol]
 				val := new(big.Rat).Set(redCost)
 
-				// Scale by OrigRowScale[i] (+1 or -1) to match original constraint sense
+				// For normalized RelGe, the surplus column had initial coefficient -1 in row i
+				if fsm.Problem.Constraints[i].Sense == RelGe {
+					val.Neg(val)
+				}
+
+				// Scale by OrigRowScale[i] (+1 or -1) to match original constraint before RHS normalization
 				val.Mul(val, fsm.OrigRowScale[i])
 
 				if fsm.Problem.Sense == OptMinimize {
-					if fsm.Problem.Constraints[i].Sense == RelLe {
-						val.Neg(val)
-					}
+					val.Neg(val)
 				}
 				dualVec[i].Set(val)
 			}
@@ -504,7 +505,7 @@ func (fsm *SimplexFSM) buildOptimalResult() (*Result, error) {
 	}, nil
 }
 
-// buildInfeasibleResult extracts Farkas infeasibility certificate y >= 0 such that y^T A >= 0, y^T b < 0.
+// buildInfeasibleResult extracts Farkas infeasibility certificate y such that y^T A >= 0, y^T b < 0.
 func (fsm *SimplexFSM) buildInfeasibleResult() (*Result, error) {
 	m := fsm.NumOrigCons
 	phase1ObjRow := m + 1
@@ -518,16 +519,15 @@ func (fsm *SimplexFSM) buildInfeasibleResult() (*Result, error) {
 			targetCol = fsm.ArtColForCon[i]
 		}
 		if targetCol != -1 && targetCol < t.Cols-1 {
-			// In Phase I objective row, the multiplier is nonnegative lambda_i >= 0.
+			// Extract exact row multiplier w_i of normalized row i in Phase I objective row, then scale by OrigRowScale[i].
 			val := new(big.Rat).Set(t.Data[phase1ObjRow][targetCol])
-			if val.Sign() < 0 {
+			switch fsm.Problem.Constraints[i].Sense {
+			case RelGe:
 				val.Neg(val)
+			case RelEq:
+				val.Sub(val, big.NewRat(1, 1))
 			}
-			// For RelGe (>=) constraint, multiplying by -lambda_i gives the multiplier for original A_i x >= b_i:
-			// -lambda_i (A_i x - b_i) <= 0.
-			if fsm.Problem.Constraints[i].Sense == RelGe {
-				val.Neg(val)
-			}
+			val.Mul(val, fsm.OrigRowScale[i])
 			farkasVec[i].Set(val)
 		}
 	}
@@ -567,8 +567,6 @@ func (fsm *SimplexFSM) buildUnboundedResult() (*Result, error) {
 	}
 
 	// Ray direction d
-	// Along enteringCol, x_entering = t, basic variable x_Bi = x0_Bi - t * Data[i][enteringCol]
-	// Since Data[i][enteringCol] <= 0, -Data[i][enteringCol] >= 0, so x_Bi increases or stays constant.
 	d := make([]*big.Rat, n)
 	for j := 0; j < n; j++ {
 		d[j] = new(big.Rat)
@@ -578,7 +576,6 @@ func (fsm *SimplexFSM) buildUnboundedResult() (*Result, error) {
 	}
 	for i, bVar := range t.Basis {
 		if bVar < n {
-			// d_Bi = -Data[i][enteringCol]
 			coeff := new(big.Rat).Neg(t.Data[i][enteringCol])
 			d[bVar].Set(coeff)
 		}
