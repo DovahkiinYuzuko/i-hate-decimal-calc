@@ -322,7 +322,7 @@ func simplifyMul(factors []Node) (Node, error) {
 
 		found := false
 		for _, be := range baseList {
-			if be.base.Equal(base) {
+			if Identical(be.base, base) {
 				be.exp.Add(be.exp, exp)
 				found = true
 				break

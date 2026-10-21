@@ -172,6 +172,11 @@ type (
 	Token  = parser.Token
 	Lexer  = parser.Lexer
 	Parser = parser.Parser
+
+	ExprID        = ast.ExprID
+	NodeKey       = ast.NodeKey
+	CanonicalNode = ast.CanonicalNode
+	InternPool    = ast.InternPool
 )
 
 var (
@@ -181,4 +186,7 @@ var (
 	Parse          = parser.Parse
 	ParseStatement = parser.ParseStatement
 	NormalizeInput = parser.NormalizeInput
+
+	NewInternPool = ast.NewInternPool
+	Identical     = ast.Identical
 )
