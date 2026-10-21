@@ -13,6 +13,7 @@ IHD_HOME="$HOME/.ihd"
 INSTALL_DIR="$IHD_HOME/bin"
 EXAM_DIR="$IHD_HOME/exam"
 REFERENCES_DIR="$IHD_HOME/references"
+VERIFIER_SRC_DIR="$IHD_HOME/tools/micro-verifier"
 
 mkdir -p "$INSTALL_DIR"
 
@@ -41,6 +42,10 @@ if [ "$LOCAL_MODE" = true ]; then
             cp "$SCRIPT_DIR/$doc" "$IHD_HOME/"
         fi
     done
+    if [ -f "$SCRIPT_DIR/tools/micro-verifier/main.go" ]; then
+        mkdir -p "$VERIFIER_SRC_DIR"
+        cp "$SCRIPT_DIR/tools/micro-verifier/main.go" "$VERIFIER_SRC_DIR/main.go"
+    fi
 else
     OS="$(uname -s)"
     ARCH="$(uname -m)"
@@ -127,6 +132,11 @@ else
             cp "$TMP_DIR/$doc" "$IHD_HOME/"
         fi
     done
+
+    if [ -f "$TMP_DIR/tools/micro-verifier/main.go" ]; then
+        mkdir -p "$VERIFIER_SRC_DIR"
+        cp "$TMP_DIR/tools/micro-verifier/main.go" "$VERIFIER_SRC_DIR/main.go"
+    fi
 fi
 
 echo ""
@@ -167,6 +177,11 @@ fi
 if [ -d "$EXAM_DIR" ]; then
     echo "Mathematical Showcase & Cookbook installed to: $EXAM_DIR"
     echo "Run the live showcase: $EXAM_DIR/exam.sh"
+fi
+if [ -f "$VERIFIER_SRC_DIR/main.go" ]; then
+    echo "Standalone Micro-Verifier binary & source installed:"
+    echo "  - Binary: $INSTALL_DIR/micro-verifier"
+    echo "  - Source: $VERIFIER_SRC_DIR/main.go"
 fi
 if [ -d "$COMPLETIONS_DIR" ]; then
     echo "Shell completion scripts generated in: $COMPLETIONS_DIR"

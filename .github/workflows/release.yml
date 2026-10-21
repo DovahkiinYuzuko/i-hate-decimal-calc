@@ -63,9 +63,9 @@ jobs:
           go build -ldflags="-s -w" -o "${VERIFIER_BIN}" ./tools/micro-verifier
           mkdir -p dist
           if [ "${{ matrix.archive }}" = "zip" ]; then
-            zip -r "dist/${{ matrix.target }}.zip" "${BIN_NAME}" "${VERIFIER_BIN}" LICENSE.MIT NOTICE.md README.md exam docs/references
+            zip -r "dist/${{ matrix.target }}.zip" "${BIN_NAME}" "${VERIFIER_BIN}" LICENSE.MIT NOTICE.md README.md exam docs/references tools/micro-verifier/main.go
           else
-            tar -czvf "dist/${{ matrix.target }}.tar.gz" "${BIN_NAME}" "${VERIFIER_BIN}" LICENSE.MIT NOTICE.md README.md exam docs/references
+            tar -czvf "dist/${{ matrix.target }}.tar.gz" "${BIN_NAME}" "${VERIFIER_BIN}" LICENSE.MIT NOTICE.md README.md exam docs/references tools/micro-verifier/main.go
           fi
 
       - name: Upload build artifact

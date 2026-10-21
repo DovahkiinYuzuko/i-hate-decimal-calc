@@ -10,6 +10,7 @@ $IhdHome = "$env:USERPROFILE\.ihd"
 $InstallDir = "$IhdHome\bin"
 $ExamDir = "$IhdHome\exam"
 $ReferencesDir = "$IhdHome\references"
+$VerifierSrcDir = "$IhdHome\tools\micro-verifier"
 
 if (-not (Test-Path $InstallDir)) {
     New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
@@ -59,6 +60,13 @@ if ($Local) {
         if (Test-Path $docPath) {
             Copy-Item -Path $docPath -Destination $IhdHome -Force
         }
+    }
+    $LocalVerifierSrc = Join-Path $LocalRoot "tools\micro-verifier\main.go"
+    if (Test-Path $LocalVerifierSrc) {
+        if (-not (Test-Path $VerifierSrcDir)) {
+            New-Item -ItemType Directory -Path $VerifierSrcDir -Force | Out-Null
+        }
+        Copy-Item -Path $LocalVerifierSrc -Destination (Join-Path $VerifierSrcDir "main.go") -Force
     }
 } else {
     # Determine architecture
@@ -127,6 +135,14 @@ if ($Local) {
             if (Test-Path $docSource) {
                 Copy-Item -Path $docSource -Destination $IhdHome -Force
             }
+        }
+
+        $VerifierGoSource = Join-Path $TmpExtract "tools\micro-verifier\main.go"
+        if (Test-Path $VerifierGoSource) {
+            if (-not (Test-Path $VerifierSrcDir)) {
+                New-Item -ItemType Directory -Path $VerifierSrcDir -Force | Out-Null
+            }
+            Copy-Item -Path $VerifierGoSource -Destination (Join-Path $VerifierSrcDir "main.go") -Force
         }
     } finally {
         if (Test-Path $TmpZip) { Remove-Item -Path $TmpZip -Force -ErrorAction SilentlyContinue }
@@ -216,5 +232,10 @@ if (Test-Path $ReferencesDir) {
 if (Test-Path $ExamDir) {
     Write-Host "Mathematical Showcase & Cookbook installed to: $ExamDir" -ForegroundColor Cyan
     Write-Host "Run the live showcase: pwsh `"$ExamDir\exam.ps1`"" -ForegroundColor Yellow
+}
+if (Test-Path (Join-Path $VerifierSrcDir "main.go")) {
+    Write-Host "Standalone Micro-Verifier binary & source installed:" -ForegroundColor Cyan
+    Write-Host "  - Binary: $InstallDir\micro-verifier.exe" -ForegroundColor Gray
+    Write-Host "  - Source: $VerifierSrcDir\main.go" -ForegroundColor Gray
 }
 Write-Host "Run 'ihd --help' or 'ihd' to start calculating." -ForegroundColor Cyan
