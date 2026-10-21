@@ -282,3 +282,51 @@ func TestRSolve_Typst(t *testing.T) {
 		t.Errorf("expected '=' in typst equation, got %s", typstStr)
 	}
 }
+
+func TestRSolve_Resonance_DoubleRoot_Constant(t *testing.T) {
+	// a(n+2) - 2*a(n+1) + a(n) == 1, a(0)==0, a(1)==0
+	// Characteristic root 1 is double root (m = 2), P''(1) = 2.
+	// Particular solution: n(n-1)/2.
+	res, err := EvalString("rsolve(a(n+2) - 2*a(n+1) + a(n) == 1, a(n), [a(0)==0, a(1)==0])")
+	if err != nil {
+		t.Fatalf("rsolve double root constant failed: %v", err)
+	}
+
+	// Test values: n=0 -> 0, n=1 -> 0, n=2 -> 1, n=3 -> 3, n=4 -> 6
+	expectedVals := []int64{0, 0, 1, 3, 6}
+	for nVal, exp := range expectedVals {
+		sub := Substitute(res, "n", &RationalNode{Val: big.NewRat(int64(nVal), 1)})
+		val, err := Eval(sub)
+		if err != nil {
+			t.Fatalf("eval at n=%d failed: %v", nVal, err)
+		}
+		r, ok := val.(*RationalNode)
+		if !ok || r.Val.Cmp(big.NewRat(exp, 1)) != 0 {
+			t.Errorf("at n=%d expected %d, got %v", nVal, exp, val)
+		}
+	}
+}
+
+func TestRSolve_Resonance_FourFoldRoot_Constant(t *testing.T) {
+	// (E - 1)^4 a(n) == 1, a(0)==0, a(1)==0, a(2)==0, a(3)==0
+	// Characteristic root 1 is 4-fold root (m = 4), P^(4)(1) = 24.
+	// Particular solution: binom(n, 4) = n(n-1)(n-2)(n-3)/24.
+	res, err := EvalString("rsolve(a(n+4) - 4*a(n+3) + 6*a(n+2) - 4*a(n+1) + a(n) == 1, a(n), [a(0)==0, a(1)==0, a(2)==0, a(3)==0])")
+	if err != nil {
+		t.Fatalf("rsolve 4-fold root constant failed: %v", err)
+	}
+
+	// Test values: n=0..3 -> 0, n=4 -> 1, n=5 -> 5, n=6 -> 15
+	expectedVals := map[int64]int64{0: 0, 1: 0, 2: 0, 3: 0, 4: 1, 5: 5, 6: 15}
+	for nVal, exp := range expectedVals {
+		sub := Substitute(res, "n", &RationalNode{Val: big.NewRat(nVal, 1)})
+		val, err := Eval(sub)
+		if err != nil {
+			t.Fatalf("eval at n=%d failed: %v", nVal, err)
+		}
+		r, ok := val.(*RationalNode)
+		if !ok || r.Val.Cmp(big.NewRat(exp, 1)) != 0 {
+			t.Errorf("at n=%d expected %d, got %v", nVal, exp, val)
+		}
+	}
+}

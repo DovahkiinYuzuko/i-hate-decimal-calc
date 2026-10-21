@@ -1092,6 +1092,7 @@
   },
   "ztrans": {
     "desc": "Computes the unilateral symbolic Z-transform of a discrete-time sequence f(n).",
+    "err_not_enough_arguments": "not enough arguments for ztrans (expression, time variable, and Z variable are required)",
     "err_n_must_be_var": "second argument of ztrans must be a time variable symbol: %s",
     "err_z_must_be_var": "third argument of ztrans must be a Z-domain variable symbol: %s",
     "err_cannot_transform": "cannot derive symbolic Z-transform for expression %s",
@@ -1100,9 +1101,11 @@
   },
   "iztrans": {
     "desc": "Computes the causal inverse Z-transform of a complex frequency expression F(z).",
+    "err_not_enough_arguments": "not enough arguments for iztrans (expression, Z variable, and time variable are required)",
     "err_z_must_be_var": "second argument of iztrans must be a Z-domain variable symbol: %s",
     "err_n_must_be_var": "third argument of iztrans must be a time variable symbol: %s",
     "err_cannot_invert": "cannot derive symbolic inverse Z-transform for rational expression %s",
+    "err_non_causal_term": "expression %s contains non-causal terms (positive power of z^k), outside unilateral inverse Z-transform domain (n >= 0)",
     "err_verify_failed": "inverse Z-transform power series verification failed (n=%d: expected %s, got %s)",
     "verify_fwd_reconstructs": "Inverse Z-transform verified: forward Z-transform reconstructs frequency-domain expression",
     "verify_pfd_residue_match": "Inverse Z-transform verified: matches partial fraction decomposition and residue expansion"

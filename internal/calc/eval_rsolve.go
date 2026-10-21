@@ -537,28 +537,40 @@ func solveSingleParticularTerm(coeffs map[int]*big.Rat, term Node, idxVar string
 			a := new(big.Rat).Quo(r.Val, p1)
 			return &RationalNode{Val: a}, nil
 		}
-		// 1 is a characteristic root: try A * n
-		pPrime1 := big.NewRat(0, 1)
-		for j, c := range coeffs {
-			pPrime1.Add(pPrime1, new(big.Rat).Mul(big.NewRat(int64(j), 1), c))
-		}
-		if pPrime1.Sign() != 0 {
-			a := new(big.Rat).Quo(r.Val, pPrime1)
-			return &MulNode{Factors: []Node{&RationalNode{Val: a}, &VarNode{Name: idxVar}}}, nil
-		}
-		// 1 is a double root: try A * n^2
-		pDoublePrime1 := big.NewRat(0, 1)
-		for j, c := range coeffs {
-			jInt := int64(j)
-			termVal := new(big.Rat).Mul(big.NewRat(jInt*(jInt-1), 1), c)
-			pDoublePrime1.Add(pDoublePrime1, termVal)
-		}
-		if pDoublePrime1.Sign() != 0 {
-			two := big.NewRat(2, 1)
-			denom := new(big.Rat).Quo(pDoublePrime1, two)
-			a := new(big.Rat).Quo(r.Val, denom)
-			n2 := &PowNode{Base: &VarNode{Name: idxVar}, Exp: &RationalNode{Val: two}}
-			return &MulNode{Factors: []Node{&RationalNode{Val: a}, n2}}, nil
+		// 1 is a characteristic root: general multiplicity m >= 1 with Taylor operator expansion
+		for m := 1; m <= order; m++ {
+			pM1 := big.NewRat(0, 1)
+			for j, c := range coeffs {
+				if j < m {
+					continue
+				}
+				// falling factorial j * (j-1) * ... * (j-m+1)
+				ff := big.NewInt(1)
+				for k := 0; k < m; k++ {
+					ff.Mul(ff, big.NewInt(int64(j-k)))
+				}
+				termVal := new(big.Rat).Mul(new(big.Rat).SetInt(ff), c)
+				pM1.Add(pM1, termVal)
+			}
+			if pM1.Sign() != 0 {
+				coeff := new(big.Rat).Quo(r.Val, pM1)
+				factors := []Node{&RationalNode{Val: coeff}}
+				for k := 0; k < m; k++ {
+					if k == 0 {
+						factors = append(factors, &VarNode{Name: idxVar})
+					} else {
+						factors = append(factors, &AddNode{Terms: []Node{
+							&VarNode{Name: idxVar},
+							&RationalNode{Val: big.NewRat(-int64(k), 1)},
+						}})
+					}
+				}
+				term, err := simplifyMul(factors)
+				if err != nil {
+					term = &MulNode{Factors: factors}
+				}
+				return term, nil
+			}
 		}
 		return nil, fmt.Errorf("%s", i18n.T("rsolve.err_multiplicity_of_root_1_exceeds"))
 	}

@@ -91,6 +91,10 @@ func invZTransRational(F Node, zName string, nVar *VarNode, env *Env) (Node, err
 	zVar := &VarNode{Name: zName}
 
 	// If expression is already a power of z: z^(-k) -> delta(n - k)
+	if v, ok := F.(*VarNode); ok && v.Name == zName {
+		// F is z^1 -> non-causal term
+		return nil, fmt.Errorf("%s", i18n.T("iztrans.err_non_causal_term", Format(F)))
+	}
 	if pow, ok := F.(*PowNode); ok {
 		if v, isV := pow.Base.(*VarNode); isV && v.Name == zName {
 			if r, isR := pow.Exp.(*RationalNode); isR && r.Val.IsInt() {
@@ -103,9 +107,8 @@ func invZTransRational(F Node, zName string, nVar *VarNode, env *Env) (Node, err
 					arg := &AddNode{Terms: []Node{nVar, &RationalNode{Val: big.NewRat(-delay, 1)}}}
 					return &FuncNode{Name: "delta", Args: []Node{arg}}, nil
 				}
-				// z^k -> delta(n + k)
-				arg := &AddNode{Terms: []Node{nVar, &RationalNode{Val: big.NewRat(k, 1)}}}
-				return &FuncNode{Name: "delta", Args: []Node{arg}}, nil
+				// z^k (k > 0) is non-causal
+				return nil, fmt.Errorf("%s", i18n.T("iztrans.err_non_causal_term", Format(F)))
 			}
 		}
 	}
@@ -123,18 +126,17 @@ func invZTransRational(F Node, zName string, nVar *VarNode, env *Env) (Node, err
 		if numPoly.degree() >= denPoly.degree() {
 			quot, rem, ok := polyDivide(numPoly, denPoly)
 			if ok {
-				// quot is a polynomial in z: sum c_k z^k -> sum c_k delta(n + k)
+				// quot is a polynomial in z: sum c_k z^k
 				for k, coeff := range quot.coeffs {
 					if isZero(coeff) {
 						continue
 					}
-					var deltaArg Node
-					if k == 0 {
-						deltaArg = nVar
-					} else {
-						deltaArg = &AddNode{Terms: []Node{nVar, &RationalNode{Val: big.NewRat(int64(k), 1)}}}
+					if k > 0 {
+						// Advanced term z^k (k > 0) is non-causal
+						return nil, fmt.Errorf("%s", i18n.T("iztrans.err_non_causal_term", Format(F)))
 					}
-					dNode := &FuncNode{Name: "delta", Args: []Node{deltaArg}}
+					// k == 0 is constant: c_0 * delta(n)
+					dNode := &FuncNode{Name: "delta", Args: []Node{nVar}}
 					term, err := simplifyMul([]Node{coeff, dNode})
 					if err != nil {
 						term = &MulNode{Factors: []Node{coeff, dNode}}

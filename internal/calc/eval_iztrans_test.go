@@ -86,13 +86,27 @@ func TestEvalInvZTrans_LinearityAndRepeatedPoles(t *testing.T) {
 }
 
 func TestEvalInvZTrans_PolynomialDivision(t *testing.T) {
-	// Improper rational: (z^2 + 1) / z = z + 1/z -> delta(n+1) + delta(n-1)
-	res, err := EvalString("iztrans((z^2 + 1) / z, z, n)")
+	// Improper rational with causal quotient: (z + 1) / z = 1 + 1/z -> delta(n) + delta(n-1)
+	res, err := EvalString("iztrans((z + 1) / z, z, n)")
 	if err != nil {
 		t.Fatalf("iztrans improper rational failed: %v", err)
 	}
 	resStr := res.String()
 	if !strings.Contains(resStr, "delta") {
 		t.Errorf("expected delta terms in polynomial division, got %s", resStr)
+	}
+}
+
+func TestEvalInvZTrans_NonCausalBoundary(t *testing.T) {
+	// Pure positive power z^2 -> non-causal
+	_, err := EvalString("iztrans(z^2, z, n)")
+	if err == nil {
+		t.Errorf("expected error for non-causal term z^2, got nil")
+	}
+
+	// Improper rational with positive quotient degree: (z^2 + 1) / z = z + 1/z -> non-causal
+	_, err2 := EvalString("iztrans((z^2 + 1) / z, z, n)")
+	if err2 == nil {
+		t.Errorf("expected error for non-causal term (z^2 + 1)/z, got nil")
 	}
 }
