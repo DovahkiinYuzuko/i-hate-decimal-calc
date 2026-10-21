@@ -17,6 +17,8 @@ const (
 	ProfileAlgebra
 	ProfileCalculus
 	ProfileSpecial
+	ProfilePolynomial
+	ProfileRational
 )
 
 // ByteStreamProvider decodes an arbitrary byte stream into deterministic primitives and AST nodes.
@@ -84,6 +86,80 @@ func (p *ByteStreamProvider) GenNode(maxDepth int, nodeBudget *int, profile Prof
 	}
 
 	*nodeBudget--
+
+	if profile == ProfilePolynomial {
+		choice := p.NextChoice(5)
+		switch choice {
+		case 0: // Add
+			t1 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			t2 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			return ast.NewAdd([]ast.Node{t1, t2})
+		case 1: // Mul
+			f1 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			f2 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			return ast.NewMul([]ast.Node{f1, f2})
+		case 2: // Pow with integer exp [0, 4]
+			base := p.GenNode(maxDepth-1, nodeBudget, profile)
+			exp := ast.NewRationalFromBigRat(big.NewRat(p.NextInt(0, 4), 1))
+			pow, err := ast.NewPow(base, exp)
+			if err != nil {
+				return p.genLeafNode(profile)
+			}
+			return pow
+		case 3: // UnaryOp
+			expr := p.GenNode(maxDepth-1, nodeBudget, profile)
+			uop, err := ast.NewUnaryOp("-", expr)
+			if err != nil {
+				return p.genLeafNode(profile)
+			}
+			return uop
+		default: // Leaf
+			return p.genLeafNode(profile)
+		}
+	}
+
+	if profile == ProfileRational {
+		choice := p.NextChoice(6)
+		switch choice {
+		case 0: // Add
+			t1 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			t2 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			return ast.NewAdd([]ast.Node{t1, t2})
+		case 1: // Mul
+			f1 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			f2 := p.GenNode(maxDepth-1, nodeBudget, profile)
+			return ast.NewMul([]ast.Node{f1, f2})
+		case 2: // Pow with integer exp [-2, 3]
+			base := p.GenNode(maxDepth-1, nodeBudget, profile)
+			expVal := p.NextInt(-2, 3)
+			if expVal == 0 {
+				expVal = 1
+			}
+			exp := ast.NewRationalFromBigRat(big.NewRat(expVal, 1))
+			pow, err := ast.NewPow(base, exp)
+			if err != nil {
+				return p.genLeafNode(profile)
+			}
+			return pow
+		case 3: // Rational fraction / division
+			num := p.GenNode(maxDepth-1, nodeBudget, profile)
+			den := p.GenNode(maxDepth-1, nodeBudget, profile)
+			invDen, err := ast.NewPow(den, ast.NewRationalFromBigRat(big.NewRat(-1, 1)))
+			if err != nil {
+				return num
+			}
+			return ast.NewMul([]ast.Node{num, invDen})
+		case 4: // UnaryOp
+			expr := p.GenNode(maxDepth-1, nodeBudget, profile)
+			uop, err := ast.NewUnaryOp("-", expr)
+			if err != nil {
+				return p.genLeafNode(profile)
+			}
+			return uop
+		default: // Leaf
+			return p.genLeafNode(profile)
+		}
+	}
 
 	// 25 distinct AST node types supported across ihd
 	nodeChoice := p.NextChoice(25)
@@ -288,7 +364,7 @@ func (p *ByteStreamProvider) GenNode(maxDepth int, nodeBudget *int, profile Prof
 // genLeafNode creates a deterministic terminal leaf node to guarantee Totality.
 func (p *ByteStreamProvider) genLeafNode(profile ProfileType) ast.Node {
 	switch profile {
-	case ProfileAlgebra:
+	case ProfileAlgebra, ProfilePolynomial, ProfileRational:
 		choice := p.NextChoice(4)
 		switch choice {
 		case 0:
