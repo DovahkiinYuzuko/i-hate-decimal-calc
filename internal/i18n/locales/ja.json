@@ -1092,6 +1092,7 @@
   },
   "ztrans": {
     "desc": "離散時間関数 f(n) の片側記号Z変換を計算します。",
+    "err_not_enough_arguments": "ztrans の引数が不足しています（式、時間変数、Z変数が最低限必要です）",
     "err_n_must_be_var": "ztransの第2引数は時間変数（シンボル）である必要があります: %s",
     "err_z_must_be_var": "ztransの第3引数はZ領域変数（シンボル）である必要があります: %s",
     "err_cannot_transform": "式 %s の記号Z変換を導出できませんでした",
@@ -1100,9 +1101,11 @@
   },
   "iztrans": {
     "desc": "複素周波数関数 F(z) の因果的逆Z変換を計算します。",
+    "err_not_enough_arguments": "iztrans の引数が不足しています（式、Z変数、時間変数が最低限必要です）",
     "err_z_must_be_var": "iztransの第2引数はZ領域変数（シンボル）である必要があります: %s",
     "err_n_must_be_var": "iztransの第3引数は時間変数（シンボル）である必要があります: %s",
     "err_cannot_invert": "有理式 %s の記号逆Z変換を導出できませんでした",
+    "err_non_causal_term": "式 %s は非因果項（正のべき乗 z^k）を含むため、片側逆Z変換の因果領域（n >= 0）外です",
     "err_verify_failed": "逆Z変換のべき級数検証に失敗しました (n=%d: 期待値 %s, 実際値 %s)",
     "verify_fwd_reconstructs": "逆Z変換検証完了: 正方向Z変換により周波数領域式が復元されました",
     "verify_pfd_residue_match": "逆Z変換検証完了: 部分分数分解および留数展開と一致しました"
