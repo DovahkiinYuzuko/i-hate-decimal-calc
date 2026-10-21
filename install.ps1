@@ -159,7 +159,16 @@ $IhdExe = Join-Path $InstallDir "ihd.exe"
 
 if (Test-Path $IhdExe) {
     try {
-        & $IhdExe completion powershell | Out-File -FilePath $PsCompletionFile -Encoding utf8
+        $prevOutputEncoding = $OutputEncoding
+        $prevConsoleEncoding = [Console]::OutputEncoding
+        try {
+            $OutputEncoding = [System.Text.Encoding]::UTF8
+            [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+            & $IhdExe completion powershell | Out-File -FilePath $PsCompletionFile -Encoding utf8
+        } finally {
+            $OutputEncoding = $prevOutputEncoding
+            [Console]::OutputEncoding = $prevConsoleEncoding
+        }
         Write-Host "Generated PowerShell completion script: $PsCompletionFile" -ForegroundColor Cyan
 
         # Register in $PROFILE if not already registered
