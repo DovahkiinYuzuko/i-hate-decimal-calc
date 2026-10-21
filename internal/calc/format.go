@@ -732,6 +732,13 @@ func formatTypstNode(n Node) string {
 		}
 		return fmt.Sprintf("mat(%s)", strings.Join(rowStrs, "; "))
 
+	case *RelOpNode:
+		op := v.Op
+		if op == "==" {
+			op = "="
+		}
+		return fmt.Sprintf("%s %s %s", formatTypstNode(v.LHS), op, formatTypstNode(v.RHS))
+
 	default:
 		return n.String()
 	}

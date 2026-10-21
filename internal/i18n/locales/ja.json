@@ -605,6 +605,7 @@
     "err_unsupported_function": "関数 '%s' に対する形式証明コード生成は未対応です",
     "err_unsupported_identity_for_lean": "未解釈関数を含む恒等式を Lean 'by ring' に変換することはできません",
     "err_unsupported_rule_for_lean": "Lean 4 形式証明において未対応の導出規則です: %s",
+    "err_unsupported_recurrence_for_lean": "Lean 4の厳密証明（sorry不使用）は現在、有理根をもつ同次線形漸化式のみをサポートしています",
     "err_derivation_node_is_nil": "nil の導出ノードから Lean 証明を生成することはできません"
   },
   "lll": {
@@ -858,7 +859,17 @@
     "err_no_terms_of_sequence_found": "方程式に数列 %s(%s) の項が見つかりません",
     "err_recurrence_order": "次数 %d の漸化式には現在対応していません",
     "err_rsolve_equation_and_sequence_function": "rsolve: 方程式および数列関数を nil にすることはできません",
-    "err_unsupported_index_expression_in_recurrence": "漸化式における未対応のインデックス式です: %s"
+    "err_unsupported_index_expression_in_recurrence": "漸化式における未対応のインデックス式です: %s",
+    "explain_recurrence": "漸化式",
+    "explain_order": "階数",
+    "explain_char_poly": "特性方程式",
+    "explain_roots": "特性根",
+    "explain_solution": "一般解 / 特殊解",
+    "explain_verification": "検証",
+    "explain_verified_algebraic_and_numeric": "代数的残差ゼロおよび 0..10 項の厳密有理数反復により検証完了",
+    "verify_holds": "漸化式および初期条件が満たされています",
+    "err_recurrence_failed": "漸化式の検証に失敗しました: 残差が0になりません",
+    "err_init_failed": "初期条件の検証に失敗しました"
   },
   "rsolve_equation_required": "rsolve: 方程式が必要です",
   "rsolve_failed": "rsolve に失敗しました: %v",
@@ -1077,5 +1088,18 @@
   },
   "warnings": {
     "iteration_limit_exceeded": "警告: %s 反復が %s ステップを超過しました (処理を続行します...)"
+  },
+  "ztrans": {
+    "desc": "離散時間関数 f(n) の片側記号Z変換を計算します。",
+    "err_n_must_be_var": "ztransの第2引数は時間変数（シンボル）である必要があります: %s",
+    "err_z_must_be_var": "ztransの第3引数はZ領域変数（シンボル）である必要があります: %s",
+    "err_cannot_transform": "式 %s の記号Z変換を導出できませんでした"
+  },
+  "iztrans": {
+    "desc": "複素周波数関数 F(z) の因果的逆Z変換を計算します。",
+    "err_z_must_be_var": "iztransの第2引数はZ領域変数（シンボル）である必要があります: %s",
+    "err_n_must_be_var": "iztransの第3引数は時間変数（シンボル）である必要があります: %s",
+    "err_cannot_invert": "有理式 %s の記号逆Z変換を導出できませんでした",
+    "err_verify_failed": "逆Z変換のべき級数検証に失敗しました (n=%d: 期待値 %s, 実際値 %s)"
   }
 }

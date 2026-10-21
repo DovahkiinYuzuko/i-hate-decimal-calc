@@ -168,7 +168,9 @@
 | `erf` | `erf(z)` | ガウスの誤差関数 $\operatorname{erf}(z) = \frac{2}{\sqrt{\pi}}\int_0^z e^{-t^2} dt$（特殊値 $\operatorname{erf}(0)=0$、奇関数性 $\operatorname{erf}(-z) = -\operatorname{erf}(z)$、導関数 $\frac{d}{dz}\operatorname{erf}(z) = \frac{2}{\sqrt{\pi}} e^{-z^2}$、ガウス積分 $\int e^{-a x^2} dx$ の初等閉形式化基盤） |
 | `limit` | `limit(sin(x)/x, x, 0)` / `limit(1/x, x, 0, 1)` | 厳密記号極限（$0/0$, $\infty/\infty$ の不定形解消、因数約分、ロピタルの定理、最高次数比較、片側極限） |
 | `dsolve` | `dsolve(diff(y, x) == y, y, x)` / `dsolve(diff(y, x, 2) + 4*y == 0, y, x)` | 記号常微分方程式ソルバー（1階線形・変数分離形積分因子法、2階定数係数線形斉次・未定係数法特解による厳密求解） |
-| `rsolve` | `rsolve(a(n+1) == 2*a(n) + 1, a(n), [a(1) == 1])` / `rsolve(a(n+2) == a(n+1) + a(n), a(n), [a(0) == 0, a(1) == 1])` | 線形漸化式ソルバー（1階・2階定数係数線形斉次・非同次漸化式、特性根解析・未定係数法・初期条件線形連立解決による一般項閉形式導出） |
+| `rsolve` | `rsolve(a(n+1) == 2*a(n) + 1, a(n), [a(1) == 1])` / `rsolve(a(n+3) - 6*a(n+2) + 11*a(n+1) - 6*a(n) == 0, a(n), [a(0) == 1, a(1) == 2, a(2) == 4])` | 線形漸化式ソルバー（次数 $d \ge 1$ 定数係数線形斉次・非同次漸化式、特性方程式求根・重根ジョルダン基底 $n^j r^n$・共鳴外力未定係数法・$d \times d$ 連立一次方程式による初期条件フィッティング、`--explain` トレース、代数・数値両立 `--verify`、Lean 4 `geom_solution_iff` 形式証明、Typst 数式出力連携） |
+| `ztrans` | `ztrans(2^n, n, z)` / `ztrans(n, n, z)` / `ztrans(cos(w*n), n, z)` | 記号的片側Z変換 $\mathcal{Z}\{f[n]\} = \sum_{n=0}^{\infty} f[n] z^{-n}$（基本信号 $\delta[n], u[n], a^n, n^k, \sin, \cos$、線形性、周波数・時間シフト則、積則の厳密代数変換） |
+| `iztrans` | `iztrans(z / (z - 2), z, n)` / `iztrans(z / (z - 1)^2, z, n)` / `iztrans(1/z, z, n)` | 記号的因果的逆Z変換 $\mathcal{Z}^{-1}\{X(z)\}$（$X(z)/z$ 部分分数分解 PFD、仮有理関数の多項式除算 $\delta[n+k]$、原点極遅延、二項定理重根極展開による厳密時間領域復元） |
 | `laplace` | `laplace(sin(2*t), t, s)` / `laplace(exp(3*t)*t^2)` | 記号ラプラス変換 $\mathcal{L}\{f(t)\}$（線形性、多項式・指数・三角関数・減衰振動および周波数シフト則の厳密代数変換） |
 | `inv_laplace` | `inv_laplace(1/(s-3), s, t)` / `inv_laplace(1/(s^2+4))` | 記号逆ラプラス変換 $\mathcal{L}^{-1}\{F(s)\}$（部分分数分解 `apart` と留数極マッチングによる厳密時間領域復元） |
 | `taylor` | `taylor(f, x, a, n)` | テイラー展開・マクローリン展開（点 $x=a$ まわりで $n$ 次まで展開） |

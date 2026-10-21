@@ -2,6 +2,7 @@ package calc
 
 import (
 	"fmt"
+	"math/big"
 	"sort"
 	"strings"
 
@@ -769,6 +770,45 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 			tactic = "by rfl"
 		}
 
+	case *RecurrenceCertificate:
+		if !c.IsHomogeneous || !c.HasOnlyRationalRoots || len(c.RationalRoots) == 0 {
+			return "", fmt.Errorf("%s", i18n.T("lean.err_unsupported_recurrence_for_lean"))
+		}
+
+		// For each rational root q, verify charPoly(q) = 0 using norm_num
+		var rootEqs []string
+		for _, q := range c.RationalRoots {
+			// Construct charPoly evaluated at q: sum(c_j * q^j) = 0
+			var polyTerms []string
+			for j, coeff := range c.CharPolyCoeffs {
+				if coeff.Sign() == 0 {
+					continue
+				}
+				qPowJ := ratPow(q, j)
+				termVal := new(big.Rat).Mul(coeff, qPowJ)
+				polyTerms = append(polyTerms, termVal.RatString())
+			}
+			polySumStr := strings.Join(polyTerms, " + ")
+			rootEqs = append(rootEqs, fmt.Sprintf("(%s : ℚ) = 0", polySumStr))
+		}
+
+		// Also verify initial conditions if present
+		for _, initEq := range c.InitialConditions {
+			if rel, ok := initEq.(*RelOpNode); ok && rel.Op == "==" {
+				lhsStr, _ := ToLeanSyntax(rel.LHS)
+				rhsStr, _ := ToLeanSyntax(rel.RHS)
+				rootEqs = append(rootEqs, fmt.Sprintf("((%s : ℚ) = %s)", lhsStr, rhsStr))
+			}
+		}
+
+		if len(rootEqs) == 1 {
+			equalityStr = rootEqs[0]
+			tactic = "by norm_num"
+		} else {
+			equalityStr = strings.Join(rootEqs, " ∧ ")
+			tactic = "by repeat constructor <;> norm_num"
+		}
+
 	case *ImpossibilityCertificate:
 		if c.Kind == ImpossibilityAbelRuffini {
 			fStr, _ := ToLeanSyntax(c.Problem)
@@ -851,6 +891,13 @@ func GenerateLeanSource(theoremName string, cert *VerificationCertificate, input
 			case *ImpossibilityCertificate:
 				if c.Problem != nil {
 					allNodes = []Node{c.Problem}
+				}
+			case *RecurrenceCertificate:
+				if c.RecurrenceNode != nil {
+					allNodes = append(allNodes, c.RecurrenceNode)
+				}
+				if c.SolutionNode != nil {
+					allNodes = append(allNodes, c.SolutionNode)
 				}
 			case *GeometricCertificate:
 				allNodes = append(allNodes, resolveGeometricAlgebraicIdentity(c))
@@ -1057,6 +1104,9 @@ func DetermineRequiredImports(cert Certificate, nodes ...Node) []string {
 			importsMap["Mathlib.Tactic.NormNum"] = true
 		case *PellCertificate:
 			importsMap["Mathlib.Data.Int.Basic"] = true
+			importsMap["Mathlib.Tactic.NormNum"] = true
+		case *RecurrenceCertificate:
+			importsMap["Mathlib.Algebra.LinearRecurrence"] = true
 			importsMap["Mathlib.Tactic.NormNum"] = true
 		case *PolynomialRootCertificate, *IntegerRelationCertificate, *EllipticPointCertificate:
 			importsMap["Mathlib.Data.Rat.Defs"] = true
