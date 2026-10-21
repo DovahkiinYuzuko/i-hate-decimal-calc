@@ -1,0 +1,33 @@
+name: Mathematical Invariants PBT & Fuzzing Smoke
+
+on:
+  push:
+    branches: [ main, 'issue-*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz-smoke:
+    name: Fuzz Smoke & Invariant Verification
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          check-latest: true
+
+      - name: Run Fuzz Corpus Smoke & Mathematical Invariant Tests
+        env:
+          GOMEMLIMIT: "2GiB"
+          IHD_NO_UPDATE_CHECK: "1"
+        run: |
+          go test -v -count=1 ./internal/calc -run "^Fuzz"
