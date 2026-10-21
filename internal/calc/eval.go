@@ -312,7 +312,14 @@ func EvalWithEnv(n Node, env *Env) (Node, error) {
 		}
 		return applyCallableWithArgs(callee, evaledArgs, env)
 
-	case *StringNode, *PlotNode, *IntervalNode:
+	case *QuantityNode:
+		val, err := EvalWithEnv(v.Value, env)
+		if err != nil {
+			return nil, err
+		}
+		return NewQuantityNode(val, v.Scale, v.Dimensions, v.DisplayUnit), nil
+
+	case *StringNode, *PlotNode, *IntervalNode, *PolyNode, *AlgebraicNumberNode:
 		return v, nil
 
 	default:

@@ -14,8 +14,11 @@ import (
 // ErrExecutionTimeout is returned when an operation exceeds its configured deadline.
 var ErrExecutionTimeout = errors.New("fuzz execution timed out")
 
-// CountNodes recursively counts the total number of nodes in an AST.
-// It guards against expression blow-up and exponential tree growth.
+// MaxOutputASTNodes defines the hard upper bound for output AST node count before aborting traversal.
+const MaxOutputASTNodes = 5000
+
+// CountNodes recursively counts the total number of nodes in an AST up to MaxOutputASTNodes + 1.
+// It stops walking immediately once the count exceeds MaxOutputASTNodes to prevent exponential hang on shared DAGs.
 func CountNodes(n ast.Node) int {
 	if n == nil {
 		return 0
@@ -24,6 +27,9 @@ func CountNodes(n ast.Node) int {
 	ast.Walk(n, func(curr ast.Node) bool {
 		if curr != nil {
 			count++
+			if count > MaxOutputASTNodes {
+				return false
+			}
 		}
 		return true
 	})
@@ -85,8 +91,17 @@ func TestGuard_NodeLimitAndTimeout(t *testing.T) {
 	}
 
 	// Max 5,000 upper bound guard check
-	if CountNodes(curr) > 5000 {
+	if CountNodes(curr) > MaxOutputASTNodes {
 		t.Fatalf("Node count exceeded maximum 5000 guard limit")
+	}
+
+	// Verify early termination on an exponential shared DAG (2^20 tree nodes if unguarded)
+	dag := ast.Node(leaf)
+	for i := 0; i < 20; i++ {
+		dag = ast.NewRelOp(dag, "==", dag)
+	}
+	if c := CountNodes(dag); c <= MaxOutputASTNodes {
+		t.Fatalf("Expected exponential DAG to exceed MaxOutputASTNodes (%d), got %d", MaxOutputASTNodes, c)
 	}
 
 	// 3. Verify RunWithTimeout on successful fast function
