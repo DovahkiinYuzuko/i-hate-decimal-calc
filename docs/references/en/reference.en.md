@@ -5,28 +5,35 @@ Complete language specification and built-in function reference for `ihd` (i-hat
 ---
 
 ## Table of Contents
-- [Operators & Precedence](#operators--precedence)
-- [Reserved Constants](#reserved-constants)
-- [Built-in Functions by Category](#built-in-functions-by-category)
-  - [1. Basic Algebra, Number Theory & Equations](#1-basic-algebra-number-theory--equations)
-  - [2. Trigonometric, Logarithmic & Complex Functions](#2-trigonometric-logarithmic--complex-functions)
-  - [3. Calculus, Differential Equations & Discrete Summation](#3-calculus-differential-equations--discrete-summation)
-  - [4. Linear Algebra & 3D Vector Calculus](#4-linear-algebra--3d-vector-calculus)
-  - [5. Computational Geometry](#5-computational-geometry)
-  - [6. Exact Discrete Probability & Statistics](#6-exact-discrete-probability--statistics)
-  - [7. Symbolic Assumptions System](#7-symbolic-assumptions-system)
-  - [8. Real Algebraic Geometry, Mathematical Logic & Quantifier Elimination](#8-real-algebraic-geometry-mathematical-logic--quantifier-elimination)
-  - [9. Elliptic Curves & Arithmetic Geometry](#9-elliptic-curves--arithmetic-geometry)
-  - [10. Visualization & Verification Tools](#10-visualization--verification-tools)
-  - [11. Lattice Basis Reduction & Integer Relations (LLL)](#11-lattice-basis-reduction--integer-relations-lll)
-  - [12. p-adic Arithmetic, Local Algebra & Hensel Lifting](#12-p-adic-arithmetic-local-algebra--hensel-lifting)
-  - [13. Local Algebraic Series & Singularities (Puiseux Series)](#13-local-algebraic-series--singularities-puiseux-series)
-  - [14. Galois Theory, Solvability by Radicals & Abel-Ruffini Certificates](#14-galois-theory-solvability-by-radicals--abel-ruffini-certificates)
-  - [15. Self-Verifying Certificates & Formal Proof Infrastructure (ProofTrace / Explain / Verify / Lean 4)](#15-self-verifying-certificates--formal-proof-infrastructure-prooftrace--explain--verify--lean-4)
-  - [16. Clifford Geometric Algebra & Binary Cyclotomic Quantum Circuit Verification](#16-clifford-geometric-algebra--binary-cyclotomic-quantum-circuit-verification)
-  - [17. CAS Iteration Control & Multi-Radix Arithmetic](#17-cas-iteration-control--multi-radix-arithmetic)
-  - [18. REPL Syntax Highlighting, Themes & Interactive Commands](#18-repl-syntax-highlighting-themes--interactive-commands)
-  - [19. Multivariate Polynomial Ideals & Primary Decomposition (GTZ)](#19-multivariate-polynomial-ideals--primary-decomposition-gtz)
+- [ihd Complete Syntax, Operators \& Functions Reference](#ihd-complete-syntax-operators--functions-reference)
+  - [Table of Contents](#table-of-contents)
+  - [Operators \& Precedence](#operators--precedence)
+    - [Distinguishing Relational Operators and Variable Assignment](#distinguishing-relational-operators-and-variable-assignment)
+  - [Number Literal Syntax (Multi-Radix \& Repeating Decimals)](#number-literal-syntax-multi-radix--repeating-decimals)
+  - [Reserved Constants](#reserved-constants)
+  - [Built-in Functions by Category](#built-in-functions-by-category)
+    - [1. Basic Algebra, Number Theory \& Equations](#1-basic-algebra-number-theory--equations)
+    - [2. Trigonometric, Logarithmic \& Complex Functions](#2-trigonometric-logarithmic--complex-functions)
+    - [3. Calculus, Differential Equations \& Discrete Summation](#3-calculus-differential-equations--discrete-summation)
+    - [4. Linear Algebra \& 3D Vector Calculus](#4-linear-algebra--3d-vector-calculus)
+    - [5. Computational Geometry](#5-computational-geometry)
+    - [6. Exact Discrete Probability \& Statistics](#6-exact-discrete-probability--statistics)
+    - [7. Symbolic Assumptions System](#7-symbolic-assumptions-system)
+    - [8. Real Algebraic Geometry, Mathematical Logic \& Quantifier Elimination](#8-real-algebraic-geometry-mathematical-logic--quantifier-elimination)
+    - [9. Elliptic Curves \& Arithmetic Geometry](#9-elliptic-curves--arithmetic-geometry)
+    - [10. Visualization \& Verification Tools](#10-visualization--verification-tools)
+    - [11. Lattice Basis Reduction \& Integer Relations (LLL)](#11-lattice-basis-reduction--integer-relations-lll)
+    - [12. p-adic Arithmetic, Local Algebra \& Hensel Lifting](#12-p-adic-arithmetic-local-algebra--hensel-lifting)
+    - [13. Local Algebraic Series \& Singularities (Puiseux Series)](#13-local-algebraic-series--singularities-puiseux-series)
+    - [14. Galois Theory, Solvability by Radicals \& Abel-Ruffini Certificates](#14-galois-theory-solvability-by-radicals--abel-ruffini-certificates)
+    - [15. Self-Verifying Certificates \& Formal Proof Infrastructure (ProofTrace / Explain / Verify / Lean 4)](#15-self-verifying-certificates--formal-proof-infrastructure-prooftrace--explain--verify--lean-4)
+    - [16. Clifford Geometric Algebra \& Binary Cyclotomic Quantum Circuit Verification](#16-clifford-geometric-algebra--binary-cyclotomic-quantum-circuit-verification)
+    - [17. CAS Iteration Control \& Multi-Radix Arithmetic](#17-cas-iteration-control--multi-radix-arithmetic)
+    - [18. REPL Syntax Highlighting, Themes \& Interactive Commands](#18-repl-syntax-highlighting-themes--interactive-commands)
+    - [19. Multivariate Polynomial Ideals \& Primary Decomposition (GTZ)](#19-multivariate-polynomial-ideals--primary-decomposition-gtz)
+    - [20. Collection Manipulation \& First-Class Lambda Expressions](#20-collection-manipulation--first-class-lambda-expressions)
+    - [21. Physical Units \& Dimensional Analysis](#21-physical-units--dimensional-analysis)
+      - [Supported Units \& Prefixes](#supported-units--prefixes)
 
 ---
 
@@ -340,9 +347,9 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `--replay` | `ihd --replay cert.json` | Reads an exported certificate JSON file and verifies that residuals vanish without invoking CAS solver algorithms |
 | `micro-verifier` | `micro-verifier cert.json` | Standalone zero-dependency micro-verification binary built using only the Go standard library. Validates certificate JSON files (`ihd-proof-trace-v1`) objectively without relying on the CAS solver itself |
 | `--lean` / `--lean-file` | `ihd --lean "factor(x^2 - 1)"` / `ihd --lean-file p.lean "factor(x^2 - 1)"` | Automatically transpiles computation and proof traces into formal **Lean 4 (Mathlib4)** proof theorems (`by ring`, `by ext <;> fin_cases`, `by repeat constructor <;> norm_num`, `by simp`, etc.) |
-| `--typst` / `--format typst` | `ihd --typst "1/2 + sqrt(2)"` / `ihd --format typst "[[1, 2], [3, 4]]"` | Formats output expressions in modern **Typst** math mode syntax (`$ ... $`, `/` for fraction, `mat(...)` for matrices, etc.) |
+| `--typst` / `--format typst` | `ihd --typst "1/2 + sqrt(2)"` / `ihd --format typst "[[1, 2], [3, 4]]"` | Formats output expressions in **Typst** math mode syntax (`$ ... $`, `/` for fraction, `mat(...)` for matrices, etc.) |
 | `--explain --lean` | `ihd --explain --lean "factor(x^4 + 4)"` | Projects from the single provenance DAG into a **Lean 4 (Mathlib4)** transitive equational derivation `calc` block (`by ring`, `by norm_num`, etc.) with zero sorry assertions |
-| `--explain --typst` | `ihd --explain --typst "expand((x + 1)^2)"` | Projects from the single provenance DAG into a beautifully formatted **Typst** Mathematical Derivation Report document (`= Mathematical Derivation Report`) |
+| `--explain --typst` | `ihd --explain --typst "expand((x + 1)^2)"` | Projects from the single provenance DAG into a formatted **Typst** Mathematical Derivation Report document (`= Mathematical Derivation Report`) |
 
 ---
 
