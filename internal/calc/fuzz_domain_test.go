@@ -162,6 +162,35 @@ func FuzzDomain_UnitsDimensionalConsistency(f *testing.F) {
 				}
 			}
 
+			// 5. Compound Units AST Evaluation via ProfileUnits:
+			// Exercises compound +, -, *, /, ^ trees of physical quantities.
+			unitBudget := 10
+			compoundUnitExpr := provider.GenNode(3, &unitBudget, ProfileUnits)
+			if compoundUnitExpr != nil {
+				env := calc.NewEnv()
+				evalComp, errComp := calc.EvalWithEnv(compoundUnitExpr, env)
+				if errComp != nil {
+					AssertI18nErrorIntegrity(t, errComp)
+				} else if CountNodes(evalComp) <= MaxOutputASTNodes {
+					evalComp2, errComp2 := calc.EvalWithEnv(evalComp, env)
+					if errComp2 != nil {
+						AssertI18nErrorIntegrity(t, errComp2)
+					} else if qComp1, ok1 := evalComp.(*ast.QuantityNode); ok1 {
+						if qComp2, ok2 := evalComp2.(*ast.QuantityNode); ok2 {
+							if !qComp1.Dimensions.Equal(qComp2.Dimensions) {
+								t.Fatalf("Compound unit evaluation idempotence dimension mismatch: %s vs %s",
+									qComp1.Dimensions.String(), qComp2.Dimensions.String())
+							}
+							verdict := EvaluateInvariant(qComp1.Value, qComp2.Value, ProfilePolynomial)
+							if verdict == VerdictSoundnessBug {
+								t.Fatalf("Compound unit evaluation idempotence value mismatch: %s vs %s",
+									qComp1.String(), qComp2.String())
+							}
+						}
+					}
+				}
+			}
+
 			return nil
 		})
 
@@ -202,6 +231,7 @@ func FuzzDomain_SimplexStrongDuality(f *testing.F) {
 			// Solve Primal problem
 			primalRes, errPrimal := lp.Solve(primalProb)
 			if errPrimal != nil {
+				AssertI18nErrorIntegrity(t, errPrimal)
 				return nil
 			}
 
@@ -245,6 +275,7 @@ func FuzzDomain_SimplexStrongDuality(f *testing.F) {
 
 			dualRes, errDual := lp.Solve(dualProb)
 			if errDual != nil {
+				AssertI18nErrorIntegrity(t, errDual)
 				return nil
 			}
 
@@ -280,6 +311,40 @@ func FuzzDomain_SimplexStrongDuality(f *testing.F) {
 					t.Fatalf("Duality theorem violated: primal is UNBOUNDED, but dual is %s (expected INFEASIBLE)",
 						dualRes.Status)
 				}
+			} else if primalRes.Status == lp.StatusInfeasible {
+				// If primal is infeasible, dual cannot be optimal
+				if dualRes.Status == lp.StatusOptimal {
+					t.Fatalf("Duality theorem violated: primal is INFEASIBLE, but dual is OPTIMAL")
+				}
+			}
+
+			// Also test mixed-sense (<=, >=, ==) and Minimize/Maximize Phase I problems for certificate integrity
+			senses := []lp.RelSense{lp.RelLe, lp.RelGe, lp.RelEq}
+			mixedConstraints := make([]lp.Constraint, len(primalProb.Constraints))
+			for i, c := range primalProb.Constraints {
+				mixedConstraints[i] = lp.Constraint{
+					Name:   c.Name,
+					Coeffs: c.Coeffs,
+					Sense:  senses[provider.NextChoice(len(senses))],
+					RHS:    c.RHS,
+				}
+			}
+			mixedSense := lp.OptMaximize
+			if provider.NextBool() {
+				mixedSense = lp.OptMinimize
+			}
+			mixedProb := &lp.Problem{
+				Sense:       mixedSense,
+				Objective:   primalProb.Objective,
+				ObjConstant: new(big.Rat),
+				VarNames:    primalProb.VarNames,
+				Constraints: mixedConstraints,
+			}
+			mixedRes, errMixed := lp.Solve(mixedProb)
+			if errMixed != nil {
+				AssertI18nErrorIntegrity(t, errMixed)
+			} else if errCert := lp.SanitizeAndVerifyCertificate(mixedProb, mixedRes.Certificate); errCert != nil {
+				t.Fatalf("Mixed-sense LP certificate verification failed: %v\nProblem: %+v", errCert, mixedProb)
 			}
 
 			return nil
@@ -440,6 +505,37 @@ func FuzzDomain_MatrixAlgebraInvariants(f *testing.F) {
 											r, c, elem.String(), expectedNode.String())
 									}
 								}
+							}
+						}
+					}
+				}
+			}
+
+			// 5. Symbolic Matrix Invariants via GenMatrixNode:
+			// Exercises symbolic entries (x, y, a, b) for det(A^T) == det(A).
+			symBudget := 9
+			symMat := provider.GenMatrixNode(2, 2, 1, &symBudget)
+			if symMat != nil {
+				symTA, errSymTA := ast.NewFunc("transpose", []ast.Node{symMat})
+				if errSymTA == nil {
+					evalSymTA, errEvalSymTA := calc.EvalWithEnv(symTA, env)
+					if errEvalSymTA != nil {
+						AssertI18nErrorIntegrity(t, errEvalSymTA)
+					} else {
+						detSymFn, _ := ast.NewFunc("det", []ast.Node{symMat})
+						detSymTFn, _ := ast.NewFunc("det", []ast.Node{evalSymTA})
+						detSym, errDS := calc.EvalWithEnv(detSymFn, env)
+						detSymT, errDST := calc.EvalWithEnv(detSymTFn, env)
+						if errDS != nil {
+							AssertI18nErrorIntegrity(t, errDS)
+						}
+						if errDST != nil {
+							AssertI18nErrorIntegrity(t, errDST)
+						}
+						if errDS == nil && errDST == nil && CountNodes(detSym) <= MaxOutputASTNodes && CountNodes(detSymT) <= MaxOutputASTNodes {
+							verdict := EvaluateInvariant(detSym, detSymT, ProfilePolynomial)
+							if verdict == VerdictSoundnessBug {
+								t.Fatalf("Symbolic matrix det(A^T) != det(A): %s vs %s", detSymT.String(), detSym.String())
 							}
 						}
 					}

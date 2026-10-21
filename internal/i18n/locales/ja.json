@@ -242,6 +242,8 @@
   "err_unknown_node_type_for_evaluation": "評価対象の未知のノード型です: %T",
   "errors": {
     "arg_must_be_var": "%s エラー: 第%s引数は変数名である必要があります (%s)",
+    "err_unknown_node_type_for_evaluation": "評価対象の未知のノード型です: %T",
+    "err_cannot_evaluate_nil_node": "nil ノードは評価できません",
     "dimension_mismatch": "次元不整合エラー: %s と %s は次元が異なるため加減算または比較できません",
     "transcendental_dimension": "初等超越関数 %s に次元を持つ物理量を渡すことはできません: %s",
     "unknown_unit": "未知の物理単位または接頭辞です: %s",

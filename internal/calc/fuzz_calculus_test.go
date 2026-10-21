@@ -293,6 +293,9 @@ func FuzzCalculus_RSolveInvariance(f *testing.F) {
 
 		var eqNode ast.Node
 		var initsNode ast.Node
+		var constTerm int64
+		var init0Val, init1Val int64
+		var bCoeff, cCoeff, rhsConst int64
 
 		if orderChoice == 1 {
 			// a(n+1) == c1*a(n) + f(n)
@@ -302,7 +305,7 @@ func FuzzCalculus_RSolveInvariance(f *testing.F) {
 			})
 
 			// RHS: c1*a(n) + constTerm
-			constTerm := provider.NextInt(0, 2)
+			constTerm = provider.NextInt(-2, 2)
 			aN, errAN := ast.NewFunc("a", []ast.Node{ast.NewVar("n")})
 			if errAN != nil {
 				return
@@ -319,20 +322,28 @@ func FuzzCalculus_RSolveInvariance(f *testing.F) {
 			rhs := ast.NewAdd(rhsTerms)
 			eqNode = ast.NewRelOp(lhs, "==", rhs)
 
-			// Initial condition: a(0) == initVal
-			initVal := provider.NextInt(1, 4)
+			// Initial condition: a(0) == init0Val
+			init0Val = provider.NextInt(-3, 4)
 			initLHS, errInit0 := ast.NewFunc("a", []ast.Node{ast.NewRationalFromBigRat(big.NewRat(0, 1))})
 			if errInit0 != nil {
 				return
 			}
-			initCond := ast.NewRelOp(initLHS, "==", ast.NewRationalFromBigRat(big.NewRat(initVal, 1)))
+			initCond := ast.NewRelOp(initLHS, "==", ast.NewRationalFromBigRat(big.NewRat(init0Val, 1)))
 			initsNode = ast.NewList([]ast.Node{initCond})
 		} else {
-			// Order 2: a(n+2) - (r1+r2)*a(n+1) + r1*r2*a(n) == 0 with distinct roots r1, r2
-			r1 := provider.NextInt(1, 3)
-			r2 := provider.NextInt(4, 5)
-			bCoeff := -(r1 + r2)
-			cCoeff := r1 * r2
+			// Order 2: a(n+2) - (r1+r2)*a(n+1) + r1*r2*a(n) == rhsConst
+			// Includes distinct roots, repeated roots (r1 == r2, resonance), and negative roots.
+			r1 := provider.NextInt(-3, 3)
+			if r1 == 0 {
+				r1 = 1
+			}
+			r2 := provider.NextInt(-3, 3)
+			if r2 == 0 {
+				r2 = 2
+			}
+			bCoeff = -(r1 + r2)
+			cCoeff = r1 * r2
+			rhsConst = provider.NextInt(-2, 2)
 
 			lhsTerm1, errT1 := ast.NewFunc("a", []ast.Node{
 				ast.NewAdd([]ast.Node{ast.NewVar("n"), ast.NewRationalFromBigRat(big.NewRat(2, 1))}),
@@ -360,8 +371,10 @@ func FuzzCalculus_RSolveInvariance(f *testing.F) {
 			})
 
 			lhs := ast.NewAdd([]ast.Node{lhsTerm1, lhsTerm2, lhsTerm3})
-			eqNode = ast.NewRelOp(lhs, "==", ast.NewRationalFromBigRat(big.NewRat(0, 1)))
+			eqNode = ast.NewRelOp(lhs, "==", ast.NewRationalFromBigRat(big.NewRat(rhsConst, 1)))
 
+			init0Val = provider.NextInt(-3, 4)
+			init1Val = provider.NextInt(-3, 4)
 			init0LHS, errI0 := ast.NewFunc("a", []ast.Node{ast.NewRationalFromBigRat(big.NewRat(0, 1))})
 			if errI0 != nil {
 				return
@@ -370,8 +383,8 @@ func FuzzCalculus_RSolveInvariance(f *testing.F) {
 			if errI1 != nil {
 				return
 			}
-			init0 := ast.NewRelOp(init0LHS, "==", ast.NewRationalFromBigRat(big.NewRat(1, 1)))
-			init1 := ast.NewRelOp(init1LHS, "==", ast.NewRationalFromBigRat(big.NewRat(2, 1)))
+			init0 := ast.NewRelOp(init0LHS, "==", ast.NewRationalFromBigRat(big.NewRat(init0Val, 1)))
+			init1 := ast.NewRelOp(init1LHS, "==", ast.NewRationalFromBigRat(big.NewRat(init1Val, 1)))
 			initsNode = ast.NewList([]ast.Node{init0, init1})
 		}
 
@@ -392,11 +405,59 @@ func FuzzCalculus_RSolveInvariance(f *testing.F) {
 				AssertI18nErrorIntegrity(t, errSolve)
 				return nil
 			}
-			if CountNodes(sol) > 5000 {
+			if CountNodes(sol) > MaxOutputASTNodes {
 				return nil
 			}
 
-			// VerifyComputation directly validates the rsolve equation and solution
+			// 1. Independent Oracle Verification: evaluate a(n) at n = 0..6 using exact Q[i] arithmetic
+			seqVals := make([]gaussianRat, 7)
+			for nVal := int64(0); nVal <= 6; nVal++ {
+				subN := ast.Substitute(sol, "n", ast.NewRationalFromBigRat(big.NewRat(nVal, 1)))
+				val, ok := evalExactGaussianRat(subN)
+				if !ok {
+					// Fallback through EvalWithEnv only if symbolic functions remain
+					ev, errEv := calc.EvalWithEnv(subN, env)
+					if errEv != nil {
+						t.Fatalf("Failed to evaluate rsolve solution %s at n=%d: %v", sol.String(), nVal, errEv)
+					}
+					val, ok = evalExactGaussianRat(ev)
+					if !ok {
+						t.Fatalf("rsolve solution %s at n=%d did not evaluate to exact rational: %s", sol.String(), nVal, ev.String())
+					}
+				}
+				seqVals[nVal] = val
+			}
+
+			if orderChoice == 1 {
+				if !seqVals[0].equal(newGaussianRatFromInt(init0Val, 0)) {
+					t.Fatalf("Order-1 initial condition violated for %s: expected a(0)=%d, got %v (sol=%s)",
+						eqNode.String(), init0Val, seqVals[0].re, sol.String())
+				}
+				for nVal := 0; nVal <= 4; nVal++ {
+					expectedNext := seqVals[nVal].mul(newGaussianRatFromInt(c1Val, 0)).add(newGaussianRatFromInt(constTerm, 0))
+					if !seqVals[nVal+1].equal(expectedNext) {
+						t.Fatalf("Order-1 recurrence violated at n=%d for %s: a(%d)=%v != %d*a(%d)+%d=%v (sol=%s)",
+							nVal, eqNode.String(), nVal+1, seqVals[nVal+1].re, c1Val, nVal, constTerm, expectedNext.re, sol.String())
+					}
+				}
+			} else {
+				if !seqVals[0].equal(newGaussianRatFromInt(init0Val, 0)) || !seqVals[1].equal(newGaussianRatFromInt(init1Val, 0)) {
+					t.Fatalf("Order-2 initial conditions violated for %s: expected a(0)=%d, a(1)=%d, got a(0)=%v, a(1)=%v (sol=%s)",
+						eqNode.String(), init0Val, init1Val, seqVals[0].re, seqVals[1].re, sol.String())
+				}
+				for nVal := 0; nVal <= 4; nVal++ {
+					lhsVal := seqVals[nVal+2].
+						add(seqVals[nVal+1].mul(newGaussianRatFromInt(bCoeff, 0))).
+						add(seqVals[nVal].mul(newGaussianRatFromInt(cCoeff, 0)))
+					rhsExpected := newGaussianRatFromInt(rhsConst, 0)
+					if !lhsVal.equal(rhsExpected) {
+						t.Fatalf("Order-2 recurrence violated at n=%d for %s: LHS=%v != RHS=%d (sol=%s)",
+							nVal, eqNode.String(), lhsVal.re, rhsConst, sol.String())
+					}
+				}
+			}
+
+			// 2. Also verify consistency with internal certificate verifier
 			cert, errVerify := calc.VerifyComputation(rsolveCall, sol, env)
 			if errVerify != nil {
 				AssertI18nErrorIntegrity(t, errVerify)
