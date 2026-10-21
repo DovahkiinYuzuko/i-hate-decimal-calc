@@ -2,7 +2,7 @@
 
 小数を一切許さず、すべての入力を即座に分数化し、平方根や定数をシンボルのまま厳密計算する電卓CLIツール / A strict CAS calculator CLI that completely rejects decimal approximations, converting all decimals to exact fractions and maintaining exact algebraic forms.
 
-![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?style=flat-square&logo=go&logoColor=white)
+![Go](https://img.shields.io/badge/Go-1.26.5-00ADD8?style=flat-square&logo=go&logoColor=white)
 [![Lean 4 Verification](https://github.com/DovahkiinYuzuko/i-hate-decimal-calc/actions/workflows/lean-verify.yml/badge.svg)](https://github.com/DovahkiinYuzuko/i-hate-decimal-calc/actions/workflows/lean-verify.yml)
 [![Typst Math Verification](https://github.com/DovahkiinYuzuko/i-hate-decimal-calc/actions/workflows/typst-verify.yml/badge.svg)](https://github.com/DovahkiinYuzuko/i-hate-decimal-calc/actions/workflows/typst-verify.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square&logo=opensourceinitiative&logoColor=white)](./LICENSE.MIT)
@@ -46,7 +46,39 @@ irm https://raw.githubusercontent.com/DovahkiinYuzuko/i-hate-decimal-calc/main/i
 ```
 
 #### ソースコードからのビルド
-Go 1.24 以上がインストールされている環境で、リポジトリルートにてビルドを実行します。
+Go 1.26.5 がインストールされている環境で、リポジトリルートにて `go build -o ihd ./cmd/ihd` を実行してビルドします（開発者向けツールや検証手順は以下の折りたたみセクションを参照してください）。
+
+<details>
+<summary><b>開発者向けツール & 検証（独立検証器 <code>micro-verifier</code> / 数学的不変条件ファジング）</b></summary>
+
+##### 1. 独立マイクロ検証器（`tools/micro-verifier`）
+`ihd --certificate cert.json "..."` で発行された計算証明書（`ihd-proof-trace-v1`）を、`ihd` 本体のソルバロジックに依存せず独立して第三者検証するための軽量CLIツールです。
+
+```bash
+# 独立検証器のビルドと証明書の検証
+go build -o micro-verifier ./tools/micro-verifier
+./micro-verifier cert.json
+# または go run で直接実行
+go run ./tools/micro-verifier cert.json
+```
+
+##### 2. 数学的不変条件 Property-Based Testing & Fuzzing
+`internal/calc` には、構造認識型AST生成器（Structure-Aware AST Generator）とガウス有理数体 $\mathbb{Q}[i]$ 上の厳密多点評価オラクル（Schwartz-Zippel補題）を組み合わせたファジングハーネスが組み込まれています。
+
+```bash
+# 全シードコーパスおよびオラクル単体テストの一括スモーク実行
+go test -v ./internal/calc -run "^(Fuzz|TestOracle|TestProvider)"
+
+# 特定の数学的不変条件ターゲットに対する連続ファジング探索（例: 30秒間）
+go test ./internal/calc -run "^FuzzAlgebra_SimplifyIdempotence$" -fuzz "^FuzzAlgebra_SimplifyIdempotence$" -fuzztime 30s
+```
+
+主なファジングターゲット:
+- `FuzzAlgebra_SimplifyIdempotence` / `FuzzAlgebra_ExpandFactorRoundTrip` / `FuzzAlgebra_GroebnerIdealMembership`
+- `FuzzCalculus_IntegrateDiffRoundTrip` / `FuzzCalculus_DiffLeibnizLinearity` / `FuzzCalculus_ODESubstitution` / `FuzzCalculus_RSolveInvariance`
+- `FuzzDomain_UnitsDimensionalConsistency` / `FuzzDomain_MatrixInvariants` / `FuzzDomain_SimplexDualityAndFarkas`
+
+</details>
 
 ```bash
 go build -o ihd ./cmd/ihd
@@ -416,7 +448,7 @@ ihd --verify "convert_unit(100 [km/h], m/s)"
 | `--explain`          | 計算過程（有理化・二重根号・微分則・行列分解等）をツリー形式の途中式として表示。<br>`ihd --explain "1 / (sqrt(2) + 1)"` |
 | `--verify`           | 計算結果（因数分解、逆行列、微積分、ODE、幾何証明等）に対し、定義式や導関数に基づく逆算検算を行い、残差が0であることを確認。<br>`ihd --verify "integrate(1/(x^2 + 1), x)"` $\to$ `atan(x)`<br>`[VERIFIED: diff(F, x) - f == 0]` |
 | `--certificate [file]` | 計算結果と導出ステップ列を証明書 JSON（`ihd-proof-trace-v1`）として出力またはファイルへ保存。<br>`ihd --certificate "factor(x^2 - 1)"`<br>`ihd --certificate cert.json "factor(x^2 - 1)"` |
-| `--replay <file>`    | 保存された証明書 JSON ファイルを読み込み、各ステップの残差が0かを再検証。<br>`ihd --replay cert.json` |
+| `--replay <file>`    | 保存された証明書 JSON ファイルを読み込み、各ステップの残差が0かを再検証（本体から分離された独立検証器 `go run ./tools/micro-verifier <file>` でも検証可能）。<br>`ihd --replay cert.json` |
 | `-i`, `--interval`   | 適応的区間細分化（Rational Interval Arithmetic）による包含区間を算出して出力。<br>`ihd -i "sin(1)"`                                                                  |
 | `--interval-eps <eps>` | 区間細分化の収束判定許容誤差を指定（有理数または小数、デフォルト: `1/1000000`）。<br>`ihd -i --interval-eps "1/1000000000" "sin(1)"`                                  |
 | `--lean`             | 計算結果や導出ステップ列を定理証明支援系 **Lean 4（Mathlib4）** の形式証明コード（`by ring`, `by ext <;> ring`, `by repeat constructor <;> norm_num` 等）として出力。<br>`ihd --lean "factor(x^2 - 1)"` |
@@ -512,7 +544,39 @@ irm https://raw.githubusercontent.com/DovahkiinYuzuko/i-hate-decimal-calc/main/i
 ```
 
 #### Building from Source
-Requires Go 1.22 or higher. Build directly from the root of the repository:
+Requires Go 1.26.5. Build directly from the root of the repository via `go build -o ihd ./cmd/ihd` (see the collapsible section below for standalone verification tools and developer fuzzing):
+
+<details>
+<summary><b>Developer Tools & Verification (Standalone <code>micro-verifier</code> / Mathematical Invariants Fuzzing)</b></summary>
+
+##### 1. Standalone Micro-Verifier (`tools/micro-verifier`)
+A lightweight, independent CLI tool that third-party verifies proof certificates (`ihd-proof-trace-v1`) generated via `ihd --certificate cert.json "..."` without relying on `ihd`'s internal solver logic:
+
+```bash
+# Build and run the standalone verifier
+go build -o micro-verifier ./tools/micro-verifier
+./micro-verifier cert.json
+# Or run directly via go run
+go run ./tools/micro-verifier cert.json
+```
+
+##### 2. Mathematical Invariants Property-Based Testing & Fuzzing
+`internal/calc` includes a structure-aware AST generator and a Gaussian rational ($\mathbb{Q}[i]$) exact multi-point evaluation oracle (Schwartz-Zippel lemma) integrated with Go's native fuzzing engine (`testing.F`):
+
+```bash
+# Run all seed corpora and oracle unit tests (smoke test)
+go test -v ./internal/calc -run "^(Fuzz|TestOracle|TestProvider)"
+
+# Run continuous fuzzing exploration on a specific invariant target (e.g., for 30s)
+go test ./internal/calc -run "^FuzzAlgebra_SimplifyIdempotence$" -fuzz "^FuzzAlgebra_SimplifyIdempotence$" -fuzztime 30s
+```
+
+Available fuzzing targets:
+- `FuzzAlgebra_SimplifyIdempotence` / `FuzzAlgebra_ExpandFactorRoundTrip` / `FuzzAlgebra_GroebnerIdealMembership`
+- `FuzzCalculus_IntegrateDiffRoundTrip` / `FuzzCalculus_DiffLeibnizLinearity` / `FuzzCalculus_ODESubstitution` / `FuzzCalculus_RSolveInvariance`
+- `FuzzDomain_UnitsDimensionalConsistency` / `FuzzDomain_MatrixInvariants` / `FuzzDomain_SimplexDualityAndFarkas`
+
+</details>
 
 ```bash
 go build -o ihd ./cmd/ihd
@@ -850,7 +914,7 @@ ihd --verify "convert_unit(100 [km/h], m/s)"
 | `--explain`          | Displays step-by-step algebraic rewriting derivation trees (radical denesting, rationalization, factoring, differentiation rules, etc.).<br>`ihd --explain "1 / (sqrt(2) + 1)"` |
 | `--verify`           | Reverse-verifies algebraic correctness (factorization, matrix inverses, calculus, ODE, geometric proofs) by checking that residuals vanish.<br>`ihd --verify "integrate(1/(x^2 + 1), x)"` $\to$ `atan(x)`<br>`[VERIFIED: diff(F, x) - f == 0]` |
 | `--certificate [file]` | Exports calculation steps and residuals into a certificate JSON file (`ihd-proof-trace-v1`).<br>`ihd --certificate "factor(x^2 - 1)"`<br>`ihd --certificate cert.json "factor(x^2 - 1)"` |
-| `--replay <file>`    | Reads a certificate JSON file and verifies that residuals vanish without relying on solver logic.<br>`ihd --replay cert.json` |
+| `--replay <file>`    | Reads a certificate JSON file and verifies that residuals vanish without relying on solver logic (can also be verified via the standalone verifier `go run ./tools/micro-verifier <file>`).<br>`ihd --replay cert.json` |
 | `-i`, `--interval`   | Evaluates expressions using adaptive rational interval arithmetic enclosures.<br>`ihd -i "sin(1)"`                                                |
 | `--interval-eps <eps>` | Specifies the convergence tolerance epsilon for interval refinement (default: `1/1000000`).<br>`ihd -i --interval-eps "1/1000000000" "sin(1)"    |
 | `--lean`             | Transpiles calculation results and rewriting steps into formal **Lean 4 (Mathlib4)** proof theorems (`by ring`, `by ext <;> ring`, `by repeat constructor <;> norm_num`, etc.).<br>`ihd --lean "factor(x^2 - 1)"` |
