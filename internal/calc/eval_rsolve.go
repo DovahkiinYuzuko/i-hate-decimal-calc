@@ -848,7 +848,7 @@ func fitInitialConditions(homogBases []Node, partSol Node, idxVar string, inits 
 			cVals = append(cVals, solMat.Data[r][0])
 		}
 	} else {
-		return nil, fmt.Errorf("unexpected linear solver result: %T", solNode)
+		return nil, fmt.Errorf("%s", fmt.Sprintf(i18n.T("rsolve.err_unexpected_linear_solver_result"), solNode))
 	}
 
 	var finalTerms []Node

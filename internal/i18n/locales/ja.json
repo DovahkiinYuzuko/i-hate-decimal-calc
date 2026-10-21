@@ -869,7 +869,8 @@
     "explain_verified_algebraic_and_numeric": "代数的残差ゼロおよび 0..10 項の厳密有理数反復により検証完了",
     "verify_holds": "漸化式および初期条件が満たされています",
     "err_recurrence_failed": "漸化式の検証に失敗しました: 残差が0になりません",
-    "err_init_failed": "初期条件の検証に失敗しました"
+    "err_init_failed": "初期条件の検証に失敗しました",
+    "err_unexpected_linear_solver_result": "線形方程式ソルバーの結果が予期しない型です: %T"
   },
   "rsolve_equation_required": "rsolve: 方程式が必要です",
   "rsolve_failed": "rsolve に失敗しました: %v",
@@ -1093,13 +1094,17 @@
     "desc": "離散時間関数 f(n) の片側記号Z変換を計算します。",
     "err_n_must_be_var": "ztransの第2引数は時間変数（シンボル）である必要があります: %s",
     "err_z_must_be_var": "ztransの第3引数はZ領域変数（シンボル）である必要があります: %s",
-    "err_cannot_transform": "式 %s の記号Z変換を導出できませんでした"
+    "err_cannot_transform": "式 %s の記号Z変換を導出できませんでした",
+    "verify_inv_reconstructs": "Z変換検証完了: 逆Z変換により元の時間領域数列が復元されました",
+    "verify_table_match": "Z変換検証完了: 標準変換公式テーブルに一致しました"
   },
   "iztrans": {
     "desc": "複素周波数関数 F(z) の因果的逆Z変換を計算します。",
     "err_z_must_be_var": "iztransの第2引数はZ領域変数（シンボル）である必要があります: %s",
     "err_n_must_be_var": "iztransの第3引数は時間変数（シンボル）である必要があります: %s",
     "err_cannot_invert": "有理式 %s の記号逆Z変換を導出できませんでした",
-    "err_verify_failed": "逆Z変換のべき級数検証に失敗しました (n=%d: 期待値 %s, 実際値 %s)"
+    "err_verify_failed": "逆Z変換のべき級数検証に失敗しました (n=%d: 期待値 %s, 実際値 %s)",
+    "verify_fwd_reconstructs": "逆Z変換検証完了: 正方向Z変換により周波数領域式が復元されました",
+    "verify_pfd_residue_match": "逆Z変換検証完了: 部分分数分解および留数展開と一致しました"
   }
 }

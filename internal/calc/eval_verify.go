@@ -2693,7 +2693,7 @@ func verifyZTrans(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) 
 		diff := NewAdd([]Node{fNode, &UnaryOpNode{Op: "-", Expr: invRes}})
 		if checkIsZeroAlgebraically(diff, env) {
 			_ = fsm.TransitionTo(VerifyStateCertified)
-			details := "Z-transform verified: inverse Z-transform reconstructs original time-domain sequence"
+			details := i18n.T("ztrans.verify_inv_reconstructs")
 			certIR := NewIdentityCertificate(IdentityKindEquivalence, fNode, invRes, mustRational(0, 1), true, details)
 			return &VerificationCertificate{
 				Domain:     DomainTransform,
@@ -2708,7 +2708,7 @@ func verifyZTrans(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) 
 	}
 
 	_ = fsm.TransitionTo(VerifyStateCertified)
-	details := "Z-transform verified: matches standard operational transform table"
+	details := i18n.T("ztrans.verify_table_match")
 	certIR := NewIdentityCertificate(IdentityKindEquivalence, fn, result, mustRational(0, 1), true, details)
 	return &VerificationCertificate{
 		Domain:     DomainTransform,
@@ -2748,7 +2748,7 @@ func verifyInvZTrans(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFS
 		diff := NewAdd([]Node{FNode, &UnaryOpNode{Op: "-", Expr: fwdRes}})
 		if checkIsZeroAlgebraically(diff, env) {
 			_ = fsm.TransitionTo(VerifyStateCertified)
-			details := "Inverse Z-transform verified: forward Z-transform reconstructs frequency-domain expression"
+			details := i18n.T("iztrans.verify_fwd_reconstructs")
 			certIR := NewIdentityCertificate(IdentityKindEquivalence, FNode, fwdRes, mustRational(0, 1), true, details)
 			return &VerificationCertificate{
 				Domain:     DomainTransform,
@@ -2763,7 +2763,7 @@ func verifyInvZTrans(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFS
 	}
 
 	_ = fsm.TransitionTo(VerifyStateCertified)
-	details := "Inverse Z-transform verified: matches partial fraction decomposition and residue expansion"
+	details := i18n.T("iztrans.verify_pfd_residue_match")
 	certIR := NewIdentityCertificate(IdentityKindEquivalence, fn, result, mustRational(0, 1), true, details)
 	return &VerificationCertificate{
 		Domain:     DomainTransform,

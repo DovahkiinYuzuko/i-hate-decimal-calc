@@ -869,7 +869,8 @@
     "explain_verified_algebraic_and_numeric": "Verified by algebraic zero residual and exact rational iteration (terms 0..10)",
     "verify_holds": "Recurrence relation and initial conditions hold",
     "err_recurrence_failed": "Recurrence verification failed: residual is non-zero",
-    "err_init_failed": "Initial condition verification failed"
+    "err_init_failed": "Initial condition verification failed",
+    "err_unexpected_linear_solver_result": "unexpected linear solver result: %T"
   },
   "rsolve_equation_required": "rsolve requires an equation",
   "rsolve_failed": "rsolve failed: %v",
@@ -1093,13 +1094,17 @@
     "desc": "Computes the unilateral symbolic Z-transform of a discrete-time sequence f(n).",
     "err_n_must_be_var": "second argument of ztrans must be a time variable symbol: %s",
     "err_z_must_be_var": "third argument of ztrans must be a Z-domain variable symbol: %s",
-    "err_cannot_transform": "cannot derive symbolic Z-transform for expression %s"
+    "err_cannot_transform": "cannot derive symbolic Z-transform for expression %s",
+    "verify_inv_reconstructs": "Z-transform verified: inverse Z-transform reconstructs original time-domain sequence",
+    "verify_table_match": "Z-transform verified: matches standard operational transform table"
   },
   "iztrans": {
     "desc": "Computes the causal inverse Z-transform of a complex frequency expression F(z).",
     "err_z_must_be_var": "second argument of iztrans must be a Z-domain variable symbol: %s",
     "err_n_must_be_var": "third argument of iztrans must be a time variable symbol: %s",
     "err_cannot_invert": "cannot derive symbolic inverse Z-transform for rational expression %s",
-    "err_verify_failed": "inverse Z-transform power series verification failed (n=%d: expected %s, got %s)"
+    "err_verify_failed": "inverse Z-transform power series verification failed (n=%d: expected %s, got %s)",
+    "verify_fwd_reconstructs": "Inverse Z-transform verified: forward Z-transform reconstructs frequency-domain expression",
+    "verify_pfd_residue_match": "Inverse Z-transform verified: matches partial fraction decomposition and residue expansion"
   }
 }
