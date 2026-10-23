@@ -1,0 +1,116 @@
+<svg viewBox="0 0 798 210" width="798" height="210" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Faceted Polyhedral Gradients (Model C) -->
+    <linearGradient id="poly-light" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#94a3b8" />
+      <stop offset="100%" stop-color="#475569" />
+    </linearGradient>
+    <linearGradient id="poly-mid" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#64748b" />
+      <stop offset="100%" stop-color="#334155" />
+    </linearGradient>
+    <linearGradient id="poly-dark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#475569" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+
+    <!-- Model C: Geometric Low-Poly / Faceted Crystal Hand -->
+    <g id="hand-model-C">
+      <!-- Middle Finger Facets -->
+      <polygon points="0,-54 -6,-45 0,-20" fill="#cbd5e1" opacity="0.75"/>
+      <polygon points="0,-54 6,-45 0,-20" fill="#94a3b8" opacity="0.75"/>
+      <polygon points="-6,-45 -7,12 0,-20" fill="url(#poly-light)" opacity="0.8"/>
+      <polygon points="6,-45 7,12 0,-20" fill="url(#poly-mid)" opacity="0.8"/>
+      <polygon points="-7,12 7,12 0,-20" fill="#64748b" opacity="0.8"/>
+      <!-- Index & Thumb Facets (Left) -->
+      <polygon points="-7,-8 -18,-5 -19,16 -7,12" fill="url(#poly-mid)" opacity="0.8"/>
+      <polygon points="-19,4 -27,12 -24,28 -14,24" fill="url(#poly-dark)" opacity="0.85"/>
+      <!-- Ring & Pinky Facets (Right Parabolic Arch) -->
+      <polygon points="7,-8 18,-4 18,16 7,12" fill="url(#poly-mid)" opacity="0.8"/>
+      <polygon points="18,0 27,5 26,24 18,16" fill="url(#poly-dark)" opacity="0.85"/>
+      <!-- Palm / Wrist Facets -->
+      <polygon points="-19,16 -7,12 0,32 -14,48 -24,28" fill="url(#poly-dark)" opacity="0.75"/>
+      <polygon points="7,12 18,16 26,24 14,48 0,32" fill="#1e293b" opacity="0.85"/>
+      <polygon points="-7,12 7,12 0,32" fill="#475569" opacity="0.75"/>
+      <polygon points="-14,48 0,32 14,48" fill="#1e293b" opacity="0.6"/>
+      <!-- Crisp Geometric Wireframe Overlay on the Hand -->
+      <g stroke="#090a0f" stroke-width="1.2" fill="none">
+        <line x1="-7" y1="-8" x2="-7" y2="18" />
+        <line x1="7" y1="-8" x2="7" y2="18" />
+        <line x1="18" y1="0" x2="18" y2="18" />
+      </g>
+    </g>
+  </defs>
+
+  <!-- Outer Frame & Double Geometric Rails (Solved by ihd linsolve: X_left=10, X_right=788, viewBox=798) -->
+  <rect x="10" y="14" width="778" height="182" fill="#090a0f" />
+  <line x1="10" y1="14" x2="788" y2="14" stroke="#e2e8f0" stroke-width="1.5" />
+  <line x1="10" y1="20" x2="788" y2="20" stroke="#334155" stroke-width="0.8" />
+  <line x1="10" y1="190" x2="788" y2="190" stroke="#334155" stroke-width="0.8" />
+  <line x1="10" y1="196" x2="788" y2="196" stroke="#e2e8f0" stroke-width="1.5" />
+
+  <!-- Left & Right Geometric Triangulated Lattice Mesh (Symmetric around [10, 788]) -->
+  <g stroke="#475569" stroke-width="0.75" fill="none" opacity="0.5">
+    <!-- Left Mesh (Anchored at x=10) -->
+    <polygon points="10,20 95,20 55,85" />
+    <polygon points="10,20 55,85 10,130" />
+    <polygon points="95,20 155,55 55,85" />
+    <polygon points="55,85 155,55 120,140" />
+    <polygon points="10,130 55,85 65,190" />
+    <polygon points="55,85 120,140 65,190" />
+    <!-- Right Mesh (Anchored at x=788) -->
+    <polygon points="788,20 688,20 733,80" />
+    <polygon points="788,20 733,80 788,140" />
+    <polygon points="688,20 628,65 733,80" />
+    <polygon points="733,80 628,65 673,145" />
+    <polygon points="733,80 788,140 718,190" />
+    <polygon points="733,80 718,190 673,145" />
+  </g>
+  <g fill="#94a3b8" opacity="0.65">
+    <circle cx="55" cy="85" r="2" />
+    <circle cx="95" cy="20" r="2" />
+    <circle cx="65" cy="190" r="2" />
+    <circle cx="733" cy="80" r="2" />
+    <circle cx="628" cy="65" r="2" />
+    <circle cx="673" cy="145" r="2" />
+    <circle cx="718" cy="190" r="2" />
+  </g>
+
+  <!-- Compass Construction Rings Centered on the Shared Decimal Dot (125.2, 76.8) -->
+  <g stroke="#475569" fill="none" opacity="0.42">
+    <circle cx="125.2" cy="76.8" r="19" stroke-width="0.7" />
+    <circle cx="125.2" cy="76.8" r="48" stroke-width="0.6" stroke-dasharray="3 4" />
+    <circle cx="182" cy="112" r="85" stroke-width="0.75" />
+    <line x1="10" y1="76.8" x2="345" y2="76.8" stroke-width="0.5" stroke-dasharray="4 4" />
+    <line x1="101" y1="190" x2="137" y2="20" stroke-width="0.5" stroke-dasharray="4 4" />
+  </g>
+
+  <!-- Slanted Geometric Divider (-12deg, centered at X_div=330 at y=105) -->
+  <line x1="345" y1="20" x2="309" y2="190" stroke="#475569" stroke-width="1" />
+  <line x1="351" y1="20" x2="315" y2="190" stroke="#1e293b" stroke-width="1" />
+
+  <!-- LEFT LOCKUP: L_min=100 (Outer left margin = 100 - 10 = 90px, Inner left margin = 330 - 264 = 66px) -->
+  <g transform="translate(87.4, 39) scale(1.05)">
+    <g transform="translate(27, 74) skewX(-12) scale(1.24)">
+      <use href="#hand-model-C" />
+    </g>
+    <g font-family="'Latin Modern Math', 'CMU Serif', 'STIX Two Math', 'Times New Roman', Georgia, serif" font-style="italic">
+      <text x="12" y="118" font-size="114" font-weight="700" fill="#090a0f" stroke="#090a0f" stroke-width="5" stroke-linejoin="round" letter-spacing="-2">ıhd</text>
+      <text x="12" y="118" font-size="114" font-weight="700" fill="#f8fafc" letter-spacing="-2">ıhd</text>
+      <text x="29.5" y="39" font-size="17.5" font-weight="600" fill="#e2e8f0" text-anchor="end">0</text>
+      <circle cx="36" cy="36" r="5" fill="#ffffff" />
+      <text x="43" y="39" font-size="17.5" font-weight="400" fill="#94a3b8" text-anchor="start" letter-spacing="0.4">5477225575051662</text>
+      <line x1="43" y1="33.5" x2="194" y2="33.5" stroke="#e2e8f0" stroke-width="1.2" opacity="0.85" />
+    </g>
+  </g>
+
+  <!-- RIGHT LOCKUP: R_min=396 (Inner right margin = 396 - 330 = 66px, Outer right margin = 788 - 698 = 90px) -->
+  <g transform="translate(396, 80)">
+    <text x="0" y="0" font-family="'JetBrains Mono', 'Fira Code', Consolas, monospace" font-size="25" font-weight="500" fill="#94a3b8">
+      ihd&gt; <tspan fill="#e2e8f0">sqrt(0.1 + 0.2)</tspan>
+    </text>
+    <text x="0" y="70" font-family="'JetBrains Mono', 'Fira Code', Consolas, monospace" font-size="56" font-weight="800" fill="#ffffff" letter-spacing="1.5">
+      √30/10
+    </text>
+  </g>
+</svg>

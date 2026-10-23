@@ -6,6 +6,11 @@
 !.github/
 !.github/workflows/
 !.github/workflows/*.yml
+# .gitignores/assets.gitignore
+!assets/
+!assets/logo/
+!assets/logo/*.svg
+!assets/logo/*.png
 # .gitignores/cmd.gitignore
 !cmd/
 !cmd/ihd/
