@@ -172,9 +172,41 @@ func TokenizeHighlightFSM(input string, env *calc.Env) []TokenSpan {
 		// 3. Numbers & Radix literals (e.g. 16^^FF, 0x1A, 3.14, 42)
 		if unicode.IsDigit(r) || (r == '.' && i+1 < n && unicode.IsDigit(runes[i+1])) {
 			startIdx := i
-			for i < n && (unicode.IsLetter(runes[i]) || unicode.IsDigit(runes[i]) || runes[i] == '.' || runes[i] == '^') {
+			// Check standard prefix: 0x, 0b, 0o
+			if r == '0' && i+1 < n {
+				peek := runes[i+1]
+				if peek == 'x' || peek == 'X' || peek == 'b' || peek == 'B' || peek == 'o' || peek == 'O' {
+					i += 2
+					for i < n && (unicode.IsLetter(runes[i]) || unicode.IsDigit(runes[i])) {
+						i++
+					}
+					spans = append(spans, TokenSpan{
+						Type:  TokenNumber,
+						Start: byteOffsets[startIdx],
+						End:   byteOffsets[i],
+					})
+					continue
+				}
+			}
+
+			// Scan integer part or initial digits
+			for i < n && unicode.IsDigit(runes[i]) {
 				i++
 			}
+
+			// Check radix syntax: base^^digits (strictly require ^^)
+			if i+1 < n && runes[i] == '^' && runes[i+1] == '^' {
+				i += 2 // consume ^^
+				for i < n && (unicode.IsLetter(runes[i]) || unicode.IsDigit(runes[i])) {
+					i++
+				}
+			} else if i < n && runes[i] == '.' {
+				i++ // consume '.'
+				for i < n && unicode.IsDigit(runes[i]) {
+					i++
+				}
+			}
+
 			spans = append(spans, TokenSpan{
 				Type:  TokenNumber,
 				Start: byteOffsets[startIdx],
@@ -267,6 +299,7 @@ func isCommand(cmd string) bool {
 
 // BuildREPLHighlights constructs a slice of readline.Highlight configurations
 // customized for the specified color theme ("dark", "light", or "none") and environment.
+// All sequences start with \x1B[0;...m to guarantee total attribute isolation across adjacent spans.
 func BuildREPLHighlights(theme string, env *calc.Env) []readline.Highlight {
 	themeLower := strings.ToLower(strings.TrimSpace(theme))
 	if themeLower == "none" || themeLower == "off" {
@@ -277,44 +310,44 @@ func BuildREPLHighlights(theme string, env *calc.Env) []readline.Highlight {
 
 	// High-contrast, transparent-terminal-safe ANSI Palette Definitions
 	var (
-		seqRainbow0   string
-		seqRainbow1   string
-		seqRainbow2   string
-		seqRainbow3   string
-		seqMismatch   string = "\x1B[97;41m" // White on red background (error alert)
-		seqFunc       string
-		seqCmd        string
-		seqNumber     string
-		seqString     string
-		seqOp         string
-		seqCustomVar  string
+		seqRainbow0  string
+		seqRainbow1  string
+		seqRainbow2  string
+		seqRainbow3  string
+		seqMismatch  string = "\x1B[0;97;41m" // White on red background (error alert with clean reset)
+		seqFunc      string
+		seqCmd       string
+		seqNumber    string
+		seqString    string
+		seqOp        string
+		seqCustomVar string
 	)
 
 	if isLight {
 		// Light Theme (Optimized for white / bright backgrounds)
-		seqRainbow0 = "\x1B[34;1m" // Bold Dark Blue
-		seqRainbow1 = "\x1B[35;1m" // Bold Dark Magenta
-		seqRainbow2 = "\x1B[32;1m" // Bold Dark Green
-		seqRainbow3 = "\x1B[36;1m" // Bold Dark Cyan
-		seqFunc = "\x1B[34m"       // Dark Blue
-		seqCmd = "\x1B[35m"        // Dark Magenta
-		seqNumber = "\x1B[31;1m"   // Bold Brick Red (Completely separated from rainbow blue/cyan)
-		seqString = "\x1B[32m"     // Dark Green
-		seqOp = "\x1B[30m"         // Solid Black
-		seqCustomVar = "\x1B[36m"  // Teal / Cyan (Semantic defined variable)
+		seqRainbow0 = "\x1B[0;34;1m" // Bold Dark Blue
+		seqRainbow1 = "\x1B[0;35;1m" // Bold Dark Magenta
+		seqRainbow2 = "\x1B[0;32;1m" // Bold Dark Green
+		seqRainbow3 = "\x1B[0;36;1m" // Bold Dark Cyan
+		seqFunc = "\x1B[0;34m"       // Dark Blue
+		seqCmd = "\x1B[0;35m"        // Dark Magenta
+		seqNumber = "\x1B[0;31;1m"   // Bold Brick Red (Completely separated from rainbow blue/cyan)
+		seqString = "\x1B[0;32m"     // Dark Green
+		seqOp = "\x1B[0;30m"         // Solid Black
+		seqCustomVar = "\x1B[0;36m"  // Teal / Cyan (Semantic defined variable)
 	} else {
 		// Dark Theme (Optimized for dark backgrounds and transparent photo terminals)
-		// Brackets rotate through Cyan, Magenta, Green, Blue
-		seqRainbow0 = "\x1B[96m"   // Bright Cyan
-		seqRainbow1 = "\x1B[95m"   // Bright Magenta
-		seqRainbow2 = "\x1B[92m"   // Bright Green
-		seqRainbow3 = "\x1B[94m"   // Bright Blue
-		seqFunc = "\x1B[94;1m"     // Bold Bright Blue
-		seqCmd = "\x1B[36;1m"      // Bold Cyan
-		seqNumber = "\x1B[93m"     // Bright Yellow (Completely separated from rainbow cyan/magenta)
-		seqString = "\x1B[32m"     // Green
-		seqOp = "\x1B[37m"         // Bright White (Clear & readable on dark / transparent backgrounds)
-		seqCustomVar = "\x1B[96;2m" // Soft Cyan / Mint (Semantic defined variable; unbound symbols remain white)
+		// Brackets rotate through Magenta, Cyan, Green, Blue (starting with Magenta to ensure sharp contrast against off-white text)
+		seqRainbow0 = "\x1B[0;95m"   // Bright Magenta (Depth 0: high contrast against off-white text and Teal variables)
+		seqRainbow1 = "\x1B[0;96m"   // Bright Cyan (Depth 1)
+		seqRainbow2 = "\x1B[0;92m"   // Bright Green (Depth 2)
+		seqRainbow3 = "\x1B[0;94m"   // Bright Blue (Depth 3)
+		seqFunc = "\x1B[0;94;1m"     // Bold Bright Blue
+		seqCmd = "\x1B[0;36;1m"      // Bold Cyan
+		seqNumber = "\x1B[0;93m"     // Bright Yellow (Completely separated from rainbow magenta/cyan)
+		seqString = "\x1B[0;32m"     // Green
+		seqOp = "\x1B[0;37m"         // Bright White (Clear & readable on dark / transparent backgrounds)
+		seqCustomVar = "\x1B[0;36m"  // Teal / Mint (Semantic defined variable; separated from Depth 0 Magenta and white text)
 	}
 
 	// Order of highlights: operators, numbers, strings, commands, funcs, custom variables, rainbow, mismatch
