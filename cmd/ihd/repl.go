@@ -296,14 +296,26 @@ func handleREPLCommand(line string, env *calc.Env, out, errOut io.Writer) bool {
 		return true
 	}
 
-	if lowerLine == "help" || strings.HasPrefix(lowerLine, "help ") {
-		arg := strings.TrimSpace(line[4:])
+	if lowerLine == "help" || strings.HasPrefix(lowerLine, "help ") || strings.HasPrefix(lowerLine, "help(") {
+		arg := ""
+		if strings.HasPrefix(lowerLine, "help(") && strings.HasSuffix(lowerLine, ")") {
+			arg = strings.TrimSpace(line[5 : len(line)-1])
+		} else if strings.HasPrefix(lowerLine, "help ") {
+			arg = strings.TrimSpace(line[4:])
+		}
+		arg = strings.Trim(arg, "\"'")
 		PrintHelpCommand(arg, out)
 		return true
 	}
 
-	if strings.HasPrefix(lowerLine, "search ") || lowerLine == "search" {
-		query := strings.TrimSpace(line[6:])
+	if strings.HasPrefix(lowerLine, "search ") || strings.HasPrefix(lowerLine, "search(") || lowerLine == "search" {
+		query := ""
+		if strings.HasPrefix(lowerLine, "search(") && strings.HasSuffix(lowerLine, ")") {
+			query = strings.TrimSpace(line[7 : len(line)-1])
+		} else if strings.HasPrefix(lowerLine, "search ") {
+			query = strings.TrimSpace(line[6:])
+		}
+		query = strings.Trim(query, "\"'")
 		PrintSearchCommand(query, out)
 		return true
 	}
@@ -315,6 +327,7 @@ func handleREPLCommand(line string, env *calc.Env, out, errOut io.Writer) bool {
 		} else if strings.HasPrefix(lowerLine, "whatis ") {
 			target = strings.TrimSpace(line[7:])
 		}
+		target = strings.Trim(target, "\"'")
 		PrintWhatisCommand(target, out)
 		return true
 	}

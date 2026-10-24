@@ -57,6 +57,16 @@ func TestREPL_InteractiveDictionaryCommands(t *testing.T) {
 			input:    "whatis(x^3 + 2*x + 1)\nexit\n",
 			wantCont: []string{"factor", "expand", "diff"},
 		},
+		{
+			name:     "whatis matrix literal nested list",
+			input:    "whatis([[1, 2], [3, 4]])\nexit\n",
+			wantCont: []string{"det", "inv", "eigenvals"},
+		},
+		{
+			name:     "help with function syntax and quotes",
+			input:    "help(\"solve\")\nexit\n",
+			wantCont: []string{"solve(eq, var)"},
+		},
 	}
 
 	for _, tc := range tests {

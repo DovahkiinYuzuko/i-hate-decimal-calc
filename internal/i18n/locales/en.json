@@ -180,7 +180,8 @@
     "repl_welcome": "ihd: Exact Arithmetic Calculator",
     "replay_failure": "Proof certificate verification failed: %s",
     "replay_success": "Proof certificate verified successfully: %s",
-    "err_did_you_mean": "Did you mean '%s'?"
+    "err_did_you_mean": "Did you mean '%s'?",
+    "default_fn_desc": "Built-in function %s"
   },
   "complex": {
     "err_cannot_determine_sign_of_complex": "cannot determine sign of complex components (re=%s, im=%s)"

@@ -180,7 +180,8 @@
     "repl_welcome": "ihd: 厳密数式処理計算機",
     "replay_failure": "代数証明書の再検証に失敗しました: %s",
     "replay_success": "代数証明書の再検証に成功しました: %s",
-    "err_did_you_mean": "もしかして: '%s' ですか？"
+    "err_did_you_mean": "もしかして '%s' ですか？",
+    "default_fn_desc": "組み込み関数 %s"
   },
   "complex": {
     "err_cannot_determine_sign_of_complex": "複素数成分の符号を決定できません (実部=%s, 虚部=%s)"

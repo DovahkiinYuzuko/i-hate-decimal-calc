@@ -27,7 +27,10 @@ func GetFunctionDoc(name string) (*FunctionDoc, bool) {
 	sigStr := fmt.Sprintf("%s(%s)", sig.Name, strings.Join(sig.Args, ", "))
 	desc := i18n.T(sig.DescKey)
 	if desc == sig.DescKey || strings.HasPrefix(desc, "fn.") {
-		desc = fmt.Sprintf("Built-in function %s", sig.Name)
+		desc = i18n.T("cli.default_fn_desc", sig.Name)
+		if desc == "cli.default_fn_desc" {
+			desc = fmt.Sprintf("Built-in function %s", sig.Name)
+		}
 	}
 
 	return &FunctionDoc{
@@ -183,6 +186,28 @@ func matchDomainConcept(query string) *ConceptExplanation {
 }
 
 func explainASTExpression(raw string, node calc.Node) *ConceptExplanation {
+	// 1. matrix(...) function call detection
+	if fn, ok := node.(*calc.FuncNode); ok && strings.ToLower(fn.Name) == "matrix" {
+		return &ConceptExplanation{
+			Target:       raw,
+			Concept:      i18n.T("cli.concept_matrix_lit_title"),
+			Explanation:  i18n.T("cli.concept_matrix_lit_desc"),
+			RelatedFuncs: []string{"det", "inv", "eigenvals", "eigenvects", "rref", "rank"},
+		}
+	}
+
+	// 2. [[...], [...]] nested list (matrix literal syntax) detection
+	if list, ok := node.(*calc.ListNode); ok && len(list.Elements) > 0 {
+		if _, isNested := list.Elements[0].(*calc.ListNode); isNested {
+			return &ConceptExplanation{
+				Target:       raw,
+				Concept:      i18n.T("cli.concept_matrix_lit_title"),
+				Explanation:  i18n.T("cli.concept_matrix_lit_desc"),
+				RelatedFuncs: []string{"det", "inv", "eigenvals", "eigenvects", "rref", "rank"},
+			}
+		}
+	}
+
 	switch node.(type) {
 	case *calc.RelOpNode:
 		return &ConceptExplanation{

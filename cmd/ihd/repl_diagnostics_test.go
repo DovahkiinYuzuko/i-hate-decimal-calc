@@ -56,12 +56,30 @@ func TestFormatErrorWithDiagnostics(t *testing.T) {
 		}
 	})
 
+	t.Run("suppress false positive for single letter custom var", func(t *testing.T) {
+		err := errors.New("unknown function: f")
+		line := "f(x)"
+		got := FormatErrorWithDiagnostics(err, line)
+		if strings.Contains(got, "Did you mean") || strings.Contains(got, "もしかして") {
+			t.Errorf("expected no suggestion for single-letter function, got: %s", got)
+		}
+	})
+
 	t.Run("caret display for syntax error position", func(t *testing.T) {
 		err := errors.New("syntax error: unexpected token at position 5: +")
 		line := "1 + * 2"
 		got := FormatErrorWithDiagnostics(err, line)
 		if !strings.Contains(got, "^") {
 			t.Errorf("expected caret '^' in formatted error, got: %s", got)
+		}
+	})
+
+	t.Run("caret display for japanese syntax error", func(t *testing.T) {
+		err := errors.New("構文エラー: 予期しないトークン '+' が位置 5 にあります")
+		line := "1 + * 2"
+		got := FormatErrorWithDiagnostics(err, line)
+		if !strings.Contains(got, "^") {
+			t.Errorf("expected caret '^' for japanese syntax error, got: %s", got)
 		}
 	})
 }

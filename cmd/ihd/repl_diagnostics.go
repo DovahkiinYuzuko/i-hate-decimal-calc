@@ -11,7 +11,7 @@ import (
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
-var posRegex = regexp.MustCompile(`(?:position|pos|at)\s+(\d+)`)
+var posRegex = regexp.MustCompile(`(?:position|pos|at|位置)\s*(\d+)`)
 
 // LevenshteinDistance computes the classic edit distance between two strings.
 func LevenshteinDistance(s1, s2 string) int {
@@ -89,12 +89,22 @@ func FormatErrorWithDiagnostics(err error, line string) string {
 		fields := strings.Fields(errMsg)
 		if len(fields) > 0 {
 			rawName := strings.Trim(fields[len(fields)-1], ":'\"()[]{}")
-			if suggestion := FindClosestFunction(rawName, 2); suggestion != "" {
-				didYouMean := i18n.T("cli.err_did_you_mean", suggestion)
-				if didYouMean == "cli.err_did_you_mean" {
-					didYouMean = fmt.Sprintf("Did you mean '%s'?", suggestion)
+			// Suppress false positives on short identifiers (e.g. single-letter custom vars f(x), g(t))
+			maxDist := 2
+			if len(rawName) <= 1 {
+				maxDist = 0
+			} else if len(rawName) <= 3 {
+				maxDist = 1
+			}
+
+			if maxDist > 0 {
+				if suggestion := FindClosestFunction(rawName, maxDist); suggestion != "" {
+					didYouMean := i18n.T("cli.err_did_you_mean", suggestion)
+					if didYouMean == "cli.err_did_you_mean" {
+						didYouMean = fmt.Sprintf("Did you mean '%s'?", suggestion)
+					}
+					errMsg = fmt.Sprintf("%s\n  %s", errMsg, didYouMean)
 				}
-				errMsg = fmt.Sprintf("%s\n  %s", errMsg, didYouMean)
 			}
 		}
 	}
@@ -121,18 +131,20 @@ func extractErrorPosition(msg string) int {
 	return -1
 }
 
-func buildCaretLine(line string, pos int) string {
-	runes := []rune(line)
-	if pos < 0 {
-		pos = 0
+func buildCaretLine(line string, bytePos int) string {
+	if bytePos < 0 {
+		bytePos = 0
 	}
-	if pos > len(runes) {
-		pos = len(runes)
+	if bytePos > len(line) {
+		bytePos = len(line)
 	}
 
+	prefix := line[:bytePos]
+	runes := []rune(prefix)
+
 	var sb strings.Builder
-	for i := 0; i < pos; i++ {
-		if runes[i] == '\t' {
+	for _, r := range runes {
+		if r == '\t' {
 			sb.WriteString("    ")
 		} else {
 			sb.WriteRune(' ')
