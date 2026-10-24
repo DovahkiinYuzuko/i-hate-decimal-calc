@@ -219,15 +219,26 @@ func LoadSession(env *calc.Env, filePath string, out, errOut io.Writer) error {
 
 	ro := runOptions{}
 	scanner := bufio.NewScanner(f)
+	lineNum := 0
+	var loadErr error
+
 	for scanner.Scan() {
+		lineNum++
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "//") {
 			continue
 		}
-		_ = evaluateLineInternal(line, ro, env, true, out, errOut, "")
+		if err := evaluateLineInternal(line, ro, env, true, out, errOut, fmt.Sprintf("%s:%d: ", filePath, lineNum)); err != nil {
+			if loadErr == nil {
+				loadErr = fmt.Errorf("error loading line %d: %w", lineNum, err)
+			}
+		}
 	}
 	env.Delete("ans")
-	return scanner.Err()
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+	return loadErr
 }
 
 // SimilarityMatch represents a matched expression with a similarity score in [0.0, 1.0].
@@ -374,18 +385,20 @@ func FindSimilarExpressions(queryExpr string, historyLines []string, topN int) (
 		}
 		seen[line] = true
 
-		// Check if line is an assignment (e.g. "x = expr")
-		exprToParse := line
+		// Extract candidate AST directly without redundant stringify and re-parse
+		var candNode calc.Node
 		if parsedStmt, err := calc.ParseStatement(line); err == nil {
-			if assign, ok := parsedStmt.(*calc.AssignStmt); ok {
-				if assign.Value != nil {
-					exprToParse = assign.Value.String()
-				}
+			switch s := parsedStmt.(type) {
+			case *calc.AssignStmt:
+				candNode = s.Value
+			case calc.Node:
+				candNode = s
 			}
+		} else if parsedExpr, err := calc.Parse(line); err == nil {
+			candNode = parsedExpr
 		}
 
-		candNode, err := calc.Parse(exprToParse)
-		if err != nil {
+		if candNode == nil {
 			continue
 		}
 

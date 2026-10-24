@@ -177,6 +177,17 @@ func TestSession_SaveLoadClear(t *testing.T) {
 	if !env.IsInteger("n") {
 		t.Errorf("expected n to be integer after load")
 	}
+
+	// 4. Load session with invalid line reports error
+	badFile := filepath.Join(tmpDir, "bad.ihd")
+	_ = os.WriteFile(badFile, []byte("valid_var = 1\nunknown_func(((\n"), 0644)
+	loadErr := LoadSession(env, badFile, out, errOut)
+	if loadErr == nil {
+		t.Errorf("expected error when loading invalid file")
+	}
+	if errOut.Len() == 0 {
+		t.Errorf("expected error output on errOut")
+	}
 }
 
 func TestSimilar_FindSimilarExpressions(t *testing.T) {
