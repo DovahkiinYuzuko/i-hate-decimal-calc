@@ -341,6 +341,12 @@ ihd "plot(sin(x), [-pi, pi])"
 - **ネスト深度別レインボー括弧**: 括弧 `()` および角括弧 `[]` のネスト深度（4色循環）に応じたハイライト。括弧の不整合（ミスマッチ）はエラー警告色（赤背景）で表示。
 - **カスタム変数ハイライト**: 未束縛の記号（$x, y$ 等）は標準色を維持し、現在のセッション環境に定義された変数のみを識別して着色（Darkテーマ時は淡いシアン）。
 - **テーマ設定 & 永続化**: `dark`（暗め背景向け）および `light`（明るめ背景向け）テーマに対応。REPL 内コマンド（`theme dark` / `theme light`）で切り替え可能で、設定は `~/.ihd/config.json` に保存。
+- **入力履歴の永続化**: 対話セッションで入力したコマンドは自動的に `~/.ihd/history`（環境変数 `IHD_DIR` 優先）へ永続保存され、次回起動時にも上下キーで過去の履歴を呼び出せます。
+- **セッション保存・復元・初期化 (`save` / `load` / `clear`)**:
+  - `save <path.ihd>`: 現在のセッションで定義されたユーザー変数および数学的前提条件（`assume`）を、再実行可能なスクリプトとして保存します。
+  - `load <path.ihd>`: 保存されたスクリプトを現在のセッションに読み込み、変数を復元します。
+  - `clear` または `reset`: セッション内の変数および前提条件を一括初期化します。
+- **類似数式検索 (`similar(<expr>)`)**: 抽象構文木（AST）の構造を解析し、入力履歴の中から構造が類似している過去の計算式をスコアリングして検索・推薦表示します。
 
 #### 5. 反復ループの非破壊安全性 & ユーザー主権制御（`--warn-loop` / `--max-loop`）
 CAS反復構文（`table`, `for`, `product`）において、長時間の計算ループによる意図しない暴走を防止しつつ、大量サンプリングやモンテカルロ計算を阻害しないハイブリッド安全機構を搭載しています。
@@ -820,6 +826,12 @@ Lexical syntax highlighting and argument guidance powered by a zero-dependency f
 - **Rainbow Nested Delimiters**: Delimiter depths across parentheses `()` and brackets `[]` rotate through 4 cyclic colors. Bracket mismatches are highlighted with an error background.
 - **Custom Variable Highlighting**: Unbound symbols ($x, y$) retain the neutral base text color, while user-defined custom variables in the active session environment are highlighted.
 - **Dual Themes & Persistence**: Supports `dark` and `light` themes. Configurable inside the REPL (`theme dark` / `theme light`), persisted to `~/.ihd/config.json`.
+- **Persistent Command History**: Entered commands are automatically persisted to `~/.ihd/history` (or `$IHD_DIR/history`) and reloaded across sessions via the Up/Down arrow keys.
+- **Session State Management (`save` / `load` / `clear`)**:
+  - `save <path.ihd>`: Exports active user-defined variables and mathematical assumptions (`assume`) into a re-executable `.ihd` script.
+  - `load <path.ihd>`: Loads and executes an `.ihd` script into the active session environment.
+  - `clear` / `reset`: Resets all active variables and assumptions in the current session.
+- **Structural Similarity Search (`similar(<expr>)`)**: Analyzes the Abstract Syntax Tree (AST) skeleton and scores previously evaluated expressions in your history to discover structurally similar formulas.
 
 #### 5. Iteration Safety & Non-Destructive Loop Control (`--warn-loop` / `--max-loop`)
 Protects against runaway CAS loops (`table`, `for`, `product`) without hindering heavy computations or Monte Carlo sampling:

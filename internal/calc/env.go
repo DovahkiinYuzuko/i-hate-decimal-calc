@@ -317,6 +317,22 @@ func (e *Env) All() map[string]Node {
 	return res
 }
 
+// Clear removes all variables and resets all assumptions.
+func (e *Env) Clear() {
+	if e == nil {
+		return
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.vars = make(map[string]Node)
+	e.evaluatingVars = make(map[string]bool)
+	if e.assumptions != nil {
+		e.assumptions.ClearAll()
+	} else {
+		e.assumptions = NewAssumptionStore()
+	}
+}
+
 // Clone creates an independent copy of the environment.
 func (e *Env) Clone() *Env {
 	if e == nil {
