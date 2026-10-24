@@ -2550,8 +2550,38 @@ M834 80h400000v40h-400000z"></path></svg></span></span></span><span class="vlist
 </tr>
 <tr>
 <td align="left"><code class="clickable-code" data-copy="help" title="Click to copy">help</code></td>
-<td align="left"><code class="clickable-code" data-copy="help" title="Click to copy">help</code></td>
-<td align="left">Prints concise built-in help and a summary of interactive commands</td>
+<td align="left"><code class="clickable-code" data-copy="help" title="Click to copy">help</code> / <code class="clickable-code" data-copy="help <func>" title="Click to copy">help &#x3C;func></code></td>
+<td align="left">Display quick help or explicit argument signature and description for a function</td>
+</tr>
+<tr>
+<td align="left"><code class="clickable-code" data-copy="search" title="Click to copy">search</code></td>
+<td align="left"><code class="clickable-code" data-copy="search <keyword>" title="Click to copy">search &#x3C;keyword></code></td>
+<td align="left">Search built-in functions by name or localized description</td>
+</tr>
+<tr>
+<td align="left"><code class="clickable-code" data-copy="whatis" title="Click to copy">whatis</code></td>
+<td align="left"><code class="clickable-code" data-copy="whatis <expr_or_concept>" title="Click to copy">whatis &#x3C;expr_or_concept></code></td>
+<td align="left">Explain mathematical concept or AST structure and suggest applicable built-in functions</td>
+</tr>
+<tr>
+<td align="left"><code class="clickable-code" data-copy="similar" title="Click to copy">similar</code></td>
+<td align="left"><code class="clickable-code" data-copy="similar(<expr>)" title="Click to copy">similar(&#x3C;expr>)</code> / <code class="clickable-code" data-copy="similar <expr>" title="Click to copy">similar &#x3C;expr></code></td>
+<td align="left">Find structurally similar expressions in session history using AST hashes</td>
+</tr>
+<tr>
+<td align="left"><code class="clickable-code" data-copy="save" title="Click to copy">save</code></td>
+<td align="left"><code class="clickable-code" data-copy="save <filepath>" title="Click to copy">save &#x3C;filepath></code></td>
+<td align="left">Persist current REPL session environment (variables and assumptions) to <code class="clickable-code" data-copy=".ihd" title="Click to copy">.ihd</code> file</td>
+</tr>
+<tr>
+<td align="left"><code class="clickable-code" data-copy="load" title="Click to copy">load</code></td>
+<td align="left"><code class="clickable-code" data-copy="load <filepath>" title="Click to copy">load &#x3C;filepath></code></td>
+<td align="left">Restore session environment from a saved <code class="clickable-code" data-copy=".ihd" title="Click to copy">.ihd</code> file</td>
+</tr>
+<tr>
+<td align="left"><code class="clickable-code" data-copy="clear" title="Click to copy">clear</code> / <code class="clickable-code" data-copy="reset" title="Click to copy">reset</code></td>
+<td align="left"><code class="clickable-code" data-copy="clear" title="Click to copy">clear</code> / <code class="clickable-code" data-copy="reset" title="Click to copy">reset</code></td>
+<td align="left">Reset all variables and assumptions in current session environment</td>
 </tr>
 <tr>
 <td align="left"><code class="clickable-code" data-copy="exit" title="Click to copy">exit</code> / <code class="clickable-code" data-copy="quit" title="Click to copy">quit</code></td>

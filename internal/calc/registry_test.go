@@ -180,3 +180,26 @@ func TestRegistry_SignaturesAndNames(t *testing.T) {
 		t.Errorf("expected LookupSignature to be case-insensitive")
 	}
 }
+
+func TestRegistry_AllFunctionsHaveExplicitSignatures(t *testing.T) {
+	allNames := AllFunctionNames()
+	var missing []string
+	for _, name := range allNames {
+		spec, ok := LookupFunction(name)
+		if !ok {
+			t.Errorf("expected LookupFunction(%q) to succeed", name)
+			continue
+		}
+		if len(spec.Args) > 0 {
+			continue
+		}
+		if _, ok := defaultFunctionArgs[strings.ToLower(spec.Name)]; ok {
+			continue
+		}
+		missing = append(missing, name)
+	}
+	if len(missing) > 0 {
+		t.Logf("Total missing signatures: %d\nMissing: %s", len(missing), strings.Join(missing, ", "))
+		t.Fail()
+	}
+}

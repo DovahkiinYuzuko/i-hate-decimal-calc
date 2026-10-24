@@ -571,7 +571,8 @@ func evaluateLineInternal(line string, ro runOptions, env *calc.Env, suppressOut
 
 	parsed, err := calc.ParseStatement(line)
 	if err != nil {
-		fmt.Fprintf(errOut, "%s%v\n", errPrefix, err)
+		diagMsg := FormatErrorWithDiagnostics(err, line)
+		fmt.Fprintf(errOut, "%s%s\n", errPrefix, diagMsg)
 		return err
 	}
 
@@ -602,7 +603,8 @@ func evaluateLineInternal(line string, ro runOptions, env *calc.Env, suppressOut
 		evaled, err = calc.EvalWithEnv(evalTarget, env)
 	}
 	if err != nil {
-		fmt.Fprintf(errOut, "%s%v\n", errPrefix, err)
+		diagMsg := FormatErrorWithDiagnostics(err, line)
+		fmt.Fprintf(errOut, "%s%s\n", errPrefix, diagMsg)
 		return err
 	}
 	if rel, ok := evaled.(*calc.RelOpNode); ok && (rel.Op == "==" || rel.Op == "!=") {

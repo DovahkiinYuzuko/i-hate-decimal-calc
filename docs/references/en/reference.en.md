@@ -399,7 +399,13 @@ Interactive control commands, high-contrast color themes, and real-time lexical 
 | `max-loop` | `max-loop <N>` / `max-loop` | Configure and display maximum iteration limit for loops, persisted to `~/.ihd/config.json` (default: -1: unlimited) |
 | `config loop` | `config loop` | Display current loop warning threshold and maximum iteration safety limit |
 | `vars` | `vars` | Displays all currently bound user variables in the active environment |
-| `help` | `help` | Prints concise built-in help and a summary of interactive commands |
+| `help` | `help` / `help <func>` | Display quick help or explicit argument signature and description for a function |
+| `search` | `search <keyword>` | Search built-in functions by name or localized description |
+| `whatis` | `whatis <expr_or_concept>` | Explain mathematical concept or AST structure and suggest applicable built-in functions |
+| `similar` | `similar(<expr>)` / `similar <expr>` | Find structurally similar expressions in session history using AST hashes |
+| `save` | `save <filepath>` | Persist current REPL session environment (variables and assumptions) to `.ihd` file |
+| `load` | `load <filepath>` | Restore session environment from a saved `.ihd` file |
+| `clear` / `reset` | `clear` / `reset` | Reset all variables and assumptions in current session environment |
 | `exit` / `quit` | `exit` / `quit` / `Ctrl+D` | Exits the interactive REPL session cleanly |
 | CLI Options | `ihd --theme light` / `--no-color` / `--warn-loop <N>` / `--max-loop <N>` | CLI startup flags to set initial color theme, disable color, or set loop thresholds |
 
