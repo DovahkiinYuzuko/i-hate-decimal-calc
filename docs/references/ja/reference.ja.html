@@ -2539,8 +2539,38 @@ M834 80h400000v40h-400000z"></path></svg></span></span></span><span class="vlist
 </tr>
 <tr>
 <td align="left"><code class="clickable-code" data-copy="help" title="クリックしてコピー">help</code></td>
-<td align="left"><code class="clickable-code" data-copy="help" title="クリックしてコピー">help</code></td>
-<td align="left">REPL 内簡易ヘルプおよび主要コマンド一覧を表示</td>
+<td align="left"><code class="clickable-code" data-copy="help" title="クリックしてコピー">help</code> / <code class="clickable-code" data-copy="help <関数名>" title="クリックしてコピー">help &#x3C;関数名></code></td>
+<td align="left">REPL 内簡易ヘルプおよび指定した組み込み関数の完全引数シグネチャ・説明を表示</td>
+</tr>
+<tr>
+<td align="left"><code class="clickable-code" data-copy="search" title="クリックしてコピー">search</code></td>
+<td align="left"><code class="clickable-code" data-copy="search <キーワード>" title="クリックしてコピー">search &#x3C;キーワード></code></td>
+<td align="left">関数名または説明文からキーワード部分一致検索を行い、該当する関数とシグネチャを一覧表示</td>
+</tr>
+<tr>
+<td align="left"><code class="clickable-code" data-copy="whatis" title="クリックしてコピー">whatis</code></td>
+<td align="left"><code class="clickable-code" data-copy="whatis <数式または概念>" title="クリックしてコピー">whatis &#x3C;数式または概念></code></td>
+<td align="left">指定された関数名・数学用語（楕円曲線、グレブナー基底など）や数式（方程式、多項式など）から適用可能な組み込み関数や数学概念を解説</td>
+</tr>
+<tr>
+<td align="left"><code class="clickable-code" data-copy="similar" title="クリックしてコピー">similar</code></td>
+<td align="left"><code class="clickable-code" data-copy="similar(<数式>)" title="クリックしてコピー">similar(&#x3C;数式>)</code> / <code class="clickable-code" data-copy="similar <数式>" title="クリックしてコピー">similar &#x3C;数式></code></td>
+<td align="left">履歴内の過去の入力から AST 構造ハッシュに基づいて類似する数式を検索・類似度順に表示</td>
+</tr>
+<tr>
+<td align="left"><code class="clickable-code" data-copy="save" title="クリックしてコピー">save</code></td>
+<td align="left"><code class="clickable-code" data-copy="save <ファイルパス>" title="クリックしてコピー">save &#x3C;ファイルパス></code></td>
+<td align="left">現在の REPL セッション環境（変数および仮定 conditions）を <code class="clickable-code" data-copy=".ihd" title="クリックしてコピー">.ihd</code> 形式で永続化保存</td>
+</tr>
+<tr>
+<td align="left"><code class="clickable-code" data-copy="load" title="クリックしてコピー">load</code></td>
+<td align="left"><code class="clickable-code" data-copy="load <ファイルパス>" title="クリックしてコピー">load &#x3C;ファイルパス></code></td>
+<td align="left">保存された <code class="clickable-code" data-copy=".ihd" title="クリックしてコピー">.ihd</code> ファイルからセッション環境を再現復元</td>
+</tr>
+<tr>
+<td align="left"><code class="clickable-code" data-copy="clear" title="クリックしてコピー">clear</code> / <code class="clickable-code" data-copy="reset" title="クリックしてコピー">reset</code></td>
+<td align="left"><code class="clickable-code" data-copy="clear" title="クリックしてコピー">clear</code> / <code class="clickable-code" data-copy="reset" title="クリックしてコピー">reset</code></td>
+<td align="left">セッション環境内のすべての変数および仮定を初期状態にリセット</td>
 </tr>
 <tr>
 <td align="left"><code class="clickable-code" data-copy="exit" title="クリックしてコピー">exit</code> / <code class="clickable-code" data-copy="quit" title="クリックしてコピー">quit</code></td>
