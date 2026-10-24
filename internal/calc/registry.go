@@ -222,6 +222,170 @@ var defaultFunctionArgs = map[string][]string{
 	"verify":           {"expr"},
 	"approx":           {"expr"},
 	"interval":         {"expr"},
+
+	// Advanced Algebra & Simplification
+	"apart":                 {"expr", "var"},
+	"together":              {"expr"},
+	"trig_expand":           {"expr"},
+	"trig_reduce":           {"expr"},
+	"alg_inv":               {"poly"},
+	"to_alg":                {"expr", "minpoly"},
+	"to_poly":               {"expr", "var"},
+	"poly_gcd":              {"a", "b", "var"},
+	"poly_lcm":              {"a", "b", "var"},
+	"resultant":             {"p1", "p2", "var"},
+	"groebner":              {"polys", "vars", "order"},
+	"ideal_intersection":    {"i1", "i2", "vars"},
+	"ideal_colon":           {"i1", "i2", "vars"},
+	"ideal_saturation":      {"i1", "i2", "vars"},
+	"ideal_radical":         {"ideal", "vars"},
+	"ideal_dimension":       {"ideal", "vars"},
+	"primary_decomposition": {"ideal", "vars"},
+	"primitive_element":     {"alpha1", "alpha2"},
+	"to_primitive_element":  {"expr", "prim"},
+	"min_poly":              {"elem", "vars"},
+	"minimal_polynomial":    {"elem", "var"},
+	"find_min_poly":         {"elem", "degree"},
+	"galois_group":          {"poly", "var"},
+	"is_solvable_by_radicals": {"poly", "var"},
+	"abelian_group_structure": {"matrix"},
+
+	// Matrix Decompositions & Linear Algebra
+	"eigenvals":         {"matrix"},
+	"eigenvects":        {"matrix"},
+	"lu":                {"matrix"},
+	"qr":                {"matrix"},
+	"cholesky":          {"matrix"},
+	"ldlt":              {"matrix"},
+	"pinv":              {"matrix"},
+	"tr":                {"matrix"},
+	"hnf":               {"matrix"},
+	"hnf_transform":     {"matrix"},
+	"snf":               {"matrix"},
+	"snf_transform":     {"matrix"},
+	"invariant_factors": {"matrix"},
+	"lll":               {"matrix", "delta"},
+
+	// Number Theory & Discrete Math
+	"is_prime":          {"n"},
+	"totient":           {"n"},
+	"inv_mod":           {"a", "m"},
+	"crt":               {"remainders", "moduli"},
+	"bernoulli":         {"n"},
+	"fib":               {"n"},
+	"fibonacci":         {"n"},
+	"digit_count":       {"n"},
+	"cfrac":             {"x"},
+	"from_cfrac":        {"terms"},
+	"solve_diophantine": {"eq", "vars"},
+	"pell":              {"d", "n"},
+	"solve_pell":        {"d", "n"},
+	"pell_solve":        {"d", "n"},
+	"bin":               {"n"},
+	"oct":               {"n"},
+	"hex":               {"n"},
+	"to_base":           {"n", "base"},
+	"from_base":         {"str", "base"},
+
+	// Complex Analysis & Special Functions
+	"arg":       {"z"},
+	"polar":     {"z"},
+	"polar_exp": {"z"},
+	"rect":      {"r", "theta"},
+	"gamma":     {"x"},
+	"beta":      {"x", "y"},
+	"zeta":      {"s"},
+	"erf":       {"x"},
+	"lambert_w": {"x", "branch"},
+	"residue":   {"expr", "var", "pole"},
+
+	// Integral Transforms & Summation
+	"laplace":         {"expr", "t", "s"},
+	"inv_laplace":     {"expr", "s", "t"},
+	"ztrans":          {"expr", "n", "z"},
+	"iztrans":         {"expr", "z", "n"},
+	"fourier_series":  {"expr", "var", "period", "terms"},
+	"gosper_sum":      {"expr", "var"},
+	"wz_cert":         {"expr", "n", "k"},
+	"risch_integrate": {"expr", "var"},
+
+	// Real Algebraic Roots & Intervals
+	"sturm":         {"poly", "var"},
+	"root_count":    {"poly", "var", "a", "b"},
+	"isolate_roots": {"poly", "var", "a", "b"},
+
+	// Elliptic Curves
+	"ec_torsion":    {"a", "b"},
+	"ec_rank_bound": {"a", "b"},
+	"ec_generators": {"a", "b"},
+	"ec_add":        {"p1", "p2", "a", "b"},
+	"ec_mul":        {"k", "p", "a", "b"},
+	"ec_p_order":    {"a", "b"},
+	"ec_p_trace":    {"a", "b"},
+	"ec_p_add":      {"p1", "p2", "a", "b"},
+	"ec_p_mul":      {"k", "p", "a", "b"},
+
+	// p-adic & Puiseux Series
+	"padic_val":    {"x", "p"},
+	"padic_norm":   {"x", "p"},
+	"padic_expand": {"x", "p", "n"},
+	"puiseux":      {"expr", "var", "point", "order"},
+
+	// Clifford Algebra & Quantum
+	"clifford_wedge":    {"a", "b", "p", "q", "r"},
+	"clifford_contract": {"a", "b", "p", "q", "r"},
+	"clifford_dual":     {"mv", "p", "q", "r"},
+	"quantum_equiv":     {"c1", "c2", "tolerance"},
+	"quantum_eval":      {"circuit", "state"},
+
+	// Optimization & Linear Programming
+	"lp_maximize": {"objective", "constraints", "vars", "method"},
+	"lp_minimize": {"objective", "constraints", "vars", "method"},
+
+	// Automated Theorem Proving & Geometry DSL
+	"geo_prove":        {"conjecture", "hypotheses", "method"},
+	"midpoint":         {"m", "a", "b"},
+	"collinear":        {"a", "b", "c"},
+	"parallel":         {"a", "b", "c", "d"},
+	"perpendicular":    {"a", "b", "c", "d"},
+	"equal_length":     {"a", "b", "c", "d"},
+	"equal_length_sq":  {"a", "b", "c", "d"},
+	"circle_concyclic": {"a", "b", "c", "d"},
+
+	// Probability & Statistics
+	"binom":    {"n", "p", "k"},
+	"geom":     {"p", "k"},
+	"hyper":    {"bigN", "bigK", "n", "k"},
+	"bayes":    {"prior", "likelihood", "evidence"},
+	"expect":   {"dist", "p1", "p2", "p3"},
+	"variance": {"dist", "p1", "p2", "p3"},
+	"stddev":   {"dist", "p1", "p2", "p3"},
+	"rand":     {"min", "max"},
+
+	// Programming Constructs & Collections
+	"map":       {"func", "list"},
+	"filter":    {"pred", "list"},
+	"range":     {"start", "stop", "step"},
+	"table":     {"expr", "var", "from", "to", "step"},
+	"for":       {"init", "cond", "update", "body"},
+	"lambda":    {"params", "body"},
+	"piecewise": {"cases", "otherwise"},
+
+	// Assumptions & Environment
+	"assume":            {"var", "domain"},
+	"unassume":          {"var"},
+	"assumptions":       {},
+	"clear_assumptions": {},
+
+	// Logic & Quantifiers
+	"forall": {"vars", "condition"},
+	"exists": {"vars", "condition"},
+
+	// Units & Physical Dimensions
+	"convert_unit": {"expr", "target_unit"},
+	"unit":         {"name"},
+	"u":            {"name"},
+	"delta":        {"expr"},
 }
 
 // AllFunctionNames returns a sorted list of all registered built-in function names.
