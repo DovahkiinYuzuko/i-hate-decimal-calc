@@ -17,28 +17,28 @@ func colorName(seq string) string {
 	switch seq {
 	case "":
 		return "[Default/Plain (None)]"
-	case "\x1B[96m":
+	case "\x1B[0;96m", "\x1B[96m":
 		return "Bright Cyan (Rainbow Depth 0)"
-	case "\x1B[95m":
+	case "\x1B[0;95m", "\x1B[95m":
 		return "Bright Magenta (Rainbow Depth 1)"
-	case "\x1B[92m":
+	case "\x1B[0;92m", "\x1B[92m":
 		return "Bright Green (Rainbow Depth 2)"
-	case "\x1B[94m":
+	case "\x1B[0;94m", "\x1B[94m":
 		return "Bright Blue (Rainbow Depth 3)"
-	case "\x1B[97;41m":
+	case "\x1B[0;97;41m", "\x1B[97;41m":
 		return "White on Red Background (Mismatch Alert)"
-	case "\x1B[94;1m":
+	case "\x1B[0;94;1m", "\x1B[94;1m":
 		return "Bold Bright Blue (Reserved Function)"
-	case "\x1B[36;1m":
+	case "\x1B[0;36;1m", "\x1B[36;1m":
 		return "Bold Cyan (CLI Command)"
-	case "\x1B[93m":
+	case "\x1B[0;93m", "\x1B[93m":
 		return "Bright Yellow (Number / Radix)"
-	case "\x1B[32m":
+	case "\x1B[0;32m", "\x1B[32m":
 		return "Green (String Literal)"
-	case "\x1B[37m":
+	case "\x1B[0;37m", "\x1B[37m":
 		return "Bright White (Operator)"
-	case "\x1B[96;2m":
-		return "Soft Cyan/Mint (Semantic Custom Variable)"
+	case "\x1B[0;36m", "\x1B[36m", "\x1B[96;2m":
+		return "Teal/Mint (Semantic Custom Variable)"
 	default:
 		return fmt.Sprintf("ANSI(%q)", seq)
 	}
@@ -99,25 +99,25 @@ func TestREPLColorTrace_Keystrokes(t *testing.T) {
 
 		// 最終フレームでの整合性アサーション
 		if i == len(fullInput) {
-			// factor (0..5): Bold Bright Blue
+			// factor (0..5): Bold Bright Blue with reset
 			for j := 0; j < 6; j++ {
-				if colorMap[j] != "\x1B[94;1m" {
-					t.Errorf("pos %d ('factor'): expected bold blue \x1B[94;1m, got %q", j, colorMap[j])
+				if colorMap[j] != "\x1B[0;94;1m" {
+					t.Errorf("pos %d ('factor'): expected bold blue \\x1B[0;94;1m, got %q", j, colorMap[j])
 				}
 			}
-			// '(' (6): Bright Cyan
-			if colorMap[6] != "\x1B[96m" {
-				t.Errorf("pos 6 ('('): expected cyan \x1B[96m, got %q", colorMap[6])
+			// '(' (6): Bright Cyan with reset
+			if colorMap[6] != "\x1B[0;96m" {
+				t.Errorf("pos 6 ('('): expected cyan \\x1B[0;96m, got %q", colorMap[6])
 			}
 			// '114514' (7..12): Bright Yellow (括弧と完全分離！)
 			for j := 7; j <= 12; j++ {
-				if colorMap[j] != "\x1B[93m" {
-					t.Errorf("pos %d ('114514'): expected yellow \x1B[93m, got %q", j, colorMap[j])
+				if colorMap[j] != "\x1B[0;93m" {
+					t.Errorf("pos %d ('114514'): expected yellow \\x1B[0;93m, got %q", j, colorMap[j])
 				}
 			}
-			// ')' (13): Bright Cyan
-			if colorMap[13] != "\x1B[96m" {
-				t.Errorf("pos 13 (')'): expected cyan \x1B[96m, got %q", colorMap[13])
+			// ')' (13): Bright Cyan with reset
+			if colorMap[13] != "\x1B[0;96m" {
+				t.Errorf("pos 13 (')'): expected cyan \\x1B[0;96m, got %q", colorMap[13])
 			}
 		}
 	}
@@ -148,7 +148,7 @@ func TestREPLColorTrace_Keystrokes(t *testing.T) {
 	env.Set("a", &calc.RationalNode{Val: big.NewRat(10, 1)})
 	logBuf.WriteString("\n【代入実行】 a = 10 を env に登録\n\n")
 
-	// 2-3: 代入後（a は定義済み変数として Soft Cyan、x は依然として未束縛記号で白）
+	// 2-3: 代入後（a は定義済み変数として Teal/Mint \x1B[0;36m、x は依然として未束縛記号で白）
 	logBuf.WriteString("【代入後 (a 定義済み)】\n")
 	framePost, colorMapPost := dumpKeystrokeFrame("sin(x + a)", env, "dark")
 	logBuf.WriteString(framePost)
@@ -157,9 +157,9 @@ func TestREPLColorTrace_Keystrokes(t *testing.T) {
 	if colorMapPost[4] != "" {
 		t.Errorf("代入後も未束縛の x は標準色のままであるべきですが、色がつきました: %q", colorMapPost[4])
 	}
-	// a (pos 8) だけが Soft Cyan (\x1B[96;2m) に光ること！
-	if colorMapPost[8] != "\x1B[96;2m" {
-		t.Errorf("代入後の a は Soft Cyan \x1B[96;2m になるべきですが、got %q", colorMapPost[8])
+	// a (pos 8) だけが Teal/Mint (\x1B[0;36m) に光ること！
+	if colorMapPost[8] != "\x1B[0;36m" {
+		t.Errorf("代入後の a は Teal/Mint \\x1B[0;36m になるべきですが、got %q", colorMapPost[8])
 	}
 	logBuf.WriteString("\n")
 
@@ -172,9 +172,9 @@ func TestREPLColorTrace_Keystrokes(t *testing.T) {
 	frameErr, colorMapErr := dumpKeystrokeFrame("(1+2]", nil, "dark")
 	logBuf.WriteString(frameErr)
 
-	// ']' (pos 4) は赤背景白文字 (\x1B[97;41m) であること
-	if colorMapErr[4] != "\x1B[97;41m" {
-		t.Errorf("pos 4 (']'): expected mismatch alert \x1B[97;41m, got %q", colorMapErr[4])
+	// ']' (pos 4) は赤背景白文字 (\x1B[0;97;41m) であること
+	if colorMapErr[4] != "\x1B[0;97;41m" {
+		t.Errorf("pos 4 (']'): expected mismatch alert \\x1B[0;97;41m, got %q", colorMapErr[4])
 	}
 
 	// =========================================================================
@@ -187,7 +187,6 @@ func TestREPLColorTrace_Keystrokes(t *testing.T) {
 	highlightsDark := BuildREPLHighlights("dark", nil)
 	hlSeq := readline.HighlightToColorSequence("sin(x+a)", "\x1B[0m", "\x1B[0m", highlightsDark, -1)
 
-	// 各文字のセル色シーケンスを取得
 	inputTight := "sin(x+a)"
 	var tightOutput strings.Builder
 	var lastColor readline.ColorInterface
@@ -201,16 +200,48 @@ func TestREPLColorTrace_Keystrokes(t *testing.T) {
 		fmt.Fprintf(&logBuf, "  pos %d: %q -> ColorSeq: %v\n", i, r, c)
 	}
 
-	// 括弧 '(' (pos 3) の直後の 'x' (pos 4) の直前で、確実に \x1B[0m が送出されていることを検証
 	renderedStr := tightOutput.String()
 	logBuf.WriteString(fmt.Sprintf("\n  端末レンダリング結果シーケンス: %q\n", renderedStr))
 
-	// 'x' の直前にリセットシーケンス \x1B[0m が存在することを確認（シアン色の漏洩を防止）
 	if !strings.Contains(renderedStr, "(\x1B[0mx") {
 		t.Errorf("括弧直後の 'x' の前に \\x1B[0m が出力されていません (色漏洩の危険): %q", renderedStr)
 	}
 
 	logBuf.WriteString("  [Bleed Guard]: '(' 直後の 'x' に対する DefaultColor: \"\\x1B[0m\" 送出確認完了\n\n")
+
+	// =========================================================================
+	// シナリオ 5 (issue-144): ユーザー定義変数直後の閉じ括弧・演算子への属性非リーク検証
+	// =========================================================================
+	logBuf.WriteString("[シナリオ 5] ユーザー変数 'a' 直後の ')' および '+' への属性リセット検証: '(a)+1'\n")
+	logBuf.WriteString(subSeparator)
+
+	hlSeqBleed := readline.HighlightToColorSequence("(a)+1", "\x1B[0m", "\x1B[0m", BuildREPLHighlights("dark", env), -1)
+	inputBleed := "(a)+1"
+	var bleedOutput strings.Builder
+	var lastBleedColor readline.ColorInterface
+	for i, r := range inputBleed {
+		c := hlSeqBleed.Next(r)
+		if lastBleedColor == nil || !c.Equals(lastBleedColor) {
+			lastBleedColor = c
+			_, _ = c.WriteTo(&bleedOutput)
+		}
+		bleedOutput.WriteRune(r)
+		fmt.Fprintf(&logBuf, "  pos %d: %q -> ColorSeq: %v\n", i, r, c)
+	}
+
+	bleedStr := bleedOutput.String()
+	logBuf.WriteString(fmt.Sprintf("\n  (a)+1 レンダリング結果: %q\n", bleedStr))
+
+	// ')' は \x1B[0;96m で始まるリセット付きシーケンスが出力されていること
+	if !strings.Contains(bleedStr, "\x1B[0;96m)") {
+		t.Errorf("')' の直前にリセット付きシーケンス \\x1B[0;96m が出力されていません: %q", bleedStr)
+	}
+	// '+' は \x1B[0;37m で始まるリセット付きシーケンスが出力されていること
+	if !strings.Contains(bleedStr, "\x1B[0;37m+") {
+		t.Errorf("'+' の直前にリセット付きシーケンス \\x1B[0;37m が出力されていません: %q", bleedStr)
+	}
+
+	logBuf.WriteString("  [Issue-144 Guard]: ユーザー変数後の ')' および '+' へのリセット属性付与確認完了\n\n")
 	logBuf.WriteString(separator)
 	logBuf.WriteString("  全キーストローク・カラーダンプ検証 SUCCESS\n")
 	logBuf.WriteString(separator)

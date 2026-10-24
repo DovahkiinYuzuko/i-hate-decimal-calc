@@ -283,6 +283,93 @@ func TestBuildREPLHighlights_ThemeSequencesAndColorSeparation(t *testing.T) {
 	}
 }
 
+func TestBuildREPLHighlights_AttributeResetPrefix(t *testing.T) {
+	env := calc.NewEnv()
+	themes := []string{"dark", "light"}
+
+	for _, theme := range themes {
+		highlights := BuildREPLHighlights(theme, env)
+		for _, h := range highlights {
+			seq := h.Sequence
+			if !strings.HasPrefix(seq, "\x1B[0;") && !strings.HasPrefix(seq, "\x1B[0m") {
+				t.Errorf("theme %s: sequence %q must start with reset prefix \\x1B[0;...m to avoid attribute bleed", theme, seq)
+			}
+		}
+	}
+}
+
+func TestBuildREPLHighlights_DarkCustomVarSeparation(t *testing.T) {
+	env := calc.NewEnv()
+	darkHighlights := BuildREPLHighlights("dark", env)
+
+	var customVarSeq, depth0Seq string
+	for _, h := range darkHighlights {
+		if m, ok := h.Pattern.(*FSMHighlightMatcher); ok {
+			if m.TargetType == TokenCustomVar {
+				customVarSeq = h.Sequence
+			}
+			if m.TargetType == TokenRainbow && m.TargetDepth == 0 {
+				depth0Seq = h.Sequence
+			}
+		}
+	}
+
+	if customVarSeq == "" || depth0Seq == "" {
+		t.Fatalf("expected customVarSeq and depth0Seq to be defined")
+	}
+
+	// TokenCustomVar in dark mode must not use Bright Cyan (96m) to avoid clash with Depth 0 bracket (96m)
+	if strings.Contains(customVarSeq, "96") {
+		t.Errorf("dark theme customVarSeq %q must not use Bright Cyan (96), should use Teal/Mint (36)", customVarSeq)
+	}
+}
+
+func TestLexerHighlightFSM_CaretOperatorAndRadixSeparation(t *testing.T) {
+	// 1. Single caret '^' in '2^3' or '2^x' must NOT be absorbed into TokenNumber.
+	// '^' must be TokenOp, 'x' must remain unbound (TokenNone).
+	input := "2^x + 10^sin(y)"
+	spans := TokenizeHighlightFSM(input, nil)
+
+	type spanCheck struct {
+		start, end int
+		tokType    TokenType
+	}
+
+	expected := []spanCheck{
+		{0, 1, TokenNumber},    // '2'
+		{1, 2, TokenOp},        // '^'
+		{4, 5, TokenOp},        // '+'
+		{6, 8, TokenNumber},    // '10'
+		{8, 9, TokenOp},        // '^'
+		{9, 12, TokenFunc},     // 'sin'
+		{12, 13, TokenRainbow}, // '('
+		{14, 15, TokenRainbow}, // ')'
+	}
+
+	for _, exp := range expected {
+		found := false
+		for _, s := range spans {
+			if s.Start == exp.start && s.End == exp.end {
+				found = true
+				if s.Type != exp.tokType {
+					t.Errorf("span at [%d:%d]: expected %v, got %v", exp.start, exp.end, exp.tokType, s.Type)
+				}
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected span [%d:%d] of type %v not found in spans: %v", exp.start, exp.end, exp.tokType, spans)
+		}
+	}
+
+	// 2. Double caret '^^' in '16^^FF' MUST be recognized as TokenNumber (Radix literal).
+	radixInput := "16^^FF"
+	radixSpans := TokenizeHighlightFSM(radixInput, nil)
+	if len(radixSpans) != 1 || radixSpans[0].Type != TokenNumber || radixSpans[0].Start != 0 || radixSpans[0].End != 6 {
+		t.Errorf("expected '16^^FF' to be a single TokenNumber span [0:6], got: %v", radixSpans)
+	}
+}
+
 func TestLexerHighlightFSM_TrailingEscape(t *testing.T) {
 	// Cases where a string literal ends with a single backslash or incomplete escape.
 	// Must NOT trigger index out of range panic.
