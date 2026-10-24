@@ -390,7 +390,32 @@ func (va *VariableAssumptions) Strings() []string {
 	return res
 }
 
-// ListAssumptions returns formatted strings of all active assumptions.
+// ExportStatements returns executable "assume ..." statements for all active assumptions in deterministic order.
+func (s *AssumptionStore) ExportStatements() []string {
+	if s == nil {
+		return nil
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	var varNames []string
+	for k := range s.vars {
+		varNames = append(varNames, k)
+	}
+	sort.Strings(varNames)
+
+	var stmts []string
+	for _, name := range varNames {
+		va := s.vars[name]
+		if va.State == StateConstrained {
+			for _, p := range va.Strings() {
+				stmts = append(stmts, fmt.Sprintf("assume(%s, %s)", name, p))
+			}
+		}
+	}
+	return stmts
+}
+
 func (s *AssumptionStore) ListAssumptions() []string {
 	if s == nil {
 		return nil

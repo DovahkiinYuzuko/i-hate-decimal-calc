@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -58,3 +59,31 @@ func TestREPL_PipedOutputHasNoANSIEscape(t *testing.T) {
 		t.Errorf("piped REPL output contains ANSI escape sequences: %q", outStr)
 	}
 }
+
+func TestREPL_SessionCommands(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("IHD_DIR", tmpDir)
+
+	sessionFile := filepath.Join(tmpDir, "saved_session.ihd")
+	escapedSessionFile := strings.ReplaceAll(sessionFile, "\\", "/")
+
+	input := "x = 100\nassume(y, positive)\nsave \"" + escapedSessionFile + "\"\nclear\nvars\nload \"" + escapedSessionFile + "\"\nvars\nsimilar(x + 1)\nexit\n"
+	in := strings.NewReader(input)
+	out := &bytes.Buffer{}
+	errOut := &bytes.Buffer{}
+
+	ro := runOptions{}
+	code := runREPL(in, out, errOut, ro)
+	if code != 0 {
+		t.Fatalf("runREPL returned non-zero code %d, err: %s", code, errOut.String())
+	}
+
+	outStr := out.String()
+	if !strings.Contains(outStr, "x = 100") {
+		t.Errorf("expected session load to restore x = 100, out:\n%s", outStr)
+	}
+	if !strings.Contains(outStr, "saved_session.ihd") {
+		t.Errorf("expected save/load confirmation in output, out:\n%s", outStr)
+	}
+}
+

@@ -62,6 +62,19 @@ func runREPL(in io.Reader, out, errOut io.Writer, ro runOptions) int {
 	}
 
 	history := simplehistory.New()
+	histPath, _ := GetHistoryFilePath()
+	if histPath != "" {
+		if pastLines, err := LoadHistoryLines(histPath, defaultMaxHistoryLines); err == nil {
+			for _, pl := range pastLines {
+				history.Add(pl)
+			}
+			// If loaded history was larger than limit, rotate on disk at startup
+			if len(pastLines) >= defaultMaxHistoryLines {
+				_ = SaveHistoryLines(histPath, pastLines, defaultMaxHistoryLines)
+			}
+		}
+	}
+
 	completionFSM := NewCompletionFSM(env)
 	editor := readline.Editor{
 		PromptWriter: func(w io.Writer) (int, error) {
@@ -112,13 +125,16 @@ func runREPL(in io.Reader, out, errOut io.Writer, ro runOptions) int {
 		}
 
 		history.Add(line)
+		if histPath != "" {
+			_ = AppendHistoryLine(histPath, line, defaultMaxHistoryLines)
+		}
 
 		if strings.EqualFold(line, "vars") {
 			printVars(env, ro, out)
 			continue
 		}
 
-		if handleREPLCommand(line, env, out) {
+		if handleREPLCommand(line, env, out, errOut) {
 			continue
 		}
 
@@ -175,7 +191,7 @@ func runScannerREPL(in io.Reader, out, errOut io.Writer, ro runOptions, env *cal
 			continue
 		}
 
-		if handleREPLCommand(line, env, out) {
+		if handleREPLCommand(line, env, out, errOut) {
 			continue
 		}
 
@@ -210,8 +226,76 @@ func printVars(env *calc.Env, ro runOptions, out io.Writer) {
 	}
 }
 
-func handleREPLCommand(line string, env *calc.Env, out io.Writer) bool {
+func handleREPLCommand(line string, env *calc.Env, out, errOut io.Writer) bool {
 	lowerLine := strings.ToLower(line)
+
+	if lowerLine == "clear" || lowerLine == "reset" {
+		env.Clear()
+		fmt.Fprintln(out, i18n.T("cli.repl_clear_success"))
+		return true
+	}
+
+	if strings.HasPrefix(lowerLine, "save ") || lowerLine == "save" {
+		arg := strings.TrimSpace(line[4:])
+		arg = strings.Trim(arg, "\"'")
+		if arg == "" {
+			fmt.Fprintln(out, i18n.T("cli.repl_save_missing_path"))
+			return true
+		}
+		if err := SaveSession(env, arg); err != nil {
+			fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
+		} else {
+			fmt.Fprintf(out, i18n.T("cli.repl_save_success")+"\n", arg)
+		}
+		return true
+	}
+
+	if strings.HasPrefix(lowerLine, "load ") || lowerLine == "load" {
+		arg := strings.TrimSpace(line[4:])
+		arg = strings.Trim(arg, "\"'")
+		if arg == "" {
+			fmt.Fprintln(out, i18n.T("cli.repl_load_missing_path"))
+			return true
+		}
+		if err := LoadSession(env, arg, out, errOut); err != nil {
+			fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
+		} else {
+			fmt.Fprintf(out, i18n.T("cli.repl_load_success")+"\n", arg)
+		}
+		return true
+	}
+
+	if strings.HasPrefix(lowerLine, "similar ") || strings.HasPrefix(lowerLine, "similar(") {
+		query := ""
+		if strings.HasPrefix(lowerLine, "similar(") && strings.HasSuffix(lowerLine, ")") {
+			query = strings.TrimSpace(line[8 : len(line)-1])
+		} else if strings.HasPrefix(lowerLine, "similar ") {
+			query = strings.TrimSpace(line[8:])
+		}
+		if query == "" {
+			fmt.Fprintln(out, i18n.T("cli.repl_similar_no_matches"))
+			return true
+		}
+
+		histPath, _ := GetHistoryFilePath()
+		var histLines []string
+		if histPath != "" {
+			histLines, _ = LoadHistoryLines(histPath, defaultMaxHistoryLines)
+		}
+
+		matches, err := FindSimilarExpressions(query, histLines, 5)
+		if err != nil || len(matches) == 0 {
+			fmt.Fprintln(out, i18n.T("cli.repl_similar_no_matches"))
+			return true
+		}
+
+		fmt.Fprintln(out, i18n.T("cli.repl_similar_header"))
+		for _, m := range matches {
+			fmt.Fprintf(out, "  - %s  (similarity: %.0f%%)\n", m.Expr, m.Score*100)
+		}
+		return true
+	}
+
 	if lowerLine == "config loop" || lowerLine == "loop" {
 		warnBig, maxBig, _ := env.GetIterationLimits()
 		warnStr := "100000"
