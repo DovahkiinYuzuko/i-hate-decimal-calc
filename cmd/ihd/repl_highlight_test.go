@@ -318,9 +318,14 @@ func TestBuildREPLHighlights_DarkCustomVarSeparation(t *testing.T) {
 		t.Fatalf("expected customVarSeq and depth0Seq to be defined")
 	}
 
-	// TokenCustomVar in dark mode must not use Bright Cyan (96m) to avoid clash with Depth 0 bracket (96m)
-	if strings.Contains(customVarSeq, "96") {
-		t.Errorf("dark theme customVarSeq %q must not use Bright Cyan (96), should use Teal/Mint (36)", customVarSeq)
+	// Depth 0 bracket must use Bright Magenta (95m) to ensure sharp contrast against off-white text
+	if !strings.Contains(depth0Seq, "95") {
+		t.Errorf("dark theme depth0Seq %q must use Bright Magenta (95) for contrast against default text", depth0Seq)
+	}
+
+	// TokenCustomVar in dark mode must use Teal/Mint (36m)
+	if !strings.Contains(customVarSeq, "36") {
+		t.Errorf("dark theme customVarSeq %q must use Teal/Mint (36)", customVarSeq)
 	}
 }
 

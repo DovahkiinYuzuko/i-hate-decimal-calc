@@ -337,17 +337,17 @@ func BuildREPLHighlights(theme string, env *calc.Env) []readline.Highlight {
 		seqCustomVar = "\x1B[0;36m"  // Teal / Cyan (Semantic defined variable)
 	} else {
 		// Dark Theme (Optimized for dark backgrounds and transparent photo terminals)
-		// Brackets rotate through Cyan, Magenta, Green, Blue
-		seqRainbow0 = "\x1B[0;96m"   // Bright Cyan
-		seqRainbow1 = "\x1B[0;95m"   // Bright Magenta
-		seqRainbow2 = "\x1B[0;92m"   // Bright Green
-		seqRainbow3 = "\x1B[0;94m"   // Bright Blue
+		// Brackets rotate through Magenta, Cyan, Green, Blue (starting with Magenta to ensure sharp contrast against off-white text)
+		seqRainbow0 = "\x1B[0;95m"   // Bright Magenta (Depth 0: high contrast against off-white text and Teal variables)
+		seqRainbow1 = "\x1B[0;96m"   // Bright Cyan (Depth 1)
+		seqRainbow2 = "\x1B[0;92m"   // Bright Green (Depth 2)
+		seqRainbow3 = "\x1B[0;94m"   // Bright Blue (Depth 3)
 		seqFunc = "\x1B[0;94;1m"     // Bold Bright Blue
 		seqCmd = "\x1B[0;36;1m"      // Bold Cyan
-		seqNumber = "\x1B[0;93m"     // Bright Yellow (Completely separated from rainbow cyan/magenta)
+		seqNumber = "\x1B[0;93m"     // Bright Yellow (Completely separated from rainbow magenta/cyan)
 		seqString = "\x1B[0;32m"     // Green
 		seqOp = "\x1B[0;37m"         // Bright White (Clear & readable on dark / transparent backgrounds)
-		seqCustomVar = "\x1B[0;36m"  // Teal / Mint (Semantic defined variable; separated from Depth 0 Bright Cyan 96m)
+		seqCustomVar = "\x1B[0;36m"  // Teal / Mint (Semantic defined variable; separated from Depth 0 Magenta and white text)
 	}
 
 	// Order of highlights: operators, numbers, strings, commands, funcs, custom variables, rainbow, mismatch

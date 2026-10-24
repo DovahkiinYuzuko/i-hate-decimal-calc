@@ -17,10 +17,10 @@ func colorName(seq string) string {
 	switch seq {
 	case "":
 		return "[Default/Plain (None)]"
-	case "\x1B[0;96m", "\x1B[96m":
-		return "Bright Cyan (Rainbow Depth 0)"
 	case "\x1B[0;95m", "\x1B[95m":
-		return "Bright Magenta (Rainbow Depth 1)"
+		return "Bright Magenta (Rainbow Depth 0)"
+	case "\x1B[0;96m", "\x1B[96m":
+		return "Bright Cyan (Rainbow Depth 1)"
 	case "\x1B[0;92m", "\x1B[92m":
 		return "Bright Green (Rainbow Depth 2)"
 	case "\x1B[0;94m", "\x1B[94m":
@@ -105,9 +105,9 @@ func TestREPLColorTrace_Keystrokes(t *testing.T) {
 					t.Errorf("pos %d ('factor'): expected bold blue \\x1B[0;94;1m, got %q", j, colorMap[j])
 				}
 			}
-			// '(' (6): Bright Cyan with reset
-			if colorMap[6] != "\x1B[0;96m" {
-				t.Errorf("pos 6 ('('): expected cyan \\x1B[0;96m, got %q", colorMap[6])
+			// '(' (6): Bright Magenta with reset (Depth 0: high contrast against white text)
+			if colorMap[6] != "\x1B[0;95m" {
+				t.Errorf("pos 6 ('('): expected magenta \\x1B[0;95m, got %q", colorMap[6])
 			}
 			// '114514' (7..12): Bright Yellow (括弧と完全分離！)
 			for j := 7; j <= 12; j++ {
@@ -115,9 +115,9 @@ func TestREPLColorTrace_Keystrokes(t *testing.T) {
 					t.Errorf("pos %d ('114514'): expected yellow \\x1B[0;93m, got %q", j, colorMap[j])
 				}
 			}
-			// ')' (13): Bright Cyan with reset
-			if colorMap[13] != "\x1B[0;96m" {
-				t.Errorf("pos 13 (')'): expected cyan \\x1B[0;96m, got %q", colorMap[13])
+			// ')' (13): Bright Magenta with reset
+			if colorMap[13] != "\x1B[0;95m" {
+				t.Errorf("pos 13 (')'): expected magenta \\x1B[0;95m, got %q", colorMap[13])
 			}
 		}
 	}
@@ -232,9 +232,9 @@ func TestREPLColorTrace_Keystrokes(t *testing.T) {
 	bleedStr := bleedOutput.String()
 	logBuf.WriteString(fmt.Sprintf("\n  (a)+1 レンダリング結果: %q\n", bleedStr))
 
-	// ')' は \x1B[0;96m で始まるリセット付きシーケンスが出力されていること
-	if !strings.Contains(bleedStr, "\x1B[0;96m)") {
-		t.Errorf("')' の直前にリセット付きシーケンス \\x1B[0;96m が出力されていません: %q", bleedStr)
+	// ')' は \x1B[0;95m で始まるリセット付きシーケンスが出力されていること (Depth 0 Magenta)
+	if !strings.Contains(bleedStr, "\x1B[0;95m)") {
+		t.Errorf("')' の直前にリセット付きシーケンス \\x1B[0;95m が出力されていません: %q", bleedStr)
 	}
 	// '+' は \x1B[0;37m で始まるリセット付きシーケンスが出力されていること
 	if !strings.Contains(bleedStr, "\x1B[0;37m+") {
