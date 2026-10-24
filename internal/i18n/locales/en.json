@@ -179,7 +179,8 @@
     "repl_warn_loop_set": "Warning iteration limit set to %s (saved).",
     "repl_welcome": "ihd: Exact Arithmetic Calculator",
     "replay_failure": "Proof certificate verification failed: %s",
-    "replay_success": "Proof certificate verified successfully: %s"
+    "replay_success": "Proof certificate verified successfully: %s",
+    "err_did_you_mean": "Did you mean '%s'?"
   },
   "complex": {
     "err_cannot_determine_sign_of_complex": "cannot determine sign of complex components (re=%s, im=%s)"
