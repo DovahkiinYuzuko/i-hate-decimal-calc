@@ -296,6 +296,29 @@ func handleREPLCommand(line string, env *calc.Env, out, errOut io.Writer) bool {
 		return true
 	}
 
+	if lowerLine == "help" || strings.HasPrefix(lowerLine, "help ") {
+		arg := strings.TrimSpace(line[4:])
+		PrintHelpCommand(arg, out)
+		return true
+	}
+
+	if strings.HasPrefix(lowerLine, "search ") || lowerLine == "search" {
+		query := strings.TrimSpace(line[6:])
+		PrintSearchCommand(query, out)
+		return true
+	}
+
+	if strings.HasPrefix(lowerLine, "whatis ") || strings.HasPrefix(lowerLine, "whatis(") || lowerLine == "whatis" {
+		target := ""
+		if strings.HasPrefix(lowerLine, "whatis(") && strings.HasSuffix(lowerLine, ")") {
+			target = strings.TrimSpace(line[7 : len(line)-1])
+		} else if strings.HasPrefix(lowerLine, "whatis ") {
+			target = strings.TrimSpace(line[7:])
+		}
+		PrintWhatisCommand(target, out)
+		return true
+	}
+
 	if lowerLine == "config loop" || lowerLine == "loop" {
 		warnBig, maxBig, _ := env.GetIterationLimits()
 		warnStr := "100000"
