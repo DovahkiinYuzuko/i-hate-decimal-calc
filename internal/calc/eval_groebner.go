@@ -624,6 +624,7 @@ func buchberger(initial []*MPoly, order MonomialOrder) ([]*MPoly, error) {
 
 		p1 := G[cp.i]
 		p2 := G[cp.j]
+		EmitSearchEvent(EventGroebnerPairSelected, "buchberger", map[string]any{"iter": iter, "pair_i": cp.i, "pair_j": cp.j, "sugar": cp.sugar})
 
 		// Dynamic check of Buchberger Criterion 2 (Chain Criterion):
 		// If there exists some k such that LM(G[k]) divides lcm(LM(p1), LM(p2))

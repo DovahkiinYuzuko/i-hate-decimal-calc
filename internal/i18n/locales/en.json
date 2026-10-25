@@ -181,7 +181,26 @@
     "replay_failure": "Proof certificate verification failed: %s",
     "replay_success": "Proof certificate verified successfully: %s",
     "err_did_you_mean": "Did you mean '%s'?",
-    "default_fn_desc": "Built-in function %s"
+    "default_fn_desc": "Built-in function %s",
+    "flag_step": "Interactively step through derivation and algebraic transformation steps",
+    "flag_trace": "Output internal search process events (Buchberger, CAD, Risch) as structured JSON",
+    "subcmd_diff": "Compare two ihd scripts or math expressions for syntactic and semantic equality",
+    "repl_prove_missing_expr": "Usage: prove <expression>",
+    "repl_step_header": "--- Derivation Step %d / %d ---",
+    "repl_step_rule": "Rule: %s",
+    "repl_step_relation": "Relation: %s",
+    "repl_step_before": "Before: %s",
+    "repl_step_after": "After:  %s",
+    "repl_step_nav_hint": "[Enter: Next | b: Back | q: Quit | t: Typst | l: Lean | ?: Help]",
+    "repl_step_completed": "Derivation walkthrough completed.",
+    "repl_step_help": "Navigation:\n  Enter / n : Next step\n  b         : Previous step\n  t         : Print derivation in Typst format\n  l         : Print derivation as Lean 4 proof\n  q         : Exit step explorer",
+    "diff_header": "Semantic Diff: %s <-> %s",
+    "diff_identical": "Identical: Both scripts are syntactically and semantically identical.",
+    "diff_stat_identical": "IDENTICAL",
+    "diff_stat_equivalent": "EQUIVALENT",
+    "diff_stat_changed": "CHANGED",
+    "diff_stat_added": "ADDED",
+    "diff_stat_removed": "REMOVED"
   },
   "complex": {
     "err_cannot_determine_sign_of_complex": "cannot determine sign of complex components (re=%s, im=%s)"
@@ -1164,4 +1183,4 @@
     "verify_fwd_reconstructs": "Inverse Z-transform verified: forward Z-transform reconstructs frequency-domain expression",
     "verify_pfd_residue_match": "Inverse Z-transform verified: matches partial fraction decomposition and residue expansion"
   }
-}
+}

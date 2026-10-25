@@ -467,6 +467,9 @@ ihd --verify "convert_unit(100 [km/h], m/s)"
 | `--pretty`           | 分数線や根号を複数行アスキーアートで組版表示する2Dプリティプリント。<br>`ihd --pretty "1/2 + sqrt(2)/2"`                                                               |
 | `--deg`              | 三角関数および逆三角関数を度数法（Degree）として解釈・計算。<br>`ihd --deg "sin(30) + cos(60)"` $\to$ `1`                                                              |
 | `--explain`          | 計算過程（有理化・二重根号・微分則・行列分解等）をツリー形式の途中式として表示。<br>`ihd --explain "1 / (sqrt(2) + 1)"` |
+| `--step`             | 計算・証明ステップを対話的に1ステップずつ閲覧・実行（REPL内では `prove <expr>` コマンドとしても利用可能）。<br>`ihd --step "expand((x + 1)^3)"` |
+| `--trace`            | Buchberger法のS-多項式選択、CADセル分割、Risch拡大タワー等の内部アルゴリズム探索過程を構造化JSONとしてダンプ。<br>`ihd --trace "groebner([x^2 - y, x^3 - z], [x, y, z])"` |
+| `diff <f1> <f2>`     | 2つのihdスクリプトまたは数式を比較し、展開・因数分解による等価性（`EQUIVALENT`）と数学的相違（`CHANGED`）を判定する意味論的差分。<br>`ihd diff script1.ihd script2.ihd` |
 | `--verify`           | 計算結果（因数分解、逆行列、微積分、ODE、幾何証明等）に対し、定義式や導関数に基づく逆算検算を行い、残差が0であることを確認。<br>`ihd --verify "integrate(1/(x^2 + 1), x)"` $\to$ `atan(x)`<br>`[VERIFIED: diff(F, x) - f == 0]` |
 | `--certificate [file]` | 計算結果と導出ステップ列を証明書 JSON（`ihd-proof-trace-v1`）として出力またはファイルへ保存。<br>`ihd --certificate "factor(x^2 - 1)"`<br>`ihd --certificate cert.json "factor(x^2 - 1)"` |
 | `--replay <file>`    | 保存された証明書 JSON ファイルを読み込み、各ステップの残差が0かを再検証（本体から分離された独立検証器 `go run ./tools/micro-verifier <file>` でも検証可能）。<br>`ihd --replay cert.json` |

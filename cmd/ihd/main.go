@@ -30,6 +30,8 @@ type runOptions struct {
 	pretty        bool
 	deg           bool
 	explain       bool
+	step          bool
+	trace         bool
 	verify        bool
 	lean          bool
 	leanFile      string
@@ -67,7 +69,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 			continue
 		}
 		switch a {
-		case "-ascii", "--ascii", "-approx", "--approx", "-latex", "--latex", "-typst", "--typst", "-pretty", "--pretty", "-deg", "--deg", "-explain", "--explain", "-verify", "--verify", "-lean", "--lean", "-h", "--help", "-v", "--version", "-version", "--no-update-check", "-no-update-check", "-i", "--i", "-interval", "--interval", "-no-color", "--no-color":
+		case "-ascii", "--ascii", "-approx", "--approx", "-latex", "--latex", "-typst", "--typst", "-pretty", "--pretty", "-deg", "--deg", "-explain", "--explain", "-verify", "--verify", "-lean", "--lean", "-h", "--help", "-v", "--version", "-version", "--no-update-check", "-no-update-check", "-i", "--i", "-interval", "--interval", "-no-color", "--no-color", "-step", "--step", "-trace", "--trace":
 			flagArgs = append(flagArgs, a)
 		default:
 			exprArgs = append(exprArgs, a)
@@ -102,6 +104,8 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 	prettyFlag := fs.Bool("pretty", false, i18n.T("cli.flag_pretty"))
 	degFlag := fs.Bool("deg", false, i18n.T("cli.flag_deg"))
 	explainFlag := fs.Bool("explain", false, i18n.T("cli.flag_explain"))
+	stepFlag := fs.Bool("step", false, i18n.T("cli.flag_step"))
+	traceFlag := fs.Bool("trace", false, i18n.T("cli.flag_trace"))
 	verifyFlag := fs.Bool("verify", false, i18n.T("cli.flag_verify"))
 	certificateFlag := fs.String("certificate", "", i18n.T("cli.flag_certificate"))
 	replayFlag := fs.String("replay", "", i18n.T("cli.flag_replay"))
@@ -173,6 +177,8 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 		pretty:        *prettyFlag || fmtMode == "pretty",
 		deg:           *degFlag,
 		explain:       *explainFlag,
+		step:          *stepFlag,
+		trace:         *traceFlag,
 		verify:        *verifyFlag,
 		certFile:      *certificateFlag,
 		replayFile:    *replayFlag,
@@ -206,6 +212,15 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 	}
 
 	if len(exprArgs) > 0 {
+		// 0. Explicit 'diff' subcommand: ihd diff <file1.ihd> <file2.ihd>
+		if exprArgs[0] == "diff" {
+			if len(exprArgs) < 3 {
+				fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), "Usage: ihd diff <file1.ihd> <file2.ihd>")
+				return 1
+			}
+			return runDiff(exprArgs[1], exprArgs[2], out, errOut)
+		}
+
 		// 1. Explicit 'run' subcommand: ihd run <file.ihd> [flags]
 		if exprArgs[0] == "run" {
 			if len(exprArgs) < 2 {
@@ -270,7 +285,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 			printVars(env, ro, bufOut)
 			continue
 		}
-		if handleREPLCommand(line, env, bufOut, errOut) {
+		if handleREPLCommand(line, env, in, bufOut, errOut) {
 			continue
 		}
 		lowerLine := strings.ToLower(line)
@@ -488,6 +503,19 @@ func handleEvaluationOutputs(origNode, evaled calc.Node, steps []calc.Pedagogica
 	if suppressOutput {
 		return
 	}
+	if ro.trace {
+		if c := calc.GetActiveSearchCollector(); c != nil {
+			_ = c.DumpJSON(out)
+			return
+		}
+	}
+	if ro.step {
+		if tracer := env.GetLastTrace(); tracer != nil && tracer.Root() != nil {
+			explorer := provenance.NewStepExplorer(tracer.Root(), os.Stdin, out)
+			_ = explorer.Run()
+			return
+		}
+	}
 	if ro.explain {
 		renderExplainOutput(origNode, evaled, steps, line, ro, env, out)
 	} else {
@@ -597,7 +625,14 @@ func evaluateLineInternal(line string, ro runOptions, env *calc.Env, suppressOut
 
 	var evaled calc.Node
 	var steps []calc.PedagogicalStep
-	if ro.explain {
+	var searchCollector *calc.MemorySearchTraceCollector
+	if ro.trace {
+		searchCollector = calc.NewMemorySearchTraceCollector()
+		calc.SetActiveSearchCollector(searchCollector)
+		defer calc.SetActiveSearchCollector(nil)
+	}
+
+	if ro.explain || ro.step {
 		evaled, steps, err = calc.EvalWithTraceAndEnv(evalTarget, env)
 	} else {
 		evaled, err = calc.EvalWithEnv(evalTarget, env)
