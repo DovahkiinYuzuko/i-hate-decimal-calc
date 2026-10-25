@@ -13,6 +13,7 @@ import (
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc"
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/provenance"
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/updater"
 	"github.com/nyaosorg/go-readline-ny"
 	"github.com/nyaosorg/go-readline-ny/keys"
@@ -134,7 +135,7 @@ func runREPL(in io.Reader, out, errOut io.Writer, ro runOptions) int {
 			continue
 		}
 
-		if handleREPLCommand(line, env, out, errOut) {
+		if handleREPLCommand(line, env, in, nil, out, errOut) {
 			continue
 		}
 
@@ -148,7 +149,7 @@ func runREPL(in io.Reader, out, errOut io.Writer, ro runOptions) int {
 			continue
 		}
 
-		_ = evaluateLineWithEnv(line, ro, env, out, errOut)
+		_ = evaluateLineWithEnv(line, ro, env, in, out, errOut)
 	}
 
 	return 0
@@ -191,7 +192,7 @@ func runScannerREPL(in io.Reader, out, errOut io.Writer, ro runOptions, env *cal
 			continue
 		}
 
-		if handleREPLCommand(line, env, out, errOut) {
+		if handleREPLCommand(line, env, in, scanner, out, errOut) {
 			continue
 		}
 
@@ -199,7 +200,7 @@ func runScannerREPL(in io.Reader, out, errOut io.Writer, ro runOptions, env *cal
 			continue
 		}
 
-		_ = evaluateLineWithEnv(line, ro, env, out, errOut)
+		_ = evaluateLineWithEnv(line, ro, env, in, out, errOut)
 	}
 	if err := scanner.Err(); err != nil {
 		fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
@@ -226,7 +227,7 @@ func printVars(env *calc.Env, ro runOptions, out io.Writer) {
 	}
 }
 
-func handleREPLCommand(line string, env *calc.Env, out, errOut io.Writer) bool {
+func handleREPLCommand(line string, env *calc.Env, in io.Reader, scanner provenance.LineScanner, out, errOut io.Writer) bool {
 	lowerLine := strings.ToLower(line)
 
 	if lowerLine == "clear" || lowerLine == "reset" {
@@ -293,6 +294,48 @@ func handleREPLCommand(line string, env *calc.Env, out, errOut io.Writer) bool {
 		for _, m := range matches {
 			fmt.Fprintf(out, "  - %s  (similarity: %.0f%%)\n", m.Expr, m.Score*100)
 		}
+		return true
+	}
+
+	if strings.HasPrefix(lowerLine, "prove ") || strings.HasPrefix(lowerLine, "prove(") || lowerLine == "prove" {
+		exprStr := ""
+		if strings.HasPrefix(lowerLine, "prove(") && strings.HasSuffix(lowerLine, ")") {
+			exprStr = strings.TrimSpace(line[6 : len(line)-1])
+		} else if strings.HasPrefix(lowerLine, "prove ") {
+			exprStr = strings.TrimSpace(line[6:])
+		}
+		if exprStr == "" {
+			fmt.Fprintln(out, i18n.T("cli.repl_prove_missing_expr"))
+			return true
+		}
+
+		node, err := calc.Parse(exprStr)
+		if err != nil {
+			fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
+			return true
+		}
+
+		_, root, evalErr := calc.EvalWithProvenanceAndEnv(node, env)
+		if evalErr != nil {
+			fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), evalErr)
+			return true
+		}
+		if root == nil {
+			fmt.Fprintln(out, i18n.T("cli.repl_step_completed"))
+			return true
+		}
+
+		var explorer *provenance.StepExplorer
+		if scanner != nil {
+			explorer = provenance.NewStepExplorerWithScanner(root, scanner, out)
+		} else {
+			inputReader := in
+			if inputReader == nil {
+				inputReader = os.Stdin
+			}
+			explorer = provenance.NewStepExplorer(root, inputReader, out)
+		}
+		_ = explorer.Run()
 		return true
 	}
 

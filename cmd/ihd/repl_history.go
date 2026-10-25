@@ -228,7 +228,7 @@ func LoadSession(env *calc.Env, filePath string, out, errOut io.Writer) error {
 		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "//") {
 			continue
 		}
-		if err := evaluateLineInternal(line, ro, env, true, out, errOut, fmt.Sprintf("%s:%d: ", filePath, lineNum)); err != nil {
+		if err := evaluateLineInternal(line, ro, env, true, nil, out, errOut, fmt.Sprintf("%s:%d: ", filePath, lineNum)); err != nil {
 			if loadErr == nil {
 				loadErr = fmt.Errorf("error loading line %d: %w", lineNum, err)
 			}

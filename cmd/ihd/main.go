@@ -30,6 +30,8 @@ type runOptions struct {
 	pretty        bool
 	deg           bool
 	explain       bool
+	step          bool
+	trace         bool
 	verify        bool
 	lean          bool
 	leanFile      string
@@ -67,7 +69,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 			continue
 		}
 		switch a {
-		case "-ascii", "--ascii", "-approx", "--approx", "-latex", "--latex", "-typst", "--typst", "-pretty", "--pretty", "-deg", "--deg", "-explain", "--explain", "-verify", "--verify", "-lean", "--lean", "-h", "--help", "-v", "--version", "-version", "--no-update-check", "-no-update-check", "-i", "--i", "-interval", "--interval", "-no-color", "--no-color":
+		case "-ascii", "--ascii", "-approx", "--approx", "-latex", "--latex", "-typst", "--typst", "-pretty", "--pretty", "-deg", "--deg", "-explain", "--explain", "-verify", "--verify", "-lean", "--lean", "-h", "--help", "-v", "--version", "-version", "--no-update-check", "-no-update-check", "-i", "--i", "-interval", "--interval", "-no-color", "--no-color", "-step", "--step", "-trace", "--trace":
 			flagArgs = append(flagArgs, a)
 		default:
 			exprArgs = append(exprArgs, a)
@@ -102,6 +104,8 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 	prettyFlag := fs.Bool("pretty", false, i18n.T("cli.flag_pretty"))
 	degFlag := fs.Bool("deg", false, i18n.T("cli.flag_deg"))
 	explainFlag := fs.Bool("explain", false, i18n.T("cli.flag_explain"))
+	stepFlag := fs.Bool("step", false, i18n.T("cli.flag_step"))
+	traceFlag := fs.Bool("trace", false, i18n.T("cli.flag_trace"))
 	verifyFlag := fs.Bool("verify", false, i18n.T("cli.flag_verify"))
 	certificateFlag := fs.String("certificate", "", i18n.T("cli.flag_certificate"))
 	replayFlag := fs.String("replay", "", i18n.T("cli.flag_replay"))
@@ -173,6 +177,8 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 		pretty:        *prettyFlag || fmtMode == "pretty",
 		deg:           *degFlag,
 		explain:       *explainFlag,
+		step:          *stepFlag,
+		trace:         *traceFlag,
 		verify:        *verifyFlag,
 		certFile:      *certificateFlag,
 		replayFile:    *replayFlag,
@@ -206,6 +212,15 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 	}
 
 	if len(exprArgs) > 0 {
+		// 0. Explicit 'diff' subcommand: ihd diff <file1.ihd|expr1> <file2.ihd|expr2>
+		if exprArgs[0] == "diff" {
+			if len(exprArgs) < 3 {
+				fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), i18n.T("cli.diff_usage"))
+				return 1
+			}
+			return runDiff(exprArgs[1], exprArgs[2], out, errOut)
+		}
+
 		// 1. Explicit 'run' subcommand: ihd run <file.ihd> [flags]
 		if exprArgs[0] == "run" {
 			if len(exprArgs) < 2 {
@@ -238,7 +253,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 
 		// 3. One-shot mode: join all non-flag arguments as the expression
 		expr := strings.Join(exprArgs, " ")
-		if err := evaluateLine(expr, ro, out, errOut); err != nil {
+		if err := evaluateLine(expr, ro, in, out, errOut); err != nil {
 			return 1
 		}
 		return 0
@@ -270,7 +285,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 			printVars(env, ro, bufOut)
 			continue
 		}
-		if handleREPLCommand(line, env, bufOut, errOut) {
+		if handleREPLCommand(line, env, in, scanner, bufOut, errOut) {
 			continue
 		}
 		lowerLine := strings.ToLower(line)
@@ -323,7 +338,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 			continue
 		}
 
-		if err := evaluateLineWithEnv(line, ro, env, bufOut, errOut); err != nil {
+		if err := evaluateLineWithEnv(line, ro, env, in, bufOut, errOut); err != nil {
 			hadError = true
 		}
 	}
@@ -456,9 +471,9 @@ func ensureEnvIterationLimits(env *calc.Env, ro runOptions, errOut io.Writer) {
 	}
 }
 
-func evaluateLine(line string, ro runOptions, out, errOut io.Writer) error {
+func evaluateLine(line string, ro runOptions, in io.Reader, out, errOut io.Writer) error {
 	env := calc.NewEnv()
-	return evaluateLineWithEnv(line, ro, env, out, errOut)
+	return evaluateLineWithEnv(line, ro, env, in, out, errOut)
 }
 
 func renderExplainOutput(origNode, evaled calc.Node, steps []calc.PedagogicalStep, line string, ro runOptions, env *calc.Env, out io.Writer) {
@@ -484,8 +499,28 @@ func renderExplainOutput(origNode, evaled calc.Node, steps []calc.PedagogicalSte
 	fmt.Fprint(out, calc.FormatTrace(line, steps, evaled))
 }
 
-func handleEvaluationOutputs(origNode, evaled calc.Node, steps []calc.PedagogicalStep, line string, ro runOptions, env *calc.Env, suppressOutput bool, out, errOut io.Writer) {
+func handleEvaluationOutputs(origNode, evaled calc.Node, steps []calc.PedagogicalStep, line string, ro runOptions, env *calc.Env, suppressOutput bool, in io.Reader, out, errOut io.Writer) {
 	if suppressOutput {
+		return
+	}
+	if ro.trace {
+		if c := calc.GetActiveSearchCollector(); c != nil {
+			_ = c.DumpJSON(out)
+			return
+		}
+	}
+	if ro.step {
+		tracer := env.GetLastTrace()
+		if tracer == nil || tracer.Root() == nil {
+			fmt.Fprintln(out, i18n.T("cli.repl_step_completed"))
+			return
+		}
+		inputReader := in
+		if inputReader == nil {
+			inputReader = os.Stdin
+		}
+		explorer := provenance.NewStepExplorer(tracer.Root(), inputReader, out)
+		_ = explorer.Run()
 		return
 	}
 	if ro.explain {
@@ -553,7 +588,7 @@ func handleEvaluationOutputs(origNode, evaled calc.Node, steps []calc.Pedagogica
 	}
 }
 
-func evaluateLineInternal(line string, ro runOptions, env *calc.Env, suppressOutput bool, out, errOut io.Writer, errPrefix string) error {
+func evaluateLineInternal(line string, ro runOptions, env *calc.Env, suppressOutput bool, in io.Reader, out, errOut io.Writer, errPrefix string) error {
 	lowerLine := strings.ToLower(line)
 	if strings.HasPrefix(lowerLine, "explain ") || strings.HasPrefix(lowerLine, "steps ") {
 		parts := strings.SplitN(line, " ", 2)
@@ -597,7 +632,18 @@ func evaluateLineInternal(line string, ro runOptions, env *calc.Env, suppressOut
 
 	var evaled calc.Node
 	var steps []calc.PedagogicalStep
-	if ro.explain {
+	var searchCollector *calc.MemorySearchTraceCollector
+	if ro.trace {
+		searchCollector = calc.NewMemorySearchTraceCollector()
+		env.SearchTracer = searchCollector
+		calc.SetActiveSearchCollector(searchCollector)
+		defer func() {
+			env.SearchTracer = nil
+			calc.SetActiveSearchCollector(nil)
+		}()
+	}
+
+	if ro.explain || ro.step {
 		evaled, steps, err = calc.EvalWithTraceAndEnv(evalTarget, env)
 	} else {
 		evaled, err = calc.EvalWithEnv(evalTarget, env)
@@ -617,13 +663,13 @@ func evaluateLineInternal(line string, ro runOptions, env *calc.Env, suppressOut
 	}
 	env.Set("ans", evaled)
 
-	handleEvaluationOutputs(evalTarget, evaled, steps, line, ro, env, suppressOutput, out, errOut)
+	handleEvaluationOutputs(evalTarget, evaled, steps, line, ro, env, suppressOutput, in, out, errOut)
 	return nil
 }
 
-func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut io.Writer) error {
+func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, in io.Reader, out, errOut io.Writer) error {
 	ensureEnvIterationLimits(env, ro, errOut)
-	return evaluateLineInternal(line, ro, env, false, out, errOut, i18n.T("cli.error_prefix"))
+	return evaluateLineInternal(line, ro, env, false, in, out, errOut, i18n.T("cli.error_prefix"))
 }
 
 func runScriptFile(filePath string, ro runOptions, out, errOut io.Writer) int {
@@ -692,7 +738,7 @@ func runScriptFile(filePath string, ro runOptions, out, errOut io.Writer) int {
 
 func executeScriptLine(line string, ro runOptions, env *calc.Env, suppressOutput bool, out, errOut io.Writer, filePath string, lineNum int) error {
 	prefix := fmt.Sprintf("%s:%d: ", filePath, lineNum)
-	return evaluateLineInternal(line, ro, env, suppressOutput, out, errOut, prefix)
+	return evaluateLineInternal(line, ro, env, suppressOutput, nil, out, errOut, prefix)
 }
 
 func saveLeanProofFile(path, code string) error {
