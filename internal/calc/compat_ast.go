@@ -83,6 +83,8 @@ type (
 	UnaryOpNode         = ast.UnaryOpNode
 	VarNode             = ast.VarNode
 	AssignStmt          = ast.AssignStmt
+	UserFuncDefStmt     = ast.UserFuncDefStmt
+	ImportStmt          = ast.ImportStmt
 	ListNode            = ast.ListNode
 	MatrixNode          = ast.MatrixNode
 	PlotNode            = ast.PlotNode

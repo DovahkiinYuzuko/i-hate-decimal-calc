@@ -622,6 +622,33 @@ func evaluateLineInternal(line string, ro runOptions, env *calc.Env, suppressOut
 	case *calc.AssignStmt:
 		evalTarget = v.Value
 		assignName = v.Name
+
+	case *calc.UserFuncDefStmt:
+		// Try compiling body to bytecode for VM speedup
+		st := calc.NewSymbolTable()
+		for _, param := range v.Params {
+			st.Define(param)
+		}
+		compiler := calc.NewCompiler(st)
+		bc, _ := compiler.Compile(v.Body)
+
+		if err := env.SetUserFunc(v.Name, v.Params, v.Body); err != nil {
+			fmt.Fprintf(errOut, "%s%v\n", errPrefix, err)
+			return err
+		}
+		if bc != nil {
+			if fn, ok := env.GetUserFunc(v.Name); ok {
+				fn.Bytecode = bc
+			}
+		}
+		if !suppressOutput {
+			fmt.Fprintf(out, "%s(%s)\n", v.Name, strings.Join(v.Params, ", "))
+		}
+		return nil
+
+	case *calc.ImportStmt:
+		return runImportFile(v.Path, ro, env, in, out, errOut, errPrefix)
+
 	case calc.Node:
 		evalTarget = v
 	default:
@@ -670,6 +697,46 @@ func evaluateLineInternal(line string, ro runOptions, env *calc.Env, suppressOut
 func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, in io.Reader, out, errOut io.Writer) error {
 	ensureEnvIterationLimits(env, ro, errOut)
 	return evaluateLineInternal(line, ro, env, false, in, out, errOut, i18n.T("cli.error_prefix"))
+}
+
+func runImportFile(filePath string, ro runOptions, env *calc.Env, in io.Reader, out, errOut io.Writer, errPrefix string) error {
+	cleanPath := filepath.Clean(filePath)
+	if err := env.EnterImport(cleanPath); err != nil {
+		fmt.Fprintf(errOut, "%s%v\n", errPrefix, err)
+		return err
+	}
+	defer env.LeaveImport(cleanPath)
+
+	file, err := os.Open(cleanPath)
+	if err != nil {
+		openErr := fmt.Errorf("%s", i18n.T("cli.err_run_open_failed", cleanPath, err))
+		fmt.Fprintf(errOut, "%s%v\n", errPrefix, openErr)
+		return openErr
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		if idx := strings.Index(line, "#"); idx != -1 {
+			line = strings.TrimSpace(line[:idx])
+		}
+		if line == "" {
+			continue
+		}
+		// Execute imported line suppressing standard output
+		if err := evaluateLineInternal(line, ro, env, true, in, out, errOut, errPrefix); err != nil {
+			return err
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		fmt.Fprintf(errOut, "%s%v\n", errPrefix, err)
+		return err
+	}
+	return nil
 }
 
 func runScriptFile(filePath string, ro runOptions, out, errOut io.Writer) int {

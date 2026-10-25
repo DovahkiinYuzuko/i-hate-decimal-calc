@@ -138,11 +138,23 @@ func (n *VarNode) Equal(other Node) bool {
 }
 
 // -------------------------------------------------------------------------
-// AssignStmt (Variable Assignment Statement)
+// Statements (Variable Assignment, Function Definition, Import)
 // -------------------------------------------------------------------------
 
 // AssignStmt represents a variable assignment statement (e.g., "x = 1/2").
 type AssignStmt struct {
 	Name  string
 	Value Node
+}
+
+// UserFuncDefStmt represents a named user-defined function statement (e.g., "f(x, y) = x^2 + y^2").
+type UserFuncDefStmt struct {
+	Name   string
+	Params []string
+	Body   Node
+}
+
+// ImportStmt represents a script module import statement (e.g., 'import "mathlib.ihd"').
+type ImportStmt struct {
+	Path string
 }

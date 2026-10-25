@@ -6,14 +6,27 @@ import (
 	"math/big"
 	"os"
 	"sync"
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/provenance"
 )
+
+// UserFunction represents a user-defined function in the environment.
+type UserFunction struct {
+	Name      string
+	Params    []string
+	Body      Node
+	Bytecode  *Bytecode
+}
 
 // Env represents a symbol table mapping variable names to AST nodes and assumptions.
 type Env struct {
 	mu             sync.RWMutex
 	vars           map[string]Node
+	funcs          map[string]*UserFunction
 	evaluatingVars map[string]bool
+	callDepth      int
+	memoCache      map[string]Node
+	importStack    map[string]bool
 	assumptions    *AssumptionStore
 	LastCert       *VerificationCertificate
 	WarnIterations *big.Int
@@ -24,11 +37,17 @@ type Env struct {
 	SearchTracer   SearchTraceCollector
 }
 
+// MaxCallDepth defines the maximum permitted call stack recursion depth for user functions.
+const MaxCallDepth = 500
+
 // NewEnv creates a new, empty Env instance.
 func NewEnv() *Env {
 	return &Env{
 		vars:           make(map[string]Node),
+		funcs:          make(map[string]*UserFunction),
 		evaluatingVars: make(map[string]bool),
+		memoCache:      make(map[string]Node),
+		importStack:    make(map[string]bool),
 		assumptions:    NewAssumptionStore(),
 		WarnWriter:     os.Stderr,
 	}
@@ -363,5 +382,162 @@ func (e *Env) Clone() *Env {
 		copied.MaxIterations = new(big.Int).Set(e.MaxIterations)
 	}
 	copied.WarnWriter = e.WarnWriter
+	for k, v := range e.funcs {
+		copied.funcs[k] = v
+	}
 	return copied
+}
+
+func isEnvReservedConst(name string) bool {
+	switch name {
+	case "pi", "e", "i", "deg":
+		return true
+	default:
+		return false
+	}
+}
+
+// SetUserFunc registers a user-defined function in the environment.
+func (e *Env) SetUserFunc(name string, params []string, body Node) error {
+	if e == nil {
+		return fmt.Errorf("environment is nil")
+	}
+	if isEnvReservedConst(name) || IsReservedFunc(name) {
+		return fmt.Errorf("%s", i18n.T("errors.reserved_word", name))
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.funcs == nil {
+		e.funcs = make(map[string]*UserFunction)
+	}
+	e.funcs[name] = &UserFunction{
+		Name:   name,
+		Params: params,
+		Body:   body,
+	}
+	// Invalidate memoCache on function definition
+	e.memoCache = make(map[string]Node)
+	return nil
+}
+
+// GetUserFunc retrieves a registered user-defined function.
+func (e *Env) GetUserFunc(name string) (*UserFunction, bool) {
+	if e == nil {
+		return nil, false
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	if e.funcs == nil {
+		return nil, false
+	}
+	fn, ok := e.funcs[name]
+	return fn, ok
+}
+
+// AllUserFuncs returns a copy of all user-defined functions.
+func (e *Env) AllUserFuncs() map[string]*UserFunction {
+	if e == nil {
+		return make(map[string]*UserFunction)
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	res := make(map[string]*UserFunction, len(e.funcs))
+	for k, v := range e.funcs {
+		res[k] = v
+	}
+	return res
+}
+
+// CallDepth returns the current call depth.
+func (e *Env) CallDepth() int {
+	if e == nil {
+		return 0
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.callDepth
+}
+
+// EnterCall increments call depth and validates against MaxCallDepth.
+func (e *Env) EnterCall(fnName string) error {
+	if e == nil {
+		return nil
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.callDepth >= MaxCallDepth {
+		return fmt.Errorf("%s", i18n.T("errors.recursion_limit_exceeded", MaxCallDepth, fnName))
+	}
+	e.callDepth++
+	return nil
+}
+
+// LeaveCall decrements call depth.
+func (e *Env) LeaveCall() {
+	if e == nil {
+		return
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.callDepth > 0 {
+		e.callDepth--
+	}
+}
+
+// CheckMemo checks if a function call with given argument signature has been cached.
+func (e *Env) CheckMemo(key string) (Node, bool) {
+	if e == nil {
+		return nil, false
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	if e.memoCache == nil {
+		return nil, false
+	}
+	val, ok := e.memoCache[key]
+	return val, ok
+}
+
+// SaveMemo stores a function evaluation result in the memo cache.
+func (e *Env) SaveMemo(key string, val Node) {
+	if e == nil {
+		return
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.memoCache == nil {
+		e.memoCache = make(map[string]Node)
+	}
+	// Limit memoCache size to prevent memory leaks in long-running sessions
+	if len(e.memoCache) > 10000 {
+		e.memoCache = make(map[string]Node)
+	}
+	e.memoCache[key] = val
+}
+
+// EnterImport tracks imported files to detect circular dependencies.
+func (e *Env) EnterImport(path string) error {
+	if e == nil {
+		return nil
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.importStack == nil {
+		e.importStack = make(map[string]bool)
+	}
+	if e.importStack[path] {
+		return fmt.Errorf("%s", i18n.T("errors.circular_import_detected", path))
+	}
+	e.importStack[path] = true
+	return nil
+}
+
+// LeaveImport releases an imported file from the active stack.
+func (e *Env) LeaveImport(path string) {
+	if e == nil {
+		return
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	delete(e.importStack, path)
 }

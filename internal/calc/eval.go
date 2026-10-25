@@ -97,6 +97,20 @@ func EvalWithEnv(n Node, env *Env) (Node, error) {
 
 	case *FuncNode:
 		if env != nil {
+			// 1. Check user-defined named function
+			if userFn, ok := env.GetUserFunc(v.Name); ok {
+				evaledArgs := make([]Node, len(v.Args))
+				for i, a := range v.Args {
+					ea, err := EvalWithEnv(a, env)
+					if err != nil {
+						return nil, err
+					}
+					evaledArgs[i] = ea
+				}
+				return evalUserFunctionDirect(userFn, evaledArgs, env)
+			}
+
+			// 2. Check variable-bound lambda
 			if bound, ok := env.Get(v.Name); ok {
 				if lambda, okL := bound.(*LambdaNode); okL {
 					evaledArgs := make([]Node, len(v.Args))
@@ -562,5 +576,76 @@ func EvaluateRelOpEquality(rel *RelOpNode, env *Env) (Node, error) {
 
 	// 6. 判定不能（未確定の変数を含む方程式: x == 1, y' == y など）は式のまま保持
 	return rel, nil
+}
+
+// evalUserFunctionDirect evaluates a user-defined function with arguments, recursion guard, and memoization.
+func evalUserFunctionDirect(fn *UserFunction, evaledArgs []Node, env *Env) (Node, error) {
+	if len(fn.Params) != len(evaledArgs) {
+		return nil, fmt.Errorf("%s", i18n.T("errors.user_func_param_count_mismatch", fn.Name, len(fn.Params), len(evaledArgs)))
+	}
+
+	// 1. Build memoization cache key: fnName(arg1.String(), arg2.String(), ...)
+	memoKey := fn.Name + "("
+	for i, arg := range evaledArgs {
+		if i > 0 {
+			memoKey += ","
+		}
+		memoKey += arg.String()
+	}
+	memoKey += ")"
+
+	if cached, ok := env.CheckMemo(memoKey); ok {
+		return cached, nil
+	}
+
+	// 2. Check call recursion depth
+	if err := env.EnterCall(fn.Name); err != nil {
+		return nil, err
+	}
+	defer env.LeaveCall()
+
+	// 3. Fast-path: If compiled bytecode exists, run via VM
+	if fn.Bytecode != nil {
+		vm := NewVM(fn.Bytecode, env, DefaultVMBudget)
+		vm.PushArgs(evaledArgs)
+		res, err := vm.Run()
+		if err == nil && res != nil {
+			env.SaveMemo(memoKey, res)
+			return res, nil
+		}
+	}
+
+	// 4. Fallback: Scope-bound AST evaluation with argument substitution
+	substitutedBody := fn.Body
+	for pIdx, pName := range fn.Params {
+		substitutedBody = Substitute(substitutedBody, pName, evaledArgs[pIdx])
+	}
+	var res Node
+	if len(fn.Params) == 1 {
+		err := env.WithScopedVar(fn.Params[0], evaledArgs[0], func(setVar func(Node)) error {
+			r, e := EvalWithEnv(substitutedBody, env)
+			if e != nil {
+				return e
+			}
+			res = r
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		workEnv := env.Clone()
+		for pIdx, pName := range fn.Params {
+			workEnv.Set(pName, evaledArgs[pIdx])
+		}
+		r, err := EvalWithEnv(substitutedBody, workEnv)
+		if err != nil {
+			return nil, err
+		}
+		res = r
+	}
+
+	env.SaveMemo(memoKey, res)
+	return res, nil
 }
 

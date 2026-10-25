@@ -295,6 +295,11 @@
   "err_limit_unable_to_resolve_limit_1": "limit: unable to resolve limit: %v",
   "err_unknown_node_type_for_evaluation": "unknown node type for evaluation: %T",
   "errors": {
+    "duplicate_function_parameter": "duplicate parameter '%s' in function definition '%s'",
+    "user_func_param_count_mismatch": "function '%s' expects %d arguments, got %d",
+    "recursion_limit_exceeded": "recursion depth limit exceeded (%d) in function '%s'",
+    "circular_import_detected": "circular import detected: %s",
+    "budget_exceeded": "virtual machine computation budget exceeded",
     "arg_must_be_var": "%s error: %s argument must be a variable name, got %s",
     "err_unknown_node_type_for_evaluation": "unknown node type for evaluation: %T",
     "err_cannot_evaluate_nil_node": "cannot evaluate nil node",
@@ -737,6 +742,7 @@
     "err_zero_valuation": "p-adic valuation of zero is undefined (infinity)"
   },
   "parser": {
+    "err_import_requires_string": "syntax error: import statement requires a string file path literal",
     "err_empty_expr": "syntax error: empty expression",
     "err_empty_index_bracket": "syntax error: empty index brackets '[]' are not allowed",
     "err_empty_matrix": "syntax error: empty matrix",

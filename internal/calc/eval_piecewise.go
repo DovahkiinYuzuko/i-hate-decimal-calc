@@ -18,6 +18,17 @@ func isConditionAlwaysTrue(cond Node, env *Env) bool {
 	if v, ok := cond.(*VarNode); ok && (v.Name == "true" || v.Name == "True") {
 		return true
 	}
+	// Try evaluating condition in env (e.g. if variables are bound in scoped env)
+	if env != nil {
+		if evaled, err := EvalWithEnv(cond, env); err == nil {
+			if v, ok := evaled.(*VarNode); ok && (v.Name == "true" || v.Name == "True") {
+				return true
+			}
+			if rel, ok := evaled.(*RelOpNode); ok {
+				cond = rel
+			}
+		}
+	}
 	if rel, ok := cond.(*RelOpNode); ok {
 		vars := ExtractFreeVariables(rel)
 		if len(vars) == 0 {
@@ -48,6 +59,17 @@ func isConditionAlwaysFalse(cond Node, env *Env) bool {
 	}
 	if v, ok := cond.(*VarNode); ok && (v.Name == "false" || v.Name == "False") {
 		return true
+	}
+	// Try evaluating condition in env (e.g. if variables are bound in scoped env)
+	if env != nil {
+		if evaled, err := EvalWithEnv(cond, env); err == nil {
+			if v, ok := evaled.(*VarNode); ok && (v.Name == "false" || v.Name == "False") {
+				return true
+			}
+			if rel, ok := evaled.(*RelOpNode); ok {
+				cond = rel
+			}
+		}
 	}
 	if rel, ok := cond.(*RelOpNode); ok {
 		vars := ExtractFreeVariables(rel)
@@ -368,9 +390,16 @@ func EvalPiecewiseHandler(args []Node, env *Env) (Node, error) {
 			return nil, fmt.Errorf("%s", i18n.T("piecewise.err_invalid_cases_format"))
 		}
 		for r := 0; r < m.Rows; r++ {
+			cond := m.Data[r][1]
+			if isConditionAlwaysTrue(cond, env) {
+				// True condition hit: immediately evaluate and return this branch without evaluating otherwise
+				return EvalWithEnv(m.Data[r][0], env)
+			} else if isConditionAlwaysFalse(cond, env) {
+				continue
+			}
 			cases = append(cases, PiecewiseCase{
 				Expr:      m.Data[r][0],
-				Condition: m.Data[r][1],
+				Condition: cond,
 			})
 		}
 	case *ListNode:
@@ -379,13 +408,25 @@ func EvalPiecewiseHandler(args []Node, env *Env) (Node, error) {
 			if !ok || len(pair.Elements) != 2 {
 				return nil, fmt.Errorf("%s", i18n.T("piecewise.err_case_pair_format", elem.String()))
 			}
+			cond := pair.Elements[1]
+			if isConditionAlwaysTrue(cond, env) {
+				// True condition hit: immediately evaluate and return this branch without evaluating otherwise
+				return EvalWithEnv(pair.Elements[0], env)
+			} else if isConditionAlwaysFalse(cond, env) {
+				continue
+			}
 			cases = append(cases, PiecewiseCase{
 				Expr:      pair.Elements[0],
-				Condition: pair.Elements[1],
+				Condition: cond,
 			})
 		}
 	default:
 		return nil, fmt.Errorf("%s", i18n.T("piecewise.err_invalid_cases_format"))
+	}
+
+	if len(cases) == 0 && len(args) == 2 {
+		// All explicit cases were false; evaluate fallback
+		return EvalWithEnv(args[1], env)
 	}
 
 	var otherwise Node

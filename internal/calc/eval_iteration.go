@@ -223,6 +223,33 @@ func handleTable(args []Node, env *Env) (Node, error) {
 		}
 	}
 
+	// Fast-path: Compile loop expression to bytecode VM for table iteration
+	if isPureExpression(expr) {
+		st := NewSymbolTable()
+		st.Define(v.Name)
+		compiler := NewCompiler(st)
+		bc, errCompile := compiler.Compile(expr)
+		if errCompile == nil && bc != nil {
+			elements := make([]Node, 0)
+			fsm := NewIterationFSM(v.Name, start, end, step, env)
+			fsm.SetLimits(warnLimit, maxLimit, warnWriter)
+			vm := NewVM(bc, env, DefaultVMBudget)
+			err = fsm.Run(func(curr *big.Rat) (bool, error) {
+				vm.Reset()
+				vm.PushArgs([]Node{&RationalNode{Val: curr}})
+				val, errVM := vm.Run()
+				if errVM != nil {
+					return false, errVM
+				}
+				elements = append(elements, val)
+				return false, nil
+			})
+			if err == nil {
+				return NewList(elements), nil
+			}
+		}
+	}
+
 	elements := make([]Node, 0)
 	fsm := NewIterationFSM(v.Name, start, end, step, env)
 	fsm.SetLimits(warnLimit, maxLimit, warnWriter)

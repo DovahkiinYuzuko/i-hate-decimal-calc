@@ -295,6 +295,11 @@
   "err_limit_unable_to_resolve_limit_1": "極限: 極限値を解決できません: %v",
   "err_unknown_node_type_for_evaluation": "評価対象の未知のノード型です: %T",
   "errors": {
+    "duplicate_function_parameter": "関数定義 '%s' においてパラメータ '%s' が重複しています",
+    "user_func_param_count_mismatch": "関数 '%s' に渡された引数の個数が一致しません (期待値: %d, 実際: %d)",
+    "recursion_limit_exceeded": "関数 '%s' の再帰呼び出し深さ上限 (%d) を超過しました",
+    "circular_import_detected": "循環インポートが検出されました: %s",
+    "budget_exceeded": "仮想マシンの計算実行ステップ数予算を超過しました",
     "arg_must_be_var": "%s エラー: 第%s引数は変数名である必要があります (%s)",
     "err_unknown_node_type_for_evaluation": "評価対象の未知のノード型です: %T",
     "err_cannot_evaluate_nil_node": "nil ノードは評価できません",
@@ -737,6 +742,7 @@
     "err_zero_valuation": "数理計算エラー: 0のp進付値は未定義（無限大）です"
   },
   "parser": {
+    "err_import_requires_string": "構文エラー: import ステートメントには文字列のファイルパスリテラルが必要です",
     "err_empty_expr": "構文エラー: 式が空です",
     "err_empty_index_bracket": "構文エラー: 空のインデックス括弧 '[]' は指定できません",
     "err_empty_matrix": "構文エラー: 空の行列です",

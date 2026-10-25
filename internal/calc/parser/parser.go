@@ -151,7 +151,9 @@ func Parse(input string) (ast.Node, error) {
 	return node, nil
 }
 
-// ParseStatement parses an input string as either an assignment statement (*ast.AssignStmt) or an expression (ast.Node).
+// ParseStatement parses an input string as an assignment statement (*ast.AssignStmt),
+// a user-defined function statement (*ast.UserFuncDefStmt), an import statement (*ast.ImportStmt),
+// or an expression (ast.Node).
 func ParseStatement(input string) (interface{}, error) {
 	l := NewLexer(input)
 	p := NewParser(l)
@@ -160,7 +162,20 @@ func ParseStatement(input string) (interface{}, error) {
 		return nil, fmt.Errorf("%s", i18n.T("parser.err_syntax_error_empty_input"))
 	}
 
-	// Check if this is an assignment: Ident = Expr
+	// 1. Check if this is an import statement: import "path.ihd"
+	if p.curTok.Type == TokenIdent && p.curTok.Literal == "import" {
+		if p.peekTok.Type != TokenString {
+			return nil, newSyntaxErr("parser.err_import_requires_string")
+		}
+		p.nextToken() // move to TokenString
+		filePath := p.curTok.Literal
+		if p.peekTok.Type != TokenEOF {
+			return nil, newSyntaxErr("parser.err_unexpected_token_after_expr", p.peekTok.Literal)
+		}
+		return &ast.ImportStmt{Path: filePath}, nil
+	}
+
+	// 2. Check if this is an assignment: Ident = Expr
 	if p.curTok.Type == TokenIdent && p.peekTok.Type == TokenAssign {
 		varName := p.curTok.Literal
 		if isReservedConst(varName) || isReservedFunc(varName) {
@@ -185,7 +200,109 @@ func ParseStatement(input string) (interface{}, error) {
 		return &ast.AssignStmt{Name: varName, Value: expr}, nil
 	}
 
+	// 3. Check if this is a user-defined function definition: Ident(param1, param2, ...) = Expr
+	if p.curTok.Type == TokenIdent && p.peekTok.Type == TokenLParen {
+		// Lookahead to check if this is indeed a function signature assignment: Ident(id1, id2, ...) = ...
+		fnName := p.curTok.Literal
+		if isReservedConst(fnName) || isReservedFunc(fnName) {
+			// Reserved functions/constants cannot be overwritten by user func definition
+			// Allow fallback to expression parsing if it's not a definition assignment
+		} else {
+			// Try tentatively parsing parameter list
+			if stmt, ok, err := p.tryParseUserFuncDef(fnName); ok || err != nil {
+				if err != nil {
+					return nil, err
+				}
+				return stmt, nil
+			}
+		}
+	}
+
 	return Parse(input)
+}
+
+// tryParseUserFuncDef tentatively parses "Ident(x, y, ...) = Expr"
+func (p *Parser) tryParseUserFuncDef(fnName string) (*ast.UserFuncDefStmt, bool, error) {
+	// We are currently at TokenIdent, next is TokenLParen
+	savedCur := p.curTok
+	savedPeek := p.peekTok
+	savedPos := p.pos
+
+	p.nextToken() // move to '('
+	var rawParams []string
+
+	p.nextToken() // move to first param or ')'
+	if p.curTok.Type != TokenRParen {
+		for {
+			if p.curTok.Type != TokenIdent {
+				// Not a pure parameter signature (might be f(2) or an expression)
+				p.restoreState(savedCur, savedPeek, savedPos)
+				return nil, false, nil
+			}
+			rawParams = append(rawParams, p.curTok.Literal)
+
+			if p.peekTok.Type == TokenComma {
+				p.nextToken() // move to ','
+				p.nextToken() // move to next param
+			} else if p.peekTok.Type == TokenRParen {
+				p.nextToken() // move to ')'
+				break
+			} else {
+				// Unexpected token in param list
+				p.restoreState(savedCur, savedPeek, savedPos)
+				return nil, false, nil
+			}
+		}
+	}
+
+	// Must be followed by '='
+	if p.peekTok.Type != TokenAssign {
+		p.restoreState(savedCur, savedPeek, savedPos)
+		return nil, false, nil
+	}
+
+	// It is definitely a function definition "Ident(...) = Expr".
+	// Validate parameter names.
+	seenParams := make(map[string]bool)
+	for _, param := range rawParams {
+		if isReservedConst(param) || isReservedFunc(param) {
+			p.restoreState(savedCur, savedPeek, savedPos)
+			return nil, false, fmt.Errorf("%s", i18n.T("errors.reserved_word", param))
+		}
+		if seenParams[param] {
+			p.restoreState(savedCur, savedPeek, savedPos)
+			return nil, false, fmt.Errorf("%s", i18n.T("errors.duplicate_function_parameter", param, fnName))
+		}
+		seenParams[param] = true
+	}
+
+	p.nextToken() // move to '='
+	p.nextToken() // move to start of body
+
+	if p.curTok.Type == TokenEOF {
+		return nil, false, newSyntaxErr("parser.err_missing_expr_after_assign")
+	}
+
+	body, err := p.ParseExpression(PREC_LOWEST)
+	if err != nil {
+		return nil, false, err
+	}
+
+	if p.peekTok.Type != TokenEOF {
+		return nil, false, newSyntaxErr("parser.err_unexpected_token_after_expr", p.peekTok.Literal)
+	}
+
+	return &ast.UserFuncDefStmt{
+		Name:   fnName,
+		Params: rawParams,
+		Body:   body,
+	}, true, nil
+}
+
+func (p *Parser) restoreState(cur, peek Token, pos int) {
+	p.curTok = cur
+	p.peekTok = peek
+	p.pos = pos
 }
 
 // ParseExpression parses an expression with Pratt parsing algorithm.
