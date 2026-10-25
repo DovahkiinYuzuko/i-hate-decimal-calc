@@ -46,6 +46,17 @@ extra = 100
 	if !strings.Contains(outStr, "ADDED") && !strings.Contains(outStr, "追加") {
 		t.Errorf("expected added marker for extra, got: %s", outStr)
 	}
+
+	// Test direct expression diff without files
+	var outInline, errOutInline bytes.Buffer
+	codeInline := run([]string{"diff", "(x + 1)^2", "x^2 + 2*x + 1"}, nil, &outInline, &errOutInline)
+	if codeInline != 0 {
+		t.Fatalf("expected code 0 for inline diff, got %d. errOut: %s", codeInline, errOutInline.String())
+	}
+	outInlineStr := outInline.String()
+	if !strings.Contains(outInlineStr, "EQUIVALENT") && !strings.Contains(outInlineStr, "意味論的等価") {
+		t.Errorf("expected EQUIVALENT for inline expression diff, got: %s", outInlineStr)
+	}
 }
 
 func TestCLI_TraceFlag(t *testing.T) {

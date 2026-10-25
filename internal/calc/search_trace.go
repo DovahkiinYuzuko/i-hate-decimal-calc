@@ -106,9 +106,19 @@ func GetActiveSearchCollector() SearchTraceCollector {
 	return activeSearchCollector
 }
 
-// EmitSearchEvent records an event to the active collector if enabled (zero overhead when disabled).
+// EmitSearchEvent records an event to the env-specific or active collector if enabled (zero overhead when disabled).
 func EmitSearchEvent(kind SearchEventKind, phase string, payload map[string]any) {
-	c := GetActiveSearchCollector()
+	EmitSearchEventWithEnv(nil, kind, phase, payload)
+}
+
+// EmitSearchEventWithEnv records an event to the environment's search tracer, falling back to global if nil.
+func EmitSearchEventWithEnv(env *Env, kind SearchEventKind, phase string, payload map[string]any) {
+	var c SearchTraceCollector
+	if env != nil && env.SearchTracer != nil {
+		c = env.SearchTracer
+	} else {
+		c = GetActiveSearchCollector()
+	}
 	if c != nil {
 		c.RecordSearchEvent(SearchEvent{
 			Kind:    kind,

@@ -212,10 +212,10 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 	}
 
 	if len(exprArgs) > 0 {
-		// 0. Explicit 'diff' subcommand: ihd diff <file1.ihd> <file2.ihd>
+		// 0. Explicit 'diff' subcommand: ihd diff <file1.ihd|expr1> <file2.ihd|expr2>
 		if exprArgs[0] == "diff" {
 			if len(exprArgs) < 3 {
-				fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), "Usage: ihd diff <file1.ihd> <file2.ihd>")
+				fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), i18n.T("cli.diff_usage"))
 				return 1
 			}
 			return runDiff(exprArgs[1], exprArgs[2], out, errOut)
@@ -635,8 +635,12 @@ func evaluateLineInternal(line string, ro runOptions, env *calc.Env, suppressOut
 	var searchCollector *calc.MemorySearchTraceCollector
 	if ro.trace {
 		searchCollector = calc.NewMemorySearchTraceCollector()
+		env.SearchTracer = searchCollector
 		calc.SetActiveSearchCollector(searchCollector)
-		defer calc.SetActiveSearchCollector(nil)
+		defer func() {
+			env.SearchTracer = nil
+			calc.SetActiveSearchCollector(nil)
+		}()
 	}
 
 	if ro.explain || ro.step {

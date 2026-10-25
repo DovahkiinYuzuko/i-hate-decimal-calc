@@ -128,10 +128,10 @@ func (e *StepExplorer) renderCurrentStep() {
 	fmt.Fprintf(e.Out, "  %s\n", fmt.Sprintf(i18n.T("cli.repl_step_after"), step.After))
 
 	if len(step.Conditions) > 0 {
-		fmt.Fprintf(e.Out, "  Conditions: %s\n", strings.Join(step.Conditions, ", "))
+		fmt.Fprintf(e.Out, "  %s\n", fmt.Sprintf(i18n.T("cli.repl_step_conditions"), strings.Join(step.Conditions, ", ")))
 	}
 	if step.Certificate != "" {
-		fmt.Fprintf(e.Out, "  Certificate: %s\n", step.Certificate)
+		fmt.Fprintf(e.Out, "  %s\n", fmt.Sprintf(i18n.T("cli.repl_step_certificate"), step.Certificate))
 	}
 
 	fmt.Fprintln(e.Out, i18n.T("cli.repl_step_nav_hint"))

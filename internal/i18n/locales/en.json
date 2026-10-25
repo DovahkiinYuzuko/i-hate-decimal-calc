@@ -200,7 +200,10 @@
     "diff_stat_equivalent": "EQUIVALENT",
     "diff_stat_changed": "CHANGED",
     "diff_stat_added": "ADDED",
-    "diff_stat_removed": "REMOVED"
+    "diff_stat_removed": "REMOVED",
+    "repl_step_conditions": "Conditions: %s",
+    "repl_step_certificate": "Certificate: %s",
+    "diff_usage": "Usage: ihd diff <file1.ihd|expr1> <file2.ihd|expr2>"
   },
   "complex": {
     "err_cannot_determine_sign_of_complex": "cannot determine sign of complex components (re=%s, im=%s)"
@@ -1183,4 +1186,4 @@
     "verify_fwd_reconstructs": "Inverse Z-transform verified: forward Z-transform reconstructs frequency-domain expression",
     "verify_pfd_residue_match": "Inverse Z-transform verified: matches partial fraction decomposition and residue expansion"
   }
-}
+}

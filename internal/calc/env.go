@@ -21,6 +21,7 @@ type Env struct {
 	WarnWriter     io.Writer
 	Tracer         *provenance.TraceRecorder
 	LastTrace      *provenance.TraceRecorder
+	SearchTracer   SearchTraceCollector
 }
 
 // NewEnv creates a new, empty Env instance.
@@ -47,6 +48,14 @@ func (e *Env) GetLastTrace() *provenance.TraceRecorder {
 		return nil
 	}
 	return e.LastTrace
+}
+
+// GetSearchTracer returns the active algorithm search trace collector or nil.
+func (e *Env) GetSearchTracer() SearchTraceCollector {
+	if e == nil {
+		return nil
+	}
+	return e.SearchTracer
 }
 
 // Assumptions returns the assumption store of this environment.
