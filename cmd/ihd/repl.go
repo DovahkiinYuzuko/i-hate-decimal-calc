@@ -135,7 +135,7 @@ func runREPL(in io.Reader, out, errOut io.Writer, ro runOptions) int {
 			continue
 		}
 
-		if handleREPLCommand(line, env, in, out, errOut) {
+		if handleREPLCommand(line, env, in, nil, out, errOut) {
 			continue
 		}
 
@@ -149,7 +149,7 @@ func runREPL(in io.Reader, out, errOut io.Writer, ro runOptions) int {
 			continue
 		}
 
-		_ = evaluateLineWithEnv(line, ro, env, out, errOut)
+		_ = evaluateLineWithEnv(line, ro, env, in, out, errOut)
 	}
 
 	return 0
@@ -192,7 +192,7 @@ func runScannerREPL(in io.Reader, out, errOut io.Writer, ro runOptions, env *cal
 			continue
 		}
 
-		if handleREPLCommand(line, env, in, out, errOut) {
+		if handleREPLCommand(line, env, in, scanner, out, errOut) {
 			continue
 		}
 
@@ -200,7 +200,7 @@ func runScannerREPL(in io.Reader, out, errOut io.Writer, ro runOptions, env *cal
 			continue
 		}
 
-		_ = evaluateLineWithEnv(line, ro, env, out, errOut)
+		_ = evaluateLineWithEnv(line, ro, env, in, out, errOut)
 	}
 	if err := scanner.Err(); err != nil {
 		fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
@@ -227,7 +227,7 @@ func printVars(env *calc.Env, ro runOptions, out io.Writer) {
 	}
 }
 
-func handleREPLCommand(line string, env *calc.Env, in io.Reader, out, errOut io.Writer) bool {
+func handleREPLCommand(line string, env *calc.Env, in io.Reader, scanner provenance.LineScanner, out, errOut io.Writer) bool {
 	lowerLine := strings.ToLower(line)
 
 	if lowerLine == "clear" || lowerLine == "reset" {
@@ -325,11 +325,16 @@ func handleREPLCommand(line string, env *calc.Env, in io.Reader, out, errOut io.
 			return true
 		}
 
-		inputReader := in
-		if inputReader == nil {
-			inputReader = os.Stdin
+		var explorer *provenance.StepExplorer
+		if scanner != nil {
+			explorer = provenance.NewStepExplorerWithScanner(root, scanner, out)
+		} else {
+			inputReader := in
+			if inputReader == nil {
+				inputReader = os.Stdin
+			}
+			explorer = provenance.NewStepExplorer(root, inputReader, out)
 		}
-		explorer := provenance.NewStepExplorer(root, inputReader, out)
 		_ = explorer.Run()
 		return true
 	}

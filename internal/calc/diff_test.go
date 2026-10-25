@@ -101,3 +101,38 @@ c = 30
 		t.Error("expected to find DiffAdded for c")
 	}
 }
+
+func TestCompareScripts_RelationalEqualityNotAssignment(t *testing.T) {
+	env := NewEnv()
+
+	leftScript := `
+x == 2
+`
+	rightScript := `
+x == 2
+`
+	diffs, err := CompareScripts(leftScript, rightScript, env)
+	if err != nil {
+		t.Fatalf("CompareScripts failed: %v", err)
+	}
+	if len(diffs) != 1 {
+		t.Fatalf("expected 1 diff, got %d", len(diffs))
+	}
+	if diffs[0].Status != DiffIdentical {
+		t.Errorf("expected DiffIdentical for 'x == 2', got %v", diffs[0].Status)
+	}
+
+	// Equivalent relations: x - 2 == 0 vs x == 2
+	leftRel := `x - 2 == 0`
+	rightRel := `x == 2`
+	diffsRel, err := CompareScripts(leftRel, rightRel, env)
+	if err != nil {
+		t.Fatalf("CompareScripts failed: %v", err)
+	}
+	if len(diffsRel) != 1 {
+		t.Fatalf("expected 1 diff, got %d", len(diffsRel))
+	}
+	if diffsRel[0].Status != DiffEquivalent {
+		t.Errorf("expected DiffEquivalent for 'x - 2 == 0' and 'x == 2', got %v", diffsRel[0].Status)
+	}
+}

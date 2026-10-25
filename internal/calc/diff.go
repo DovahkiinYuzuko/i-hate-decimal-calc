@@ -51,6 +51,25 @@ func CompareExpressions(left, right ast.Node, env *Env) (DiffStatus, error) {
 		env = NewEnv()
 	}
 
+	// Handle RelOpNode comparison (e.g. x - 2 == 0 vs x == 2)
+	relL, isRelL := left.(*ast.RelOpNode)
+	relR, isRelR := right.(*ast.RelOpNode)
+	if isRelL && isRelR {
+		if relL.Op == relR.Op {
+			// Zero form difference: (lhsL - rhsL) - (lhsR - rhsR)
+			zeroL := ast.NewAdd([]ast.Node{relL.LHS, &ast.UnaryOpNode{Op: "-", Expr: relL.RHS}})
+			zeroR := ast.NewAdd([]ast.Node{relR.LHS, &ast.UnaryOpNode{Op: "-", Expr: relR.RHS}})
+			diffRel := ast.NewAdd([]ast.Node{zeroL, &ast.UnaryOpNode{Op: "-", Expr: zeroR}})
+			if checkIsZeroAlgebraically(diffRel, env) {
+				return DiffEquivalent, nil
+			}
+		}
+		return DiffChanged, nil
+	}
+	if isRelL != isRelR {
+		return DiffChanged, nil
+	}
+
 	// 2. Evaluate both expressions
 	leftEval, err := EvalWithEnv(left, env)
 	if err != nil {
@@ -126,51 +145,58 @@ func CompareScripts(leftContent, rightContent string, env *Env) ([]StatementDiff
 			continue
 		}
 
-		// Handle variable assignments: name = expr
-		leftVar, leftVal, isAssignL := parseAssignment(leftRaw)
-		rightVar, rightVal, isAssignR := parseAssignment(rightRaw)
-
-		if isAssignL && isAssignR {
-			if leftVar != rightVar {
-				diff.Status = DiffChanged
-				diff.Details = i18n.T("cli.diff_stat_changed")
-			} else {
-				nodeL, errL := Parse(leftVal)
-				nodeR, errR := Parse(rightVal)
-				if errL != nil || errR != nil {
-					diff.Status = DiffChanged
-					diff.Details = i18n.T("cli.diff_stat_changed")
-				} else {
-					st, cmpErr := CompareExpressions(nodeL, nodeR, env)
-					if cmpErr != nil || st == DiffChanged {
-						diff.Status = DiffChanged
-						diff.Details = i18n.T("cli.diff_stat_changed")
-					} else if st == DiffEquivalent {
-						diff.Status = DiffEquivalent
-						diff.Details = fmt.Sprintf("%s (%s = %s)", i18n.T("cli.diff_stat_equivalent"), leftRaw, rightRaw)
-					} else {
-						diff.Status = DiffIdentical
-						diff.Details = i18n.T("cli.diff_stat_identical")
-					}
-				}
-			}
-			results = append(results, diff)
-			continue
-		}
-
-		// Parse expressions if possible
-		leftNode, errL := Parse(leftRaw)
-		rightNode, errR := Parse(rightRaw)
+		// Parse using parser.ParseStatement to cleanly separate AssignStmt from expressions
+		parsedL, errL := ParseStatement(leftRaw)
+		parsedR, errR := ParseStatement(rightRaw)
 
 		if errL != nil || errR != nil {
-			// If not parseable as pure expressions, treat as text changed
 			diff.Status = DiffChanged
 			diff.Details = i18n.T("cli.diff_stat_changed")
 			results = append(results, diff)
 			continue
 		}
 
-		st, cmpErr := CompareExpressions(leftNode, rightNode, env)
+		assignL, isAssignL := parsedL.(*AssignStmt)
+		assignR, isAssignR := parsedR.(*AssignStmt)
+
+		if isAssignL && isAssignR {
+			if assignL.Name != assignR.Name {
+				diff.Status = DiffChanged
+				diff.Details = i18n.T("cli.diff_stat_changed")
+			} else {
+				st, cmpErr := CompareExpressions(assignL.Value, assignR.Value, env)
+				if cmpErr != nil || st == DiffChanged {
+					diff.Status = DiffChanged
+					diff.Details = i18n.T("cli.diff_stat_changed")
+				} else if st == DiffEquivalent {
+					diff.Status = DiffEquivalent
+					diff.Details = fmt.Sprintf("%s (%s = %s)", i18n.T("cli.diff_stat_equivalent"), leftRaw, rightRaw)
+				} else {
+					diff.Status = DiffIdentical
+					diff.Details = i18n.T("cli.diff_stat_identical")
+				}
+			}
+			results = append(results, diff)
+			continue
+		}
+
+		if isAssignL != isAssignR {
+			diff.Status = DiffChanged
+			diff.Details = i18n.T("cli.diff_stat_changed")
+			results = append(results, diff)
+			continue
+		}
+
+		nodeL, okL := parsedL.(ast.Node)
+		nodeR, okR := parsedR.(ast.Node)
+		if !okL || !okR {
+			diff.Status = DiffChanged
+			diff.Details = i18n.T("cli.diff_stat_changed")
+			results = append(results, diff)
+			continue
+		}
+
+		st, cmpErr := CompareExpressions(nodeL, nodeR, env)
 		if cmpErr != nil || st == DiffChanged {
 			diff.Status = DiffChanged
 			diff.Details = i18n.T("cli.diff_stat_changed")
@@ -186,18 +212,6 @@ func CompareScripts(leftContent, rightContent string, env *Env) ([]StatementDiff
 	}
 
 	return results, nil
-}
-
-func parseAssignment(line string) (string, string, bool) {
-	if idx := strings.Index(line, "="); idx > 0 {
-		left := strings.TrimSpace(line[:idx])
-		right := strings.TrimSpace(line[idx+1:])
-		// Ensure left is a valid identifier
-		if !strings.ContainsAny(left, "+-*/^%()[]{},><=!") && len(left) > 0 {
-			return left, right, true
-		}
-	}
-	return "", "", false
 }
 
 func splitScriptLines(content string) []string {
