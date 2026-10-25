@@ -9,26 +9,24 @@ import (
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
-func runDiff(file1, file2 string, out, errOut io.Writer) int {
-	b1, err := os.ReadFile(file1)
-	if err != nil {
-		fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
-		return 1
+func runDiff(source1, source2 string, out, errOut io.Writer) int {
+	s1 := source1
+	if b, err := os.ReadFile(source1); err == nil {
+		s1 = string(b)
 	}
-	b2, err := os.ReadFile(file2)
-	if err != nil {
-		fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
-		return 1
+	s2 := source2
+	if b, err := os.ReadFile(source2); err == nil {
+		s2 = string(b)
 	}
 
 	env := calc.NewEnv()
-	diffs, err := calc.CompareScripts(string(b1), string(b2), env)
+	diffs, err := calc.CompareScripts(s1, s2, env)
 	if err != nil {
 		fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
 		return 1
 	}
 
-	fmt.Fprintf(out, i18n.T("cli.diff_header")+"\n", file1, file2)
+	fmt.Fprintf(out, i18n.T("cli.diff_header")+"\n", source1, source2)
 
 	allIdentical := true
 	for _, d := range diffs {

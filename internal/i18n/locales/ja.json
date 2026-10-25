@@ -200,7 +200,10 @@
     "diff_stat_equivalent": "意味論的等価",
     "diff_stat_changed": "意味論的相違",
     "diff_stat_added": "追加",
-    "diff_stat_removed": "削除"
+    "diff_stat_removed": "削除",
+    "repl_step_conditions": "前提条件: %s",
+    "repl_step_certificate": "代数証明書: %s",
+    "diff_usage": "使用法: ihd diff <file1.ihd|式1> <file2.ihd|式2>"
   },
   "complex": {
     "err_cannot_determine_sign_of_complex": "複素数成分の符号を決定できません (実部=%s, 虚部=%s)"
@@ -1183,4 +1186,4 @@
     "verify_fwd_reconstructs": "逆Z変換検証完了: 正方向Z変換により周波数領域式が復元されました",
     "verify_pfd_residue_match": "逆Z変換検証完了: 部分分数分解および留数展開と一致しました"
   }
-}
+}
