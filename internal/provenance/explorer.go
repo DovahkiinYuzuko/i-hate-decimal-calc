@@ -9,16 +9,24 @@ import (
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
-// StepExplorer provides an interactive CUI step-by-step walkthrough for derivation trees.
-type StepExplorer struct {
-	Steps   []*FormattedStep
-	Current int
-	Root    *DerivationNode
-	In      io.Reader
-	Out     io.Writer
+// ScannerScanner is an interface satisfied by bufio.Scanner and custom line scanners.
+type LineScanner interface {
+	Scan() bool
+	Text() string
+	Err() error
 }
 
-// NewStepExplorer instantiates a StepExplorer from a root derivation node.
+// StepExplorer provides an interactive CUI step-by-step walkthrough for derivation trees.
+type StepExplorer struct {
+	Steps       []*FormattedStep
+	Current     int
+	Root        *DerivationNode
+	In          io.Reader
+	LineScanner LineScanner
+	Out         io.Writer
+}
+
+// NewStepExplorer instantiates a StepExplorer from a root derivation node and an io.Reader.
 func NewStepExplorer(root *DerivationNode, in io.Reader, out io.Writer) *StepExplorer {
 	visitor := NewExplainVisitor()
 	steps := visitor.collectPresentableSteps(root)
@@ -32,6 +40,20 @@ func NewStepExplorer(root *DerivationNode, in io.Reader, out io.Writer) *StepExp
 	}
 }
 
+// NewStepExplorerWithScanner instantiates a StepExplorer using an existing LineScanner to prevent buffering race conditions.
+func NewStepExplorerWithScanner(root *DerivationNode, scanner LineScanner, out io.Writer) *StepExplorer {
+	visitor := NewExplainVisitor()
+	steps := visitor.collectPresentableSteps(root)
+
+	return &StepExplorer{
+		Steps:       steps,
+		Current:     0,
+		Root:        root,
+		LineScanner: scanner,
+		Out:         out,
+	}
+}
+
 // Run starts the interactive navigation loop.
 func (e *StepExplorer) Run() error {
 	if len(e.Steps) == 0 {
@@ -39,7 +61,15 @@ func (e *StepExplorer) Run() error {
 		return nil
 	}
 
-	scanner := bufio.NewScanner(e.In)
+	scanner := e.LineScanner
+	if scanner == nil {
+		if e.In == nil {
+			fmt.Fprintln(e.Out, i18n.T("cli.repl_step_completed"))
+			return nil
+		}
+		scanner = bufio.NewScanner(e.In)
+	}
+
 	for {
 		e.renderCurrentStep()
 
@@ -62,8 +92,12 @@ func (e *StepExplorer) Run() error {
 			fmt.Fprintln(e.Out, tv.RenderDocument(e.Root, ""))
 		case "l", "lean":
 			lv := NewLeanCalcVisitor()
-			res, _ := lv.RenderCalc(e.Root, "ihd_derivation")
-			fmt.Fprintln(e.Out, res)
+			res, err := lv.RenderCalc(e.Root, "ihd_derivation")
+			if err != nil {
+				fmt.Fprintf(e.Out, "%s%v\n", i18n.T("cli.error_prefix"), err)
+			} else {
+				fmt.Fprintln(e.Out, res)
+			}
 		case "", "n", "next":
 			if e.Current < len(e.Steps)-1 {
 				e.Current++

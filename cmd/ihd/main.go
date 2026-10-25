@@ -253,7 +253,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 
 		// 3. One-shot mode: join all non-flag arguments as the expression
 		expr := strings.Join(exprArgs, " ")
-		if err := evaluateLine(expr, ro, out, errOut); err != nil {
+		if err := evaluateLine(expr, ro, in, out, errOut); err != nil {
 			return 1
 		}
 		return 0
@@ -285,7 +285,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 			printVars(env, ro, bufOut)
 			continue
 		}
-		if handleREPLCommand(line, env, in, bufOut, errOut) {
+		if handleREPLCommand(line, env, in, scanner, bufOut, errOut) {
 			continue
 		}
 		lowerLine := strings.ToLower(line)
@@ -338,7 +338,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 			continue
 		}
 
-		if err := evaluateLineWithEnv(line, ro, env, bufOut, errOut); err != nil {
+		if err := evaluateLineWithEnv(line, ro, env, in, bufOut, errOut); err != nil {
 			hadError = true
 		}
 	}
@@ -471,9 +471,9 @@ func ensureEnvIterationLimits(env *calc.Env, ro runOptions, errOut io.Writer) {
 	}
 }
 
-func evaluateLine(line string, ro runOptions, out, errOut io.Writer) error {
+func evaluateLine(line string, ro runOptions, in io.Reader, out, errOut io.Writer) error {
 	env := calc.NewEnv()
-	return evaluateLineWithEnv(line, ro, env, out, errOut)
+	return evaluateLineWithEnv(line, ro, env, in, out, errOut)
 }
 
 func renderExplainOutput(origNode, evaled calc.Node, steps []calc.PedagogicalStep, line string, ro runOptions, env *calc.Env, out io.Writer) {
@@ -499,7 +499,7 @@ func renderExplainOutput(origNode, evaled calc.Node, steps []calc.PedagogicalSte
 	fmt.Fprint(out, calc.FormatTrace(line, steps, evaled))
 }
 
-func handleEvaluationOutputs(origNode, evaled calc.Node, steps []calc.PedagogicalStep, line string, ro runOptions, env *calc.Env, suppressOutput bool, out, errOut io.Writer) {
+func handleEvaluationOutputs(origNode, evaled calc.Node, steps []calc.PedagogicalStep, line string, ro runOptions, env *calc.Env, suppressOutput bool, in io.Reader, out, errOut io.Writer) {
 	if suppressOutput {
 		return
 	}
@@ -510,11 +510,18 @@ func handleEvaluationOutputs(origNode, evaled calc.Node, steps []calc.Pedagogica
 		}
 	}
 	if ro.step {
-		if tracer := env.GetLastTrace(); tracer != nil && tracer.Root() != nil {
-			explorer := provenance.NewStepExplorer(tracer.Root(), os.Stdin, out)
-			_ = explorer.Run()
+		tracer := env.GetLastTrace()
+		if tracer == nil || tracer.Root() == nil {
+			fmt.Fprintln(out, i18n.T("cli.repl_step_completed"))
 			return
 		}
+		inputReader := in
+		if inputReader == nil {
+			inputReader = os.Stdin
+		}
+		explorer := provenance.NewStepExplorer(tracer.Root(), inputReader, out)
+		_ = explorer.Run()
+		return
 	}
 	if ro.explain {
 		renderExplainOutput(origNode, evaled, steps, line, ro, env, out)
@@ -581,7 +588,7 @@ func handleEvaluationOutputs(origNode, evaled calc.Node, steps []calc.Pedagogica
 	}
 }
 
-func evaluateLineInternal(line string, ro runOptions, env *calc.Env, suppressOutput bool, out, errOut io.Writer, errPrefix string) error {
+func evaluateLineInternal(line string, ro runOptions, env *calc.Env, suppressOutput bool, in io.Reader, out, errOut io.Writer, errPrefix string) error {
 	lowerLine := strings.ToLower(line)
 	if strings.HasPrefix(lowerLine, "explain ") || strings.HasPrefix(lowerLine, "steps ") {
 		parts := strings.SplitN(line, " ", 2)
@@ -652,13 +659,13 @@ func evaluateLineInternal(line string, ro runOptions, env *calc.Env, suppressOut
 	}
 	env.Set("ans", evaled)
 
-	handleEvaluationOutputs(evalTarget, evaled, steps, line, ro, env, suppressOutput, out, errOut)
+	handleEvaluationOutputs(evalTarget, evaled, steps, line, ro, env, suppressOutput, in, out, errOut)
 	return nil
 }
 
-func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, out, errOut io.Writer) error {
+func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, in io.Reader, out, errOut io.Writer) error {
 	ensureEnvIterationLimits(env, ro, errOut)
-	return evaluateLineInternal(line, ro, env, false, out, errOut, i18n.T("cli.error_prefix"))
+	return evaluateLineInternal(line, ro, env, false, in, out, errOut, i18n.T("cli.error_prefix"))
 }
 
 func runScriptFile(filePath string, ro runOptions, out, errOut io.Writer) int {
@@ -727,7 +734,7 @@ func runScriptFile(filePath string, ro runOptions, out, errOut io.Writer) int {
 
 func executeScriptLine(line string, ro runOptions, env *calc.Env, suppressOutput bool, out, errOut io.Writer, filePath string, lineNum int) error {
 	prefix := fmt.Sprintf("%s:%d: ", filePath, lineNum)
-	return evaluateLineInternal(line, ro, env, suppressOutput, out, errOut, prefix)
+	return evaluateLineInternal(line, ro, env, suppressOutput, nil, out, errOut, prefix)
 }
 
 func saveLeanProofFile(path, code string) error {
