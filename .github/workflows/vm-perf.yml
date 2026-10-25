@@ -1,0 +1,35 @@
+name: VM Performance & Invariants Verification
+
+on:
+  push:
+    branches: [ main, 'issue-*' ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, 'issue-*' ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  vm-verify:
+    name: Verify Bytecode VM Invariants and Performance
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          check-latest: true
+
+      - name: Run VM Invariants and Benchmarks
+        run: |
+          echo "=== 1. Deterministic VM Invariants & Metamorphic Differential Tests ==="
+          go test -v -count=1 -run "TestVM_Invariants|TestVM_Differential" ./internal/calc/...
+
+          echo "=== 2. VM Relative Performance Benchmark ==="
+          go test -v -run '^$' -bench "BenchmarkVM_RelativeSpeedup" -benchmem -benchtime 1s ./internal/calc/...

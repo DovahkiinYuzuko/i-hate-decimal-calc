@@ -1,11 +1,15 @@
 package calc
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
+
+// ErrVMBudgetExceeded indicates that VM execution exceeded its instruction budget.
+var ErrVMBudgetExceeded = errors.New("vm execution budget exceeded")
 
 // Opcode represents a 1-byte virtual machine instruction code.
 type Opcode byte
@@ -334,7 +338,7 @@ func (vm *VM) Run() (Node, error) {
 
 		for frame.ip < len(bc.Instructions) {
 			if vm.budget <= 0 {
-				return nil, fmt.Errorf("%s", i18n.T("errors.budget_exceeded"))
+				return nil, fmt.Errorf("%w: %s", ErrVMBudgetExceeded, i18n.T("errors.budget_exceeded"))
 			}
 			vm.budget--
 
