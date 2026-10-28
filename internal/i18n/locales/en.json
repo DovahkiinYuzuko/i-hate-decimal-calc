@@ -1191,5 +1191,13 @@
     "err_verify_failed": "inverse Z-transform power series verification failed (n=%d: expected %s, got %s)",
     "verify_fwd_reconstructs": "Inverse Z-transform verified: forward Z-transform reconstructs frequency-domain expression",
     "verify_pfd_residue_match": "Inverse Z-transform verified: matches partial fraction decomposition and residue expansion"
-  }
+  },
+  "rewrite.err_rules_nil": "rules cannot be nil",
+  "rewrite.err_list_only_rules": "list must contain only rule(...) objects, got: %s",
+  "rewrite.err_expected_rule_or_list": "expected rule or list of rules, got: %s",
+  "rewrite.err_rule_arg_count": "rule requires exactly 2 arguments (lhs, rhs), got %d",
+  "rewrite.err_replace_arg_count": "replace requires 2 arguments (expr, rules), got %d",
+  "rewrite.err_rewrite_arg_count": "rewrite requires 2 or 3 arguments (expr, rules, [max_steps]), got %d",
+  "rewrite.err_max_steps_integer": "rewrite max_steps must be a positive integer, got: %s",
+  "rewrite.err_max_steps_positive": "rewrite max_steps must be positive, got: %d"
 }

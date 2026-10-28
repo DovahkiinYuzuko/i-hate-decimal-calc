@@ -1191,5 +1191,13 @@
     "err_verify_failed": "逆Z変換のべき級数検証に失敗しました (n=%d: 期待値 %s, 実際値 %s)",
     "verify_fwd_reconstructs": "逆Z変換検証完了: 正方向Z変換により周波数領域式が復元されました",
     "verify_pfd_residue_match": "逆Z変換検証完了: 部分分数分解および留数展開と一致しました"
-  }
+  },
+  "rewrite.err_rules_nil": "ルールに nil を指定することはできません",
+  "rewrite.err_list_only_rules": "リストには rule(...) オブジェクトのみを含める必要があります: %s",
+  "rewrite.err_expected_rule_or_list": "rule または rule のリストが必要です: %s",
+  "rewrite.err_rule_arg_count": "rule は2つの引数 (lhs, rhs) が必要です（指定数: %d）",
+  "rewrite.err_replace_arg_count": "replace は2つの引数 (expr, rules) が必要です（指定数: %d）",
+  "rewrite.err_rewrite_arg_count": "rewrite は2つまたは3つの引数 (expr, rules, [max_steps]) が必要です（指定数: %d）",
+  "rewrite.err_max_steps_integer": "rewrite の max_steps は正の整数である必要があります: %s",
+  "rewrite.err_max_steps_positive": "rewrite の max_steps は正の値である必要があります: %d"
 }

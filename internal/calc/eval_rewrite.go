@@ -218,8 +218,8 @@ func TryApplyRuleAtRoot(rule *ast.RuleNode, target ast.Node) (ast.Node, bool) {
 			k := len(pAdd.Terms)
 			m := len(tAdd.Terms)
 			indices := make([]int, k)
-			var findSubMatch func(currK int, startM int, currBindings PatternBindings) (PatternBindings, []int, bool)
-			findSubMatch = func(currK int, startM int, currBindings PatternBindings) (PatternBindings, []int, bool) {
+			var findSubMatch func(currK int, currBindings PatternBindings) (PatternBindings, []int, bool)
+			findSubMatch = func(currK int, currBindings PatternBindings) (PatternBindings, []int, bool) {
 				if currK == k {
 					return currBindings, indices, true
 				}
@@ -238,7 +238,7 @@ func TryApplyRuleAtRoot(rule *ast.RuleNode, target ast.Node) (ast.Node, bool) {
 					}
 					if nextB, ok := MatchAST(pTerm, tAdd.Terms[j], currBindings); ok {
 						indices[currK] = j
-						if finalB, idxs, found := findSubMatch(currK+1, 0, nextB); found {
+						if finalB, idxs, found := findSubMatch(currK+1, nextB); found {
 							return finalB, idxs, true
 						}
 					}
@@ -246,7 +246,7 @@ func TryApplyRuleAtRoot(rule *ast.RuleNode, target ast.Node) (ast.Node, bool) {
 				return currBindings, nil, false
 			}
 
-			if bindings, matchedIndices, found := findSubMatch(0, 0, PatternBindings{}); found {
+			if bindings, matchedIndices, found := findSubMatch(0, PatternBindings{}); found {
 				repl := InstantiateTemplate(rule.RHS, bindings)
 				matchedSet := make(map[int]bool)
 				for _, idx := range matchedIndices {
@@ -429,6 +429,67 @@ func ApplyRuleOnceBottomUp(expr ast.Node, rules []*ast.RuleNode, recorder *prove
 			} else {
 				transformedChild = v
 			}
+		case *ast.ComplexNode:
+			newR, chR := visit(v.Real)
+			newI, chI := visit(v.Imag)
+			if chR || chI {
+				childChanged = true
+				transformedChild = ast.NewComplex(newR, newI)
+			} else {
+				transformedChild = v
+			}
+		case *ast.MatrixNode:
+			newData := make([][]ast.Node, v.Rows)
+			for r := 0; r < v.Rows; r++ {
+				newData[r] = make([]ast.Node, v.Cols)
+				for c := 0; c < v.Cols; c++ {
+					nc, ch := visit(v.Data[r][c])
+					if ch {
+						childChanged = true
+					}
+					newData[r][c] = nc
+				}
+			}
+			if childChanged {
+				transformedChild = &ast.MatrixNode{Rows: v.Rows, Cols: v.Cols, Data: newData}
+			} else {
+				transformedChild = v
+			}
+		case *ast.QuantityNode:
+			newVal, ch := visit(v.Value)
+			if ch {
+				childChanged = true
+				transformedChild = ast.NewQuantityNode(newVal, v.Scale, v.Dimensions, v.DisplayUnit)
+			} else {
+				transformedChild = v
+			}
+		case *ast.PiecewiseNode:
+			newCases := make([]ast.PiecewiseCase, len(v.Cases))
+			for i, c := range v.Cases {
+				newExpr, chE := visit(c.Expr)
+				var newCond ast.Node
+				var chC bool
+				if c.Condition != nil {
+					newCond, chC = visit(c.Condition)
+				}
+				if chE || chC {
+					childChanged = true
+				}
+				newCases[i] = ast.PiecewiseCase{Expr: newExpr, Condition: newCond}
+			}
+			var newOtherwise ast.Node
+			if v.Otherwise != nil {
+				no, chO := visit(v.Otherwise)
+				if chO {
+					childChanged = true
+				}
+				newOtherwise = no
+			}
+			if childChanged {
+				transformedChild = &ast.PiecewiseNode{Cases: newCases, Otherwise: newOtherwise}
+			} else {
+				transformedChild = v
+			}
 		default:
 			transformedChild = n
 		}
@@ -464,7 +525,7 @@ func ApplyRuleOnceBottomUp(expr ast.Node, rules []*ast.RuleNode, recorder *prove
 // extractRules converts an ast.Node (RuleNode or ListNode of RuleNodes) into []*ast.RuleNode.
 func extractRules(node ast.Node) ([]*ast.RuleNode, error) {
 	if node == nil {
-		return nil, fmt.Errorf("rules cannot be nil")
+		return nil, fmt.Errorf("%s", i18n.T("rewrite.err_rules_nil"))
 	}
 	if r, ok := node.(*ast.RuleNode); ok {
 		return []*ast.RuleNode{r}, nil
@@ -475,18 +536,18 @@ func extractRules(node ast.Node) ([]*ast.RuleNode, error) {
 			if r, ok := elem.(*ast.RuleNode); ok {
 				res = append(res, r)
 			} else {
-				return nil, fmt.Errorf("list must contain only rule(...) objects, got: %s", elem)
+				return nil, fmt.Errorf("%s", i18n.T("rewrite.err_list_only_rules", elem))
 			}
 		}
 		return res, nil
 	}
-	return nil, fmt.Errorf("expected rule or list of rules, got: %s", node)
+	return nil, fmt.Errorf("%s", i18n.T("rewrite.err_expected_rule_or_list", node))
 }
 
 // EvalRule implements rule(lhs, rhs).
 func EvalRule(args []ast.Node, env *Env) (ast.Node, error) {
 	if len(args) != 2 {
-		return nil, fmt.Errorf("rule requires exactly 2 arguments (lhs, rhs), got %d", len(args))
+		return nil, fmt.Errorf("%s", i18n.T("rewrite.err_rule_arg_count", len(args)))
 	}
 	// LHS and RHS are unevaluated patterns
 	return ast.NewRuleNode(args[0], args[1]), nil
@@ -495,7 +556,7 @@ func EvalRule(args []ast.Node, env *Env) (ast.Node, error) {
 // EvalReplace implements replace(expr, rule_or_list).
 func EvalReplace(args []ast.Node, env *Env) (ast.Node, error) {
 	if len(args) != 2 {
-		return nil, fmt.Errorf("replace requires 2 arguments (expr, rules), got %d", len(args))
+		return nil, fmt.Errorf("%s", i18n.T("rewrite.err_replace_arg_count", len(args)))
 	}
 	targetExpr, err := EvalWithEnv(args[0], env)
 	if err != nil {
@@ -522,7 +583,7 @@ func EvalReplace(args []ast.Node, env *Env) (ast.Node, error) {
 // EvalRewrite implements rewrite(expr, rule_or_list, [max_steps]).
 func EvalRewrite(args []ast.Node, env *Env) (ast.Node, error) {
 	if len(args) < 2 || len(args) > 3 {
-		return nil, fmt.Errorf("rewrite requires 2 or 3 arguments (expr, rules, [max_steps]), got %d", len(args))
+		return nil, fmt.Errorf("%s", i18n.T("rewrite.err_rewrite_arg_count", len(args)))
 	}
 
 	targetExpr, err := EvalWithEnv(args[0], env)
@@ -550,9 +611,13 @@ func EvalRewrite(args []ast.Node, env *Env) (ast.Node, error) {
 			return nil, err
 		}
 		if rat, ok := stepNode.(*ast.RationalNode); ok && rat.Val.IsInt() {
-			maxSteps = int(rat.Val.Num().Int64())
+			val := int(rat.Val.Num().Int64())
+			if val <= 0 {
+				return nil, fmt.Errorf("%s", i18n.T("rewrite.err_max_steps_positive", val))
+			}
+			maxSteps = val
 		} else {
-			return nil, fmt.Errorf("rewrite max_steps must be an integer, got %s", stepNode)
+			return nil, fmt.Errorf("%s", i18n.T("rewrite.err_max_steps_integer", stepNode))
 		}
 	}
 
