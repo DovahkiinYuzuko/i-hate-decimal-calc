@@ -183,14 +183,15 @@ func RenderSignatureInline(w io.Writer, ctx *SignatureContext, theme string, ava
 	descColor := "\x1B[32m"       // Green
 	resetColor := "\x1B[0m"
 
-	if theme == "light" {
+	switch theme {
+	case "light":
 		prefixColor = "\x1B[90m"
 		nameColor = "\x1B[1;34m"     // Bold Blue
 		activeColor = "\x1B[1;4;35m" // Bold Underline Magenta
 		normalColor = "\x1B[30m"     // Black
 		dimColor = "\x1B[90m"
 		descColor = "\x1B[32m"
-	} else if theme == "none" {
+	case "none":
 		prefixColor = ""
 		nameColor = ""
 		activeColor = ""
@@ -232,35 +233,40 @@ func RenderSignatureInline(w io.Writer, ctx *SignatureContext, theme string, ava
 
 	// Now build styled ANSI string matching the target display text
 	var styled strings.Builder
+	writeStyled := func(c, s string) {
+		styled.WriteString(c)
+		styled.WriteString(s)
+		styled.WriteString(resetColor)
+	}
 	styled.WriteString("  ")
-	styled.WriteString(prefixColor + "[" + resetColor)
-	styled.WriteString(nameColor + ctx.FuncName + resetColor)
-	styled.WriteString(dimColor + "(" + resetColor)
+	writeStyled(prefixColor, "[")
+	writeStyled(nameColor, ctx.FuncName)
+	writeStyled(dimColor, "(")
 
 	for i, arg := range ctx.Args {
 		if i > 0 {
-			styled.WriteString(dimColor + ", " + resetColor)
+			writeStyled(dimColor, ", ")
 		}
 		if i == ctx.ArgIndex {
-			styled.WriteString(activeColor + arg + resetColor)
+			writeStyled(activeColor, arg)
 		} else {
-			styled.WriteString(normalColor + arg + resetColor)
+			writeStyled(normalColor, arg)
 		}
 	}
 	if ctx.ArgIndex >= len(ctx.Args) && ctx.ActiveArgName != "" {
 		if len(ctx.Args) > 0 {
-			styled.WriteString(dimColor + ", " + resetColor)
+			writeStyled(dimColor, ", ")
 		}
-		styled.WriteString(activeColor + ctx.ActiveArgName + resetColor)
+		writeStyled(activeColor, ctx.ActiveArgName)
 	}
-	styled.WriteString(dimColor + ")" + resetColor)
+	writeStyled(dimColor, ")")
 
 	// If full hint fit, add description
 	if targetRaw == rawHint {
-		styled.WriteString(dimColor + " - " + resetColor)
-		styled.WriteString(descColor + ctx.Description + resetColor)
+		writeStyled(dimColor, " - ")
+		writeStyled(descColor, ctx.Description)
 	}
-	styled.WriteString(prefixColor + "]" + resetColor)
+	writeStyled(prefixColor, "]")
 
 	_, err := io.WriteString(w, styled.String())
 	return err
