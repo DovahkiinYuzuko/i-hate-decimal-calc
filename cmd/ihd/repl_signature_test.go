@@ -151,6 +151,35 @@ func TestRenderSignatureInline(t *testing.T) {
 		t.Errorf("rendered guide should contain description, got: %q", rendered)
 	}
 
+	// Test light theme
+	buf.Reset()
+	err = RenderSignatureInline(&buf, ctx, "light", 80)
+	if err != nil {
+		t.Fatalf("RenderSignatureInline with light theme failed: %v", err)
+	}
+	renderedLight := buf.String()
+	if !strings.Contains(renderedLight, "\x1B[1;34m") {
+		t.Errorf("light theme should use blue for function name, got: %q", renderedLight)
+	}
+	if !strings.Contains(renderedLight, "diff") || !strings.Contains(renderedLight, "var") {
+		t.Errorf("light theme should contain func name and active arg, got: %q", renderedLight)
+	}
+
+	// Test none theme (plain text, no ANSI escape sequences)
+	buf.Reset()
+	err = RenderSignatureInline(&buf, ctx, "none", 80)
+	if err != nil {
+		t.Fatalf("RenderSignatureInline with none theme failed: %v", err)
+	}
+	renderedNone := buf.String()
+	if strings.Contains(renderedNone, "\x1B[") {
+		t.Errorf("none theme should not contain any ANSI escape codes, got: %q", renderedNone)
+	}
+	expectedNone := "  [diff(expr, var) - Calculate derivative]"
+	if renderedNone != expectedNone {
+		t.Errorf("none theme output mismatch: want %q, got %q", expectedNone, renderedNone)
+	}
+
 	// Test insufficient width suppression
 	buf.Reset()
 	err = RenderSignatureInline(&buf, ctx, "dark", 5)
