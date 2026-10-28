@@ -47,6 +47,11 @@ type runOptions struct {
 }
 
 func run(args []string, in io.Reader, out, errOut io.Writer) int {
+	if len(args) > 0 && (args[0] == "update" || args[0] == "self-update") {
+		_ = i18n.Init("")
+		return runUpdate(args[1:], out, errOut)
+	}
+
 	// Partition args into flags and expressions.
 	var flagArgs []string
 	var exprArgs []string
@@ -837,5 +842,59 @@ func replayCertificate(certPath string, out, errOut io.Writer) int {
 
 	fmt.Fprintln(out, fmt.Sprintf(i18n.T("cli.replay_success"), certPath))
 	fmt.Fprint(out, trace.RenderExplain(i18n.CurrentLocale()))
+	return 0
+}
+
+func runUpdate(args []string, out, errOut io.Writer) int {
+	for i := 0; i < len(args); i++ {
+		if (args[i] == "-lang" || args[i] == "--lang") && i+1 < len(args) {
+			_ = i18n.Init(args[i+1])
+			break
+		} else if strings.HasPrefix(args[i], "--lang=") {
+			_ = i18n.Init(strings.TrimPrefix(args[i], "--lang="))
+			break
+		} else if strings.HasPrefix(args[i], "-lang=") {
+			_ = i18n.Init(strings.TrimPrefix(args[i], "-lang="))
+			break
+		}
+	}
+
+	fs := flag.NewFlagSet("ihd update", flag.ContinueOnError)
+	fs.SetOutput(errOut)
+
+	langFlag := fs.String("lang", "", i18n.T("cli.flag_lang"))
+	forceFlag := fs.Bool("force", false, i18n.T("cli.flag_update_force"))
+	fs.BoolVar(forceFlag, "f", false, i18n.T("cli.flag_update_force"))
+	checkFlag := fs.Bool("check", false, i18n.T("cli.flag_update_check"))
+	fs.BoolVar(checkFlag, "c", false, i18n.T("cli.flag_update_check"))
+	helpFlag := fs.Bool("help", false, i18n.T("cli.flag_help"))
+	fs.BoolVar(helpFlag, "h", false, i18n.T("cli.flag_help"))
+
+	if err := fs.Parse(args); err != nil {
+		return 1
+	}
+
+	if *langFlag != "" {
+		_ = i18n.Init(*langFlag)
+	}
+
+	if *helpFlag {
+		fmt.Fprintf(out, "%s\n\n", i18n.T("cli.cmd_update_desc"))
+		fmt.Fprintf(out, "Usage: ihd update [flags]\n\nFlags:\n")
+		fs.PrintDefaults()
+		return 0
+	}
+
+	opts := updater.SelfUpdateOptions{
+		Force:     *forceFlag,
+		CheckOnly: *checkFlag,
+		Out:       out,
+		ErrOut:    errOut,
+	}
+
+	if err := updater.PerformSelfUpdate(opts); err != nil {
+		fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), err.Error())
+		return 1
+	}
 	return 0
 }

@@ -86,6 +86,9 @@
     "err_pell_max_iterations_exceeded": "ペル方程式エラー: 最大反復回数を超過しました"
   },
   "cli": {
+    "cmd_update_desc": "ihd を最新のリリースバージョンに更新します",
+    "flag_update_check": "更新の確認のみを行い、インストールは行いません",
+    "flag_update_force": "既に最新の場合でも強制的に再インストールします",
     "repl_help_overview": "使用法: help <関数名> (例: help solve) | search <キーワード> (例: search 楕円) | whatis <数式または概念>",
     "repl_help_not_found": "関数または概念 '%s' は見つかりませんでした。'search <キーワード>' で検索してみてください。",
     "repl_search_missing_query": "使用法: search <キーワード>",
@@ -981,7 +984,20 @@
   "updater": {
     "new_version": "[!] ihd の新しいバージョンが利用可能です: %s (現在: %s)\n",
     "release": "   リリース情報: %s\n",
-    "to_update": "   アップデート方法: %s\n"
+    "to_update": "   アップデート方法: %s\n",
+    "already_latest": "ihd は既に最新バージョン (%s) です。\n",
+    "checking": "最新リリース情報を確認しています...\n",
+    "downloading": "最新バージョン (%s) のアセットをダウンロード中: %s\n",
+    "verifying": "SHA256 チェックサムを検証しています...\n",
+    "staging": "更新アセットを展開・ステージングしています...\n",
+    "applying": "バイナリを置換しています...\n",
+    "syncing_assets": "同梱資産 (exam, references 等) を更新しています...\n",
+    "success": "ihd を %s から %s へ正常にアップデートしました。\n",
+    "failed": "アップデートに失敗しました: %v\n",
+    "rollback_success": "旧バージョンのバイナリを正常に復元しました。\n",
+    "rollback_failed": "警告: 旧バージョンのバイナリ復元に失敗しました。手動で復旧してください: %v\n",
+    "pkg_manager_detected": "ihd はパッケージマネージャ (%s) 経由でインストールされているため、セルフアップデートは行えません。\n次のコマンドでアップデートしてください: %s\n",
+    "permission_denied": "エラー: インストール先ディレクトリ (%s) への書き込み権限がありません。管理者権限 (sudo 等) で実行してください。\n"
   },
   "vector": {
     "err_argument_must_be_a_1d": "引数は1次元ベクトルまたは 1xN/Nx1 行列である必要があります (指定値: %dx%d 行列)",
