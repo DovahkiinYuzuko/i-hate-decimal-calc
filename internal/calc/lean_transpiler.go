@@ -259,6 +259,20 @@ func ToLeanSyntax(node Node) (string, error) {
 		}
 		return fmt.Sprintf("!![%s]", strings.Join(rowStrs, "; ")), nil
 
+	case *RuleNode:
+		lhsStr, err := ToLeanSyntax(n.LHS)
+		if err != nil {
+			return "", err
+		}
+		rhsStr, err := ToLeanSyntax(n.RHS)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("(%s = %s)", lhsStr, rhsStr), nil
+
+	case *WildcardNode:
+		return escapeLeanIdent(strings.TrimPrefix(n.Name, "_")), nil
+
 	default:
 		return "", fmt.Errorf("%s", i18n.T("lean.err_unsupported_ast_node", n))
 	}

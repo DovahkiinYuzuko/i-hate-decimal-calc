@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc/ast"
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
@@ -365,6 +366,10 @@ func (p *Parser) parsePrefix() (ast.Node, error) {
 		}
 		if isReservedConst(name) {
 			return ast.NewConst(name)
+		}
+		// Wildcard variable symbol (e.g. "_x", "_a", "_1")
+		if strings.HasPrefix(name, "_") && len(name) > 1 {
+			return ast.NewWildcardNode(name), nil
 		}
 		// Otherwise, it is a variable symbol (e.g., "x", "ans")
 		return ast.NewVar(name), nil
