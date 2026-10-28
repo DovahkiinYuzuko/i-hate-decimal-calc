@@ -196,10 +196,10 @@ case ":$PATH:" in
     *":$INSTALL_DIR:"*) ;;
     *)
         echo "Note: $INSTALL_DIR is not in your PATH."
-        echo "Add the following line to your shell configuration file (~/.bashrc, ~/.zshrc, or ~/.profile):"
+        echo "Add the following line to your shell configuration file (~/.bashrc, ~/.zshrc, ~/.profile, or ~/.bash_profile for Termux):"
         echo ""
         echo "  export PATH=\"\$HOME/.ihd/bin:\$PATH\""
         echo ""
-        echo "Then reload your shell or run: source ~/.zshrc (or ~/.bashrc)"
+        echo "Then reload your shell or run: source ~/.zshrc (or source ~/.bashrc / source ~/.bash_profile)"
         ;;
 esac

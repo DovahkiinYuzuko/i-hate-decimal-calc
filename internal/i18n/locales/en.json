@@ -86,6 +86,9 @@
     "err_pell_max_iterations_exceeded": "Pell equation error: maximum iterations exceeded"
   },
   "cli": {
+    "cmd_update_desc": "Update ihd to the latest release version",
+    "flag_update_check": "Only check for available updates without installing",
+    "flag_update_force": "Force re-installation even if already up to date",
     "repl_help_overview": "Usage: help <function> (e.g. help solve) | search <keyword> (e.g. search elliptic) | whatis <expression or concept>",
     "repl_help_not_found": "Function or concept '%s' not found. Try searching with 'search <keyword>'.",
     "repl_search_missing_query": "Usage: search <keyword>",
@@ -981,7 +984,20 @@
   "updater": {
     "new_version": "[!] A new version of ihd is available: %s (current: %s)\n",
     "release": "   Release: %s\n",
-    "to_update": "   To update: %s\n"
+    "to_update": "   To update: %s\n",
+    "already_latest": "ihd is already up to date (%s).\n",
+    "checking": "Checking for latest release...\n",
+    "downloading": "Downloading asset for version %s: %s\n",
+    "verifying": "Verifying SHA256 checksum...\n",
+    "staging": "Extracting and staging update assets...\n",
+    "applying": "Applying binary replacement...\n",
+    "syncing_assets": "Syncing bundled assets (exam, references, etc.)...\n",
+    "success": "Successfully updated ihd from %s to %s.\n",
+    "failed": "Failed to update ihd: %v\n",
+    "rollback_success": "Successfully rolled back to the previous binary version.\n",
+    "rollback_failed": "Warning: Failed to restore previous binary version. Please recover manually: %v\n",
+    "pkg_manager_detected": "ihd was installed via a package manager (%s) and cannot self-update directly.\nPlease update using: %s\n",
+    "permission_denied": "Error: Insufficient write permissions for installation directory (%s). Please run with elevated privileges (e.g., sudo).\n"
   },
   "vector": {
     "err_argument_must_be_a_1d": "argument must be a 1D vector or 1xN/Nx1 matrix, got %dx%d matrix",

@@ -76,6 +76,7 @@ func RunCompletion(shell string, w io.Writer) error {
 	}{
 		{"run", "cli.subcmd_run"},
 		{"completion", "cli.subcmd_completion"},
+		{"update", "cli.cmd_update_desc"},
 	}
 
 	var subcommands []completionItem

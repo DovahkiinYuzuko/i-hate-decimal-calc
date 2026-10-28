@@ -60,6 +60,10 @@ curl -fsSL https://raw.githubusercontent.com/DovahkiinYuzuko/i-hate-decimal-calc
 irm https://raw.githubusercontent.com/DovahkiinYuzuko/i-hate-decimal-calc/main/install.ps1 | iex
 ```
 
+> [!NOTE]
+> **Android (Termux) やログインシェル環境でのご利用について**:  
+> Termux などの環境では、起動時に `~/.bashrc` ではなく `~/.bash_profile` が優先評価されます。PATH 設定を永続化するには、`~/.bash_profile` に `export PATH="$HOME/.ihd/bin:$PATH"` を追記するか、`~/.bash_profile` 内で `~/.bashrc` を読み込む（`[ -f ~/.bashrc ] && . ~/.bashrc`）ように設定してください。
+
 #### ソースコードからのビルド
 Go 1.26.5 がインストールされている環境で、リポジトリルートにて `go build -o ihd ./cmd/ihd` を実行してビルドします（開発者向けツールや検証手順は以下の折りたたみセクションを参照してください）。
 
@@ -577,6 +581,10 @@ curl -fsSL https://raw.githubusercontent.com/DovahkiinYuzuko/i-hate-decimal-calc
 ```powershell
 irm https://raw.githubusercontent.com/DovahkiinYuzuko/i-hate-decimal-calc/main/install.ps1 | iex
 ```
+
+> [!NOTE]
+> **Android (Termux) & Login Shell Environments**:  
+> In environments like Termux on Android, `~/.bash_profile` is evaluated primarily upon session startup instead of `~/.bashrc`. To persist the `PATH` environment variable across sessions, ensure you append `export PATH="$HOME/.ihd/bin:$PATH"` to your `~/.bash_profile`, or ensure `~/.bashrc` is sourced within `~/.bash_profile` (`[ -f ~/.bashrc ] && . ~/.bashrc`).
 
 #### Building from Source
 Requires Go 1.26.5. Build directly from the root of the repository via `go build -o ihd ./cmd/ihd` (see the collapsible section below for standalone verification tools and developer fuzzing):
