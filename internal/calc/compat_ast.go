@@ -61,6 +61,8 @@ const (
 	NodeLambda          = ast.NodeLambda
 	NodeApply           = ast.NodeApply
 	NodeQuantity        = ast.NodeQuantity
+	NodeWildcard        = ast.NodeWildcard
+	NodeRule            = ast.NodeRule
 )
 
 type QuantifierKind = ast.QuantifierKind
@@ -102,6 +104,8 @@ type (
 	ApplyNode           = ast.ApplyNode
 	QuantityNode        = ast.QuantityNode
 	DimensionVector     = ast.DimensionVector
+	WildcardNode        = ast.WildcardNode
+	RuleNode            = ast.RuleNode
 )
 
 var (
@@ -129,6 +133,8 @@ var (
 	NewLambdaNode           = ast.NewLambdaNode
 	NewApplyNode            = ast.NewApplyNode
 	NewQuantityNode         = ast.NewQuantityNode
+	NewWildcardNode         = ast.NewWildcardNode
+	NewRuleNode             = ast.NewRuleNode
 	Walk                    = ast.Walk
 	Inspect                 = ast.Inspect
 	Transform               = ast.Transform

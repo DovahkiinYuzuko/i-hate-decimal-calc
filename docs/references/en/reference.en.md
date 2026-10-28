@@ -461,3 +461,24 @@ Performs dimensional analysis and physical unit calculations over the 7-dimensio
 
 
 
+
+---
+
+### 22. Algebraic Pattern Matching & Term Rewriting System (TRS)
+
+Provides term rewriting and pattern matching using underscore wildcard variables (_x, _a), supporting non-linear pattern consistency, associative-commutative (AC) partial matching for addition and multiplication, and fixed-point rewrite loops.
+
+| Function / Syntax | Example | Description |
+| :--- | :--- | :--- |
+| _var | _x, _a, _1 | Wildcard variable matching any subexpression. Identical wildcards are checked for structural equivalence (non-linear patterns) |
+| 
+ule | 
+ule(sin(_x)^2, 1 - cos(_x)^2) | Creates a first-class rewrite rule object holding LHS pattern and RHS template |
+| 
+eplace | 
+eplace(sin(t)^2, rule(sin(_x)^2, 1 - cos(_x)^2)) | Traverses expression bottom-up and replaces matched subterms once |
+| 
+ewrite | 
+ewrite(sin(sin(x)), rule(sin(_t), _t)) / 
+ewrite(expr, [r1, r2], [max_steps]) | Iteratively applies rules until a fixed point is reached. Protected by cycle detection and configurable step limit in ~/.ihd/config.json (
+ewrite_max_steps, default 1000) |

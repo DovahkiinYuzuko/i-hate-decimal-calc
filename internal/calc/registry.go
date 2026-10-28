@@ -1501,6 +1501,29 @@ func init() {
 		MaxArgs:  1,
 		LazyArgs: true,
 	})
+
+	// Algebraic Pattern Matching & Term Rewriting System (TRS)
+	RegisterFunction(FunctionSpec{
+		Name:     "rule",
+		MinArgs:  2,
+		MaxArgs:  2,
+		LazyArgs: true,
+		Handler:  EvalRule,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:     "replace",
+		MinArgs:  2,
+		MaxArgs:  2,
+		LazyArgs: true,
+		Handler:  EvalReplace,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:     "rewrite",
+		MinArgs:  2,
+		MaxArgs:  3,
+		LazyArgs: true,
+		Handler:  EvalRewrite,
+	})
 }
 
 

@@ -86,6 +86,8 @@ const (
 	NodeLambda
 	NodeApply
 	NodeQuantity
+	NodeWildcard
+	NodeRule
 )
 
 // Node represents any node in the mathematical expression tree.

@@ -69,7 +69,14 @@ func Walk(node Node, visitor func(Node) bool) {
 		}
 	case *QuantityNode:
 		Walk(v.Value, visitor)
-	case *RationalNode, *ConstNode, *VarNode, *PlotNode, *PolyNode, *AlgebraicNumberNode, *StringNode:
+	case *RuleNode:
+		if v.LHS != nil {
+			Walk(v.LHS, visitor)
+		}
+		if v.RHS != nil {
+			Walk(v.RHS, visitor)
+		}
+	case *RationalNode, *ConstNode, *VarNode, *PlotNode, *PolyNode, *AlgebraicNumberNode, *StringNode, *WildcardNode:
 		// Leaf nodes: no children
 	}
 }
@@ -195,7 +202,19 @@ func Transform(node Node, transformer func(Node) Node) Node {
 			Dimensions:  v.Dimensions.Clone(),
 			DisplayUnit: v.DisplayUnit,
 		}
-	case *RationalNode, *ConstNode, *VarNode, *PlotNode, *PolyNode, *AlgebraicNumberNode, *StringNode:
+	case *RuleNode:
+		var newLHS, newRHS Node
+		if v.LHS != nil {
+			newLHS = Transform(v.LHS, transformer)
+		}
+		if v.RHS != nil {
+			newRHS = Transform(v.RHS, transformer)
+		}
+		transformedChild = &RuleNode{
+			LHS: newLHS,
+			RHS: newRHS,
+		}
+	case *RationalNode, *ConstNode, *VarNode, *PlotNode, *PolyNode, *AlgebraicNumberNode, *StringNode, *WildcardNode:
 		transformedChild = node
 	default:
 		transformedChild = node

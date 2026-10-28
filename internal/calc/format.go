@@ -200,6 +200,12 @@ func formatNode(n Node, opts FormatOptions) string {
 		}
 		return fmt.Sprintf("%s [%s]", valStr, unitStr)
 
+	case *RuleNode:
+		return fmt.Sprintf("rule(%s, %s)", formatNode(v.LHS, opts), formatNode(v.RHS, opts))
+
+	case *WildcardNode:
+		return v.Name
+
 	default:
 		return n.String()
 	}
@@ -505,6 +511,12 @@ func formatLaTeXNode(n Node) string {
 		}
 		return fmt.Sprintf("\\begin{pmatrix} %s \\end{pmatrix}", strings.Join(rowStrs, " \\\\ "))
 
+	case *RuleNode:
+		return fmt.Sprintf("%s \\to %s", formatLaTeXNode(v.LHS), formatLaTeXNode(v.RHS))
+
+	case *WildcardNode:
+		return v.Name
+
 	default:
 		return n.String()
 	}
@@ -738,6 +750,12 @@ func formatTypstNode(n Node) string {
 			op = "="
 		}
 		return fmt.Sprintf("%s %s %s", formatTypstNode(v.LHS), op, formatTypstNode(v.RHS))
+
+	case *RuleNode:
+		return fmt.Sprintf("%s arrow.r %s", formatTypstNode(v.LHS), formatTypstNode(v.RHS))
+
+	case *WildcardNode:
+		return v.Name
 
 	default:
 		return n.String()

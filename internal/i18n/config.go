@@ -16,6 +16,7 @@ type Config struct {
 	SyntaxHighlight *bool           `json:"syntax_highlight,omitempty"`
 	WarnIterations  json.RawMessage `json:"warn_iterations,omitempty"`
 	MaxIterations   json.RawMessage `json:"max_iterations,omitempty"`
+	RewriteMaxSteps *int            `json:"rewrite_max_steps,omitempty"`
 }
 
 // GetIhdDir returns the path to the ~/.ihd directory.
@@ -169,5 +170,31 @@ func SaveConfigMaxIterationsBig(val *big.Int) error {
 	cfg.MaxIterations = json.RawMessage([]byte(val.String()))
 	return SaveConfig(cfg)
 }
+
+// GetRewriteMaxSteps returns the maximum rewrite steps.
+// Defaults to 1000 if not specified or invalid.
+func GetRewriteMaxSteps(cfg *Config) int {
+	defaultVal := 1000
+	if cfg == nil || cfg.RewriteMaxSteps == nil || *cfg.RewriteMaxSteps <= 0 {
+		return defaultVal
+	}
+	return *cfg.RewriteMaxSteps
+}
+
+// GetRewriteMaxSteps returns the maximum rewrite steps for this config.
+func (c *Config) GetRewriteMaxSteps() int {
+	return GetRewriteMaxSteps(c)
+}
+
+// SaveConfigRewriteMaxSteps updates the rewrite_max_steps entry in ~/.ihd/config.json.
+func SaveConfigRewriteMaxSteps(steps int) error {
+	cfg, _ := LoadConfig()
+	if cfg == nil {
+		cfg = &Config{}
+	}
+	cfg.RewriteMaxSteps = &steps
+	return SaveConfig(cfg)
+}
+
 
 
