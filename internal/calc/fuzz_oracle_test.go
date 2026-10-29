@@ -1,4 +1,4 @@
-package calc_test
+﻿package calc_test
 
 import (
 	"fmt"
@@ -99,12 +99,6 @@ func (g gaussianRat) add(other gaussianRat) gaussianRat {
 	}
 }
 
-func (g gaussianRat) sub(other gaussianRat) gaussianRat {
-	return gaussianRat{
-		re: new(big.Rat).Sub(g.re, other.re),
-		im: new(big.Rat).Sub(g.im, other.im),
-	}
-}
 
 func (g gaussianRat) mul(other gaussianRat) gaussianRat {
 	// (a + bi)(c + di) = (ac - bd) + (ad + bc)i
@@ -550,12 +544,14 @@ func evalNumericalComplex(n ast.Node) (complex128, bool) {
 		if !ok {
 			return 0, false
 		}
-		if v.Op == "-" {
+		switch v.Op {
+		case "-":
 			return -val, isValidComplex(-val)
-		} else if v.Op == "+" {
+		case "+":
 			return val, isValidComplex(val)
+		default:
+			return 0, false
 		}
-		return 0, false
 	case *ast.AddNode:
 		var sum complex128
 		for _, term := range v.Terms {

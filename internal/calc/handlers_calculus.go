@@ -1,4 +1,4 @@
-package calc
+﻿package calc
 
 import (
 	"fmt"
@@ -201,9 +201,10 @@ func handleSolve(args []Node, env *Env) (Node, error) {
 
 	// Check if relational inequality or equality
 	if rel, ok := args[0].(*RelOpNode); ok {
-		if rel.Op == "<" || rel.Op == "<=" || rel.Op == ">" || rel.Op == ">=" {
+		switch rel.Op {
+		case "<", "<=", ">", ">=":
 			res, err = SolveInequality(rel, varName, env)
-		} else if rel.Op == "==" {
+		case "==":
 			negRHS, negErr := simplifyUnaryOp("-", rel.RHS)
 			if negErr != nil {
 				negRHS = &UnaryOpNode{Op: "-", Expr: rel.RHS}
@@ -213,7 +214,7 @@ func handleSolve(args []Node, env *Env) (Node, error) {
 				diff = NewAdd([]Node{rel.LHS, negRHS})
 			}
 			res, err = solveEquation(diff, varName)
-		} else {
+		default:
 			res, err = solveEquation(args[0], varName)
 		}
 	} else {

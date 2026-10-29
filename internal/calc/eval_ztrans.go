@@ -111,7 +111,7 @@ func ztransDispatch(f Node, nName string, zVar *VarNode, env *Env) (Node, error)
 	return ztransTerm(f, nName, zVar, env)
 }
 
-func ztransTerm(f Node, nName string, zVar *VarNode, env *Env) (Node, error) {
+func ztransTerm(f Node, nName string, zVar *VarNode, _ *Env) (Node, error) {
 	one := &RationalNode{Val: big.NewRat(1, 1)}
 	negOne := &RationalNode{Val: big.NewRat(-1, 1)}
 

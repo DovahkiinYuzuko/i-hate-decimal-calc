@@ -201,7 +201,7 @@ func parseLPExpressionMode(sense lp.OptSense, objNode, consNode Node, env *Env) 
 	}, varUnits, nil
 }
 
-func parseLPMatrixMode(sense lp.OptSense, args []Node, env *Env) (*lp.Problem, map[string]ast.DimensionVector, error) {
+func parseLPMatrixMode(sense lp.OptSense, args []Node, _ *Env) (*lp.Problem, map[string]ast.DimensionVector, error) {
 	cList, ok := args[0].(*ast.ListNode)
 	if !ok {
 		return nil, nil, fmt.Errorf("%s", i18n.T("lp.err_expected_objective_list", args[0]))

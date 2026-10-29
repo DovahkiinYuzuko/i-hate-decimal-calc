@@ -1,4 +1,4 @@
-package calc
+﻿package calc
 
 import (
 	"fmt"
@@ -81,11 +81,12 @@ func (c *RecurrenceCertificate) RenderTraceExplain(lang string) string {
 			if cf.Sign() == 0 {
 				continue
 			}
-			if i == 0 {
+			switch i {
+			case 0:
 				terms = append(terms, cf.RatString())
-			} else if i == 1 {
+			case 1:
 				terms = append(terms, fmt.Sprintf("%s * r", cf.RatString()))
-			} else {
+			default:
 				terms = append(terms, fmt.Sprintf("%s * r^%d", cf.RatString(), i))
 			}
 		}

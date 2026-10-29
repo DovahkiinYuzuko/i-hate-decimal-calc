@@ -1,4 +1,4 @@
-package calc_test
+﻿package calc_test
 
 import (
 	"fmt"
@@ -285,7 +285,8 @@ func FuzzDomain_SimplexStrongDuality(f *testing.F) {
 			}
 
 			// Strong Duality Invariant Check
-			if primalRes.Status == lp.StatusOptimal {
+			switch primalRes.Status {
+			case lp.StatusOptimal:
 				if dualRes.Status != lp.StatusOptimal {
 					t.Fatalf("Strong duality status mismatch: primal is OPTIMAL, but dual is %s", dualRes.Status)
 				}
@@ -305,13 +306,13 @@ func FuzzDomain_SimplexStrongDuality(f *testing.F) {
 					t.Fatalf("Oracle evaluated strong duality soundness bug: %s != %s",
 						primalOptNode.String(), dualOptNode.String())
 				}
-			} else if primalRes.Status == lp.StatusUnbounded {
+			case lp.StatusUnbounded:
 				// If primal is unbounded, dual must be infeasible
 				if dualRes.Status != lp.StatusInfeasible {
 					t.Fatalf("Duality theorem violated: primal is UNBOUNDED, but dual is %s (expected INFEASIBLE)",
 						dualRes.Status)
 				}
-			} else if primalRes.Status == lp.StatusInfeasible {
+			case lp.StatusInfeasible:
 				// If primal is infeasible, dual cannot be optimal
 				if dualRes.Status == lp.StatusOptimal {
 					t.Fatalf("Duality theorem violated: primal is INFEASIBLE, but dual is OPTIMAL")

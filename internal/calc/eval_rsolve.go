@@ -1,4 +1,4 @@
-package calc
+﻿package calc
 
 import (
 	"fmt"
@@ -369,11 +369,12 @@ func solveHomogeneousRecurrence(coeffs map[int]*big.Rat, idxVar string, order in
 	for _, r := range roots {
 		for j := 0; j < r.Multiplicity; j++ {
 			b := makePowerBasis(r.Val, idxVar)
-			if j == 0 {
+			switch j {
+			case 0:
 				bases = append(bases, b)
-			} else if j == 1 {
+			case 1:
 				bases = append(bases, &MulNode{Factors: []Node{&VarNode{Name: idxVar}, b}})
-			} else {
+			default:
 				jPow := &PowNode{Base: &VarNode{Name: idxVar}, Exp: &RationalNode{Val: big.NewRat(int64(j), 1)}}
 				bases = append(bases, &MulNode{Factors: []Node{jPow, b}})
 			}
@@ -414,7 +415,7 @@ type ratRootWithMult struct {
 
 // factorRecurrenceRationalRoots converts rational coefficients to integer polynomial
 // and uses factor.go's findRationalRoots and syntheticDivide.
-func factorRecurrenceRationalRoots(poly []*big.Rat, deg int) ([]ratRootWithMult, []*big.Rat, error) {
+func factorRecurrenceRationalRoots(poly []*big.Rat, _ int) ([]ratRootWithMult, []*big.Rat, error) {
 	// Find common denominator to convert to []*big.Int
 	lcmDenom := big.NewInt(1)
 	for _, c := range poly {

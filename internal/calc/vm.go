@@ -467,7 +467,6 @@ func (vm *VM) Run() (Node, error) {
 					return retVal, nil
 				}
 				vm.Push(retVal)
-				break
 
 			case OpPop:
 				vm.Pop()

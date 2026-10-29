@@ -195,7 +195,7 @@ func invZTransRational(F Node, zName string, nVar *VarNode, env *Env) (Node, err
 // invZTransTerm transforms a single partial fraction term of X(z)/z to time domain.
 // Because the term is from X(z)/z, we multiply by z in the transform domain:
 // A/(z-p)^k in X(z)/z  -->  A * z / (z-p)^k in X(z).
-func invZTransTerm(term Node, zName string, nVar *VarNode, env *Env) (Node, error) {
+func invZTransTerm(term Node, zName string, nVar *VarNode, _ *Env) (Node, error) {
 	if !containsVariable(term, zName) {
 		return &RationalNode{Val: big.NewRat(0, 1)}, nil
 	}

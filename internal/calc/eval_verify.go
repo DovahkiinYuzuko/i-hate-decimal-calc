@@ -1,4 +1,4 @@
-package calc
+﻿package calc
 
 import (
 	"fmt"
@@ -150,6 +150,7 @@ func VerifyComputation(expr, result Node, env *Env) (*VerificationCertificate, e
 			_ = fsm.TransitionTo(VerifyStateTargetClassified)
 			return verifyODE(fn, result, env, fsm)
 
+
 		case "rsolve":
 			_ = fsm.TransitionTo(VerifyStateTargetClassified)
 			return verifyRSolve(fn, result, env, fsm)
@@ -161,8 +162,6 @@ func VerifyComputation(expr, result Node, env *Env) (*VerificationCertificate, e
 		case "iztrans":
 			_ = fsm.TransitionTo(VerifyStateTargetClassified)
 			return verifyInvZTrans(fn, result, env, fsm)
-			_ = fsm.TransitionTo(VerifyStateTargetClassified)
-			return verifyODE(fn, result, env, fsm)
 
 		case "wz_cert":
 			_ = fsm.TransitionTo(VerifyStateTargetClassified)
