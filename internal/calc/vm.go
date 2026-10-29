@@ -26,6 +26,7 @@ const (
 	OpDiv                    // [OpDiv] (pop b, pop a, push a / b)
 	OpPow                    // [OpPow] (pop b, pop a, push a ^ b)
 	OpNeg                    // [OpNeg] (pop a, push -a)
+	OpFactorial              // [OpFactorial] (pop a, push a!)
 	OpCall                   // [OpCall, fn_name_idx (uint16), argc (uint8)]
 	OpReturn                 // [OpReturn]
 	OpPop                    // [OpPop]
@@ -166,6 +167,10 @@ func (c *Compiler) compileNode(node Node) error {
 		}
 		if v.Op == "-" {
 			c.emit(OpNeg)
+		} else if v.Op == "!" {
+			c.emit(OpFactorial)
+		} else {
+			return fmt.Errorf("unsupported unary op for VM: %s", v.Op)
 		}
 		return nil
 
@@ -426,6 +431,14 @@ func (vm *VM) Run() (Node, error) {
 			case OpNeg:
 				a := vm.Pop()
 				res, err := EvalWithEnv(&UnaryOpNode{Op: "-", Expr: a}, vm.env)
+				if err != nil {
+					return nil, err
+				}
+				vm.Push(res)
+
+			case OpFactorial:
+				a := vm.Pop()
+				res, err := EvalWithEnv(&UnaryOpNode{Op: "!", Expr: a}, vm.env)
 				if err != nil {
 					return nil, err
 				}
