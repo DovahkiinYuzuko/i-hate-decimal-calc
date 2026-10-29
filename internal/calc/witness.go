@@ -19,11 +19,13 @@ const (
 
 // CounterexampleWitness represents a concrete numerical assignment refuting an equality.
 type CounterexampleWitness struct {
-	Kind        WitnessKind
-	Assignments map[string]*big.Rat
-	LHSVal      *big.Rat // nil if undefined
-	RHSVal      *big.Rat // nil if undefined
-	Message     string
+	Kind         WitnessKind
+	Assignments  map[string]*big.Rat
+	LHSVal       *big.Rat // nil if undefined or non-rational
+	RHSVal       *big.Rat // nil if undefined or non-rational
+	LHSUndefined bool
+	RHSUndefined bool
+	Message      string
 }
 
 // String returns human-readable description of the witness.
@@ -32,6 +34,14 @@ func (w *CounterexampleWitness) String() string {
 		return ""
 	}
 	return w.Message
+}
+
+func copyAssignments(src map[string]*big.Rat) map[string]*big.Rat {
+	dst := make(map[string]*big.Rat, len(src))
+	for k, v := range src {
+		dst[k] = new(big.Rat).Set(v)
+	}
+	return dst
 }
 
 // FindCounterexample searches for a concrete rational counterexample to lhs == rhs.
@@ -75,12 +85,13 @@ func FindCounterexample(lhs, rhs Node, env *Env) (*CounterexampleWitness, error)
 		candidates = append(candidates, big.NewRat(f[0], f[1]))
 	}
 
-	// 3. Generate candidate vectors up to budget
+	// 3. Generate candidate vectors up to budget using backtracking (zero allocation per step)
 	maxPoints := 250
 	pointCount := 0
+	current := make(map[string]*big.Rat, len(allVars))
 
-	var searchGrid func(varIdx int, current map[string]*big.Rat) *CounterexampleWitness
-	searchGrid = func(varIdx int, current map[string]*big.Rat) *CounterexampleWitness {
+	var searchGrid func(varIdx int) *CounterexampleWitness
+	searchGrid = func(varIdx int) *CounterexampleWitness {
 		if pointCount >= maxPoints {
 			return nil
 		}
@@ -116,32 +127,39 @@ func FindCounterexample(lhs, rhs Node, env *Env) (*CounterexampleWitness, error)
 			if errL != nil && errR == nil {
 				rStr := evalR.String()
 				return &CounterexampleWitness{
-					Kind:        WitnessDomainMismatch,
-					Assignments: current,
-					LHSVal:      nil,
-					RHSVal:      tryExtractRat(evalR),
-					Message:     fmt.Sprintf("Domain mismatch at %s: LHS is undefined (%v), RHS = %s", formatAssigns(), errL, rStr),
+					Kind:         WitnessDomainMismatch,
+					Assignments:  copyAssignments(current),
+					LHSVal:       nil,
+					RHSVal:       tryExtractRat(evalR),
+					LHSUndefined: true,
+					Message:      fmt.Sprintf("Domain mismatch at %s: LHS is undefined (%v), RHS = %s", formatAssigns(), errL, rStr),
 				}
 			}
 			if errL == nil && errR != nil {
 				lStr := evalL.String()
 				return &CounterexampleWitness{
-					Kind:        WitnessDomainMismatch,
-					Assignments: current,
-					LHSVal:      tryExtractRat(evalL),
-					RHSVal:      nil,
-					Message:     fmt.Sprintf("Domain mismatch at %s: LHS = %s, RHS is undefined (%v)", formatAssigns(), lStr, errR),
+					Kind:         WitnessDomainMismatch,
+					Assignments:  copyAssignments(current),
+					LHSVal:       tryExtractRat(evalL),
+					RHSVal:       nil,
+					RHSUndefined: true,
+					Message:      fmt.Sprintf("Domain mismatch at %s: LHS = %s, RHS is undefined (%v)", formatAssigns(), lStr, errR),
 				}
 			}
 
-			// Both defined: check equality
+			// 1. Check structural AST equality first (handles Complex(0,0), matrices, symbols)
+			if evalL.Equal(evalR) {
+				return nil
+			}
+
+			// 2. Both evaluate to rationals: compare values
 			ratL := tryExtractRat(evalL)
 			ratR := tryExtractRat(evalR)
 			if ratL != nil && ratR != nil {
 				if ratL.Cmp(ratR) != 0 {
 					return &CounterexampleWitness{
 						Kind:        WitnessValueMismatch,
-						Assignments: current,
+						Assignments: copyAssignments(current),
 						LHSVal:      ratL,
 						RHSVal:      ratR,
 						Message:     fmt.Sprintf("Counterexample at %s: LHS = %s, RHS = %s", formatAssigns(), ratL.RatString(), ratR.RatString()),
@@ -150,33 +168,29 @@ func FindCounterexample(lhs, rhs Node, env *Env) (*CounterexampleWitness, error)
 				return nil
 			}
 
-			// Fallback: check algebraic equivalence of evaluated expressions
+			// 3. Fallback: check algebraic zero equivalence
 			negR, _ := simplifyUnaryOp("-", evalR)
 			diffNode := NewAdd([]Node{evalL, negR})
-			diffEval, diffErr := EvalWithEnv(diffNode, evalEnv)
-			if diffErr == nil && !isZero(diffEval) {
-				return &CounterexampleWitness{
-					Kind:        WitnessValueMismatch,
-					Assignments: current,
-					LHSVal:      ratL,
-					RHSVal:      ratR,
-					Message:     fmt.Sprintf("Counterexample at %s: LHS = %s, RHS = %s", formatAssigns(), evalL.String(), evalR.String()),
-				}
+			if checkIsZeroAlgebraically(diffNode, evalEnv) {
+				return nil
 			}
 
-			return nil
+			return &CounterexampleWitness{
+				Kind:        WitnessValueMismatch,
+				Assignments: copyAssignments(current),
+				LHSVal:      ratL,
+				RHSVal:      ratR,
+				Message:     fmt.Sprintf("Counterexample at %s: LHS = %s, RHS = %s", formatAssigns(), evalL.String(), evalR.String()),
+			}
 		}
 
 		vName := allVars[varIdx]
 		for _, cand := range candidates {
-			newMap := make(map[string]*big.Rat, len(current)+1)
-			for k, v := range current {
-				newMap[k] = v
-			}
-			newMap[vName] = cand
-			if w := searchGrid(varIdx+1, newMap); w != nil {
+			current[vName] = cand
+			if w := searchGrid(varIdx + 1); w != nil {
 				return w
 			}
+			delete(current, vName)
 			if pointCount >= maxPoints {
 				break
 			}
@@ -184,7 +198,7 @@ func FindCounterexample(lhs, rhs Node, env *Env) (*CounterexampleWitness, error)
 		return nil
 	}
 
-	witness := searchGrid(0, make(map[string]*big.Rat))
+	witness := searchGrid(0)
 	return witness, nil
 }
 
