@@ -1,4 +1,4 @@
-﻿package calc
+package calc
 
 import (
 	"fmt"
@@ -43,6 +43,7 @@ type VerificationCertificate struct {
 	Details    string
 	State      VerifyState
 	CertIR     Certificate
+	Witness    *CounterexampleWitness
 }
 
 // ToCertificateIR returns the underlying structured certificate IR.
@@ -988,6 +989,10 @@ func VerifyAlgebraicEquivalence(lhs, rhs Node, env *Env) (*VerificationCertifica
 	_ = fsm.TransitionTo(VerifyStateRefuted)
 	evalDiff, _ := Eval(diff)
 	details := fmt.Sprintf(i18n.T("verify.refuted_residual"), evalDiff.String())
+	witness, _ := FindCounterexample(lhs, rhs, env)
+	if witness != nil {
+		details = fmt.Sprintf("%s (%s)", details, witness.Message)
+	}
 	certIR := NewIdentityCertificate(IdentityKindEquivalence, lhs, rhs, evalDiff, false, details)
 	return &VerificationCertificate{
 		Domain:     DomainGeneral,
@@ -997,6 +1002,7 @@ func VerifyAlgebraicEquivalence(lhs, rhs Node, env *Env) (*VerificationCertifica
 		Details:    details,
 		State:      VerifyStateRefuted,
 		CertIR:     certIR,
+		Witness:    witness,
 	}, nil
 }
 
