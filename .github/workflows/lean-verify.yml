@@ -85,18 +85,18 @@ jobs:
           curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
           echo "$HOME/.elan/bin" >> $GITHUB_PATH
 
-      - name: Sync toolchain with Mathlib4
+      - name: Setup Lean Toolchain from pinned repository toolchain
         working-directory: formal
         run: |
-          # Fetch exact toolchain required by Mathlib4 master to guarantee binary cache hit
-          curl -sSf https://raw.githubusercontent.com/leanprover-community/mathlib4/master/lean-toolchain -o lean-toolchain
-          echo "Using Lean toolchain: $(cat lean-toolchain)"
-          $HOME/.elan/bin/elan default $(cat lean-toolchain)
+          # Use pinned lean-toolchain from repository
+          TOOLCHAIN=$(cat lean-toolchain | tr -d '\r\n')
+          echo "Using pinned Lean toolchain: $TOOLCHAIN"
+          $HOME/.elan/bin/elan default "$TOOLCHAIN"
 
       - name: Fetch Mathlib4 Cache
         working-directory: formal
         run: |
-          $HOME/.elan/bin/lake update
+          # Pinned manifest used: lake update is skipped to guarantee reproducible cache hit
           $HOME/.elan/bin/lake exe cache get
 
       - name: Verify Proofs with Lean 4 Kernel

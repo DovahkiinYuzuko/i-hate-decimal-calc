@@ -32,6 +32,7 @@
 !formal/lean-toolchain
 !formal/lakefile.toml
 !formal/test_cases.txt
+!formal/lake-manifest.json
 # .gitignores/internal.gitignore
 !internal/
 !internal/calc/
