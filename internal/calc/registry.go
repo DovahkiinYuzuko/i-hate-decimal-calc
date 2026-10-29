@@ -386,6 +386,11 @@ var defaultFunctionArgs = map[string][]string{
 	"unit":         {"name"},
 	"u":            {"name"},
 	"delta":        {"expr"},
+
+	// Algebraic Pattern Matching & Term Rewriting System (TRS)
+	"rule":    {"lhs", "rhs"},
+	"replace": {"expr", "rules"},
+	"rewrite": {"expr", "rules", "max_steps"},
 }
 
 // AllFunctionNames returns a sorted list of all registered built-in function names.

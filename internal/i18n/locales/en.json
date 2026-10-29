@@ -1152,7 +1152,10 @@
     "snf": "Smith Normal Form of integer matrix",
     "lll": "Lenstra-Lenstra-Lovasz lattice basis reduction algorithm",
     "ztrans": "Unilateral symbolic Z-transform",
-    "iztrans": "Unilateral inverse Z-transform"
+    "iztrans": "Unilateral inverse Z-transform",
+    "rule": "Create a transformation rule lhs -> rhs with pattern matching",
+    "replace": "Apply rewrite rules to expression once bottom-up",
+    "rewrite": "Apply rewrite rules repeatedly until fixed point is reached"
   },
   "lp": {
     "err_requires_at_least_2_args": "lp solver requires at least 2 arguments: objective and constraints",

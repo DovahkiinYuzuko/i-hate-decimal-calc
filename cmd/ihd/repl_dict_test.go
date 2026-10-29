@@ -4,9 +4,14 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
 func TestREPL_InteractiveDictionaryCommands(t *testing.T) {
+	origLocale := i18n.CurrentLocale()
+	_ = i18n.Init("en")
+	defer func() { _ = i18n.Init(origLocale) }()
 	tests := []struct {
 		name     string
 		input    string
