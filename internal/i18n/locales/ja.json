@@ -1152,7 +1152,10 @@
     "snf": "整数行列のスミス標準形（Smith Normal Form）",
     "lll": "格子基底縮小アルゴリズム（Lenstra-Lenstra-Lovász）",
     "ztrans": "片側記号Z変換",
-    "iztrans": "片側逆Z変換"
+    "iztrans": "片側逆Z変換",
+    "rule": "パターンマッチング変換規則 lhs -> rhs を生成",
+    "replace": "書き換え規則を式に対してボトムアップに1回適用",
+    "rewrite": "不動点に達するまで書き換え規則を繰り返し適用"
   },
   "lp": {
     "err_requires_at_least_2_args": "線形計画ソルバーには少なくとも2つの引数 (目的関数, 制約式リスト) が必要です",
