@@ -1,0 +1,50 @@
+name: Unit Test Suite
+
+on:
+  push:
+    branches: [ main, 'issue-*']
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, 'issue-*' ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit-test:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          check-latest: true
+
+      - name: Run Unit Tests
+        env:
+          IHD_NO_UPDATE_CHECK: "1"
+          LANG: "en_US.UTF-8"
+        shell: pwsh
+        run: |
+          $output = & go test -v -timeout 5m ./...
+          $exitCode = $LASTEXITCODE
+
+          $output | ForEach-Object { Write-Host $_ }
+
+          $passed = ($output | Select-String "--- PASS:").Count
+          $failed = ($output | Select-String "--- FAIL:").Count
+
+          if ($exitCode -eq 0) {
+              Write-Host "`n[TEST SUMMARY] SUCCESS: $passed passed, $failed failed" -ForegroundColor Green
+              exit 0
+          } else {
+              Write-Host "`n[TEST SUMMARY] FAILURE: $passed passed, $failed failed (ExitCode: $exitCode)" -ForegroundColor Red
+              exit $exitCode
+          }
