@@ -49,7 +49,8 @@ type SelfUpdateOptions struct {
 
 // DetectPackageManager detects whether the executable is inside a managed package manager directory.
 func DetectPackageManager(executablePath string) string {
-	cleanPath := filepath.ToSlash(filepath.Clean(executablePath))
+	normalized := strings.ReplaceAll(executablePath, "\\", "/")
+	cleanPath := filepath.ToSlash(filepath.Clean(normalized))
 	lowerPath := strings.ToLower(cleanPath)
 
 	// Homebrew detection (macOS / Linux)
