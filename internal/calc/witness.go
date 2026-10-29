@@ -5,6 +5,8 @@ import (
 	"math/big"
 	"sort"
 	"strings"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
 // WitnessKind identifies the category of counterexample found.
@@ -132,7 +134,7 @@ func FindCounterexample(lhs, rhs Node, env *Env) (*CounterexampleWitness, error)
 					LHSVal:       nil,
 					RHSVal:       tryExtractRat(evalR),
 					LHSUndefined: true,
-					Message:      fmt.Sprintf("Domain mismatch at %s: LHS is undefined (%v), RHS = %s", formatAssigns(), errL, rStr),
+					Message:      i18n.T("verify.witness_domain_mismatch_lhs", formatAssigns(), errL, rStr),
 				}
 			}
 			if errL == nil && errR != nil {
@@ -143,7 +145,7 @@ func FindCounterexample(lhs, rhs Node, env *Env) (*CounterexampleWitness, error)
 					LHSVal:       tryExtractRat(evalL),
 					RHSVal:       nil,
 					RHSUndefined: true,
-					Message:      fmt.Sprintf("Domain mismatch at %s: LHS = %s, RHS is undefined (%v)", formatAssigns(), lStr, errR),
+					Message:      i18n.T("verify.witness_domain_mismatch_rhs", formatAssigns(), lStr, errR),
 				}
 			}
 
@@ -162,7 +164,7 @@ func FindCounterexample(lhs, rhs Node, env *Env) (*CounterexampleWitness, error)
 						Assignments: copyAssignments(current),
 						LHSVal:      ratL,
 						RHSVal:      ratR,
-						Message:     fmt.Sprintf("Counterexample at %s: LHS = %s, RHS = %s", formatAssigns(), ratL.RatString(), ratR.RatString()),
+						Message:     i18n.T("verify.witness_counterexample", formatAssigns(), ratL.RatString(), ratR.RatString()),
 					}
 				}
 				return nil
@@ -180,7 +182,7 @@ func FindCounterexample(lhs, rhs Node, env *Env) (*CounterexampleWitness, error)
 				Assignments: copyAssignments(current),
 				LHSVal:      ratL,
 				RHSVal:      ratR,
-				Message:     fmt.Sprintf("Counterexample at %s: LHS = %s, RHS = %s", formatAssigns(), evalL.String(), evalR.String()),
+				Message:     i18n.T("verify.witness_counterexample", formatAssigns(), evalL.String(), evalR.String()),
 			}
 		}
 
