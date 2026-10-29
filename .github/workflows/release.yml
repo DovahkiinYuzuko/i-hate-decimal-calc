@@ -92,8 +92,9 @@ jobs:
           mkdir -p dist
           find release-artifacts -type f \( -name "*.zip" -o -name "*.tar.gz" \) -exec mv {} dist/ \;
           cd dist
-          sha256sum * > checksums.txt
-          cat checksums.txt
+          sha256sum * > SHA256SUMS
+          cp SHA256SUMS checksums.txt
+          cat SHA256SUMS
 
       - name: Publish Release
         uses: softprops/action-gh-release@v2
@@ -101,6 +102,7 @@ jobs:
           files: |
             dist/*.zip
             dist/*.tar.gz
+            dist/SHA256SUMS
             dist/checksums.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

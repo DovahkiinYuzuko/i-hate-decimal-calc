@@ -11,6 +11,7 @@ import (
 	"runtime/debug"
 	"sync"
 
+
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
@@ -249,7 +250,13 @@ func (m *ScratchSwapManager) CheckDiskSpaceForPow(base *big.Int, exp *big.Int) e
 }
 
 // PowBigIntWithSwap computes base^exp using repeated squaring and disk-swap if threshold exceeded.
+// PowBigIntWithSwap computes base^exp using repeated squaring and disk-swap if threshold exceeded.
 func PowBigIntWithSwap(base *big.Int, exp *big.Int) (*big.Int, error) {
+	return PowBigIntWithSwapAndBudget(base, exp, nil)
+}
+
+// PowBigIntWithSwapAndBudget computes base^exp using repeated squaring and disk-swap while ticking execution budget.
+func PowBigIntWithSwapAndBudget(base *big.Int, exp *big.Int, b *ExecutionBudget) (*big.Int, error) {
 	if exp.Sign() < 0 {
 		return nil, errors.New("negative exponent requires rational inversion")
 	}
@@ -291,6 +298,11 @@ func PowBigIntWithSwap(base *big.Int, exp *big.Int) (*big.Int, error) {
 	reqBytes := mgr.EstimateDiskRequired(base, exp)
 	const inMemoryThreshold = 10 * 1024 * 1024 // 10 MB
 	if reqBytes < inMemoryThreshold {
+		if b != nil {
+			if err := b.Tick(); err != nil {
+				return nil, err
+			}
+		}
 		return new(big.Int).Exp(base, exp, nil), nil
 	}
 
@@ -303,6 +315,11 @@ func PowBigIntWithSwap(base *big.Int, exp *big.Int) (*big.Int, error) {
 	var resFile string
 
 	for e.Sign() > 0 {
+		if b != nil {
+			if err := b.Tick(); err != nil {
+				return nil, err
+			}
+		}
 		if e.Bit(0) == 1 {
 			// res = res * curr
 			if resFile != "" {

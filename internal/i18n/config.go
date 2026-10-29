@@ -17,6 +17,11 @@ type Config struct {
 	WarnIterations  json.RawMessage `json:"warn_iterations,omitempty"`
 	MaxIterations   json.RawMessage `json:"max_iterations,omitempty"`
 	RewriteMaxSteps *int            `json:"rewrite_max_steps,omitempty"`
+	Timeout         *string         `json:"timeout,omitempty"`
+	BudgetSteps     *uint64         `json:"budget_steps,omitempty"`
+	MaxNodes        *uint64         `json:"max_nodes,omitempty"`
+	MaxDepth        *uint64         `json:"max_depth,omitempty"`
+	Deterministic   *bool           `json:"deterministic,omitempty"`
 }
 
 // GetIhdDir returns the path to the ~/.ihd directory.

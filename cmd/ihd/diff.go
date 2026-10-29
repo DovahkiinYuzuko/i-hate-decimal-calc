@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -12,11 +13,11 @@ import (
 func runDiff(source1, source2 string, out, errOut io.Writer) int {
 	s1 := source1
 	if b, err := os.ReadFile(source1); err == nil {
-		s1 = string(b)
+		s1 = string(bytes.TrimPrefix(b, []byte("\xef\xbb\xbf")))
 	}
 	s2 := source2
 	if b, err := os.ReadFile(source2); err == nil {
-		s2 = string(b)
+		s2 = string(bytes.TrimPrefix(b, []byte("\xef\xbb\xbf")))
 	}
 
 	env := calc.NewEnv()

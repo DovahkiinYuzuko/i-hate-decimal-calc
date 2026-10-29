@@ -4,6 +4,7 @@ param(
 
 # ihd PowerShell Installer for Windows
 $ErrorActionPreference = 'Stop'
+[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 
 $Repo = "DovahkiinYuzuko/i-hate-decimal-calc"
 $IhdHome = "$env:USERPROFILE\.ihd"
@@ -91,11 +92,36 @@ if ($Local) {
 
     $DownloadUrl = "https://github.com/$Repo/releases/download/$Tag/$AssetName"
     $TmpZip = Join-Path $env:TEMP "$AssetName"
+    $TmpSums = Join-Path $env:TEMP "ihd-sums-$([System.Guid]::NewGuid().ToString('N')).txt"
     $TmpExtract = Join-Path $env:TEMP "ihd-extract-$([System.Guid]::NewGuid().ToString('N'))"
 
     try {
         Write-Host "Downloading $DownloadUrl..." -ForegroundColor Cyan
         Invoke-WebRequest -Uri $DownloadUrl -OutFile $TmpZip -UseBasicParsing
+
+        $ChecksumUrl = "https://github.com/$Repo/releases/download/$Tag/SHA256SUMS"
+        Write-Host "Downloading $ChecksumUrl..." -ForegroundColor Cyan
+        Invoke-WebRequest -Uri $ChecksumUrl -OutFile $TmpSums -UseBasicParsing
+
+        $ExpectedHash = $null
+        foreach ($line in (Get-Content -Path $TmpSums)) {
+            if ($line -match "^([a-fA-F0-9]{64})\s+.*$([regex]::Escape($AssetName))`$") {
+                $ExpectedHash = $matches[1].ToLowerInvariant()
+                break
+            }
+        }
+        if (-not $ExpectedHash) {
+            Write-Error "Could not find expected SHA256 checksum for $AssetName in SHA256SUMS manifest."
+            exit 1
+        }
+
+        Write-Host "Verifying SHA256 checksum..." -ForegroundColor Cyan
+        $ActualHash = (Get-FileHash -Path $TmpZip -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($ActualHash -ne $ExpectedHash) {
+            Write-Error "SHA256 checksum verification failed for $AssetName!`nExpected: $ExpectedHash`nActual:   $ActualHash"
+            exit 1
+        }
+        Write-Host "SHA256 checksum verified successfully." -ForegroundColor Green
 
         Write-Host "Extracting..." -ForegroundColor Cyan
         Expand-Archive -Path $TmpZip -DestinationPath $TmpExtract -Force
@@ -146,6 +172,7 @@ if ($Local) {
         }
     } finally {
         if (Test-Path $TmpZip) { Remove-Item -Path $TmpZip -Force -ErrorAction SilentlyContinue }
+        if (Test-Path $TmpSums) { Remove-Item -Path $TmpSums -Force -ErrorAction SilentlyContinue }
         if (Test-Path $TmpExtract) { Remove-Item -Path $TmpExtract -Recurse -Force -ErrorAction SilentlyContinue }
     }
 }

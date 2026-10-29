@@ -482,6 +482,11 @@ ihd --verify "convert_unit(100 [km/h], m/s)"
 | `--lean`             | 計算結果や導出ステップ列を定理証明支援系 **Lean 4（Mathlib4）** の形式証明コード（`by ring`, `by ext <;> ring`, `by repeat constructor <;> norm_num` 等）として出力。<br>`ihd --lean "factor(x^2 - 1)"` |
 | `--lean-file <path>` | 生成された Lean 4 形式証明コードをスタンドアロンな `.lean` ファイルとして指定パスへ保存。<br>`ihd --lean-file proof.lean "factor(x^2 - 1)"`                                 |
 | `--lang <code/auto>` | 表示言語（ロケール）を指定（`ja`, `en`, `auto`）。設定は `~/.ihd/config.json` に永続化され、カスタム辞書（`~/.ihd/locales/`）にも対応。<br>`ihd --lang en "1/2 + 1/3"` |
+| `--timeout <dur>`    | 計算の壁時計時間タイムアウトを指定（例: `5s`, `500ms`）。超過時は終了コード1で中断。<br>`ihd --timeout 2s "factor(x^100 - 1)"` |
+| `--budget-steps <N>` | CAS簡約・展開の論理ステップ数上限を指定（デフォルト: 0:無制限）。超過時はエラー終了。<br>`ihd --budget-steps 10000 "expand((x+1)^20)"` |
+| `--max-nodes <N>`    | 生成されるASTノード数の安全上限を指定（アロケーション爆発防止、デフォルト: 0:無制限）。<br>`ihd --max-nodes 50000 "expand((x+y)^10)"` |
+| `--max-depth <N>`    | 式の最大再帰深度上限を指定（スタック枯渇防止、デフォルト: 1000）。<br>`ihd --max-depth 500 "myfib(50)"` |
+| `--deterministic`    | マップ反復や多項式・式の表現順序を完全に正規化し、同一入力に対してバイト単位で決定論的な出力を保証。<br>`ihd --deterministic "factor(x^4 - 5*x^2 + 4)"` |
 | `completion <shell>` | 主要4大シェル（`bash`, `zsh`, `fish`, `powershell`）向けのタブ自動補完スクリプトをゼロ依存で生成。<br>`ihd completion powershell \| Out-String \| Invoke-Expression` |
 | `-h`, `--help`       | コマンドのヘルプメッセージを表示。                                                                                                                                     |
 | `-v`, `--version`    | バージョン情報を表示（新リリースが存在する場合は更新案内を表示）。                                                                                                     |
@@ -969,6 +974,11 @@ ihd --verify "convert_unit(100 [km/h], m/s)"
 | `--lean`             | Transpiles calculation results and rewriting steps into formal **Lean 4 (Mathlib4)** proof theorems (`by ring`, `by ext <;> ring`, `by repeat constructor <;> norm_num`, etc.).<br>`ihd --lean "factor(x^2 - 1)"` |
 | `--lean-file <path>` | Save generated Lean 4 proof code as a standalone, runnable `.lean` file.<br>`ihd --lean-file proof.lean "factor(x^2 - 1)"`                         |
 | `--lang <code/auto>` | Specify display language (`ja`, `en`, `auto`). Persisted to `~/.ihd/config.json`.<br>`ihd --lang en "1/2 + 1/3"`                                  |
+| `--timeout <dur>`    | Sets wall-clock execution timeout (e.g. `5s`, `500ms`). Aborts with exit code 1 if exceeded.<br>`ihd --timeout 2s "factor(x^100 - 1)"`            |
+| `--budget-steps <N>` | Maximum logical CAS reduction/expansion step budget (default: 0: unlimited).<br>`ihd --budget-steps 10000 "expand((x+1)^20)"`                     |
+| `--max-nodes <N>`    | Maximum AST node limit to guard against memory exhaustion (default: 0: unlimited).<br>`ihd --max-nodes 50000 "expand((x+y)^10)"`                   |
+| `--max-depth <N>`    | Maximum expression recursion depth to guard against stack overflows (default: 1000).<br>`ihd --max-depth 500 "myfib(50)"`                        |
+| `--deterministic`    | Normalizes map iterations, polynomial ordering, and expression trees to guarantee byte-identical stdout/stderr.<br>`ihd --deterministic "factor(x^4 - 5*x^2 + 4)"` |
 | `completion <shell>` | Generate zero-dependency tab completion script for `bash`, `zsh`, `fish`, or `powershell`.<br>`ihd completion powershell \| Out-String \| Invoke-Expression` |
 | `-h`, `--help`       | Display command help message.                                                                                                                     |
 | `-v`, `--version`    | Display version information (checks for newer releases if available).                                                                             |

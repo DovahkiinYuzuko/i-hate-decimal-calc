@@ -107,6 +107,38 @@ else
         wget -qO "$TMP_DIR/$ASSET_NAME" "$DOWNLOAD_URL"
     fi
 
+    CHECKSUM_URL="https://github.com/$REPO/releases/download/$TAG/SHA256SUMS"
+    echo "Downloading checksums from $CHECKSUM_URL..."
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsSL "$CHECKSUM_URL" -o "$TMP_DIR/SHA256SUMS"
+    else
+        wget -qO "$TMP_DIR/SHA256SUMS" "$CHECKSUM_URL"
+    fi
+
+    echo "Verifying SHA256 checksum..."
+    EXPECTED_HASH="$(grep -E "[[:space:]]${ASSET_NAME}\$" "$TMP_DIR/SHA256SUMS" | awk '{print $1}')"
+    if [ -z "$EXPECTED_HASH" ]; then
+        echo "Error: Checksum for $ASSET_NAME not found in SHA256SUMS manifest."
+        exit 1
+    fi
+
+    if command -v sha256sum >/dev/null 2>&1; then
+        ACTUAL_HASH="$(sha256sum "$TMP_DIR/$ASSET_NAME" | awk '{print $1}')"
+    elif command -v shasum >/dev/null 2>&1; then
+        ACTUAL_HASH="$(shasum -a 256 "$TMP_DIR/$ASSET_NAME" | awk '{print $1}')"
+    else
+        echo "Error: sha256sum or shasum is required to verify release integrity."
+        exit 1
+    fi
+
+    if [ "$EXPECTED_HASH" != "$ACTUAL_HASH" ]; then
+        echo "Error: SHA256 checksum verification failed for $ASSET_NAME!"
+        echo "Expected: $EXPECTED_HASH"
+        echo "Actual:   $ACTUAL_HASH"
+        exit 1
+    fi
+    echo "SHA256 checksum verified successfully."
+
     tar -xzf "$TMP_DIR/$ASSET_NAME" -C "$TMP_DIR"
 
     cp "$TMP_DIR/ihd" "$INSTALL_DIR/ihd"

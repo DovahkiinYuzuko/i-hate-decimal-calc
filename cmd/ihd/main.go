@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"flag"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc"
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
@@ -44,6 +46,11 @@ type runOptions struct {
 	theme         string
 	warnLoop      *big.Int
 	maxLoop       *big.Int
+	timeout       string
+	budgetSteps   uint64
+	maxNodes      uint64
+	maxDepth      uint64
+	deterministic bool
 }
 
 func run(args []string, in io.Reader, out, errOut io.Writer) int {
@@ -59,6 +66,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 	valuedFlags := map[string]bool{
 		"lang": true, "warn-loop": true, "max-loop": true, "lean-file": true,
 		"certificate": true, "replay": true, "interval-eps": true, "theme": true, "format": true,
+		"timeout": true, "budget-steps": true, "max-nodes": true, "max-depth": true,
 	}
 
 	for i := 0; i < len(args); i++ {
@@ -74,7 +82,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 			continue
 		}
 		switch a {
-		case "-ascii", "--ascii", "-approx", "--approx", "-latex", "--latex", "-typst", "--typst", "-pretty", "--pretty", "-deg", "--deg", "-explain", "--explain", "-verify", "--verify", "-lean", "--lean", "-h", "--help", "-v", "--version", "-version", "--no-update-check", "-no-update-check", "-i", "--i", "-interval", "--interval", "-no-color", "--no-color", "-step", "--step", "-trace", "--trace":
+		case "-ascii", "--ascii", "-approx", "--approx", "-latex", "--latex", "-typst", "--typst", "-pretty", "--pretty", "-deg", "--deg", "-explain", "--explain", "-verify", "--verify", "-lean", "--lean", "-h", "--help", "-v", "--version", "-version", "--no-update-check", "-no-update-check", "-i", "--i", "-interval", "--interval", "-no-color", "--no-color", "-step", "--step", "-trace", "--trace", "-deterministic", "--deterministic":
 			flagArgs = append(flagArgs, a)
 		default:
 			exprArgs = append(exprArgs, a)
@@ -123,6 +131,11 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 	themeFlag := fs.String("theme", "", i18n.T("cli.flag_theme"))
 	warnLoopFlag := fs.String("warn-loop", "", i18n.T("cli.flag_warn_loop"))
 	maxLoopFlag := fs.String("max-loop", "", i18n.T("cli.flag_max_loop"))
+	timeoutFlag := fs.String("timeout", "", i18n.T("cli.flag_timeout"))
+	budgetStepsFlag := fs.Uint64("budget-steps", 0, i18n.T("cli.flag_budget_steps"))
+	maxNodesFlag := fs.Uint64("max-nodes", 0, i18n.T("cli.flag_max_nodes"))
+	maxDepthFlag := fs.Uint64("max-depth", 0, i18n.T("cli.flag_max_depth"))
+	deterministicFlag := fs.Bool("deterministic", false, i18n.T("cli.flag_deterministic"))
 	versionFlag := fs.Bool("version", false, i18n.T("cli.flag_version"))
 	fs.BoolVar(versionFlag, "v", false, i18n.T("cli.flag_version"))
 	noUpdateCheckFlag := fs.Bool("no-update-check", false, i18n.T("cli.flag_no_update_check"))
@@ -196,6 +209,11 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 		theme:         *themeFlag,
 		warnLoop:      warnLoopBig,
 		maxLoop:       maxLoopBig,
+		timeout:       *timeoutFlag,
+		budgetSteps:   *budgetStepsFlag,
+		maxNodes:      *maxNodesFlag,
+		maxDepth:      *maxDepthFlag,
+		deterministic: *deterministicFlag,
 	}
 
 	if ro.replayFile != "" {
@@ -279,7 +297,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 	ensureEnvIterationLimits(env, ro, errOut)
 
 	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
+		line := strings.TrimSpace(strings.TrimPrefix(scanner.Text(), "\ufeff"))
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
@@ -474,6 +492,65 @@ func ensureEnvIterationLimits(env *calc.Env, ro runOptions, errOut io.Writer) {
 			env.SetIterationLimits(currentWarn, currentMax, errOut)
 		}
 	}
+}
+
+func ensureEnvBudget(env *calc.Env, ro runOptions) func() {
+	if env == nil {
+		return func() {}
+	}
+	cfg, _ := i18n.LoadConfig()
+
+	var timeoutDur time.Duration
+	if ro.timeout != "" {
+		if d, err := time.ParseDuration(ro.timeout); err == nil {
+			timeoutDur = d
+		}
+	} else if cfg != nil && cfg.Timeout != nil && *cfg.Timeout != "" {
+		if d, err := time.ParseDuration(*cfg.Timeout); err == nil {
+			timeoutDur = d
+		}
+	}
+
+	budgetSteps := ro.budgetSteps
+	if budgetSteps == 0 && cfg != nil && cfg.BudgetSteps != nil {
+		budgetSteps = *cfg.BudgetSteps
+	}
+
+	maxNodes := ro.maxNodes
+	if maxNodes == 0 && cfg != nil && cfg.MaxNodes != nil {
+		maxNodes = *cfg.MaxNodes
+	}
+
+	maxDepth := ro.maxDepth
+	if maxDepth == 0 && cfg != nil && cfg.MaxDepth != nil {
+		maxDepth = *cfg.MaxDepth
+	}
+
+	deterministic := ro.deterministic
+	if !deterministic && cfg != nil && cfg.Deterministic != nil {
+		deterministic = *cfg.Deterministic
+	}
+
+	bCfg := calc.BudgetConfig{
+		Timeout:       timeoutDur,
+		BudgetSteps:   budgetSteps,
+		MaxNodes:      maxNodes,
+		MaxDepth:      maxDepth,
+		Deterministic: deterministic,
+	}
+
+	ctx := context.Background()
+	cancel := func() {}
+	if timeoutDur > 0 {
+		var c context.CancelFunc
+		ctx, c = context.WithTimeout(ctx, timeoutDur)
+		cancel = c
+	}
+
+	b := calc.NewExecutionBudget(ctx, bCfg)
+	env.SetBudget(b)
+
+	return cancel
 }
 
 func evaluateLine(line string, ro runOptions, in io.Reader, out, errOut io.Writer) error {
@@ -700,6 +777,8 @@ func evaluateLineInternal(line string, ro runOptions, env *calc.Env, suppressOut
 }
 
 func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, in io.Reader, out, errOut io.Writer) error {
+	cancel := ensureEnvBudget(env, ro)
+	defer cancel()
 	ensureEnvIterationLimits(env, ro, errOut)
 	return evaluateLineInternal(line, ro, env, false, in, out, errOut, i18n.T("cli.error_prefix"))
 }
@@ -722,7 +801,7 @@ func runImportFile(filePath string, ro runOptions, env *calc.Env, in io.Reader, 
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
+		line := strings.TrimSpace(strings.TrimPrefix(scanner.Text(), "\ufeff"))
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
@@ -754,13 +833,15 @@ func runScriptFile(filePath string, ro runOptions, out, errOut io.Writer) int {
 
 	scanner := bufio.NewScanner(file)
 	env := calc.NewEnv()
+	cancel := ensureEnvBudget(env, ro)
+	defer cancel()
 	ensureEnvIterationLimits(env, ro, errOut)
 	lineNum := 0
 	hadError := false
 
 	for scanner.Scan() {
 		lineNum++
-		rawLine := scanner.Text()
+		rawLine := strings.TrimPrefix(scanner.Text(), "\ufeff")
 		line := strings.TrimSpace(rawLine)
 
 		// Skip empty lines

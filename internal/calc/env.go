@@ -35,6 +35,7 @@ type Env struct {
 	Tracer         *provenance.TraceRecorder
 	LastTrace      *provenance.TraceRecorder
 	SearchTracer   SearchTraceCollector
+	Budget         *ExecutionBudget
 }
 
 // MaxCallDepth defines the maximum permitted call stack recursion depth for user functions.
@@ -67,6 +68,21 @@ func (e *Env) GetLastTrace() *provenance.TraceRecorder {
 		return nil
 	}
 	return e.LastTrace
+}
+
+// GetBudget returns the active execution budget or nil.
+func (e *Env) GetBudget() *ExecutionBudget {
+	if e == nil {
+		return nil
+	}
+	return e.Budget
+}
+
+// SetBudget sets the active execution budget.
+func (e *Env) SetBudget(b *ExecutionBudget) {
+	if e != nil {
+		e.Budget = b
+	}
 }
 
 // GetSearchTracer returns the active algorithm search trace collector or nil.

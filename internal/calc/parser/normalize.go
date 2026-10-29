@@ -5,6 +5,7 @@ import "strings"
 // NormalizeInput converts full-width (Zenkaku) characters into half-width (Hankaku) ASCII characters.
 // This allows seamless calculation when Japanese IME is accidentally active.
 func NormalizeInput(input string) string {
+	input = strings.TrimPrefix(input, "\ufeff")
 	var sb strings.Builder
 	sb.Grow(len(input))
 
@@ -63,6 +64,8 @@ func NormalizeInput(input string) string {
 		// Comma and period
 		case r == '，' || r == '、':
 			sb.WriteRune(',')
+		case r == '\ufeff':
+			// Skip UTF-8 BOM
 		case r == '．' || r == '。':
 			sb.WriteRune('.')
 

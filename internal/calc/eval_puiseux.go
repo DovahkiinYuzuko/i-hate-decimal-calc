@@ -3,6 +3,7 @@ package calc
 import (
 	"fmt"
 	"math/big"
+	"sort"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
@@ -240,6 +241,13 @@ func BuildNewtonPolygon(points []NewtonPoint) ([]NewtonEdge, error) {
 	for _, pt := range pointMap {
 		pts = append(pts, pt)
 	}
+
+	sort.Slice(pts, func(i, j int) bool {
+		if pts[i].X != pts[j].X {
+			return pts[i].X < pts[j].X
+		}
+		return pts[i].Y < pts[j].Y
+	})
 
 	// Find maxY and minY
 	maxY := pts[0].Y

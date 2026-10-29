@@ -1405,8 +1405,13 @@ func resolveGeometricAlgebraicIdentity(c *GeometricCertificate) Node {
 
 	// 3. Substitute solved dependent variables into conclusion
 	substed := c.Conclusion
-	for k, v := range subs {
-		substed = Substitute(substed, k, v)
+	var subKeys []string
+	for k := range subs {
+		subKeys = append(subKeys, k)
+	}
+	sort.Strings(subKeys)
+	for _, k := range subKeys {
+		substed = Substitute(substed, k, subs[k])
 	}
 
 	// 4. Verify that substituted expression algebraically simplifies to 0

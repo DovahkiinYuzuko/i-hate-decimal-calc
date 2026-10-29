@@ -905,3 +905,38 @@ func TestCLI_CompletionSubcommand(t *testing.T) {
 		t.Errorf("expected exit code 1 for unsupported shell, got %d", code)
 	}
 }
+
+func TestCLI_BudgetAndResourceLimits(t *testing.T) {
+	// 1. Budget steps limit exhaustion
+	var out, errOut bytes.Buffer
+	code := run([]string{"--budget-steps=2", "1 + 2 + 3 + 4 + 5"}, strings.NewReader(""), &out, &errOut)
+	if code != 1 {
+		t.Errorf("expected exit code 1 for budget exhaustion, got %d", code)
+	}
+	if !strings.Contains(errOut.String(), "budget exceeded") {
+		t.Errorf("expected 'budget exceeded' in stderr, got: %s", errOut.String())
+	}
+
+	// 2. Max nodes limit exhaustion
+	out.Reset()
+	errOut.Reset()
+	code = run([]string{"--max-nodes=2", "1 + 2 + 3"}, strings.NewReader(""), &out, &errOut)
+	if code != 1 {
+		t.Errorf("expected exit code 1 for max nodes exhaustion, got %d", code)
+	}
+	if !strings.Contains(errOut.String(), "AST node limit exceeded") {
+		t.Errorf("expected 'AST node limit exceeded' in stderr, got: %s", errOut.String())
+	}
+
+	// 3. Deterministic flag normal operation
+	out.Reset()
+	errOut.Reset()
+	code = run([]string{"--deterministic", "2 + 3 * 4"}, strings.NewReader(""), &out, &errOut)
+	if code != 0 {
+		t.Fatalf("expected exit code 0 for deterministic run, got %d, stderr: %s", code, errOut.String())
+	}
+	if strings.TrimSpace(out.String()) != "14" {
+		t.Errorf("expected '14', got: %s", out.String())
+	}
+}
+

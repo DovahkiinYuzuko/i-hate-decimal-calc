@@ -9,6 +9,10 @@ import (
 // -------------------------------------------------------------------------
 
 func simplifyPow(base, exp Node) (Node, error) {
+	return simplifyPowWithEnv(base, exp, nil)
+}
+
+func simplifyPowWithEnv(base, exp Node, env *Env) (Node, error) {
 	ratExp, expIsRat := exp.(*RationalNode)
 	ratBase, baseIsRat := base.(*RationalNode)
 
@@ -62,11 +66,11 @@ func simplifyPow(base, exp Node) (Node, error) {
 			return simplifyPow(&RationalNode{Val: inv}, &RationalNode{Val: new(big.Rat).SetInt(posExp)})
 		}
 
-		numPow, err := PowBigIntWithSwap(ratBase.Val.Num(), expNum)
+		numPow, err := PowBigIntWithSwapAndBudget(ratBase.Val.Num(), expNum, env.GetBudget())
 		if err != nil {
 			return nil, err
 		}
-		denomPow, err := PowBigIntWithSwap(ratBase.Val.Denom(), expNum)
+		denomPow, err := PowBigIntWithSwapAndBudget(ratBase.Val.Denom(), expNum, env.GetBudget())
 		if err != nil {
 			return nil, err
 		}

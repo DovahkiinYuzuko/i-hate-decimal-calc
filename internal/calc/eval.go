@@ -49,6 +49,20 @@ func EvalWithEnv(n Node, env *Env) (Node, error) {
 		return nil, fmt.Errorf("%s", i18n.T("errors.err_cannot_evaluate_nil_node"))
 	}
 
+	if env != nil && env.Budget != nil {
+		if err := env.Budget.EnterDepth(); err != nil {
+			return nil, err
+		}
+		defer env.Budget.LeaveDepth()
+
+		if err := env.Budget.Tick(); err != nil {
+			return nil, err
+		}
+		if err := env.Budget.TrackNodes(1); err != nil {
+			return nil, err
+		}
+	}
+
 	switch v := n.(type) {
 	case *RationalNode:
 		return v, nil
@@ -181,7 +195,7 @@ func EvalWithEnv(n Node, env *Env) (Node, error) {
 		if q, ok := base.(*QuantityNode); ok {
 			return evalQuantityPow(q, exp)
 		}
-		return simplifyPow(base, exp)
+		return simplifyPowWithEnv(base, exp, env)
 
 	case *AddNode:
 		evaledTerms := make([]Node, len(v.Terms))
