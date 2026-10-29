@@ -1302,7 +1302,7 @@
 <tr>
 <td align="left"><code class="clickable-code" data-copy="is_prime" title="Click to copy">is_prime</code></td>
 <td align="left"><code class="clickable-code" data-copy="is_prime(n)" title="Click to copy">is_prime(n)</code></td>
-<td align="left">Deterministic primality test (Sorenson &#x26; Webster 12 bases for 64-bit, Baillie-PSW for big ints)</td>
+<td align="left">Primality test (unconditionally deterministic for 64-bit integers via minimal bases; deterministic Baillie-PSW probable prime test for big integers with no known counterexamples)</td>
 </tr>
 <tr>
 <td align="left"><code class="clickable-code" data-copy="solve" title="Click to copy">solve</code></td>
@@ -2800,64 +2800,24 @@ M834 80h400000v40h-400000z"></path></svg></span></span></span><span class="vlist
 </thead>
 <tbody>
 <tr>
-<td align="left">_var</td>
-<td align="left">_x, _a, _1</td>
+<td align="left"><code class="clickable-code" data-copy="_var" title="Click to copy">_var</code></td>
+<td align="left"><code class="clickable-code" data-copy="_x" title="Click to copy">_x</code>, <code class="clickable-code" data-copy="_a" title="Click to copy">_a</code>, <code class="clickable-code" data-copy="_1" title="Click to copy">_1</code></td>
 <td align="left">Wildcard variable matching any subexpression. Identical wildcards are checked for structural equivalence (non-linear patterns)</td>
 </tr>
 <tr>
-<td align="left"></td>
-<td align="left"></td>
-<td align="left"></td>
-</tr>
-<tr>
-<td align="left">ule</td>
-<td align="left"></td>
-<td align="left"></td>
-</tr>
-<tr>
-<td align="left">ule(sin(_x)^2, 1 - cos(_x)^2)</td>
+<td align="left"><code class="clickable-code" data-copy="rule" title="Click to copy">rule</code></td>
+<td align="left"><code class="clickable-code" data-copy="rule(sin(_x)^2, 1 - cos(_x)^2)" title="Click to copy">rule(sin(_x)^2, 1 - cos(_x)^2)</code></td>
 <td align="left">Creates a first-class rewrite rule object holding LHS pattern and RHS template</td>
-<td align="left"></td>
 </tr>
 <tr>
-<td align="left"></td>
-<td align="left"></td>
-<td align="left"></td>
-</tr>
-<tr>
-<td align="left">eplace</td>
-<td align="left"></td>
-<td align="left"></td>
-</tr>
-<tr>
-<td align="left">eplace(sin(t)^2, rule(sin(_x)^2, 1 - cos(_x)^2))</td>
+<td align="left"><code class="clickable-code" data-copy="replace" title="Click to copy">replace</code></td>
+<td align="left"><code class="clickable-code" data-copy="replace(sin(t)^2, rule(sin(_x)^2, 1 - cos(_x)^2))" title="Click to copy">replace(sin(t)^2, rule(sin(_x)^2, 1 - cos(_x)^2))</code></td>
 <td align="left">Traverses expression bottom-up and replaces matched subterms once</td>
-<td align="left"></td>
 </tr>
 <tr>
-<td align="left"></td>
-<td align="left"></td>
-<td align="left"></td>
-</tr>
-<tr>
-<td align="left">ewrite</td>
-<td align="left"></td>
-<td align="left"></td>
-</tr>
-<tr>
-<td align="left">ewrite(sin(sin(x)), rule(sin(_t), _t)) /</td>
-<td align="left"></td>
-<td align="left"></td>
-</tr>
-<tr>
-<td align="left">ewrite(expr, [r1, r2], [max_steps])</td>
-<td align="left">Iteratively applies rules until a fixed point is reached. Protected by cycle detection and configurable step limit in ~/.ihd/config.json (</td>
-<td align="left"></td>
-</tr>
-<tr>
-<td align="left">ewrite_max_steps, default 1000)</td>
-<td align="left"></td>
-<td align="left"></td>
+<td align="left"><code class="clickable-code" data-copy="rewrite" title="Click to copy">rewrite</code></td>
+<td align="left"><code class="clickable-code" data-copy="rewrite(sin(sin(x)), rule(sin(_t), _t))" title="Click to copy">rewrite(sin(sin(x)), rule(sin(_t), _t))</code> / <code class="clickable-code" data-copy="rewrite(expr, [r1, r2], [max_steps])" title="Click to copy">rewrite(expr, [r1, r2], [max_steps])</code></td>
+<td align="left">Iteratively applies rules until a fixed point is reached. Protected by cycle detection and configurable step limit in <code class="clickable-code" data-copy="~/.ihd/config.json" title="Click to copy">~/.ihd/config.json</code> (<code class="clickable-code" data-copy="rewrite_max_steps" title="Click to copy">rewrite_max_steps</code>, default 1000)</td>
 </tr>
 </tbody>
 </table></div>

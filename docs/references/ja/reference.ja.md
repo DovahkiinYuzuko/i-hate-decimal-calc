@@ -120,7 +120,7 @@
 | `inv_mod` | `inv_mod(a, m)` | 拡張ユークリッド互除法によるモジュラ逆数（$a x \equiv 1 \pmod m$） |
 | `crt` | `crt([r1, r2], [m1, m2])` | 中国剰余定理（Garner法および非互いに素な合同式を解く一般化CRT拡張） |
 | `totient` | `totient(n)` | オイラーのトーシェント関数 $\phi(n) = n \prod_{p \mid n} (1 - 1/p)$ |
-| `is_prime` | `is_prime(n)` | 決定論的素数判定（64bitはSorenson-Websterの12基底完全決定論的判定、巨大数はBaillie-PSW） |
+| `is_prime` | `is_prime(n)` | 素数判定（64bit範囲はSinclair/Sorenson-Webster基底による完全決定論的判定、巨大数はBaillie-PSWによる素数候補判定（反例未発見）） |
 | `solve` | `solve(expr, var)` | 厳密代数・初等超越方程式ソルバー（1次・2次・3次・4次代数方程式の代数的根号求解に加え、ランバートW関数 `lambert_w` による初等超越方程式 $f(x)e^{f(x)}=c$, $ax+b\ln x=c$, $x^x=c$, $a^x=bx$ の完全閉形式解に対応。カルダノ公式・フェラーリ法・チルンハウス変換・分解3次方程式レゾルベントによる厳密解、重解・複素数解対応） |
 | `to_poly` | `to_poly(expr, [x, y], "lex")` | 式を指定変数・単項式順序（`lex`, `grevlex`）の正規形多項式ノード `PolyNode` へ明示変換 |
 | `to_alg` | `to_alg(rep, min_poly, [var])` | 代数拡大体 $\mathbb{Q}(\alpha) \cong \mathbb{Q}[x]/\langle m(x) \rangle$ の代数数ノード `AlgNode` を構築 |
@@ -471,15 +471,7 @@
 
 | 関数・構文 | 形式・例 | 説明 |
 | :--- | :--- | :--- |
-| _var | _x, _a, _1 | 任意の式木にマッチするワイルドカード変数。同一ワイルドカードが複数箇所に出現する場合は構造等価性を検証（非線形パターン） |
-| 
-ule | 
-ule(sin(_x)^2, 1 - cos(_x)^2) | パターン（左辺）と置換テンプレート（右辺）を保持する第一級ルールオブジェクトを作成 |
-| 
-eplace | 
-eplace(sin(t)^2, rule(sin(_x)^2, 1 - cos(_x)^2)) | 式木をボトムアップ走査し、マッチした部分式を1回置換 |
-| 
-ewrite | 
-ewrite(sin(sin(x)), rule(sin(_t), _t)) / 
-ewrite(expr, [r1, r2], [max_steps]) | 不動点（どのルールも適用できなくなる状態）に達するまで繰り返し書き換えを適用。循環検出および ~/.ihd/config.json（
-ewrite_max_steps、既定値1000）による安全上限ガード付き |
+| `_var` | `_x`, `_a`, `_1` | 任意の式木にマッチするワイルドカード変数。同一ワイルドカードが複数箇所に出現する場合は構造等価性を検証（非線形パターン） |
+| `rule` | `rule(sin(_x)^2, 1 - cos(_x)^2)` | パターン（左辺）と置換テンプレート（右辺）を保持する第一級ルールオブジェクトを作成 |
+| `replace` | `replace(sin(t)^2, rule(sin(_x)^2, 1 - cos(_x)^2))` | 式木をボトムアップ走査し、マッチした部分式を1回置換 |
+| `rewrite` | `rewrite(sin(sin(x)), rule(sin(_t), _t))` / `rewrite(expr, [r1, r2], [max_steps])` | 不動点（どのルールも適用できなくなる状態）に達するまで繰り返し書き換えを適用。循環検出および `~/.ihd/config.json`（`rewrite_max_steps`、既定値1000）による安全上限ガード付き |

@@ -1302,7 +1302,7 @@
 <tr>
 <td align="left"><code class="clickable-code" data-copy="is_prime" title="クリックしてコピー">is_prime</code></td>
 <td align="left"><code class="clickable-code" data-copy="is_prime(n)" title="クリックしてコピー">is_prime(n)</code></td>
-<td align="left">決定論的素数判定（64bitはSorenson-Websterの12基底完全決定論的判定、巨大数はBaillie-PSW）</td>
+<td align="left">素数判定（64bit範囲はSinclair/Sorenson-Webster基底による完全決定論的判定、巨大数はBaillie-PSWによる素数候補判定（反例未発見））</td>
 </tr>
 <tr>
 <td align="left"><code class="clickable-code" data-copy="solve" title="クリックしてコピー">solve</code></td>
@@ -2772,7 +2772,7 @@ M834 80h400000v40h-400000z"></path></svg></span></span></span><span class="vlist
             </div>
           </details>
         
-          <details class="dads-accordion" id="sec-22-代数パターンマッチング-項書き換え規則-trs" data-keywords="22. 代数パターンマッチング &amp; 項書き換え規則 (TRS) アンダースコア始まりのワイルドカード変数（_x, _a）を用いたパターンマッチング（非線形パターン検査、加算・乗算の結合・可換 AC 部分マッチング対応）および、ユーザー定義規則の適用・不動点反復エンジンを提供します。 関数・構文形式・例説明_var_x, _a, _1任意の式木にマッチするワイルドカード変数。同一ワイルドカードが複数箇所に出現する場合は構造等価性を検証（非線形パターン）uleule(sin(_x)^2, 1 - cos(_x)^2)パターン（左辺）と置換テンプレート（右辺）を保持する第一級ルールオブジェクトを作成eplaceeplace(sin(t)^2, rule(sin(_x)^2, 1 - cos(_x)^2))式木をボトムアップ走査し、マッチした部分式を1回置換ewriteewrite(sin(sin(x)),">
+          <details class="dads-accordion" id="sec-22-代数パターンマッチング-項書き換え規則-trs" data-keywords="22. 代数パターンマッチング &amp; 項書き換え規則 (TRS) アンダースコア始まりのワイルドカード変数（_x, _a）を用いたパターンマッチング（非線形パターン検査、加算・乗算の結合・可換 AC 部分マッチング対応）および、ユーザー定義規則の適用・不動点反復エンジンを提供します。 関数・構文形式・例説明_var_x, _a, _1任意の式木にマッチするワイルドカード変数。同一ワイルドカードが複数箇所に出現する場合は構造等価性を検証（非線形パターン）rulerule(sin(_x)^2, 1 - cos(_x)^2)パターン（左辺）と置換テンプレート（右辺）を保持する第一級ルールオブジェクトを作成replacereplace(sin(t)^2, rule(sin(_x)^2, 1 - cos(_x)^2))式木をボトムアップ走査し、マッチした部分式を1回置換rewriterewrite(sin(sin(x)),">
             <summary class="accordion-summary" aria-label="22. 代数パターンマッチング &amp; 項書き換え規則 (TRS) を開閉">
               <span class="accordion-title">22. 代数パターンマッチング &amp; 項書き換え規則 (TRS)</span>
               <svg class="accordion-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/></svg>
@@ -2789,64 +2789,24 @@ M834 80h400000v40h-400000z"></path></svg></span></span></span><span class="vlist
 </thead>
 <tbody>
 <tr>
-<td align="left">_var</td>
-<td align="left">_x, _a, _1</td>
+<td align="left"><code class="clickable-code" data-copy="_var" title="クリックしてコピー">_var</code></td>
+<td align="left"><code class="clickable-code" data-copy="_x" title="クリックしてコピー">_x</code>, <code class="clickable-code" data-copy="_a" title="クリックしてコピー">_a</code>, <code class="clickable-code" data-copy="_1" title="クリックしてコピー">_1</code></td>
 <td align="left">任意の式木にマッチするワイルドカード変数。同一ワイルドカードが複数箇所に出現する場合は構造等価性を検証（非線形パターン）</td>
 </tr>
 <tr>
-<td align="left"></td>
-<td align="left"></td>
-<td align="left"></td>
-</tr>
-<tr>
-<td align="left">ule</td>
-<td align="left"></td>
-<td align="left"></td>
-</tr>
-<tr>
-<td align="left">ule(sin(_x)^2, 1 - cos(_x)^2)</td>
+<td align="left"><code class="clickable-code" data-copy="rule" title="クリックしてコピー">rule</code></td>
+<td align="left"><code class="clickable-code" data-copy="rule(sin(_x)^2, 1 - cos(_x)^2)" title="クリックしてコピー">rule(sin(_x)^2, 1 - cos(_x)^2)</code></td>
 <td align="left">パターン（左辺）と置換テンプレート（右辺）を保持する第一級ルールオブジェクトを作成</td>
-<td align="left"></td>
 </tr>
 <tr>
-<td align="left"></td>
-<td align="left"></td>
-<td align="left"></td>
-</tr>
-<tr>
-<td align="left">eplace</td>
-<td align="left"></td>
-<td align="left"></td>
-</tr>
-<tr>
-<td align="left">eplace(sin(t)^2, rule(sin(_x)^2, 1 - cos(_x)^2))</td>
+<td align="left"><code class="clickable-code" data-copy="replace" title="クリックしてコピー">replace</code></td>
+<td align="left"><code class="clickable-code" data-copy="replace(sin(t)^2, rule(sin(_x)^2, 1 - cos(_x)^2))" title="クリックしてコピー">replace(sin(t)^2, rule(sin(_x)^2, 1 - cos(_x)^2))</code></td>
 <td align="left">式木をボトムアップ走査し、マッチした部分式を1回置換</td>
-<td align="left"></td>
 </tr>
 <tr>
-<td align="left"></td>
-<td align="left"></td>
-<td align="left"></td>
-</tr>
-<tr>
-<td align="left">ewrite</td>
-<td align="left"></td>
-<td align="left"></td>
-</tr>
-<tr>
-<td align="left">ewrite(sin(sin(x)), rule(sin(_t), _t)) /</td>
-<td align="left"></td>
-<td align="left"></td>
-</tr>
-<tr>
-<td align="left">ewrite(expr, [r1, r2], [max_steps])</td>
-<td align="left">不動点（どのルールも適用できなくなる状態）に達するまで繰り返し書き換えを適用。循環検出および ~/.ihd/config.json（</td>
-<td align="left"></td>
-</tr>
-<tr>
-<td align="left">ewrite_max_steps、既定値1000）による安全上限ガード付き</td>
-<td align="left"></td>
-<td align="left"></td>
+<td align="left"><code class="clickable-code" data-copy="rewrite" title="クリックしてコピー">rewrite</code></td>
+<td align="left"><code class="clickable-code" data-copy="rewrite(sin(sin(x)), rule(sin(_t), _t))" title="クリックしてコピー">rewrite(sin(sin(x)), rule(sin(_t), _t))</code> / <code class="clickable-code" data-copy="rewrite(expr, [r1, r2], [max_steps])" title="クリックしてコピー">rewrite(expr, [r1, r2], [max_steps])</code></td>
+<td align="left">不動点（どのルールも適用できなくなる状態）に達するまで繰り返し書き換えを適用。循環検出および <code class="clickable-code" data-copy="~/.ihd/config.json" title="クリックしてコピー">~/.ihd/config.json</code>（<code class="clickable-code" data-copy="rewrite_max_steps" title="クリックしてコピー">rewrite_max_steps</code>、既定値1000）による安全上限ガード付き</td>
 </tr>
 </tbody>
 </table></div>

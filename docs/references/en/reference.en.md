@@ -120,7 +120,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `inv_mod` | `inv_mod(a, m)` | Modular inverse via Extended Euclidean Algorithm ($a x \equiv 1 \pmod m$) |
 | `crt` | `crt([r1, r2], [m1, m2])` | Chinese Remainder Theorem (Garner's algorithm & generalized non-coprime CRT) |
 | `totient` | `totient(n)` | Euler's totient function $\phi(n) = n \prod_{p \mid n} (1 - 1/p)$ |
-| `is_prime` | `is_prime(n)` | Deterministic primality test (Sorenson & Webster 12 bases for 64-bit, Baillie-PSW for big ints) |
+| `is_prime` | `is_prime(n)` | Primality test (unconditionally deterministic for 64-bit integers via minimal bases; deterministic Baillie-PSW probable prime test for big integers with no known counterexamples) |
 | `solve` | `solve(expr, var)` | Exact algebraic and elementary transcendental equation solver for linear, quadratic, cubic, and quartic polynomials (exact radical solutions via Cardano's formula, Ferrari's method, Tschirnhaus transformation, and resolvent cubics), as well as closed-form solutions for elementary transcendental equations via the Lambert W function `lambert_w` ($f(x)e^{f(x)}=c$, $ax+b\ln x=c$, $x^x=c$, $a^x=bx$); supports multiple and complex roots |
 | `to_poly` | `to_poly(expr, [x, y], "lex")` | Explicitly converts an expression to a canonical `PolyNode` under specified variables and monomial order (`lex`, `grevlex`) |
 | `to_alg` | `to_alg(rep, min_poly, [var])` | Constructs an algebraic number node `AlgNode` in field extension $\mathbb{Q}(\alpha) \cong \mathbb{Q}[x]/\langle m(x) \rangle$ |
@@ -470,15 +470,7 @@ Provides term rewriting and pattern matching using underscore wildcard variables
 
 | Function / Syntax | Example | Description |
 | :--- | :--- | :--- |
-| _var | _x, _a, _1 | Wildcard variable matching any subexpression. Identical wildcards are checked for structural equivalence (non-linear patterns) |
-| 
-ule | 
-ule(sin(_x)^2, 1 - cos(_x)^2) | Creates a first-class rewrite rule object holding LHS pattern and RHS template |
-| 
-eplace | 
-eplace(sin(t)^2, rule(sin(_x)^2, 1 - cos(_x)^2)) | Traverses expression bottom-up and replaces matched subterms once |
-| 
-ewrite | 
-ewrite(sin(sin(x)), rule(sin(_t), _t)) / 
-ewrite(expr, [r1, r2], [max_steps]) | Iteratively applies rules until a fixed point is reached. Protected by cycle detection and configurable step limit in ~/.ihd/config.json (
-ewrite_max_steps, default 1000) |
+| `_var` | `_x`, `_a`, `_1` | Wildcard variable matching any subexpression. Identical wildcards are checked for structural equivalence (non-linear patterns) |
+| `rule` | `rule(sin(_x)^2, 1 - cos(_x)^2)` | Creates a first-class rewrite rule object holding LHS pattern and RHS template |
+| `replace` | `replace(sin(t)^2, rule(sin(_x)^2, 1 - cos(_x)^2))` | Traverses expression bottom-up and replaces matched subterms once |
+| `rewrite` | `rewrite(sin(sin(x)), rule(sin(_t), _t))` / `rewrite(expr, [r1, r2], [max_steps])` | Iteratively applies rules until a fixed point is reached. Protected by cycle detection and configurable step limit in `~/.ihd/config.json` (`rewrite_max_steps`, default 1000) |
