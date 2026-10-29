@@ -56,15 +56,21 @@ func (s *DomainConditionSet) Add(kind ConditionKind, expr Node) {
 	if s == nil || expr == nil {
 		return
 	}
+	// Normalize expression if possible to canonical form
+	normalized := expr
+	if evaled, err := EvalWithEnv(expr, NewEnv()); err == nil && evaled != nil {
+		normalized = evaled
+	}
+
 	// Check for syntactic equality to deduplicate
 	for _, c := range s.conditions {
-		if c.Kind == kind && c.Expr != nil && c.Expr.Equal(expr) {
+		if c.Kind == kind && c.Expr != nil && c.Expr.Equal(normalized) {
 			return
 		}
 	}
 	s.conditions = append(s.conditions, DomainCondition{
 		Kind: kind,
-		Expr: expr,
+		Expr: normalized,
 	})
 }
 
@@ -131,3 +137,78 @@ func (s *DomainConditionSet) String() string {
 	}
 	return strings.Join(parts, ", ")
 }
+
+// ExtractDomainConditions walks an AST node and collects non-trivial domain side conditions.
+// Only conditions on expressions containing variables are collected (constant checks like 2 != 0 are skipped).
+func ExtractDomainConditions(node Node) *DomainConditionSet {
+	set := NewDomainConditionSet()
+	if node == nil {
+		return set
+	}
+
+	Walk(node, func(n Node) bool {
+		if n == nil {
+			return true
+		}
+
+		// 1. Check for negative powers (denominators: base != 0)
+		if pow, ok := n.(*PowNode); ok {
+			if rExp, okR := pow.Exp.(*RationalNode); okR && rExp.Val != nil {
+				if rExp.Val.Sign() < 0 {
+					if len(ExtractFreeVariables(pow.Base)) > 0 {
+						set.Add(CondNonZero, pow.Base)
+					}
+				}
+				// Even root check: exp is a fraction with even denominator (e.g., 1/2)
+				denom := rExp.Val.Denom()
+				if denom != nil && denom.Bit(0) == 0 { // even denominator
+					if len(ExtractFreeVariables(pow.Base)) > 0 {
+						set.Add(CondNonNegative, pow.Base)
+					}
+				}
+			}
+		}
+
+		// 2. Check for SqrtNode (radicand >= 0)
+		if sqrt, ok := n.(*SqrtNode); ok {
+			if len(ExtractFreeVariables(sqrt.Radicand)) > 0 {
+				set.Add(CondNonNegative, sqrt.Radicand)
+			}
+		}
+
+		// 3. Check for log/ln functions (arg > 0)
+		if fn, ok := n.(*FuncNode); ok {
+			if (fn.Name == "log" || fn.Name == "ln") && len(fn.Args) > 0 {
+				arg := fn.Args[0]
+				if len(ExtractFreeVariables(arg)) > 0 {
+					set.Add(CondPositive, arg)
+				}
+			}
+		}
+
+		return true
+	})
+
+	return set
+}
+
+// SimplifyWithConditions simplifies an AST node and returns the result along with
+// the accumulated domain conditions from both the original expression and the result.
+func SimplifyWithConditions(node Node, env *Env) (Node, *DomainConditionSet, error) {
+	if node == nil {
+		return nil, NewDomainConditionSet(), nil
+	}
+
+	origConds := ExtractDomainConditions(node)
+
+	simplified, err := EvalWithEnv(node, env)
+	if err != nil {
+		return nil, origConds, err
+	}
+
+	resConds := ExtractDomainConditions(simplified)
+	origConds.Merge(resConds)
+
+	return simplified, origConds, nil
+}
+
