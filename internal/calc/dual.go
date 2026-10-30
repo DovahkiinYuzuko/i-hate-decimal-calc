@@ -5,63 +5,59 @@ import (
 	"math/big"
 )
 
-// DualRat represents a dual number over the rational field: Real + Dual * epsilon (where epsilon^2 = 0).
+// DualRat represents a dual number over big.Rat: a + b*eps where eps^2 = 0.
 type DualRat struct {
 	Real *big.Rat
 	Dual *big.Rat
 }
 
-// NewDualRat creates a new DualRat number with defensive copies.
-func NewDualRat(real, dual *big.Rat) DualRat {
-	r := new(big.Rat)
-	if real != nil {
-		r.Set(real)
-	}
-	d := new(big.Rat)
-	if dual != nil {
-		d.Set(dual)
-	}
-	return DualRat{Real: r, Dual: d}
-}
-
-// NewDualConst creates a constant dual number (derivative = 0).
+// NewDualConst creates a constant dual number with zero dual component: a + 0*eps.
 func NewDualConst(val *big.Rat) DualRat {
-	return NewDualRat(val, new(big.Rat))
+	return DualRat{
+		Real: new(big.Rat).Set(val),
+		Dual: new(big.Rat),
+	}
 }
 
-// NewDualVar creates a variable dual number (derivative = 1).
+// NewDualVar creates an independent variable dual number with unit dual component: x + 1*eps.
 func NewDualVar(val *big.Rat) DualRat {
-	return NewDualRat(val, big.NewRat(1, 1))
+	return DualRat{
+		Real: new(big.Rat).Set(val),
+		Dual: big.NewRat(1, 1),
+	}
 }
 
-// DualAdd computes (a + b*eps) + (c + d*eps) = (a + c) + (b + d)*eps.
+// DualAdd computes (a + b*eps) + (c + d*eps) = (a+c) + (b+d)*eps.
 func DualAdd(x, y DualRat) DualRat {
-	r := new(big.Rat).Add(x.Real, y.Real)
-	d := new(big.Rat).Add(x.Dual, y.Dual)
-	return DualRat{Real: r, Dual: d}
+	return DualRat{
+		Real: new(big.Rat).Add(x.Real, y.Real),
+		Dual: new(big.Rat).Add(x.Dual, y.Dual),
+	}
 }
 
-// DualSub computes (a + b*eps) - (c + d*eps) = (a - c) + (b - d)*eps.
+// DualSub computes (a + b*eps) - (c + d*eps) = (a-c) + (b-d)*eps.
 func DualSub(x, y DualRat) DualRat {
-	r := new(big.Rat).Sub(x.Real, y.Real)
-	d := new(big.Rat).Sub(x.Dual, y.Dual)
-	return DualRat{Real: r, Dual: d}
+	return DualRat{
+		Real: new(big.Rat).Sub(x.Real, y.Real),
+		Dual: new(big.Rat).Sub(x.Dual, y.Dual),
+	}
 }
 
-// DualMul computes (a + b*eps) * (c + d*eps) = a*c + (a*d + b*c)*eps.
+// DualMul computes (a + b*eps) * (c + d*eps) = (a*c) + (a*d + b*c)*eps.
 func DualMul(x, y DualRat) DualRat {
 	r := new(big.Rat).Mul(x.Real, y.Real)
-	t1 := new(big.Rat).Mul(x.Real, y.Dual)
-	t2 := new(big.Rat).Mul(x.Dual, y.Real)
-	d := new(big.Rat).Add(t1, t2)
+	ad := new(big.Rat).Mul(x.Real, y.Dual)
+	bc := new(big.Rat).Mul(x.Dual, y.Real)
+	d := new(big.Rat).Add(ad, bc)
 	return DualRat{Real: r, Dual: d}
 }
 
-// DualQuo computes (a + b*eps) / (c + d*eps) = a/c + (b*c - a*d)/(c^2)*eps.
+// DualQuo computes (a + b*eps) / (c + d*eps) = (a/c) + ((b*c - a*d)/c^2)*eps.
 func DualQuo(x, y DualRat) (DualRat, error) {
 	if y.Real.Sign() == 0 {
-		return DualRat{}, fmt.Errorf("division by zero in dual number arithmetic")
+		return DualRat{}, fmt.Errorf("division by zero in dual division")
 	}
+
 	r := new(big.Rat).Quo(x.Real, y.Real)
 
 	bc := new(big.Rat).Mul(x.Dual, y.Real)
@@ -73,13 +69,16 @@ func DualQuo(x, y DualRat) (DualRat, error) {
 	return DualRat{Real: r, Dual: d}, nil
 }
 
-// DualPowInt computes (a + b*eps)^n = a^n + n * a^(n-1) * b * eps.
-func DualPowInt(x DualRat, n int) (DualRat, error) {
-	if n == 0 {
+// DualPowBigInt computes (a + b*eps)^n = a^n + n * a^(n-1) * b * eps using binary exponentiation.
+// It accepts arbitrary precision *big.Int to prevent overflow and MinInt wrap-around.
+func DualPowBigInt(x DualRat, n *big.Int) (DualRat, error) {
+	if n.Sign() == 0 {
 		return NewDualConst(big.NewRat(1, 1)), nil
 	}
-	if n < 0 {
-		pos, err := DualPowInt(x, -n)
+
+	if n.Sign() < 0 {
+		absN := new(big.Int).Abs(n)
+		pos, err := DualPowBigInt(x, absN)
 		if err != nil {
 			return DualRat{}, err
 		}
@@ -87,24 +86,48 @@ func DualPowInt(x DualRat, n int) (DualRat, error) {
 		return DualQuo(one, pos)
 	}
 
-	r := new(big.Rat).Set(x.Real)
-	for i := 1; i < n; i++ {
-		r.Mul(r, x.Real)
+	// For n > 0, compute a^n and a^(n-1) using binary exponentiation
+	powReal := func(base *big.Rat, p *big.Int) (*big.Rat, error) {
+		res := big.NewRat(1, 1)
+		cur := new(big.Rat).Set(base)
+		for i := 0; i < p.BitLen(); i++ {
+			if p.Bit(i) == 1 {
+				res.Mul(res, cur)
+				if res.Num().BitLen()+res.Denom().BitLen() > 100000 {
+					return nil, fmt.Errorf("bit size budget exceeded in dual power")
+				}
+			}
+			if i+1 < p.BitLen() {
+				cur.Mul(cur, cur)
+				if cur.Num().BitLen()+cur.Denom().BitLen() > 100000 {
+					return nil, fmt.Errorf("bit size budget exceeded in dual power")
+				}
+			}
+		}
+		return res, nil
 	}
 
-	if n == 1 {
-		return DualRat{Real: r, Dual: new(big.Rat).Set(x.Dual)}, nil
+	rn, err := powReal(x.Real, n)
+	if err != nil {
+		return DualRat{}, err
 	}
 
-	an1 := new(big.Rat).Set(x.Real)
-	for i := 1; i < n-1; i++ {
-		an1.Mul(an1, x.Real)
+	nMinus1 := new(big.Int).Sub(n, big.NewInt(1))
+	ran1, err := powReal(x.Real, nMinus1)
+	if err != nil {
+		return DualRat{}, err
 	}
-	nRat := big.NewRat(int64(n), 1)
-	d := new(big.Rat).Mul(nRat, an1)
+
+	nRat := new(big.Rat).SetInt(n)
+	d := new(big.Rat).Mul(nRat, ran1)
 	d.Mul(d, x.Dual)
 
-	return DualRat{Real: r, Dual: d}, nil
+	return DualRat{Real: rn, Dual: d}, nil
+}
+
+// DualPowInt is a convenience wrapper for DualPowBigInt accepting int.
+func DualPowInt(x DualRat, n int) (DualRat, error) {
+	return DualPowBigInt(x, big.NewInt(int64(n)))
 }
 
 // EvalNodeDual evaluates an AST node into a DualRat for forward automatic differentiation.
@@ -122,8 +145,7 @@ func EvalNodeDual(n Node, varName string, point *big.Rat) (DualRat, error) {
 		if v.Name == varName {
 			return NewDualVar(point), nil
 		}
-		// Any variable other than varName is treated as constant at 1 or given value
-		return NewDualConst(big.NewRat(1, 1)), nil
+		return DualRat{}, fmt.Errorf("unsupported: multiple variables in dual evaluation (%s)", v.Name)
 
 	case *UnaryOpNode:
 		inner, err := EvalNodeDual(v.Expr, varName, point)
@@ -162,10 +184,8 @@ func EvalNodeDual(n Node, varName string, point *big.Rat) (DualRat, error) {
 		if err != nil {
 			return DualRat{}, err
 		}
-		// If exponent is an integer constant
 		if rn, ok := v.Exp.(*RationalNode); ok && rn.Val.IsInt() {
-			nInt := int(rn.Val.Num().Int64())
-			return DualPowInt(baseVal, nInt)
+			return DualPowBigInt(baseVal, rn.Val.Num())
 		}
 		return DualRat{}, fmt.Errorf("non-integer exponent in dual evaluation")
 

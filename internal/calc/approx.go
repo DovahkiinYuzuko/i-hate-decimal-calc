@@ -57,9 +57,18 @@ func ApproxWithDigits(n Node, digits int) (string, error) {
 		return fmt.Sprintf("[%s]", strings.Join(rowStrs, ", ")), nil
 	}
 
-	// 3. Structural traversal for RelOpNode (e.g. solve solutions like x == sqrt(2))
+	// 3. Structural traversal for RelOpNode (e.g. solve solutions like x == sqrt(2) or sqrt(2) == sqrt(3))
 	if rel, ok := n.(*RelOpNode); ok {
-		leftStr := rel.LHS.String()
+		var leftStr string
+		var err error
+		if _, isVar := rel.LHS.(*VarNode); isVar {
+			leftStr = rel.LHS.String()
+		} else {
+			leftStr, err = ApproxWithDigits(rel.LHS, digits)
+			if err != nil {
+				leftStr = rel.LHS.String()
+			}
+		}
 		rightStr, err := ApproxWithDigits(rel.RHS, digits)
 		if err != nil {
 			return "", err
@@ -99,10 +108,20 @@ func ApproxWithDigits(n Node, digits int) (string, error) {
 			if imStr == "-1" {
 				return "-i", nil
 			}
+			if strings.Contains(imStr, " ") {
+				return fmt.Sprintf("(%s)*i", imStr), nil
+			}
 			return fmt.Sprintf("%si", imStr), nil
 		}
 		if strings.HasPrefix(imStr, "-") {
-			return fmt.Sprintf("%s - %si", rStr, strings.TrimPrefix(imStr, "-")), nil
+			trimmed := strings.TrimPrefix(imStr, "-")
+			if strings.Contains(trimmed, " ") {
+				return fmt.Sprintf("%s - (%s)*i", rStr, trimmed), nil
+			}
+			return fmt.Sprintf("%s - %si", rStr, trimmed), nil
+		}
+		if strings.Contains(imStr, " ") {
+			return fmt.Sprintf("%s + (%s)*i", rStr, imStr), nil
 		}
 		return fmt.Sprintf("%s + %si", rStr, imStr), nil
 	}

@@ -262,40 +262,7 @@ func verifyIntegral(fn *FuncNode, F Node, env *Env, fsm *VerifyLifecycleFSM) (*V
 		}
 	}
 
-	// 1. Try independent Dual Number automatic differentiation check on sample points
-	dualTested := false
-	dualPassed := true
-	for _, pt := range candidateSamplePoints[:5] {
-		dVal, errD := EvalNodeDual(F, varName, pt)
-		fVal, errF := EvalAtRational(f, varName, pt)
-		if errD != nil || errF != nil {
-			continue
-		}
-		dualTested = true
-		if dVal.Dual.Cmp(fVal) != 0 {
-			dualPassed = false
-			break
-		}
-	}
-
-	if dualTested && dualPassed {
-		_ = fsm.TransitionTo(VerifyStateCertified)
-		details := fmt.Sprintf(i18n.T("verify.integral_holds"), varName)
-		eqStr := fmt.Sprintf("diff(F, %s) - f == 0", varName)
-		certIR := NewDerivCertificate(f, F, mustRational(0, 1), varName, true, details)
-		return &VerificationCertificate{
-			Domain:     DomainIntegral,
-			Equation:   eqStr,
-			Residual:   mustRational(0, 1),
-			IsVerified: true,
-			Details:    details,
-			State:      VerifyStateCertified,
-			CertIR:     certIR,
-			Certainty:  VerifyCertaintyExact,
-		}, nil
-	}
-
-	// Compute derivative F'(x) = d/dx (F)
+	// 1. Compute derivative F'(x) = d/dx (F)
 	fPrime, err := differentiate(F, varName)
 	if err != nil {
 		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
@@ -314,11 +281,31 @@ func verifyIntegral(fn *FuncNode, F Node, env *Env, fsm *VerifyLifecycleFSM) (*V
 	_ = fsm.TransitionTo(VerifyStateSimplificationEvaluated)
 	isZeroRes := checkIsZeroAlgebraically(residualNode, env)
 
+	// 2. Cross-check with independent Dual Number automatic differentiation
+	dualPassed := true
+	dualCount := 0
+	for _, pt := range candidateSamplePoints[:5] {
+		dVal, errD := EvalNodeDual(F, varName, pt)
+		fVal, errF := EvalAtRational(f, varName, pt)
+		if errD != nil || errF != nil {
+			continue
+		}
+		dualCount++
+		if dVal.Dual.Cmp(fVal) != 0 {
+			dualPassed = false
+			break
+		}
+	}
+
 	eqStr := fmt.Sprintf("diff(F, %s) - f == 0", varName)
-	if isZeroRes {
+	if isZeroRes && dualPassed {
 		_ = fsm.TransitionTo(VerifyStateCertified)
 		details := fmt.Sprintf(i18n.T("verify.integral_holds"), varName)
 		certIR := NewDerivCertificate(f, F, mustRational(0, 1), varName, true, details)
+		certainty := VerifyCertaintyExact
+		if dualCount == 0 {
+			certainty = VerifyCertaintyProbabilistic
+		}
 		return &VerificationCertificate{
 			Domain:     DomainIntegral,
 			Equation:   eqStr,
@@ -327,6 +314,7 @@ func verifyIntegral(fn *FuncNode, F Node, env *Env, fsm *VerifyLifecycleFSM) (*V
 			Details:    details,
 			State:      VerifyStateCertified,
 			CertIR:     certIR,
+			Certainty:  certainty,
 		}, nil
 	}
 
@@ -1083,48 +1071,50 @@ func VerifyAlgebraicEquivalence(lhs, rhs Node, env *Env) (*VerificationCertifica
 		}, nil
 	}
 
-	// 2. Try independent PIT verification for expressions with variables
-	varName := vList[0]
-	certainty, wit, _ := VerifyEquivalencePIT(lhs, rhs, varName)
-	if certainty == VerifyCertaintyExact || certainty == VerifyCertaintyProbabilistic {
-		_ = fsm.TransitionTo(VerifyStateCertified)
-		details := i18n.T("verify.general_holds")
-		certIR := NewIdentityCertificate(IdentityKindEquivalence, lhs, rhs, mustRational(0, 1), true, details)
-		return &VerificationCertificate{
-			Domain:     DomainGeneral,
-			Equation:   eqStr,
-			Residual:   mustRational(0, 1),
-			IsVerified: true,
-			Details:    details,
-			State:      VerifyStateCertified,
-			CertIR:     certIR,
-			Certainty:  certainty,
-		}, nil
-	} else if certainty == VerifyCertaintyRefuted && wit != nil {
-		_ = fsm.TransitionTo(VerifyStateRefuted)
-		negRhs, _ := simplifyUnaryOp("-", rhs)
-		diff := NewAdd([]Node{lhs, negRhs})
-		evalDiff, _ := Eval(diff)
-		resStr := "-1"
-		if evalDiff != nil {
-			resStr = evalDiff.String()
+	// 2. Try independent PIT verification strictly for univariate polynomial expressions
+	if len(vList) == 1 {
+		varName := vList[0]
+		certainty, wit, _ := VerifyEquivalencePIT(lhs, rhs, varName)
+		if certainty == VerifyCertaintyExact || certainty == VerifyCertaintyProbabilistic {
+			_ = fsm.TransitionTo(VerifyStateCertified)
+			details := i18n.T("verify.general_holds")
+			certIR := NewIdentityCertificate(IdentityKindEquivalence, lhs, rhs, mustRational(0, 1), true, details)
+			return &VerificationCertificate{
+				Domain:     DomainGeneral,
+				Equation:   eqStr,
+				Residual:   mustRational(0, 1),
+				IsVerified: true,
+				Details:    details,
+				State:      VerifyStateCertified,
+				CertIR:     certIR,
+				Certainty:  certainty,
+			}, nil
+		} else if certainty == VerifyCertaintyRefuted && wit != nil {
+			_ = fsm.TransitionTo(VerifyStateRefuted)
+			negRhs, _ := simplifyUnaryOp("-", rhs)
+			diff := NewAdd([]Node{lhs, negRhs})
+			evalDiff, _ := Eval(diff)
+			resStr := "-1"
+			if evalDiff != nil {
+				resStr = evalDiff.String()
+			}
+			details := fmt.Sprintf(i18n.T("verify.refuted_residual"), resStr)
+			if wit.Message != "" {
+				details = fmt.Sprintf("%s (%s)", details, wit.Message)
+			}
+			certIR := NewIdentityCertificate(IdentityKindEquivalence, lhs, rhs, evalDiff, false, details)
+			return &VerificationCertificate{
+				Domain:     DomainGeneral,
+				Equation:   eqStr,
+				Residual:   evalDiff,
+				IsVerified: false,
+				Details:    details,
+				State:      VerifyStateRefuted,
+				CertIR:     certIR,
+				Certainty:  VerifyCertaintyRefuted,
+				Witness:    wit,
+			}, nil
 		}
-		details := fmt.Sprintf(i18n.T("verify.refuted_residual"), resStr)
-		if wit.Message != "" {
-			details = fmt.Sprintf("%s (%s)", details, wit.Message)
-		}
-		certIR := NewIdentityCertificate(IdentityKindEquivalence, lhs, rhs, evalDiff, false, details)
-		return &VerificationCertificate{
-			Domain:     DomainGeneral,
-			Equation:   eqStr,
-			Residual:   evalDiff,
-			IsVerified: false,
-			Details:    details,
-			State:      VerifyStateRefuted,
-			CertIR:     certIR,
-			Witness:    wit,
-			Certainty:  VerifyCertaintyRefuted,
-		}, nil
 	}
 
 	_ = fsm.TransitionTo(VerifyStateResidualConstructed)

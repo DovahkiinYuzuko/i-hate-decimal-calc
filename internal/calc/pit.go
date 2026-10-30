@@ -16,6 +16,64 @@ const (
 	VerifyCertaintyInconclusive  VerifyCertainty = "INCONCLUSIVE"
 )
 
+// IsPurePolynomial checks if the expression tree is a pure polynomial in varName
+// (no division, no negative exponents, no transcendental functions, and no other free variables).
+func IsPurePolynomial(n Node, varName string) bool {
+	if n == nil {
+		return false
+	}
+
+	switch v := n.(type) {
+	case *RationalNode:
+		return true
+
+	case *ConstNode:
+		return false
+
+	case *VarNode:
+		return v.Name == varName
+
+	case *UnaryOpNode:
+		if v.Op == "-" {
+			return IsPurePolynomial(v.Expr, varName)
+		}
+		return false
+
+	case *AddNode:
+		for _, term := range v.Terms {
+			if !IsPurePolynomial(term, varName) {
+				return false
+			}
+		}
+		return true
+
+	case *MulNode:
+		for _, factor := range v.Factors {
+			if !IsPurePolynomial(factor, varName) {
+				return false
+			}
+		}
+		return true
+
+	case *PowNode:
+		if !IsPurePolynomial(v.Base, varName) {
+			return false
+		}
+		rn, ok := v.Exp.(*RationalNode)
+		if !ok || !rn.Val.IsInt() {
+			return false
+		}
+		// Negative exponents are rational functions, not polynomials
+		if rn.Val.Sign() < 0 {
+			return false
+		}
+		return true
+
+	default:
+		return false
+	}
+}
+
 // EstimateDegreeUpperBound computes a safe compositional upper bound on the degree of varName in node n.
 func EstimateDegreeUpperBound(n Node, varName string) int {
 	if n == nil {
@@ -55,11 +113,14 @@ func EstimateDegreeUpperBound(n Node, varName string) int {
 	case *PowNode:
 		baseD := EstimateDegreeUpperBound(v.Base, varName)
 		if rn, ok := v.Exp.(*RationalNode); ok && rn.Val.IsInt() {
-			expInt := int(rn.Val.Num().Int64())
-			if expInt > 0 {
-				return baseD * expInt
+			num := rn.Val.Num()
+			if num.Sign() > 0 && num.IsInt64() {
+				expInt := int(num.Int64())
+				// Guard against arithmetic overflow in degree calculation
+				if expInt > 0 && baseD <= (1<<30)/expInt {
+					return baseD * expInt
+				}
 			}
-			// Negative powers in rational function numerator bound
 			return baseD
 		}
 		return baseD + 1
@@ -69,7 +130,46 @@ func EstimateDegreeUpperBound(n Node, varName string) int {
 	}
 }
 
-// EvalAtRational evaluates an AST node directly at a rational point point without simplification.
+// ratPowBigInt computes base^exp using binary exponentiation (O(log exp)) without downcasting to int.
+func ratPowBigInt(base *big.Rat, exp *big.Int) (*big.Rat, error) {
+	if exp.Sign() == 0 {
+		return big.NewRat(1, 1), nil
+	}
+
+	isNeg := exp.Sign() < 0
+	absExp := new(big.Int).Abs(exp)
+
+	// Binary exponentiation
+	result := big.NewRat(1, 1)
+	cur := new(big.Rat).Set(base)
+
+	for i := 0; i < absExp.BitLen(); i++ {
+		if absExp.Bit(i) == 1 {
+			result.Mul(result, cur)
+			// Safety budget: prevent intermediate bit swell DoS
+			if result.Num().BitLen()+result.Denom().BitLen() > 100000 {
+				return nil, fmt.Errorf("bit size budget exceeded in rational power")
+			}
+		}
+		if i+1 < absExp.BitLen() {
+			cur.Mul(cur, cur)
+			if cur.Num().BitLen()+cur.Denom().BitLen() > 100000 {
+				return nil, fmt.Errorf("bit size budget exceeded in rational power")
+			}
+		}
+	}
+
+	if isNeg {
+		if result.Sign() == 0 {
+			return nil, fmt.Errorf("division by zero in power evaluation")
+		}
+		result.Inv(result)
+	}
+
+	return result, nil
+}
+
+// EvalAtRational evaluates an AST node directly at a rational point without simplification.
 func EvalAtRational(n Node, varName string, point *big.Rat) (*big.Rat, error) {
 	if n == nil {
 		return nil, fmt.Errorf("nil node in rational evaluation")
@@ -81,15 +181,15 @@ func EvalAtRational(n Node, varName string, point *big.Rat) (*big.Rat, error) {
 
 	case *ConstNode:
 		if v.Name == "i" {
-			return nil, fmt.Errorf("complex constant i not supported in real rational evaluation")
+			return nil, fmt.Errorf("unsupported: complex constant i")
 		}
-		return nil, fmt.Errorf("transcendental constant %s cannot be evaluated as exact rational", v.Name)
+		return nil, fmt.Errorf("unsupported: transcendental constant %s", v.Name)
 
 	case *VarNode:
 		if v.Name == varName {
 			return new(big.Rat).Set(point), nil
 		}
-		return big.NewRat(1, 1), nil
+		return nil, fmt.Errorf("unsupported: multiple variables (encountered %s)", v.Name)
 
 	case *UnaryOpNode:
 		val, err := EvalAtRational(v.Expr, varName, point)
@@ -99,7 +199,7 @@ func EvalAtRational(n Node, varName string, point *big.Rat) (*big.Rat, error) {
 		if v.Op == "-" {
 			return new(big.Rat).Neg(val), nil
 		}
-		return nil, fmt.Errorf("unsupported unary op %s", v.Op)
+		return nil, fmt.Errorf("unsupported: unary op %s", v.Op)
 
 	case *AddNode:
 		sum := new(big.Rat)
@@ -129,32 +229,12 @@ func EvalAtRational(n Node, varName string, point *big.Rat) (*big.Rat, error) {
 			return nil, err
 		}
 		if rn, ok := v.Exp.(*RationalNode); ok && rn.Val.IsInt() {
-			k := rn.Val.Num().Int64()
-			if k == 0 {
-				return big.NewRat(1, 1), nil
-			}
-			if k > 0 {
-				res := new(big.Rat).Set(baseVal)
-				for i := int64(1); i < k; i++ {
-					res.Mul(res, baseVal)
-				}
-				return res, nil
-			}
-			// k < 0: reciprocal
-			if baseVal.Sign() == 0 {
-				return nil, fmt.Errorf("division by zero in power evaluation")
-			}
-			posK := -k
-			posRes := new(big.Rat).Set(baseVal)
-			for i := int64(1); i < posK; i++ {
-				posRes.Mul(posRes, baseVal)
-			}
-			return new(big.Rat).Inv(posRes), nil
+			return ratPowBigInt(baseVal, rn.Val.Num())
 		}
-		return nil, fmt.Errorf("non-integer exponent in rational evaluation")
+		return nil, fmt.Errorf("unsupported: non-integer exponent in rational evaluation")
 
 	default:
-		return nil, fmt.Errorf("unsupported node %T in rational evaluation", n)
+		return nil, fmt.Errorf("unsupported: node %T in rational evaluation", n)
 	}
 }
 
@@ -183,11 +263,40 @@ var candidateSamplePoints = []*big.Rat{
 	big.NewRat(-7, 1),
 }
 
+// isUnsupportedError returns true if the error is due to an unsupported node/function rather than a domain singularity.
+func isUnsupportedError(err error) bool {
+	if err == nil {
+		return false
+	}
+	s := err.Error()
+	return len(s) >= 12 && s[:12] == "unsupported:"
+}
+
 // VerifyEquivalencePIT verifies if lhs == rhs algebraically using D+1 deterministic PIT
-// or probabilistic sampling if multivariate / high degree.
+// for univariate polynomials, or returns Inconclusive for non-polynomials / multivariate expressions.
 func VerifyEquivalencePIT(lhs, rhs Node, varName string) (VerifyCertainty, *CounterexampleWitness, error) {
 	if lhs == nil || rhs == nil {
 		return VerifyCertaintyInconclusive, nil, fmt.Errorf("nil node in PIT verification")
+	}
+
+	// 1. Strict univariate polynomial guard
+	// PIT theorem (D+1 point equality => algebraic identity) only holds for univariate polynomials.
+	if !IsPurePolynomial(lhs, varName) || !IsPurePolynomial(rhs, varName) {
+		return VerifyCertaintyInconclusive, nil, nil
+	}
+
+	// 2. Variable count guard: must be strictly univariate
+	varsL := ExtractFreeVariables(lhs)
+	varsR := ExtractFreeVariables(rhs)
+	allVars := make(map[string]bool)
+	for _, v := range varsL {
+		allVars[v] = true
+	}
+	for _, v := range varsR {
+		allVars[v] = true
+	}
+	if len(allVars) > 1 || (len(allVars) == 1 && !allVars[varName]) {
+		return VerifyCertaintyInconclusive, nil, nil
 	}
 
 	degL := EstimateDegreeUpperBound(lhs, varName)
@@ -197,7 +306,6 @@ func VerifyEquivalencePIT(lhs, rhs Node, varName string) (VerifyCertainty, *Coun
 		maxDeg = degR
 	}
 
-	// For univariate with degree D <= 15, D+1 deterministic evaluation is a mathematical proof
 	neededPoints := maxDeg + 1
 	if neededPoints < 3 {
 		neededPoints = 3
@@ -211,6 +319,11 @@ func VerifyEquivalencePIT(lhs, rhs Node, varName string) (VerifyCertainty, *Coun
 
 		vL, errL := EvalAtRational(lhs, varName, pt)
 		vR, errR := EvalAtRational(rhs, varName, pt)
+
+		// If either failed due to an unsupported node type, fail safe to Inconclusive
+		if isUnsupportedError(errL) || isUnsupportedError(errR) {
+			return VerifyCertaintyInconclusive, nil, nil
+		}
 
 		// If both have pole / division by zero at this sample point, skip
 		if errL != nil && errR != nil {
@@ -250,12 +363,19 @@ func VerifyEquivalencePIT(lhs, rhs Node, varName string) (VerifyCertainty, *Coun
 	}
 
 	// Fallback to randomized sampling with bounded integers
+	randomSuccessCount := 0
 	for i := 0; i < 5; i++ {
-		b, _ := rand.Int(rand.Reader, big.NewInt(1000))
+		b, err := rand.Int(rand.Reader, big.NewInt(1000))
+		if err != nil || b == nil {
+			continue
+		}
 		randPt := new(big.Rat).SetInt(b)
 
 		vL, errL := EvalAtRational(lhs, varName, randPt)
 		vR, errR := EvalAtRational(rhs, varName, randPt)
+		if isUnsupportedError(errL) || isUnsupportedError(errR) {
+			return VerifyCertaintyInconclusive, nil, nil
+		}
 		if errL != nil || errR != nil {
 			continue
 		}
@@ -269,7 +389,12 @@ func VerifyEquivalencePIT(lhs, rhs Node, varName string) (VerifyCertainty, *Coun
 			}
 			return VerifyCertaintyRefuted, wit, nil
 		}
+		randomSuccessCount++
 	}
 
-	return VerifyCertaintyProbabilistic, nil, nil
+	if randomSuccessCount > 0 {
+		return VerifyCertaintyProbabilistic, nil, nil
+	}
+
+	return VerifyCertaintyInconclusive, nil, nil
 }
