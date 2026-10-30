@@ -23,9 +23,19 @@ jobs:
           go-version-file: 'go.mod'
           check-latest: true
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install SymPy Oracle
+        run: |
+          python -m pip install --upgrade pip
+          pip install sympy
+
       - name: Run Fuzz Corpus Smoke & Mathematical Invariant Tests
         env:
           GOMEMLIMIT: "2GiB"
           IHD_NO_UPDATE_CHECK: "1"
         run: |
-          go test -v -count=1 -timeout 2m ./internal/calc -run "^(Fuzz|TestThreeTierOracle|TestI18nErrorIntegrity|TestByteStreamProvider|TestGuard)"
+          go test -v -count=1 -timeout 3m ./internal/calc -run "^(Fuzz|TestThreeTierOracle|TestI18nErrorIntegrity|TestByteStreamProvider|TestGuard|TestDifferentialOracle|TestASTShrinker|TestSymPyClient)"

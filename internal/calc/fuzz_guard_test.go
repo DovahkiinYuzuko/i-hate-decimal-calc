@@ -62,6 +62,31 @@ func RunWithTimeout(d time.Duration, fn func() error) error {
 	}
 }
 
+// RunWithContextTimeout executes a context-aware function within a specified timeout duration.
+// The provided context is cancelled upon timeout, allowing cooperative termination.
+func RunWithContextTimeout(d time.Duration, fn func(ctx context.Context) error) error {
+	ctx, cancel := context.WithTimeout(context.Background(), d)
+	defer cancel()
+
+	errCh := make(chan error, 1)
+
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				errCh <- fmt.Errorf("panic in guarded function: %v", r)
+			}
+		}()
+		errCh <- fn(ctx)
+	}()
+
+	select {
+	case <-ctx.Done():
+		return ErrExecutionTimeout
+	case err := <-errCh:
+		return err
+	}
+}
+
 // TestGuard_NodeLimitAndTimeout validates AST node counting and execution timeout safeguards.
 func TestGuard_NodeLimitAndTimeout(t *testing.T) {
 	// 1. Verify CountNodes accuracy
