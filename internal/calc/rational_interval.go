@@ -459,6 +459,58 @@ func RationalBoundSqrt(x *big.Rat, steps int) (RationalInterval, error) {
 	return NewRationalInterval(low, high), nil
 }
 
+// RationalBoundCbrt computes certified rational upper and lower bounds for cbrt(x)
+// using Newton-Raphson iteration with paired bracket endpoints.
+func RationalBoundCbrt(x *big.Rat, steps int) (RationalInterval, error) {
+	if x.Sign() == 0 {
+		return NewExactRationalInterval(big.NewRat(0, 1)), nil
+	}
+	neg := x.Sign() < 0
+	absX := new(big.Rat).Abs(x)
+
+	iterSteps := steps / 2
+	if iterSteps < 6 {
+		iterSteps = 6
+	}
+	if iterSteps > 40 {
+		iterSteps = 40
+	}
+
+	// Initial guess y0
+	y := new(big.Rat).Set(absX)
+	if absX.Cmp(big.NewRat(1, 1)) > 0 {
+		y.SetFrac(big.NewInt(2), big.NewInt(1))
+	} else {
+		y.SetFrac(big.NewInt(1), big.NewInt(1))
+	}
+
+	oneThird := big.NewRat(1, 3)
+	twoThird := big.NewRat(2, 3)
+
+	for i := 0; i < iterSteps; i++ {
+		y2 := new(big.Rat).Mul(y, y)
+		term2 := new(big.Rat).Quo(absX, y2)
+		part1 := new(big.Rat).Mul(twoThird, y)
+		part2 := new(big.Rat).Mul(oneThird, term2)
+		y = new(big.Rat).Add(part1, part2)
+	}
+
+	// Paired bracket endpoint: z = absX / y^2
+	y2 := new(big.Rat).Mul(y, y)
+	z := new(big.Rat).Quo(absX, y2)
+
+	low := y
+	high := z
+	if low.Cmp(high) > 0 {
+		low, high = high, low
+	}
+
+	if neg {
+		return NewRationalInterval(new(big.Rat).Neg(high), new(big.Rat).Neg(low)), nil
+	}
+	return NewRationalInterval(low, high), nil
+}
+
 // EvalNodeInterval recursively evaluates an AST expression into a RationalInterval enclosure.
 func EvalNodeInterval(n Node, steps int) (RationalInterval, error) {
 	if n == nil {
@@ -517,6 +569,21 @@ func EvalNodeInterval(n Node, steps int) (RationalInterval, error) {
 		}
 		if node.Op == "-" {
 			return sub.Neg(), nil
+
+		}
+		if node.Op == "!" {
+			if sub.Low.Cmp(sub.High) != 0 || !sub.Low.IsInt() || sub.Low.Sign() < 0 {
+				return RationalInterval{}, fmt.Errorf("%s", i18n.T("approx.err_factorial_requires_non_negative_integer"))
+			}
+			nVal := sub.Low.Num().Int64()
+			if nVal > 10000 {
+				return RationalInterval{}, fmt.Errorf("factorial argument too large: %d", nVal)
+			}
+			fact := big.NewInt(1)
+			for i := int64(2); i <= nVal; i++ {
+				fact.Mul(fact, big.NewInt(i))
+			}
+			return NewExactRationalInterval(new(big.Rat).SetInt(fact)), nil
 		}
 		return sub, nil
 
@@ -697,6 +764,45 @@ func EvalNodeInterval(n Node, steps int) (RationalInterval, error) {
 				maxVal = b2.High
 			}
 			return NewRationalInterval(minVal, maxVal), nil
+
+		case "cbrt":
+			if len(node.Args) != 1 {
+				return RationalInterval{}, fmt.Errorf("%s", i18n.T("approx.err_invalid_function_call", "cbrt"))
+			}
+			argInt, err := EvalNodeInterval(node.Args[0], steps)
+			if err != nil {
+				return RationalInterval{}, err
+			}
+			lowBound, err := RationalBoundCbrt(argInt.Low, steps)
+			if err != nil {
+				return RationalInterval{}, err
+			}
+			highBound, err := RationalBoundCbrt(argInt.High, steps)
+			if err != nil {
+				return RationalInterval{}, err
+			}
+			return NewRationalInterval(lowBound.Low, highBound.High), nil
+
+		case "abs":
+			if len(node.Args) != 1 {
+				return RationalInterval{}, fmt.Errorf("%s", i18n.T("approx.err_invalid_function_call", "abs"))
+			}
+			argInt, err := EvalNodeInterval(node.Args[0], steps)
+			if err != nil {
+				return RationalInterval{}, err
+			}
+			if argInt.Low.Sign() >= 0 {
+				return argInt, nil
+			}
+			if argInt.High.Sign() <= 0 {
+				return argInt.Neg(), nil
+			}
+			negLow := new(big.Rat).Neg(argInt.Low)
+			maxVal := argInt.High
+			if negLow.Cmp(maxVal) > 0 {
+				maxVal = negLow
+			}
+			return NewRationalInterval(big.NewRat(0, 1), maxVal), nil
 
 		case "sqrt":
 			if len(node.Args) != 1 {
