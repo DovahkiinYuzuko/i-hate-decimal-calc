@@ -71,6 +71,9 @@
 !*.go
 !install.*
 !NOTICE.md
+# .gitignores/sample.gitignore
+!sample/
+!sample/sample.*.md
 # .gitignores/tools.gitignore
 !tools/
 !tools/micro-verifier/
