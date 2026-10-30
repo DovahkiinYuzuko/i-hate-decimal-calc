@@ -87,3 +87,35 @@ func TestEvalQuantity_CompoundUnit(t *testing.T) {
 		t.Fatalf("expected [m/s] dimensions, got %s", q.Dimensions)
 	}
 }
+
+func TestEvalQuantity_MixedScalarMulDiv(t *testing.T) {
+	tests := []struct {
+		input       string
+		expectedVal string
+	}{
+		{"2 * 3 * 5 [m]", "30"},
+		{"10 [m] * 2 * 3", "60"},
+		{"2 * 10 [m] * 3", "60"},
+		{"(100 [m] / 2) / 5", "10"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			parsed, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("parse error for %s: %v", tt.input, err)
+			}
+			evaled, err := calc.Eval(parsed)
+			if err != nil {
+				t.Fatalf("eval error for %s: %v", tt.input, err)
+			}
+			q, ok := evaled.(*ast.QuantityNode)
+			if !ok {
+				t.Fatalf("expected QuantityNode, got %T: %s", evaled, evaled.String())
+			}
+			if q.Value.String() != tt.expectedVal {
+				t.Errorf("expected val %s, got %s", tt.expectedVal, q.Value.String())
+			}
+		})
+	}
+}

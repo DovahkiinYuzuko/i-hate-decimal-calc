@@ -114,6 +114,10 @@ func evalQuantityMul(left, right Node) (Node, error) {
 	qLeft, isQLeft := left.(*ast.QuantityNode)
 	qRight, isQRight := right.(*ast.QuantityNode)
 
+	if !isQLeft && !isQRight {
+		return simplifyMul([]Node{left, right})
+	}
+
 	if isQLeft && !isQRight {
 		newVal, err := simplifyMul([]Node{qLeft.Value, right})
 		if err != nil {
@@ -149,6 +153,14 @@ func evalQuantityMul(left, right Node) (Node, error) {
 func evalQuantityDiv(left, right Node) (Node, error) {
 	qLeft, isQLeft := left.(*ast.QuantityNode)
 	qRight, isQRight := right.(*ast.QuantityNode)
+
+	if !isQLeft && !isQRight {
+		invRight, err := simplifyPow(right, ast.NewRationalFromBigRat(big.NewRat(-1, 1)))
+		if err != nil {
+			return nil, err
+		}
+		return simplifyMul([]Node{left, invRight})
+	}
 
 	if isQLeft && !isQRight {
 		invRight, err := simplifyPow(right, ast.NewRationalFromBigRat(big.NewRat(-1, 1)))
