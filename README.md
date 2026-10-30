@@ -33,6 +33,12 @@
 | `sin(pi/6)`           | `0.49999999999999994`              | `1/2`                 | 特殊角の代数的厳密値評価                     |
 | `１＋２×３`           | エラー（全角未対応）               | `7`                   | 日本語IMEの全角文字を透過的に半角ASCII正規化 |
 
+> [!WARNING]
+> **計算結果の正確性と外部検証について（重要な注意事項）**:  
+> `ihd` は「小数の排除と厳密代数計算」を追求していますが、すべての数式処理において完全無欠・100%の正しさを保証するものではありません。複雑な不定積分、代数方程式、極限計算などにおいて、簡約アルゴリズムの未成熟さや実装上の制限により、計算結果を誤ったり一部の解が欠落したりする場合があります。  
+> 現在本リポジトリでは、GitHub Actions CI 上で**単体テスト（`unit-test.yml`）**、**Lean 4 カーネル形式証明（`lean-verify.yml`）**、**Typst 数式コンパイル（`typst-verify.yml`）**、および**数学的不変条件ファジング（`fuzz-smoke.yml`）** を常時実行しており、CI テストスイートに含まれる範囲については機械的に検証・保証されています。しかし、それを超える任意の入力については計算誤りが生じる可能性を排除できません。  
+> そのため、`ihd` では計算結果を鵜呑みにせず外部から客観的に第三者検証できるよう、**逆算検算（`--verify`）**、**計算証明書の発行（`--certificate`）**、**独立マイクロ検証器（`tools/micro-verifier`）**、および**定理証明系 Lean 4 連携（`--lean`）** などの検証基盤を積極的に整備・開発し続けています。学術研究や業務などの重要な計算に際しては、必ず自己検算や外部検証ツールとの併用をお願いいたします。
+
 <details>
 <summary><b>ロゴの小話</b></summary>
 
@@ -150,12 +156,12 @@ ihd "１＋２×３"
 - **ターミナル2D数式組版 (`--pretty`)**: 分数線や根号を複数行アスキーアートボックスモデルで描画します。
 - **Braille 2×4 点字高解像度プロッタ (`plot`)**: 点字文字を用いたサブピクセル描画により、端末上に関数の形状や極値・零点をプロットします。
 - **REPL リアルタイム引数ガイド & 構文ハイライト**: 外部依存ゼロの有限状態機械（FSM）により、入力中の引数案内、多言語シグネチャヘルパー、ネスト深度別レインボー括弧、セッション変数ハイライトを提供します。
-- **厳密有理数ベクトル空間による物理単位計算**: 有理数体 $\mathbb{Q}$ 上の7次元ベクトル空間（SI基本単位）に基づき、小数を一切排除した単位乗除算、組立単位展開、次元解析、単位換算（`convert_unit`）を実行します。
+- **厳密有理数ベクトル空間による物理単位計算**: 有理数体 $\mathbb{Q}$ 上の 7 次元ベクトル空間（SI基本単位）に基づき、小数を一切排除した単位乗除算、組立単位展開、次元解析、単位換算（`convert_unit`）を実行します。
 - **コレクション操作 & ラムダ式**: Python スタイルのスライス構文（`[start:end:step]`）、数列生成 `range`、第一級無名関数 `lambda`、高階関数 `map`, `filter` をサポートしています。
 - **ループ暴走ガード (`--warn-loop` / `--max-loop`)**: CAS反復構文（`table`, `for`, `product`）において、警告閾値超過時にパイプラインを汚さず `os.Stderr` へ非破壊警告を発出し、上限到達時は強制遮断します。
 
 > [!TIP]
-> ターミナル組版のアスキーアート、点字グラフ描画、途中式ツリー、Typst/Lean4出力コードなどの詳細な出力見本は **[出力サンプル (sample/sample.ja.md)](./sample/sample.ja.md)** をご覧ください。
+> ターミナル組版のアスキーアート、点字グラフ描画、途中式ツリー、Typst/Lean4出力コードなどの詳細な出力見本は **[出力見本集 (sample/sample.ja.md)](./sample/sample.ja.md)** をご覧ください。
 
 ---
 
@@ -178,7 +184,18 @@ ihd "１＋２×３"
 
 ---
 
-### コマンドラインオプション
+### コマンドラインオプション & サブコマンド
+
+#### サブコマンド
+
+| コマンド | 説明・使用例 |
+| :--- | :--- |
+| `ihd diff <f1\|e1> <f2\|e2>` | 2つの数式またはスクリプトを比較し、展開・因数分解による代数的同値性（`EQUIVALENT`）や相違（`CHANGED`）を判定する意味論的差分。<br>`ihd diff "x^2 - 1" "(x - 1)*(x + 1)"` |
+| `ihd run <file.ihd>` | 複数行の数式や変数定義を記述したスクリプトを一括実行。<br>`ihd run script.ihd` |
+| `ihd completion <shell>` | 主要シェル（`bash`, `zsh`, `fish`, `powershell`）向けの自動補完スクリプトを生成。<br>`ihd completion powershell \| Out-String \| Invoke-Expression` |
+| `ihd update` | 最新リリースへの自己アップデートを実行（`self-update` も可）。 |
+
+#### 主なCLIオプション
 
 | オプション | 説明・使用例 |
 | :--- | :--- |
@@ -190,12 +207,16 @@ ihd "１＋２×３"
 | `--ascii` | 数学記号（`√`, `π`）をASCII文字列（`sqrt`, `pi`）にフォールバック。<br>`ihd --ascii "sqrt(2) + pi"` |
 | `--approx` | 厳密解の横に参考用の浮動小数点小数近似値（float64）を併記。<br>`ihd --approx "sqrt(2)"` |
 | `--verify` | 計算結果に対し、定義式や導関数に基づく逆算検算を実行。<br>`ihd --verify "integrate(1/(x^2 + 1), x)"` |
-| `--certificate [file]` | 計算結果と導出ステップ列を証明書 JSON（`ihd-proof-trace-v1`）として保存。<br>`ihd --certificate cert.json "factor(x^2 - 1)"` |
+| `--certificate [file]` | 計算結果と導出ステップ列を証明書 JSON（`ihd-proof-trace-v1`）として出力または保存。<br>`ihd --certificate cert.json "factor(x^2 - 1)"` |
+| `--replay <file>` | 保存された証明書 JSON ファイルを読み込み、各ステップの残差が0かを再検証。<br>`ihd --replay cert.json` |
 | `--lean` | 定理証明支援系 **Lean 4（Mathlib4）** の形式証明コードを出力。<br>`ihd --lean "factor(x^2 - 1)"` |
+| `--lean-file <path>` | 生成された Lean 4 証明コードをスタンドアロンな `.lean` ファイルとして保存。<br>`ihd --lean-file proof.lean "factor(x^2 - 1)"` |
+| `-i`, `--interval` | 適応的区間細分化（Rational Interval Arithmetic）による包含区間を算出。<br>`ihd -i "sin(1)"` |
 | `--deg` | 三角関数および逆三角関数を度数法（Degree）として解釈・計算。<br>`ihd --deg "sin(30)"` |
 | `--theme <dark\|light\|none>` | REPLのカラーテーマを指定（`~/.ihd/config.json` に永続化）。<br>`ihd --theme light` |
 | `--lang <code/auto>` | 表示言語を指定（`ja`, `en`, `auto`）。<br>`ihd --lang en "1/2 + 1/3"` |
 | `--timeout <dur>` | 壁時計時間タイムアウトを指定（例: `2s`, `500ms`）。<br>`ihd --timeout 2s "factor(x^100 - 1)"` |
+| `--deterministic` | マップ反復や多項式順序を正規化し、バイト単位で決定論的な出力を保証。<br>`ihd --deterministic "factor(x^4 - 5*x^2 + 4)"` |
 | `-h`, `--help` | 利用可能な全オプションと詳細なヘルプを表示。 |
 
 > [!NOTE]
@@ -278,6 +299,12 @@ Standard programming languages and calculators rely on `float64` floating-point 
 | `1 / (sqrt(2) + 1)`   | `0.4142135623730951`                        | `-1 + √2`                 | Binomial conjugate radical rationalization                          |
 | `sin(pi/6)`           | `0.49999999999999994`                       | `1/2`                     | Exact algebraic evaluation of special angles                        |
 | `１＋２×３`           | Error (Unsupported)                         | `7`                       | Automatic normalization of Zenkaku characters to ASCII              |
+
+> [!WARNING]
+> **Mathematical Exactness & External Verification (Important Notice)**:  
+> While `ihd` strictly rejects decimal approximations and maintains exact symbolic representations, it does **not** guarantee 100% mathematical flawlessness across all mathematical domains. Due to the inherent algorithmic complexities of Computer Algebra Systems (CAS) and active ongoing development, `ihd` may occasionally produce incorrect, incomplete, or partially reduced results—particularly in advanced integration, limits, or equation solving.  
+> Currently, this repository continuously runs automated pipelines in GitHub Actions CI for **Unit Tests (`unit-test.yml`)**, **Lean 4 Kernel Formal Verification (`lean-verify.yml`)**, **Typst Math Compilation (`typst-verify.yml`)**, and **Mathematical Invariants Fuzzing (`fuzz-smoke.yml`)**. Expressions and theorems included within the CI test suite are mechanically verified and guaranteed. However, calculations outside of these explicit suites may be subject to bugs or omissions.  
+> To address this, `ihd` prioritizes **external verifiability** over blind trust. We actively develop verifiable pipelines including **automated reverse-verification (`--verify`)**, **proof certificates (`--certificate`)**, a **standalone micro-verifier (`tools/micro-verifier`)**, and formal theorem transpilation to **Lean 4 (`--lean`)**. For critical research or mission-critical calculations, always independently verify results with external tools.
 
 <details>
 <summary><b>Logo Trivia</b></summary>
@@ -424,7 +451,18 @@ ihd "１＋２×３"
 
 ---
 
-### Command-Line Options
+### Command-Line Options & Subcommands
+
+#### Subcommands
+
+| Command | Description & Examples |
+| :--- | :--- |
+| `ihd diff <f1\|e1> <f2\|e2>` | Compares two expressions or scripts to determine algebraic equivalence (`EQUIVALENT`) or changes (`CHANGED`).<br>`ihd diff "x^2 - 1" "(x - 1)*(x + 1)"` |
+| `ihd run <file.ihd>` | Executes multi-line variable definitions and expressions from a script file.<br>`ihd run script.ihd` |
+| `ihd completion <shell>` | Generates tab completion scripts for major shells (`bash`, `zsh`, `fish`, `powershell`).<br>`ihd completion powershell \| Out-String \| Invoke-Expression` |
+| `ihd update` | Self-updates the binary to the latest GitHub release (`self-update` also accepted). |
+
+#### Major CLI Options
 
 | Option | Description & Examples |
 | :--- | :--- |
@@ -437,11 +475,15 @@ ihd "１＋２×３"
 | `--approx` | Display approximate floating-point decimal value alongside the exact form.<br>`ihd --approx "sqrt(2)"` |
 | `--verify` | Reverse-verifies algebraic correctness by checking residual vanishing.<br>`ihd --verify "integrate(1/(x^2 + 1), x)"` |
 | `--certificate [file]` | Exports calculation steps and residuals into a certificate JSON file.<br>`ihd --certificate cert.json "factor(x^2 - 1)"` |
+| `--replay <file>` | Reads a certificate JSON file and verifies that residuals vanish.<br>`ihd --replay cert.json` |
 | `--lean` | Transpiles calculation results into formal **Lean 4 (Mathlib4)** proof theorems.<br>`ihd --lean "factor(x^2 - 1)"` |
+| `--lean-file <path>` | Save generated Lean 4 proof code as a standalone `.lean` file.<br>`ihd --lean-file proof.lean "factor(x^2 - 1)"` |
+| `-i`, `--interval` | Evaluates expressions using adaptive rational interval arithmetic enclosures.<br>`ihd -i "sin(1)"` |
 | `--deg` | Evaluate trigonometric functions in degrees.<br>`ihd --deg "sin(30)"` |
 | `--theme <dark\|light\|none>` | Specify REPL color theme (persisted to `~/.ihd/config.json`).<br>`ihd --theme light` |
 | `--lang <code/auto>` | Specify display language (`ja`, `en`, `auto`).<br>`ihd --lang en "1/2 + 1/3"` |
 | `--timeout <dur>` | Sets wall-clock execution timeout (e.g. `2s`, `500ms`).<br>`ihd --timeout 2s "factor(x^100 - 1)"` |
+| `--deterministic` | Normalizes iterations and polynomial ordering for byte-identical outputs.<br>`ihd --deterministic "factor(x^4 - 5*x^2 + 4)"` |
 | `-h`, `--help` | Display full options list and command help message. |
 
 > [!NOTE]
