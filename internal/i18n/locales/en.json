@@ -123,6 +123,8 @@
     "err_write_file": "failed writing to file '%s': %v",
     "error_prefix": "Error: ",
     "flag_approx": "Show approximate decimal value",
+    "flag_approx_digits": "Specify number of decimal digits for approximate value (default: 30)",
+    "err_invalid_approx_digits": "Error: --approx-digits must be a positive integer, got %d",
     "flag_ascii": "Output ASCII characters only",
     "flag_certificate": "Save standalone algebraic proof certificate to specified JSON file",
     "flag_deg": "Use degree mode for trigonometric and inverse trigonometric functions",

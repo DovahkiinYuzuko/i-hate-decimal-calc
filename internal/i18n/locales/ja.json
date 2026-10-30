@@ -123,6 +123,8 @@
     "err_write_file": "ファイル '%s' への書き込みに失敗しました: %v",
     "error_prefix": "エラー: ",
     "flag_approx": "厳密解の横に参考用の小数近似値を併記",
+    "flag_approx_digits": "近似値の出力小数桁数を指定（デフォルト: 30）",
+    "err_invalid_approx_digits": "エラー: --approx-digits は正の整数である必要があります (指定値: %d)",
     "flag_ascii": "Unicode記号の代わりに標準ASCII文字列 (sqrt, pi等) で出力",
     "flag_certificate": "自己完結型代数証明書を指定のJSONファイルへ保存",
     "flag_deg": "三角関数・逆三角関数を度数法 (Degree) として計算",

@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -23,18 +24,22 @@ func main() {
 	os.Exit(code)
 }
 
+var errVerificationFailed = errors.New("verification refuted or failed")
+
 type runOptions struct {
-	opts          calc.FormatOptions
-	showApprox    bool
-	latex         bool
-	typst         bool
-	format        string
-	pretty        bool
-	deg           bool
-	explain       bool
-	step          bool
-	trace         bool
-	verify        bool
+	opts               calc.FormatOptions
+	showApprox         bool
+	approxDigits       int
+	latex              bool
+	typst              bool
+	format             string
+	pretty             bool
+	deg                bool
+	explain            bool
+	step               bool
+	trace              bool
+	verify             bool
+	verifyFlagExplicit bool
 	lean          bool
 	leanFile      string
 	certFile      string
@@ -67,6 +72,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 		"lang": true, "warn-loop": true, "max-loop": true, "lean-file": true,
 		"certificate": true, "replay": true, "interval-eps": true, "theme": true, "format": true,
 		"timeout": true, "budget-steps": true, "max-nodes": true, "max-depth": true,
+		"approx-digits": true, "digits": true,
 	}
 
 	for i := 0; i < len(args); i++ {
@@ -82,7 +88,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 			continue
 		}
 		switch a {
-		case "-ascii", "--ascii", "-approx", "--approx", "-latex", "--latex", "-typst", "--typst", "-pretty", "--pretty", "-deg", "--deg", "-explain", "--explain", "-verify", "--verify", "-lean", "--lean", "-h", "--help", "-v", "--version", "-version", "--no-update-check", "-no-update-check", "-i", "--i", "-interval", "--interval", "-no-color", "--no-color", "-step", "--step", "-trace", "--trace", "-deterministic", "--deterministic":
+		case "-ascii", "--ascii", "-a", "--a", "-approx", "--approx", "-latex", "--latex", "-typst", "--typst", "-pretty", "--pretty", "-deg", "--deg", "-explain", "--explain", "-verify", "--verify", "-lean", "--lean", "-h", "--help", "-v", "--version", "-version", "--no-update-check", "-no-update-check", "-i", "--i", "-interval", "--interval", "-no-color", "--no-color", "-step", "--step", "-trace", "--trace", "-deterministic", "--deterministic":
 			flagArgs = append(flagArgs, a)
 		default:
 			exprArgs = append(exprArgs, a)
@@ -111,6 +117,9 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 	langFlag := fs.String("lang", "", i18n.T("cli.flag_lang"))
 	asciiFlag := fs.Bool("ascii", false, i18n.T("cli.flag_ascii"))
 	approxFlag := fs.Bool("approx", false, i18n.T("cli.flag_approx"))
+	fs.BoolVar(approxFlag, "a", false, i18n.T("cli.flag_approx"))
+	approxDigitsFlag := fs.Int("approx-digits", 30, i18n.T("cli.flag_approx_digits"))
+	fs.IntVar(approxDigitsFlag, "digits", 30, i18n.T("cli.flag_approx_digits"))
 	formatFlag := fs.String("format", "", i18n.T("cli.flag_format"))
 	typstFlag := fs.Bool("typst", false, i18n.T("cli.flag_typst"))
 	latexFlag := fs.Bool("latex", false, i18n.T("cli.flag_latex"))
@@ -185,10 +194,23 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 		_ = os.Setenv("IHD_NO_UPDATE_CHECK", "1")
 	}
 
+	if *approxDigitsFlag <= 0 {
+		fmt.Fprintf(errOut, "%s\n", i18n.T("cli.err_invalid_approx_digits", *approxDigitsFlag))
+		return 1
+	}
+
+	isApprox := *approxFlag
+	fs.Visit(func(f *flag.Flag) {
+		if f.Name == "approx-digits" || f.Name == "digits" {
+			isApprox = true
+		}
+	})
+
 	fmtMode := strings.ToLower(*formatFlag)
 	ro := runOptions{
 		opts:          calc.FormatOptions{AsciiOnly: *asciiFlag || fmtMode == "ascii"},
-		showApprox:    *approxFlag,
+		showApprox:    isApprox,
+		approxDigits:  *approxDigitsFlag,
 		latex:         *latexFlag || fmtMode == "latex",
 		typst:         *typstFlag || fmtMode == "typst",
 		format:        fmtMode,
@@ -197,7 +219,8 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 		explain:       *explainFlag,
 		step:          *stepFlag,
 		trace:         *traceFlag,
-		verify:        *verifyFlag,
+		verify:             *verifyFlag,
+		verifyFlagExplicit: *verifyFlag,
 		certFile:      *certificateFlag,
 		replayFile:    *replayFlag,
 		lean:          *leanFlag,
@@ -277,6 +300,9 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 		// 3. One-shot mode: join all non-flag arguments as the expression
 		expr := strings.Join(exprArgs, " ")
 		if err := evaluateLine(expr, ro, in, out, errOut); err != nil {
+			if errors.Is(err, errVerificationFailed) {
+				return 3
+			}
 			return 1
 		}
 		return 0
@@ -414,7 +440,7 @@ func formatOutput(node calc.Node, ro runOptions) string {
 
 	exactStr := calc.FormatWithOptions(node, ro.opts)
 	if ro.showApprox {
-		approxStr, err := calc.Approx(node)
+		approxStr, err := calc.ApproxWithDigits(node, ro.approxDigits)
 		if err == nil {
 			return i18n.T("cli.approx_format", exactStr, approxStr)
 		}
@@ -453,7 +479,7 @@ func outputNode(out io.Writer, node calc.Node, ro runOptions) error {
 	}
 	if ro.showApprox {
 		exactStr := calc.FormatWithOptions(node, ro.opts)
-		approxStr, err := calc.Approx(node)
+		approxStr, err := calc.ApproxWithDigits(node, ro.approxDigits)
 		if err == nil {
 			_, err = fmt.Fprintln(out, i18n.T("cli.approx_format", exactStr, approxStr))
 			return err
@@ -581,21 +607,21 @@ func renderExplainOutput(origNode, evaled calc.Node, steps []calc.PedagogicalSte
 	fmt.Fprint(out, calc.FormatTrace(line, steps, evaled))
 }
 
-func handleEvaluationOutputs(origNode, evaled calc.Node, steps []calc.PedagogicalStep, line string, ro runOptions, env *calc.Env, suppressOutput bool, in io.Reader, out, errOut io.Writer) {
+func handleEvaluationOutputs(origNode, evaled calc.Node, steps []calc.PedagogicalStep, line string, ro runOptions, env *calc.Env, suppressOutput bool, in io.Reader, out, errOut io.Writer) error {
 	if suppressOutput {
-		return
+		return nil
 	}
 	if ro.trace {
 		if c := calc.GetActiveSearchCollector(); c != nil {
 			_ = c.DumpJSON(out)
-			return
+			return nil
 		}
 	}
 	if ro.step {
 		tracer := env.GetLastTrace()
 		if tracer == nil || tracer.Root() == nil {
 			fmt.Fprintln(out, i18n.T("cli.repl_step_completed"))
-			return
+			return nil
 		}
 		inputReader := in
 		if inputReader == nil {
@@ -603,16 +629,24 @@ func handleEvaluationOutputs(origNode, evaled calc.Node, steps []calc.Pedagogica
 		}
 		explorer := provenance.NewStepExplorer(tracer.Root(), inputReader, out)
 		_ = explorer.Run()
-		return
+		return nil
 	}
 	if ro.explain {
 		renderExplainOutput(origNode, evaled, steps, line, ro, env, out)
 	} else {
 		_ = outputNode(out, evaled, ro)
 	}
+	var verifyErr error
 	if ro.verify {
 		cert, _ := calc.VerifyComputation(origNode, evaled, env)
-		fmt.Fprintln(out, cert.String())
+		if cert != nil {
+			fmt.Fprintln(out, cert.String())
+			if ro.verifyFlagExplicit && (cert.Certainty == calc.VerifyCertaintyRefuted || cert.State == calc.VerifyStateRefuted) {
+				if _, isRel := origNode.(*calc.RelOpNode); isRel {
+					verifyErr = errVerificationFailed
+				}
+			}
+		}
 	}
 	if ro.lean || ro.leanFile != "" {
 		if ro.explain {
@@ -626,7 +660,7 @@ func handleEvaluationOutputs(origNode, evaled calc.Node, steps []calc.Pedagogica
 					if ro.leanFile != "" {
 						_ = saveLeanProofFile(ro.leanFile, code)
 					}
-					return
+					return verifyErr
 				}
 			}
 		}
@@ -668,6 +702,7 @@ func handleEvaluationOutputs(origNode, evaled calc.Node, steps []calc.Pedagogica
 			}
 		}
 	}
+	return verifyErr
 }
 
 func evaluateLineInternal(line string, ro runOptions, env *calc.Env, suppressOutput bool, in io.Reader, out, errOut io.Writer, errPrefix string) error {
@@ -772,8 +807,7 @@ func evaluateLineInternal(line string, ro runOptions, env *calc.Env, suppressOut
 	}
 	env.Set("ans", evaled)
 
-	handleEvaluationOutputs(evalTarget, evaled, steps, line, ro, env, suppressOutput, in, out, errOut)
-	return nil
+	return handleEvaluationOutputs(evalTarget, evaled, steps, line, ro, env, suppressOutput, in, out, errOut)
 }
 
 func evaluateLineWithEnv(line string, ro runOptions, env *calc.Env, in io.Reader, out, errOut io.Writer) error {

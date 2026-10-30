@@ -1,22 +1,37 @@
 package calc
 
 import (
-	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
-	"math"
-	"math/cmplx"
+	"math/big"
 	"strings"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
-// Approx evaluates an AST node into an approximate decimal string representation.
+// Approx evaluates an AST node into an approximate decimal string representation
+// with a default certified precision of 30 digits.
 func Approx(n Node) (string, error) {
+	return ApproxWithDigits(n, 30)
+}
+
+// ApproxWithDigits evaluates an AST node into an approximate decimal string representation
+// with the specified number of digits, accompanied by a certified outward-rounded error bound (± radius).
+func ApproxWithDigits(n Node, digits int) (string, error) {
 	if n == nil {
 		return "", fmt.Errorf("%s", i18n.T("approx.err_cannot_approximate_nil_node"))
 	}
+	if digits < 1 {
+		digits = 30
+	}
+	if digits > 500 {
+		digits = 500
+	}
+
+	// 1. Structural traversal for ListNode
 	if list, ok := n.(*ListNode); ok {
 		appStrs := make([]string, len(list.Elements))
 		for i, e := range list.Elements {
-			str, err := Approx(e)
+			str, err := ApproxWithDigits(e, digits)
 			if err != nil {
 				return "", err
 			}
@@ -24,12 +39,14 @@ func Approx(n Node) (string, error) {
 		}
 		return fmt.Sprintf("[%s]", strings.Join(appStrs, ", ")), nil
 	}
+
+	// 2. Structural traversal for MatrixNode
 	if mat, ok := n.(*MatrixNode); ok {
 		rowStrs := make([]string, mat.Rows)
 		for r := 0; r < mat.Rows; r++ {
 			elemStrs := make([]string, mat.Cols)
 			for c := 0; c < mat.Cols; c++ {
-				str, err := Approx(mat.Data[r][c])
+				str, err := ApproxWithDigits(mat.Data[r][c], digits)
 				if err != nil {
 					return "", err
 				}
@@ -39,206 +56,233 @@ func Approx(n Node) (string, error) {
 		}
 		return fmt.Sprintf("[%s]", strings.Join(rowStrs, ", ")), nil
 	}
-	c, err := evalComplex(n)
+
+	// 3. Structural traversal for RelOpNode (e.g. solve solutions like x == sqrt(2) or sqrt(2) == sqrt(3))
+	if rel, ok := n.(*RelOpNode); ok {
+		var leftStr string
+		var err error
+		if _, isVar := rel.LHS.(*VarNode); isVar {
+			leftStr = rel.LHS.String()
+		} else {
+			leftStr, err = ApproxWithDigits(rel.LHS, digits)
+			if err != nil {
+				leftStr = rel.LHS.String()
+			}
+		}
+		rightStr, err := ApproxWithDigits(rel.RHS, digits)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("%s %s %s", leftStr, rel.Op, rightStr), nil
+	}
+
+	// 4. Structural traversal for QuantityNode (e.g. physical units 100 [km/h])
+	if q, ok := n.(*QuantityNode); ok {
+		valStr, err := ApproxWithDigits(q.Value, digits)
+		if err != nil {
+			return "", err
+		}
+		if q.DisplayUnit != "" {
+			return fmt.Sprintf("%s [%s]", valStr, q.DisplayUnit), nil
+		}
+		return valStr, nil
+	}
+
+	// 5. Complex numbers: ComplexNode
+	if c, ok := n.(*ComplexNode); ok {
+		rStr, errR := ApproxWithDigits(c.Real, digits)
+		if errR != nil {
+			return "", errR
+		}
+		imStr, errI := ApproxWithDigits(c.Imag, digits)
+		if errI != nil {
+			return "", errI
+		}
+		if imStr == "0" {
+			return rStr, nil
+		}
+		if rStr == "0" {
+			if imStr == "1" {
+				return "i", nil
+			}
+			if imStr == "-1" {
+				return "-i", nil
+			}
+			if strings.Contains(imStr, " ") {
+				return fmt.Sprintf("(%s)*i", imStr), nil
+			}
+			return fmt.Sprintf("%si", imStr), nil
+		}
+		if strings.HasPrefix(imStr, "-") {
+			trimmed := strings.TrimPrefix(imStr, "-")
+			if strings.Contains(trimmed, " ") {
+				return fmt.Sprintf("%s - (%s)*i", rStr, trimmed), nil
+			}
+			return fmt.Sprintf("%s - %si", rStr, trimmed), nil
+		}
+		if strings.Contains(imStr, " ") {
+			return fmt.Sprintf("%s + (%s)*i", rStr, imStr), nil
+		}
+		return fmt.Sprintf("%s + %si", rStr, imStr), nil
+	}
+
+	// 6. Scalar / Real expressions: Adaptive interval refinement
+	// Target tolerance: eps = 10^-(digits + 2)
+	ten := big.NewInt(10)
+	denom := new(big.Int).Exp(ten, big.NewInt(int64(digits+2)), nil)
+	eps := new(big.Rat).SetFrac(big.NewInt(1), denom)
+
+	maxSteps := digits * 3
+	if maxSteps < 60 {
+		maxSteps = 60
+	}
+	if maxSteps > 200 {
+		maxSteps = 200
+	}
+
+	interval, err := AdaptiveRefineInterval(n, eps, maxSteps)
 	if err != nil {
 		return "", err
 	}
-	return formatApprox(c), nil
+
+	return formatApproxInterval(interval, digits), nil
 }
 
-func formatApprox(c complex128) string {
-	r := real(c)
-	im := imag(c)
+// formatApproxInterval formats a rational interval [Low, High] into a center value
+// rounded to 'digits' decimal places, plus a certified outward-rounded error bound (± radius) in scientific notation.
+func formatApproxInterval(interval RationalInterval, digits int) string {
+	low := interval.Low
+	high := interval.High
 
-	// Suppress tiny floating-point residue
-	if math.Abs(im) < 1e-14 {
-		return fmt.Sprintf("%.16g", r)
-	}
-	if math.Abs(r) < 1e-14 {
-		if im == 1 {
-			return "i"
-		}
-		if im == -1 {
-			return "-i"
-		}
-		return fmt.Sprintf("%.16gi", im)
+	if low.Cmp(high) == 0 && low.IsInt() {
+		return low.Num().String()
 	}
 
-	if im < 0 {
-		if im == -1 {
-			return fmt.Sprintf("%.16g - i", r)
-		}
-		return fmt.Sprintf("%.16g - %.16gi", r, -im)
+	// Mid = (Low + High) / 2
+	mid := new(big.Rat).Add(low, high)
+	mid.Mul(mid, big.NewRat(1, 2))
+
+	// Format Mid to 'digits' decimal places with round-half-to-even
+	neg := mid.Sign() < 0
+	absMid := new(big.Rat).Abs(mid)
+
+	scale := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(digits)), nil)
+	p := new(big.Int).Mul(absMid.Num(), scale)
+	q := absMid.Denom()
+
+	quot := new(big.Int)
+	rem := new(big.Int)
+	quot.QuoRem(p, q, rem)
+
+	// Round half to even:
+	// 2 * rem vs q
+	twoRem := new(big.Int).Mul(rem, big.NewInt(2))
+	cmp := twoRem.Cmp(q)
+	if cmp > 0 || (cmp == 0 && quot.Bit(0) == 1) {
+		quot.Add(quot, big.NewInt(1))
 	}
-	if im == 1 {
-		return fmt.Sprintf("%.16g + i", r)
+
+	// Split into integer and fractional parts
+	quotStr := quot.String()
+	var intPart, fracPart string
+	if len(quotStr) <= digits {
+		quotStr = strings.Repeat("0", digits-len(quotStr)+1) + quotStr
 	}
-	return fmt.Sprintf("%.16g + %.16gi", r, im)
+	splitIdx := len(quotStr) - digits
+	intPart = quotStr[:splitIdx]
+	fracPart = quotStr[splitIdx:]
+
+	midStr := intPart
+	if digits > 0 {
+		midStr += "." + fracPart
+	}
+	if neg && (intPart != "0" || strings.Trim(fracPart, "0") != "") {
+		midStr = "-" + midStr
+	}
+
+	// Now compute the exact rational value of midStr
+	mRat := new(big.Rat)
+	mRat.SetString(midStr)
+
+	// Certified radius bound = max(|mRat - Low|, |mRat - High|)
+	dLow := new(big.Rat).Abs(new(big.Rat).Sub(mRat, low))
+	dHigh := new(big.Rat).Abs(new(big.Rat).Sub(mRat, high))
+	maxDist := dLow
+	if dHigh.Cmp(maxDist) > 0 {
+		maxDist = dHigh
+	}
+
+	if maxDist.Sign() == 0 {
+		return midStr
+	}
+
+	boundStr := formatCeilScientific(maxDist)
+	return fmt.Sprintf("%s (± %s)", midStr, boundStr)
 }
 
-func evalFloat(n Node) (float64, error) {
-	c, err := evalComplex(n)
-	if err != nil {
-		return 0, err
+func formatCeilScientific(r *big.Rat) string {
+	if r.Sign() <= 0 {
+		return "0"
 	}
-	if math.Abs(imag(c)) > 1e-14 {
-		return 0, fmt.Errorf("%s", i18n.T("approx.err_result_is_complex_not_a", c))
+	num := r.Num()
+	den := r.Denom()
+
+	ten := big.NewInt(10)
+	kEst := int(float64(num.BitLen()-den.BitLen()) * 0.3010299956639812)
+	k := kEst - 1
+
+	for {
+		var pNum, pDen *big.Int
+		if k >= 0 {
+			pNum = new(big.Int).Exp(ten, big.NewInt(int64(k+1)), nil)
+			pDen = big.NewInt(1)
+		} else {
+			pNum = big.NewInt(1)
+			pDen = new(big.Int).Exp(ten, big.NewInt(int64(-k-1)), nil)
+		}
+		left := new(big.Int).Mul(num, pDen)
+		right := new(big.Int).Mul(pNum, den)
+		if left.Cmp(right) < 0 {
+			var pNum0, pDen0 *big.Int
+			if k >= 0 {
+				pNum0 = new(big.Int).Exp(ten, big.NewInt(int64(k)), nil)
+				pDen0 = big.NewInt(1)
+			} else {
+				pNum0 = big.NewInt(1)
+				pDen0 = new(big.Int).Exp(ten, big.NewInt(int64(-k)), nil)
+			}
+			l0 := new(big.Int).Mul(num, pDen0)
+			r0 := new(big.Int).Mul(pNum0, den)
+			if l0.Cmp(r0) >= 0 {
+				break
+			}
+			k--
+		} else {
+			k++
+		}
 	}
-	return real(c), nil
-}
 
-func evalComplex(n Node) (complex128, error) {
-	switch v := n.(type) {
-	case *RationalNode:
-		f, _ := v.Val.Float64()
-		return complex(f, 0), nil
-
-	case *ConstNode:
-		switch v.Name {
-		case "pi":
-			return complex(math.Pi, 0), nil
-		case "e":
-			return complex(math.E, 0), nil
-		case "deg":
-			return complex(math.Pi/180.0, 0), nil
-		case "i":
-			return complex(0, 1), nil
-		default:
-			return 0, fmt.Errorf("%s", i18n.T("errors.unknown_constant", v.Name))
-		}
-
-	case *SqrtNode:
-		rad, err := evalComplex(v.Radicand)
-		if err != nil {
-			return 0, err
-		}
-		return cmplx.Sqrt(rad), nil
-
-	case *FuncNode:
-		if len(v.Args) == 1 {
-			arg, err := evalComplex(v.Args[0])
-			if err != nil {
-				return 0, err
-			}
-			switch v.Name {
-			case "sin":
-				return cmplx.Sin(arg), nil
-			case "cos":
-				return cmplx.Cos(arg), nil
-			case "tan":
-				return cmplx.Tan(arg), nil
-			case "asin":
-				return cmplx.Asin(arg), nil
-			case "acos":
-				return cmplx.Acos(arg), nil
-			case "atan":
-				return cmplx.Atan(arg), nil
-			case "ln":
-				return cmplx.Log(arg), nil
-			case "log":
-				// Single arg log(x) is log10(x)
-				return cmplx.Log10(arg), nil
-			case "abs":
-				return complex(cmplx.Abs(arg), 0), nil
-			case "cbrt":
-				if math.Abs(imag(arg)) < 1e-14 {
-					r := real(arg)
-					if r >= 0 {
-						return complex(math.Cbrt(r), 0), nil
-					}
-					return complex(-math.Cbrt(-r), 0), nil
-				}
-				return cmplx.Pow(arg, complex(1.0/3.0, 0)), nil
-			default:
-				return 0, fmt.Errorf("%s", i18n.T("errors.unknown_function", v.Name))
-			}
-		} else if len(v.Args) == 2 && v.Name == "log" {
-			base, err := evalComplex(v.Args[0])
-			if err != nil {
-				return 0, err
-			}
-			arg, err := evalComplex(v.Args[1])
-			if err != nil {
-				return 0, err
-			}
-			// log_b(x) = ln(x) / ln(b)
-			lnBase := cmplx.Log(base)
-			if lnBase == 0 {
-				return 0, fmt.Errorf("%s", i18n.T("approx.err_division_by_zero_in_log"))
-			}
-			return cmplx.Log(arg) / lnBase, nil
-		}
-		return 0, fmt.Errorf("%s", i18n.T("approx.err_invalid_function_call", v.Name))
-
-	case *ComplexNode:
-		r, err := evalFloat(v.Real)
-		if err != nil {
-			return 0, err
-		}
-		im, err := evalFloat(v.Imag)
-		if err != nil {
-			return 0, err
-		}
-		return complex(r, im), nil
-
-	case *UnaryOpNode:
-		val, err := evalComplex(v.Expr)
-		if err != nil {
-			return 0, err
-		}
-		if v.Op == "-" {
-			return -val, nil
-		}
-		if v.Op == "!" {
-			if math.Abs(imag(val)) > 1e-14 || real(val) < 0 || math.Floor(real(val)) != real(val) {
-				return 0, fmt.Errorf("%s", i18n.T("approx.err_factorial_requires_non_negative_integer"))
-			}
-			n := int64(real(val))
-			if n > 170 {
-				return complex(math.Inf(1), 0), nil
-			}
-			res := 1.0
-			for i := int64(2); i <= n; i++ {
-				res *= float64(i)
-			}
-			return complex(res, 0), nil
-		}
-		return 0, fmt.Errorf("%s", i18n.T("approx.err_unknown_unary_operator", v.Op))
-
-	case *PowNode:
-		base, err := evalComplex(v.Base)
-		if err != nil {
-			return 0, err
-		}
-		exp, err := evalComplex(v.Exp)
-		if err != nil {
-			return 0, err
-		}
-		return cmplx.Pow(base, exp), nil
-
-	case *MulNode:
-		prod := complex(1, 0)
-		for _, f := range v.Factors {
-			val, err := evalComplex(f)
-			if err != nil {
-				return 0, err
-			}
-			prod *= val
-		}
-		return prod, nil
-
-	case *AddNode:
-		sum := complex(0, 0)
-		for _, t := range v.Terms {
-			val, err := evalComplex(t)
-			if err != nil {
-				return 0, err
-			}
-			sum += val
-		}
-		return sum, nil
-
-	default:
-		return 0, fmt.Errorf("%s", i18n.T("approx.err_cannot_approximate_node_type", n))
+	// 2 significant digits for the bound: C = ceil(r * 10^(1-k))
+	shift := 1 - k
+	var sNum, sDen *big.Int
+	if shift >= 0 {
+		sNum = new(big.Int).Mul(num, new(big.Int).Exp(ten, big.NewInt(int64(shift)), nil))
+		sDen = den
+	} else {
+		sNum = num
+		sDen = new(big.Int).Mul(den, new(big.Int).Exp(ten, big.NewInt(int64(-shift)), nil))
 	}
+	cInt := new(big.Int).Add(sNum, sDen)
+	cInt.Sub(cInt, big.NewInt(1))
+	cInt.Quo(cInt, sDen)
+
+	cVal := cInt.Int64()
+	if cVal >= 100 {
+		cVal = 10
+		k++
+	}
+
+	d1 := cVal / 10
+	d2 := cVal % 10
+	return fmt.Sprintf("%d.%de%+d", d1, d2, k)
 }

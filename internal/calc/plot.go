@@ -313,16 +313,15 @@ func (c *BrailleCanvas) Render() string {
 	return sb.String()
 }
 
-// evalNodeFloat evaluates an AST node to a real float64 using approx.go evalComplex.
+// evalNodeFloat evaluates an AST node to a real float64 using interval enclosure.
 func evalNodeFloat(n Node) (float64, error) {
-	cVal, err := evalComplex(n)
+	interval, err := EvalNodeInterval(n, 20)
 	if err != nil {
 		return 0, err
 	}
-	if math.Abs(imag(cVal)) > 1e-12 {
-		return 0, fmt.Errorf("%s", i18n.T("errors.plot_complex_not_allowed", cVal))
-	}
-	r := real(cVal)
+	mid := new(big.Rat).Add(interval.Low, interval.High)
+	mid.Mul(mid, big.NewRat(1, 2))
+	r, _ := mid.Float64()
 	if math.IsNaN(r) || math.IsInf(r, 0) {
 		return 0, fmt.Errorf("%s", i18n.T("errors.plot_nan_or_inf"))
 	}
