@@ -22,20 +22,33 @@ import (
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc/ast"
 )
 
+type workerResponse struct {
+	generation uint64
+	id         uint64
+	data       []byte
+	err        error
+}
+
 // SymPyClient manages a resident Python sympy_oracle.py worker communicating via unbuffered NDJSON.
+// Features generation-tracked request correlation, single resident reader goroutine, and hybrid caching.
 type SymPyClient struct {
 	mu           sync.Mutex
 	cmd          *exec.Cmd
 	stdin        io.WriteCloser
-	reader       *bufio.Reader
+	generation   atomic.Uint64
 	seq          atomic.Uint64
 	available    bool
 	unavailableR string
 	pythonPath   string
 	scriptPath   string
 	version      string
+	mpmathVer    string
 	pid          int
 	requestCount int
+
+	pendingMu  sync.Mutex
+	pending    map[uint64]chan workerResponse
+	readerDone chan struct{}
 }
 
 var (
@@ -53,7 +66,9 @@ func GetGlobalSymPyClient() *SymPyClient {
 
 // NewSymPyClient initializes and starts a new resident SymPy worker.
 func NewSymPyClient() *SymPyClient {
-	c := &SymPyClient{}
+	c := &SymPyClient{
+		pending: make(map[uint64]chan workerResponse),
+	}
 	pyPath, err := resolvePythonPath()
 	if err != nil {
 		c.unavailableR = fmt.Sprintf("python not found: %v", err)
@@ -113,7 +128,6 @@ func resolvePythonPath() (string, error) {
 }
 
 func resolveScriptPath() (string, error) {
-	// Look up relative to project root or current working dir
 	candidates := []string{
 		filepath.Join("test-scripts", "go", "fuzz", "sympy_oracle.py"),
 		filepath.Join("..", "..", "test-scripts", "go", "fuzz", "sympy_oracle.py"),
@@ -130,6 +144,8 @@ func resolveScriptPath() (string, error) {
 }
 
 func (c *SymPyClient) startWorker() error {
+	gen := c.generation.Add(1)
+
 	cmd := exec.Command(c.pythonPath, "-u", c.scriptPath)
 	cmd.Env = append(os.Environ(),
 		"PYTHONUNBUFFERED=1",
@@ -163,59 +179,111 @@ func (c *SymPyClient) startWorker() error {
 		return fmt.Errorf("cmd start error: %w", err)
 	}
 
-	// Stderr must be drained continuously in background to prevent OS pipe buffer deadlocks
+	// Drain stderr continuously in background to avoid pipe buffer deadlocks
 	go func() {
 		_, _ = io.Copy(io.Discard, stderrPipe)
 	}()
 
+	readerDone := make(chan struct{})
 	c.cmd = cmd
 	c.stdin = stdinPipe
-	c.reader = bufio.NewReaderSize(stdoutPipe, 1024*1024) // 1MB buffer
+	c.readerDone = readerDone
 	c.pid = cmd.Process.Pid
 	c.requestCount = 0
+
+	c.pendingMu.Lock()
+	c.pending = make(map[uint64]chan workerResponse)
+	c.pendingMu.Unlock()
+
+	// Dedicated single reader goroutine per process generation
+	reader := bufio.NewReaderSize(stdoutPipe, 1024*1024)
+	go func(currentGen uint64, r *bufio.Reader, done chan struct{}) {
+		defer close(done)
+		for {
+			line, rErr := r.ReadBytes('\n')
+			if rErr != nil {
+				// Broadcast pipe termination to all active pending channels of this generation
+				c.pendingMu.Lock()
+				for id, ch := range c.pending {
+					ch <- workerResponse{generation: currentGen, id: id, err: rErr}
+				}
+				c.pending = make(map[uint64]chan workerResponse)
+				c.pendingMu.Unlock()
+				return
+			}
+
+			var hdr struct {
+				ID         uint64 `json:"id"`
+				Generation uint64 `json:"generation"`
+			}
+			if jErr := json.Unmarshal(line, &hdr); jErr == nil {
+				c.pendingMu.Lock()
+				// Only dispatch if both generation and request ID match
+				if ch, ok := c.pending[hdr.ID]; ok && hdr.Generation == currentGen {
+					delete(c.pending, hdr.ID)
+					ch <- workerResponse{generation: currentGen, id: hdr.ID, data: line, err: nil}
+				}
+				c.pendingMu.Unlock()
+			}
+		}
+	}(gen, reader, readerDone)
 
 	// Handshake verification
 	reqID := c.seq.Add(1)
 	handshakeReq := map[string]any{
-		"id":     reqID,
-		"action": "handshake",
+		"id":         reqID,
+		"generation": gen,
+		"action":     "handshake",
 	}
 	handshakeBytes, _ := json.Marshal(handshakeReq)
 	handshakeBytes = append(handshakeBytes, '\n')
 
-	if _, err := c.stdin.Write(handshakeBytes); err != nil {
+	respCh := make(chan workerResponse, 1)
+	c.pendingMu.Lock()
+	c.pending[reqID] = respCh
+	c.pendingMu.Unlock()
+
+	if _, wErr := c.stdin.Write(handshakeBytes); wErr != nil {
 		c.stopWorkerLocked()
-		return fmt.Errorf("failed to write handshake: %w", err)
+		return fmt.Errorf("failed to write handshake: %w", wErr)
 	}
 
-	line, err := c.reader.ReadBytes('\n')
-	if err != nil {
-		c.stopWorkerLocked()
-		return fmt.Errorf("failed to read handshake: %w", err)
-	}
+	timer := time.NewTimer(5 * time.Second)
+	defer timer.Stop()
 
-	var res struct {
-		ID      uint64 `json:"id"`
-		Status  string `json:"status"`
-		Version string `json:"sympy_version"`
-		PID     int    `json:"pid"`
-		Error   string `json:"error"`
-	}
-	if err := json.Unmarshal(line, &res); err != nil {
+	select {
+	case <-timer.C:
 		c.stopWorkerLocked()
-		return fmt.Errorf("malformed handshake response: %w", err)
+		return errors.New("handshake timed out after 5s")
+	case resp := <-respCh:
+		if resp.err != nil {
+			c.stopWorkerLocked()
+			return fmt.Errorf("handshake read failed: %w", resp.err)
+		}
+		var res struct {
+			ID            uint64 `json:"id"`
+			Generation    uint64 `json:"generation"`
+			Status        string `json:"status"`
+			Version       string `json:"sympy_version"`
+			MpmathVersion string `json:"mpmath_version"`
+			Error         string `json:"error"`
+		}
+		if uErr := json.Unmarshal(resp.data, &res); uErr != nil {
+			c.stopWorkerLocked()
+			return fmt.Errorf("malformed handshake response: %w", uErr)
+		}
+		if res.Error != "" {
+			c.stopWorkerLocked()
+			return fmt.Errorf("handshake worker error: %s", res.Error)
+		}
+		if res.Status != "ok" {
+			c.stopWorkerLocked()
+			return fmt.Errorf("worker status not ok: %s", res.Status)
+		}
+		c.version = res.Version
+		c.mpmathVer = res.MpmathVersion
+		return nil
 	}
-	if res.Error != "" {
-		c.stopWorkerLocked()
-		return fmt.Errorf("handshake error from worker: %s", res.Error)
-	}
-	if res.Status != "ok" {
-		c.stopWorkerLocked()
-		return fmt.Errorf("worker status not ok: %s", res.Status)
-	}
-
-	c.version = res.Version
-	return nil
 }
 
 func (c *SymPyClient) stopWorkerLocked() {
@@ -226,7 +294,6 @@ func (c *SymPyClient) stopWorkerLocked() {
 	if c.cmd != nil && c.cmd.Process != nil {
 		pid := c.cmd.Process.Pid
 		if runtime.GOOS == "windows" {
-			// Windows taskkill /F /T kills entire process tree
 			_ = exec.Command("taskkill", "/F", "/T", "/PID", strconv.Itoa(pid)).Run()
 		} else {
 			_ = c.cmd.Process.Kill()
@@ -234,7 +301,13 @@ func (c *SymPyClient) stopWorkerLocked() {
 		_ = c.cmd.Wait()
 		c.cmd = nil
 	}
-	c.reader = nil
+	if c.readerDone != nil {
+		select {
+		case <-c.readerDone:
+		case <-time.After(500 * time.Millisecond):
+		}
+		c.readerDone = nil
+	}
 }
 
 // Close terminates the worker process cleanly.
@@ -250,16 +323,31 @@ func (c *SymPyClient) sendRequestLocked(req map[string]any, timeout time.Duratio
 		return nil, errors.New("sympy worker not available")
 	}
 
-	// Recycle worker periodically (every 1000 queries) to prevent cache/memory leaks
-	if c.requestCount >= 1000 {
+	// Hybrid cache lifecycle: clear_cache every 200 requests, hard restart every 5000 requests
+	c.requestCount++
+	if c.requestCount >= 5000 {
 		c.stopWorkerLocked()
 		if err := c.startWorker(); err != nil {
 			c.available = false
-			c.unavailableR = fmt.Sprintf("recycle failed: %v", err)
+			c.unavailableR = fmt.Sprintf("hard recycle failed: %v", err)
 			return nil, err
 		}
+	} else if c.requestCount%200 == 0 {
+		// Lightweight clear_cache RPC
+		clearReq := map[string]any{
+			"id":         c.seq.Add(1),
+			"generation": c.generation.Load(),
+			"action":     "clear_cache",
+		}
+		clearBytes, _ := json.Marshal(clearReq)
+		clearBytes = append(clearBytes, '\n')
+		_, _ = c.stdin.Write(clearBytes)
 	}
-	c.requestCount++
+
+	reqID := c.seq.Add(1)
+	gen := c.generation.Load()
+	req["id"] = reqID
+	req["generation"] = gen
 
 	reqBytes, err := json.Marshal(req)
 	if err != nil {
@@ -267,53 +355,64 @@ func (c *SymPyClient) sendRequestLocked(req map[string]any, timeout time.Duratio
 	}
 	reqBytes = append(reqBytes, '\n')
 
-	type result struct {
-		data []byte
-		err  error
-	}
-	resChan := make(chan result, 1)
+	respCh := make(chan workerResponse, 1)
+	c.pendingMu.Lock()
+	c.pending[reqID] = respCh
+	c.pendingMu.Unlock()
 
-	go func() {
-		if _, writeErr := c.stdin.Write(reqBytes); writeErr != nil {
-			resChan <- result{nil, fmt.Errorf("stdin write error: %w", writeErr)}
-			return
+	if _, wErr := c.stdin.Write(reqBytes); wErr != nil {
+		c.pendingMu.Lock()
+		delete(c.pending, reqID)
+		c.pendingMu.Unlock()
+		c.stopWorkerLocked()
+		if rErr := c.startWorker(); rErr != nil {
+			c.available = false
+			c.unavailableR = fmt.Sprintf("respawn after write failure failed: %v", rErr)
 		}
-		line, readErr := c.reader.ReadBytes('\n')
-		if readErr != nil {
-			resChan <- result{nil, fmt.Errorf("stdout read error: %w", readErr)}
-			return
-		}
-		resChan <- result{line, nil}
-	}()
+		return nil, fmt.Errorf("stdin write error: %w", wErr)
+	}
+
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
 
 	select {
-	case <-time.After(timeout):
-		// On timeout, kill process tree immediately to prevent orphaned SymPy CPU burn
+	case <-timer.C:
+		c.pendingMu.Lock()
+		delete(c.pending, reqID)
+		c.pendingMu.Unlock()
+
 		c.stopWorkerLocked()
-		// Attempt to respawn worker for future requests
-		_ = c.startWorker()
-		return nil, fmt.Errorf("query timed out after %v", timeout)
-	case res := <-resChan:
-		if res.err != nil {
-			// Restart worker on pipe/read failure
-			c.stopWorkerLocked()
-			_ = c.startWorker()
-			return nil, res.err
+		if rErr := c.startWorker(); rErr != nil {
+			c.available = false
+			c.unavailableR = fmt.Sprintf("respawn after timeout failed: %v", rErr)
+			return nil, fmt.Errorf("query timed out after %v, respawn failed: %w", timeout, rErr)
 		}
-		return res.data, nil
+		return nil, fmt.Errorf("query timed out after %v", timeout)
+
+	case resp := <-respCh:
+		if resp.err != nil {
+			c.stopWorkerLocked()
+			if rErr := c.startWorker(); rErr != nil {
+				c.available = false
+				c.unavailableR = fmt.Sprintf("respawn after pipe failure failed: %v", rErr)
+				return nil, fmt.Errorf("pipe error: %v, respawn failed: %w", resp.err, rErr)
+			}
+			return nil, resp.err
+		}
+		return resp.data, nil
 	}
 }
 
 // PointEvaluation represents the result of evaluating an expression at a single point in SymPy.
 type PointEvaluation struct {
-	Undefined bool   `json:"undefined"`
-	Reason    string `json:"reason"`
-	Exact     bool   `json:"exact"`
-	ReNum     string `json:"re_num"`
-	ReDen     string `json:"re_den"`
-	ImNum     string `json:"im_num"`
-	ImDen     string `json:"im_den"`
-	ApproxStr string `json:"approx_str"`
+	Undefined bool    `json:"undefined"`
+	Reason    string  `json:"reason"`
+	Exact     bool    `json:"exact"`
+	ReNum     string  `json:"re_num"`
+	ReDen     string  `json:"re_den"`
+	ImNum     string  `json:"im_num"`
+	ImDen     string  `json:"im_den"`
+	ApproxStr string  `json:"approx_str"`
 	ReFloat   float64 `json:"re_float"`
 	ImFloat   float64 `json:"im_float"`
 }
@@ -338,9 +437,7 @@ func (c *SymPyClient) EvalPoints(ctx context.Context, exprAST map[string]any, po
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	reqID := c.seq.Add(1)
 	req := map[string]any{
-		"id":     reqID,
 		"action": "eval_points",
 		"expr":   exprAST,
 		"points": points,
@@ -360,6 +457,7 @@ func (c *SymPyClient) EvalPoints(ctx context.Context, exprAST map[string]any, po
 
 	var res struct {
 		ID          uint64            `json:"id"`
+		Generation  uint64            `json:"generation"`
 		Status      string            `json:"status"`
 		Evaluations []PointEvaluation `json:"evaluations"`
 		Error       string            `json:"error"`
@@ -373,39 +471,112 @@ func (c *SymPyClient) EvalPoints(ctx context.Context, exprAST map[string]any, po
 	return res.Evaluations, nil
 }
 
-// SubtractiveZero checks if SymPy simplifies LHS - RHS to zero.
-func (c *SymPyClient) SubtractiveZero(ctx context.Context, lhsAST, rhsAST map[string]any) (bool, string, error) {
+// NumericalPointResult represents the dual-tolerance check result at a single point.
+type NumericalPointResult struct {
+	Valid     bool    `json:"valid"`
+	Agree     bool    `json:"agree"`
+	Residual  float64 `json:"residual"`
+	Tolerance float64 `json:"tolerance"`
+	Reason    string  `json:"reason"`
+}
+
+// NumericalResult holds the aggregate outcome of Tier-3 numerical verification.
+type NumericalResult struct {
+	AllAgree     bool                   `json:"all_agree"`
+	SampleCount  int                    `json:"sample_count"`
+	MaxResidual  float64                `json:"max_residual"`
+	PointResults []NumericalPointResult `json:"point_results"`
+}
+
+// EvalNumerical evaluates LHS and RHS at high precision with dual tolerance.
+func (c *SymPyClient) EvalNumerical(ctx context.Context, lhsAST, rhsAST map[string]any, points []map[string]map[string]string, atol, rtol float64) (NumericalResult, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	reqID := c.seq.Add(1)
 	req := map[string]any{
-		"id":     reqID,
+		"action": "eval_numerical",
+		"lhs":    lhsAST,
+		"rhs":    rhsAST,
+		"points": points,
+		"atol":   atol,
+		"rtol":   rtol,
+	}
+
+	timeout := 5 * time.Second
+	if dl, ok := ctx.Deadline(); ok {
+		if remaining := time.Until(dl); remaining > 0 && remaining < timeout {
+			timeout = remaining
+		}
+	}
+
+	data, err := c.sendRequestLocked(req, timeout)
+	if err != nil {
+		return NumericalResult{}, err
+	}
+
+	var res struct {
+		ID          uint64                 `json:"id"`
+		Generation  uint64                 `json:"generation"`
+		Status      string                 `json:"status"`
+		AllAgree    bool                   `json:"all_agree"`
+		SampleCount int                    `json:"sample_count"`
+		MaxResidual float64                `json:"max_residual"`
+		Points      []NumericalPointResult `json:"point_results"`
+		Error       string                 `json:"error"`
+	}
+	if err := json.Unmarshal(data, &res); err != nil {
+		return NumericalResult{}, fmt.Errorf("unmarshal error: %w", err)
+	}
+	if res.Error != "" {
+		return NumericalResult{}, errors.New(res.Error)
+	}
+	return NumericalResult{
+		AllAgree:     res.AllAgree,
+		SampleCount:  res.SampleCount,
+		MaxResidual:  res.MaxResidual,
+		PointResults: res.Points,
+	}, nil
+}
+
+// SubtractiveZero checks if SymPy simplifies LHS - RHS to zero.
+func (c *SymPyClient) SubtractiveZero(ctx context.Context, lhsAST, rhsAST map[string]any) (bool, bool, string, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	req := map[string]any{
 		"action": "subtractive_zero",
 		"lhs":    lhsAST,
 		"rhs":    rhsAST,
 	}
 
 	timeout := 4 * time.Second
+	if dl, ok := ctx.Deadline(); ok {
+		if remaining := time.Until(dl); remaining > 0 && remaining < timeout {
+			timeout = remaining
+		}
+	}
+
 	data, err := c.sendRequestLocked(req, timeout)
 	if err != nil {
-		return false, "", err
+		return false, false, "", err
 	}
 
 	var res struct {
-		ID         uint64 `json:"id"`
-		Status     string `json:"status"`
-		IsZero     bool   `json:"is_zero"`
-		Simplified string `json:"simplified"`
-		Error      string `json:"error"`
+		ID                 uint64 `json:"id"`
+		Generation         uint64 `json:"generation"`
+		Status             string `json:"status"`
+		IsZero             bool   `json:"is_zero"`
+		IsConstantNonzero  bool   `json:"is_constant_nonzero"`
+		Simplified         string `json:"simplified"`
+		Error              string `json:"error"`
 	}
 	if err := json.Unmarshal(data, &res); err != nil {
-		return false, "", fmt.Errorf("unmarshal error: %w", err)
+		return false, false, "", fmt.Errorf("unmarshal error: %w", err)
 	}
 	if res.Error != "" {
-		return false, "", errors.New(res.Error)
+		return false, false, "", errors.New(res.Error)
 	}
-	return res.IsZero, res.Simplified, nil
+	return res.IsZero, res.IsConstantNonzero, res.Simplified, nil
 }
 
 // ASTToSymPyJSON converts an ihd AST Node into a structured JSON dictionary for SymPy.
@@ -429,9 +600,6 @@ func ASTToSymPyJSON(node ast.Node) (map[string]any, error) {
 		return map[string]any{
 			"op":   "Symbol",
 			"name": n.Name,
-			"assumptions": map[string]bool{
-				"real": true,
-			},
 		}, nil
 
 	case *ast.AddNode:
@@ -596,7 +764,7 @@ func TestSymPyClient_Handshake(t *testing.T) {
 		t.Skipf("SymPy not available: %s", client.ReasonUnavailable())
 	}
 
-	t.Logf("SymPy version: %s (PID: %d)", client.Version(), client.pid)
+	t.Logf("SymPy version: %s, mpmath version: %s (PID: %d)", client.Version(), client.mpmathVer, client.pid)
 	if client.Version() == "" {
 		t.Fatalf("Expected non-empty SymPy version")
 	}

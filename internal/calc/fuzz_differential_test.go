@@ -2,9 +2,14 @@ package calc_test
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"math/rand"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -18,13 +23,13 @@ import (
 type DifferentialVerdict int
 
 const (
-	// VerdictDiffExactMatch: Tier-0 structural or canonical representation matches identically.
+	// VerdictDiffExactMatch: Tier-0 structural match or Tier-1 symbolic zero reduction.
 	VerdictDiffExactMatch DifferentialVerdict = iota
-	// VerdictDiffExactMismatch: Symbolic polynomial reduction proves non-equivalence.
+	// VerdictDiffExactMismatch: Symbolic reduction proves non-equivalence (non-zero constant diff).
 	VerdictDiffExactMismatch
-	// VerdictDiffSampledAgreement: Evaluated at k >= 5 independent non-pole sample points over Q[i] with zero difference.
+	// VerdictDiffSampledAgreement: Evaluated at k >= 5 independent sample points with zero discrepancy.
 	VerdictDiffSampledAgreement
-	// VerdictDiffSampledMismatch: Valid non-pole sample points yield distinct values (Confirmed bug candidate).
+	// VerdictDiffSampledMismatch: Valid sample points yield distinct values (Confirmed bug candidate).
 	VerdictDiffSampledMismatch
 	// VerdictDiffInconclusive: Skipped due to unsupported operations, pole singularities, or timeouts (Not a bug).
 	VerdictDiffInconclusive
@@ -57,7 +62,7 @@ type DifferentialOracle struct {
 func NewDifferentialOracle(client *SymPyClient) *DifferentialOracle {
 	return &DifferentialOracle{
 		client:     client,
-		sampleSize: 6, // k >= 5 independent points over Q[i]
+		sampleSize: 6, // k >= 5 independent sample points
 	}
 }
 
@@ -82,58 +87,62 @@ func (o *DifferentialOracle) EvaluateEquivalence(ctx context.Context, ihdAST, sy
 	}
 
 	// Tier 1 Fast-Path: Subtractive zero check (equals(0) / simplify(A - B) == 0)
-	// Invariant (Claude Sonnet 5.5 / Namazu): simplify() is allowed to confirm equality, but NEVER to declare inequality.
-	isZero, _, err := o.client.SubtractiveZero(ctx, ihdJSON, sympJSON)
-	if err == nil && isZero {
-		return VerdictDiffExactMatch, "Tier-1 subtractive algebraic zero"
+	isZero, isConstantNonzero, simpStr, err := o.client.SubtractiveZero(ctx, ihdJSON, sympJSON)
+	if err == nil {
+		if isZero {
+			return VerdictDiffExactMatch, "Tier-1 subtractive algebraic zero"
+		}
+		if isConstantNonzero {
+			return VerdictDiffExactMismatch, fmt.Sprintf("Tier-1 exact non-zero difference: %s", simpStr)
+		}
 	}
 
 	// Tier 2: Schwartz-Zippel Rational Identity Testing (RIT) over Q[i]
-	// Extract variables occurring in either expression
 	vars := extractVariables(ihdAST, sympyAST)
 	if len(vars) == 0 {
-		// Purely constant expression: evaluate directly in ihd and SymPy
+		// Purely constant expression
 		valIhd, okIhd := evalExactGaussianRat(ihdAST)
 		evals, errSym := o.client.EvalPoints(ctx, sympJSON, []map[string]map[string]string{{}})
-		if !okIhd || errSym != nil || len(evals) != 1 || evals[0].Undefined {
-			return VerdictDiffInconclusive, "constant evaluation undefined or failed"
+		if okIhd && errSym == nil && len(evals) == 1 && !evals[0].Undefined {
+			if valSym, okSym := evals[0].ToGaussianRat(); okSym {
+				if valIhd.re.Cmp(valSym.re) == 0 && valIhd.im.Cmp(valSym.im) == 0 {
+					return VerdictDiffSampledAgreement, "Tier-2 constant exact rational match"
+				}
+				return VerdictDiffSampledMismatch, fmt.Sprintf("constant mismatch: ihd=%v+%vi, sympy=%v+%vi", valIhd.re, valIhd.im, valSym.re, valSym.im)
+			}
 		}
-		valSym, okSym := evals[0].ToGaussianRat()
-		if !okSym {
-			return VerdictDiffInconclusive, "constant SymPy value not Gaussian rational"
+
+		// Tier 3 Fallback for transcendental constant expressions (e.g. nested radicals, Morrie's law)
+		numRes, numErr := o.client.EvalNumerical(ctx, ihdJSON, sympJSON, []map[string]map[string]string{{}}, 1e-12, 1e-9)
+		if numErr == nil && len(numRes.PointResults) > 0 && numRes.PointResults[0].Valid {
+			if numRes.PointResults[0].Agree {
+				return VerdictDiffSampledAgreement, fmt.Sprintf("Tier-3 numerical constant match (residual=%e)", numRes.MaxResidual)
+			}
+			return VerdictDiffSampledMismatch, fmt.Sprintf("Tier-3 numerical constant mismatch (residual=%e)", numRes.MaxResidual)
 		}
-		if valIhd.re.Cmp(valSym.re) == 0 && valIhd.im.Cmp(valSym.im) == 0 {
-			return VerdictDiffSampledAgreement, "Tier-2 constant exact match"
-		}
-		return VerdictDiffSampledMismatch, fmt.Sprintf("constant mismatch: ihd=%v+%vi, sympy=%v+%vi", valIhd.re, valIhd.im, valSym.re, valSym.im)
+		return VerdictDiffInconclusive, "constant evaluation undefined or failed"
 	}
 
-	// Deterministic PRNG seeded from fuzz corpus input
+	// Deterministic PRNG seeded from fuzz input
 	rng := rand.New(rand.NewSource(seed))
 
-	// Generate sample points in Q[i] with pole and singularity shielding
 	validSamples := 0
 	const maxAttempts = 25
+	pointsList := make([]map[string]map[string]string, 0, o.sampleSize)
 
 	for attempt := 0; attempt < maxAttempts && validSamples < o.sampleSize; attempt++ {
 		pointMap := make(map[string]gaussianRat)
 		symPointMap := make(map[string]map[string]string)
 
 		for _, vName := range vars {
-			// Choose non-zero small random Gaussian integers in [-100, 100]
-			re := int64(rng.Intn(199) - 99)
-			if re == 0 {
-				re = 1
-			}
-			im := int64(rng.Intn(199) - 99)
-			// Half of the points are real-only to test purely real branch contracts
-			if rng.Intn(2) == 0 {
-				im = 0
+			// Bias towards safe first-quadrant wedge Re in [1, 30], Im in [0, 15] to avoid negative real axis branch cuts
+			re := int64(rng.Intn(30) + 1)
+			im := int64(0)
+			if rng.Intn(2) == 1 {
+				im = int64(rng.Intn(15) + 1)
 			}
 
-			gVal := newGaussianRatFromInt(re, im)
-			pointMap[vName] = gVal
-
+			pointMap[vName] = newGaussianRatFromInt(re, im)
 			symPointMap[vName] = map[string]string{
 				"re_num": strconv.FormatInt(re, 10),
 				"re_den": "1",
@@ -146,25 +155,24 @@ func (o *DifferentialOracle) EvaluateEquivalence(ctx context.Context, ihdAST, sy
 		subIhd := substituteVariables(ihdAST, pointMap)
 		valIhd, okIhd := evalExactGaussianRat(subIhd)
 		if !okIhd {
-			// Hit a pole or unsupported complex branch in ihd -> skip this sample point
+			// Expression has transcendentals or division by zero -> save point for Tier-3 fallback
+			pointsList = append(pointsList, symPointMap)
 			continue
 		}
 
 		// Substitute in SymPy
 		evals, errSym := o.client.EvalPoints(ctx, sympJSON, []map[string]map[string]string{symPointMap})
 		if errSym != nil || len(evals) != 1 || evals[0].Undefined {
-			// Hit a pole or unsupported branch in SymPy -> skip this sample point
+			pointsList = append(pointsList, symPointMap)
 			continue
 		}
 		valSym, okSym := evals[0].ToGaussianRat()
 		if !okSym {
-			// SymPy returned non-rational -> skip
+			pointsList = append(pointsList, symPointMap)
 			continue
 		}
 
-		// Check difference
 		if valIhd.re.Cmp(valSym.re) != 0 || valIhd.im.Cmp(valSym.im) != 0 {
-			// Mismatch confirmed at a valid non-pole sample point!
 			var ptStrs []string
 			for k, v := range pointMap {
 				ptStrs = append(ptStrs, fmt.Sprintf("%s=%s+%si", k, v.re.RatString(), v.im.RatString()))
@@ -177,23 +185,34 @@ func (o *DifferentialOracle) EvaluateEquivalence(ctx context.Context, ihdAST, sy
 			)
 		}
 		validSamples++
+		pointsList = append(pointsList, symPointMap)
 	}
 
-	if validSamples < 3 {
-		return VerdictDiffInconclusive, fmt.Sprintf("too few valid non-pole sample points: %d/%d", validSamples, o.sampleSize)
+	if validSamples >= 5 {
+		return VerdictDiffSampledAgreement, fmt.Sprintf("Tier-2 agreement across %d independent Q[i] sample points", validSamples)
 	}
 
-	return VerdictDiffSampledAgreement, fmt.Sprintf("Tier-2 agreement across %d independent Q[i] sample points", validSamples)
+	// Tier 3: High-precision numerical evaluation fallback (eliminates silent Inconclusive passes on transcendentals)
+	if len(pointsList) >= 5 {
+		numRes, numErr := o.client.EvalNumerical(ctx, ihdJSON, sympJSON, pointsList, 1e-12, 1e-9)
+		if numErr == nil && numRes.SampleCount >= 5 {
+			if numRes.AllAgree {
+				return VerdictDiffSampledAgreement, fmt.Sprintf("Tier-3 numerical agreement across %d points (max_residual=%e)", numRes.SampleCount, numRes.MaxResidual)
+			}
+			return VerdictDiffSampledMismatch, fmt.Sprintf("Tier-3 numerical mismatch (max_residual=%e)", numRes.MaxResidual)
+		}
+	}
+
+	return VerdictDiffInconclusive, fmt.Sprintf("too few valid non-pole sample points: %d/%d", validSamples, o.sampleSize)
 }
 
 func substituteVariables(node ast.Node, values map[string]gaussianRat) ast.Node {
 	if node == nil {
 		return nil
 	}
-	return replaceChildrenWithSelf(node, func(curr ast.Node) ast.Node {
+	return ast.Transform(node, func(curr ast.Node) ast.Node {
 		if v, ok := curr.(*ast.VarNode); ok {
 			if val, exists := values[v.Name]; exists {
-				// Construct Gaussian rational AST node
 				reNode := ast.NewRationalFromBigRat(val.re)
 				if val.im.Sign() == 0 {
 					return reNode
@@ -211,14 +230,46 @@ func substituteVariables(node ast.Node, values map[string]gaussianRat) ast.Node 
 	})
 }
 
-func replaceChildrenWithSelf(node ast.Node, leafMapper func(ast.Node) ast.Node) ast.Node {
-	mapped := leafMapper(node)
-	if mapped != node {
-		return mapped
+// CounterexampleRecord defines the JSON schema for storing minimized differential counterexamples.
+type CounterexampleRecord struct {
+	SchemaVersion int    `json:"schema_version"`
+	ID            string `json:"id"`
+	Domain        string `json:"domain"`
+	OriginalAST   string `json:"original_ast"`
+	ShrunkAST     string `json:"shrunk_ast"`
+	Verdict       string `json:"verdict"`
+	Reason        string `json:"reason"`
+	Seed          int64  `json:"seed"`
+	DiscoveredAt  string `json:"discovered_at"`
+	Status        string `json:"status"` // "open", "fixed", "wontfix"
+}
+
+func saveCounterexample(domain string, orig, shrunk ast.Node, verdict DifferentialVerdict, reason string, seed int64) {
+	dir := filepath.Join("test-scripts", "go", "fuzz", "counterexamples", "pending")
+	_ = os.MkdirAll(dir, 0755)
+
+	shrunkStr := shrunk.String()
+	h := sha256.Sum256([]byte(domain + ":" + shrunkStr))
+	id := hex.EncodeToString(h[:8])
+
+	record := CounterexampleRecord{
+		SchemaVersion: 1,
+		ID:            id,
+		Domain:        domain,
+		OriginalAST:   orig.String(),
+		ShrunkAST:     shrunkStr,
+		Verdict:       verdict.String(),
+		Reason:        reason,
+		Seed:          seed,
+		DiscoveredAt:  time.Now().UTC().Format(time.RFC3339),
+		Status:        "open",
 	}
-	return replaceChildren(node, func(ch ast.Node) ast.Node {
-		return replaceChildrenWithSelf(ch, leafMapper)
-	})
+
+	bytes, err := json.MarshalIndent(record, "", "  ")
+	if err == nil {
+		targetFile := filepath.Join(dir, fmt.Sprintf("%s_%s.json", domain, id))
+		_ = os.WriteFile(targetFile, bytes, 0644)
+	}
 }
 
 // TestDifferentialOracle_FiveVerdicts verifies the 5-way verdict classification protocol.
@@ -242,7 +293,7 @@ func TestDifferentialOracle_FiveVerdicts(t *testing.T) {
 		t.Fatalf("Expected VerdictDiffExactMatch, got %s", v1)
 	}
 
-	// 2. Sampled Agreement (Algebraic Equivalence): (x + 1)^2 vs x^2 + 2x + 1
+	// 2. Sampled Agreement: (x + 1)^2 vs x^2 + 2x + 1
 	pow2, _ := ast.NewPow(n1, two)
 	x2, _ := ast.NewPow(x, two)
 	twoX := ast.NewMul([]ast.Node{two, x})
@@ -254,18 +305,176 @@ func TestDifferentialOracle_FiveVerdicts(t *testing.T) {
 		t.Fatalf("Expected ExactMatch or SampledAgreement, got %s", v2)
 	}
 
-	// 3. Exact Mismatch: x + 1 vs x + 2
+	// 3. Exact Mismatch: x + 1 vs x + 2 (Difference is -1 != 0)
 	n3 := ast.NewAdd([]ast.Node{x, two})
 	v3, reason3 := oracle.EvaluateEquivalence(ctx, n1, n3, 999)
 	t.Logf("Case 3 (x+1 vs x+2): %s (%s)", v3, reason3)
-	if v3 != VerdictDiffSampledMismatch && v3 != VerdictDiffExactMismatch {
-		t.Fatalf("Expected SampledMismatch, got %s", v3)
+	if v3 != VerdictDiffExactMismatch && v3 != VerdictDiffSampledMismatch {
+		t.Fatalf("Expected ExactMismatch or SampledMismatch, got %s", v3)
 	}
 }
 
-// FuzzDifferential_SymPy_Algebra explores algebraic identities (Expand, Simplify) against SymPy oracle.
+// TestDifferentialOracle_AdversarialSuite evaluates the classical CAS pitfalls provided by external AI review.
+func TestDifferentialOracle_AdversarialSuite(t *testing.T) {
+	client := GetGlobalSymPyClient()
+	if !client.Available() {
+		t.Skipf("SymPy not available: %s", client.ReasonUnavailable())
+	}
+	oracle := NewDifferentialOracle(client)
+	ctx := context.Background()
+
+	x := ast.NewVar("x")
+	one := ast.NewRationalFromBigRat(big.NewRat(1, 1))
+	two := ast.NewRationalFromBigRat(big.NewRat(2, 1))
+
+	tests := []struct {
+		name     string
+		lhs      ast.Node
+		rhs      ast.Node
+		expected DifferentialVerdict
+	}{
+		{
+			name:     "Polynomial Identity: (x-1)*(x+1) vs x^2 - 1",
+			lhs:      ast.NewMul([]ast.Node{ast.NewAdd([]ast.Node{x, ast.NewRationalFromBigRat(big.NewRat(-1, 1))}), ast.NewAdd([]ast.Node{x, one})}),
+			rhs:      ast.NewAdd([]ast.Node{mustPow(x, two), ast.NewRationalFromBigRat(big.NewRat(-1, 1))}),
+			expected: VerdictDiffExactMatch,
+		},
+		{
+			name:     "Degree 5 Geometric Sum: (x^5 - 1)/(x - 1) vs x^4 + x^3 + x^2 + x + 1",
+			lhs:      ast.NewMul([]ast.Node{ast.NewAdd([]ast.Node{mustPow(x, ast.NewRationalFromBigRat(big.NewRat(5, 1))), ast.NewRationalFromBigRat(big.NewRat(-1, 1))}), mustPow(ast.NewAdd([]ast.Node{x, ast.NewRationalFromBigRat(big.NewRat(-1, 1))}), ast.NewRationalFromBigRat(big.NewRat(-1, 1)))}),
+			rhs:      ast.NewAdd([]ast.Node{mustPow(x, ast.NewRationalFromBigRat(big.NewRat(4, 1))), mustPow(x, ast.NewRationalFromBigRat(big.NewRat(3, 1))), mustPow(x, two), x, one}),
+			expected: VerdictDiffSampledAgreement,
+		},
+		{
+			name:     "Trig Identity: sin(x)^2 + cos(x)^2 vs 1",
+			lhs:      ast.NewAdd([]ast.Node{mustPow(mustFunc("sin", []ast.Node{x}), two), mustPow(mustFunc("cos", []ast.Node{x}), two)}),
+			rhs:      one,
+			expected: VerdictDiffExactMatch,
+		},
+		{
+			name:     "Trig Zero Identity: 2*sin(x)^2 - sin(2x)*tan(x) vs 0 (issue #21683)",
+			lhs:      ast.NewAdd([]ast.Node{ast.NewMul([]ast.Node{two, mustPow(mustFunc("sin", []ast.Node{x}), two)}), mustUnaryOp("-", ast.NewMul([]ast.Node{mustFunc("sin", []ast.Node{ast.NewMul([]ast.Node{two, x})}), mustFunc("tan", []ast.Node{x})}))}),
+			rhs:      ast.NewRationalFromBigRat(big.NewRat(0, 1)),
+			expected: VerdictDiffSampledAgreement,
+		},
+		{
+			name: "Nested Radical (Ramanujan-like): sqrt(3 + 2*sqrt(2)) vs sqrt(2) + 1",
+			lhs: ast.NewSqrt(ast.NewAdd([]ast.Node{
+				ast.NewRationalFromBigRat(big.NewRat(3, 1)),
+				ast.NewMul([]ast.Node{two, ast.NewSqrt(two)}),
+			})),
+			rhs: ast.NewAdd([]ast.Node{
+				ast.NewSqrt(two),
+				one,
+			}),
+			expected: VerdictDiffSampledAgreement,
+		},
+		{
+			name:     "Non-zero Discrepancy: x vs x + 1",
+			lhs:      x,
+			rhs:      ast.NewAdd([]ast.Node{x, one}),
+			expected: VerdictDiffExactMismatch,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			v, reason := oracle.EvaluateEquivalence(ctx, tc.lhs, tc.rhs, 42)
+			t.Logf("[%s] -> Verdict: %s (Reason: %s)", tc.name, v, reason)
+			if tc.expected == VerdictDiffExactMatch {
+				if v != VerdictDiffExactMatch && v != VerdictDiffSampledAgreement {
+					t.Fatalf("Expected agreement, got %s (%s)", v, reason)
+				}
+			} else if tc.expected == VerdictDiffSampledAgreement {
+				if v != VerdictDiffSampledAgreement && v != VerdictDiffExactMatch {
+					t.Fatalf("Expected agreement, got %s (%s)", v, reason)
+				}
+			} else if tc.expected == VerdictDiffExactMismatch {
+				if v != VerdictDiffExactMismatch && v != VerdictDiffSampledMismatch {
+					t.Fatalf("Expected mismatch, got %s (%s)", v, reason)
+				}
+			}
+		})
+	}
+}
+
+func mustPow(base, exp ast.Node) ast.Node {
+	p, err := ast.NewPow(base, exp)
+	if err != nil {
+		panic(err)
+	}
+	return p
+}
+
+func mustFunc(name string, args []ast.Node) ast.Node {
+	f, err := ast.NewFunc(name, args)
+	if err != nil {
+		panic(err)
+	}
+	return f
+}
+
+func mustUnaryOp(op string, expr ast.Node) ast.Node {
+	uop, err := ast.NewUnaryOp(op, expr)
+	if err != nil {
+		panic(err)
+	}
+	return uop
+}
+
+// TestDifferentialOracle_RegressionLedger reads and validates all counterexamples saved in counterexamples/.
+func TestDifferentialOracle_RegressionLedger(t *testing.T) {
+	ledgerDir := filepath.Join("test-scripts", "go", "fuzz", "counterexamples")
+	files, err := filepath.Glob(filepath.Join(ledgerDir, "*.json"))
+	if err != nil || len(files) == 0 {
+		t.Log("No confirmed counterexample ledger fixtures found (clean state).")
+		return
+	}
+
+	client := GetGlobalSymPyClient()
+	if !client.Available() {
+		t.Skipf("SymPy not available: %s", client.ReasonUnavailable())
+	}
+	oracle := NewDifferentialOracle(client)
+	ctx := context.Background()
+
+	for _, file := range files {
+		t.Run(filepath.Base(file), func(t *testing.T) {
+			bytes, rErr := os.ReadFile(file)
+			if rErr != nil {
+				t.Fatalf("Failed to read fixture: %v", rErr)
+			}
+			var record CounterexampleRecord
+			if uErr := json.Unmarshal(bytes, &record); uErr != nil {
+				t.Fatalf("Failed to unmarshal fixture: %v", uErr)
+			}
+			if record.Status == "wontfix" {
+				t.Skip("Marked wontfix by specification.")
+			}
+
+			ihdNode, err1 := calc.Parse(record.ShrunkAST)
+			if err1 != nil {
+				t.Fatalf("Failed to parse shrunk AST '%s': %v", record.ShrunkAST, err1)
+			}
+			env := calc.NewEnv()
+			simplified, err2 := calc.EvalWithEnv(ihdNode, env)
+			if err2 != nil {
+				t.Fatalf("Eval error on shrunk AST: %v", err2)
+			}
+
+			v, reason := oracle.EvaluateEquivalence(ctx, simplified, ihdNode, record.Seed)
+			t.Logf("Regression fixture %s -> verdict: %s (%s)", record.ID, v, reason)
+			if record.Status == "fixed" {
+				if v != VerdictDiffExactMatch && v != VerdictDiffSampledAgreement {
+					t.Fatalf("Regression failure on fixed fixture %s: expected agreement, got %s", record.ID, v)
+				}
+			}
+		})
+	}
+}
+
+// FuzzDifferential_SymPy_Algebra explores algebraic identities against SymPy oracle.
 func FuzzDifferential_SymPy_Algebra(f *testing.F) {
-	// Seed corpus
 	f.Add([]byte{0x01, 0x02, 0x03, 0x04, 0x05})
 	f.Add([]byte{0x10, 0x20, 0x30, 0x40, 0x50})
 	f.Add([]byte("expand((x+1)*(x+2))"))
@@ -282,17 +491,10 @@ func FuzzDifferential_SymPy_Algebra(f *testing.F) {
 		p := NewByteStreamProvider(data)
 		budget := 20
 		tree := p.GenNode(3, &budget, ProfileAlgebra)
-		if tree == nil {
+		if tree == nil || containsLiteralPole(tree) {
 			return
 		}
 
-		// Semantic Pre-Filter (Sakana AI Namazu):
-		// Reject ASTs with trivial literal division by zero or log(0)
-		if containsLiteralPole(tree) {
-			return
-		}
-
-		// Wrap in expand / simplify in ihd
 		env := calc.NewEnv()
 		simplified, err := calc.EvalWithEnv(tree, env)
 		if err != nil || simplified == nil {
@@ -306,26 +508,26 @@ func FuzzDifferential_SymPy_Algebra(f *testing.F) {
 		verdict, reason := oracle.EvaluateEquivalence(ctx, simplified, tree, seed)
 
 		switch verdict {
-		case VerdictDiffExactMatch, VerdictDiffSampledAgreement:
-			// Passed! Invariant holds
-			return
-		case VerdictDiffInconclusive:
-			// Skipped sample (e.g. pole, transcendental branch)
+		case VerdictDiffExactMatch, VerdictDiffSampledAgreement, VerdictDiffInconclusive:
 			return
 		case VerdictDiffExactMismatch, VerdictDiffSampledMismatch:
-			// Discrepancy detected! Automatically invoke AST Shrinker to isolate minimal bug
 			t.Logf("[DIFFERENTIAL MISMATCH] Original AST: %s (Reason: %s)", tree.String(), reason)
+
+			// Fresh context for shrinker with full budget duration
+			shrinkCtx, shrinkCancel := context.WithTimeout(context.Background(), shrinker.MaxDuration)
+			defer shrinkCancel()
 
 			pred := func(cand ast.Node) bool {
 				candSimp, eErr := calc.EvalWithEnv(cand, env)
 				if eErr != nil || candSimp == nil {
 					return false
 				}
-				v, _ := oracle.EvaluateEquivalence(ctx, candSimp, cand, seed)
-				return v == verdict // Strict Interestingness: Same mismatch class (Slippage prevention)
+				v, _ := oracle.EvaluateEquivalence(shrinkCtx, candSimp, cand, seed)
+				return v == verdict
 			}
 
 			shrunk := shrinker.Shrink(tree, pred)
+			saveCounterexample("algebra", tree, shrunk, verdict, reason, seed)
 			t.Fatalf("Differential Mismatch with SymPy Oracle!\nOriginal: %s\nShrunk Minimal Counterexample: %s\nReason: %s",
 				tree.String(), shrunk.String(), reason)
 		}
@@ -375,6 +577,10 @@ func FuzzDifferential_SymPy_Calculus(f *testing.F) {
 			return
 		case VerdictDiffExactMismatch, VerdictDiffSampledMismatch:
 			t.Logf("[DIFFERENTIAL CALCULUS MISMATCH] Tree: %s, Result: %s (Reason: %s)", tree.String(), ihdResult.String(), reason)
+
+			shrinkCtx, shrinkCancel := context.WithTimeout(context.Background(), shrinker.MaxDuration)
+			defer shrinkCancel()
+
 			pred := func(cand ast.Node) bool {
 				cDiff, cErr := ast.NewFunc("diff", []ast.Node{cand, ast.NewVar("x")})
 				if cErr != nil {
@@ -384,17 +590,18 @@ func FuzzDifferential_SymPy_Calculus(f *testing.F) {
 				if eErr != nil || cRes == nil {
 					return false
 				}
-				v, _ := oracle.EvaluateEquivalence(ctx, cRes, cDiff, seed)
+				v, _ := oracle.EvaluateEquivalence(shrinkCtx, cRes, cDiff, seed)
 				return v == verdict
 			}
 			shrunk := shrinker.Shrink(tree, pred)
+			saveCounterexample("calculus", tree, shrunk, verdict, reason, seed)
 			t.Fatalf("Differential Calculus Mismatch!\nOriginal: %s\nShrunk Minimal Counterexample: %s\nReason: %s",
 				tree.String(), shrunk.String(), reason)
 		}
 	})
 }
 
-// FuzzDifferential_SymPy_Rational explores rational fraction identities (apart / together) against SymPy oracle.
+// FuzzDifferential_SymPy_Rational explores rational fraction identities against SymPy oracle.
 func FuzzDifferential_SymPy_Rational(f *testing.F) {
 	f.Add([]byte{0x11, 0x22, 0x33, 0x44, 0x55})
 	f.Add([]byte("apart(1/(x^2 - 1), x)"))
@@ -432,15 +639,20 @@ func FuzzDifferential_SymPy_Rational(f *testing.F) {
 			return
 		case VerdictDiffExactMismatch, VerdictDiffSampledMismatch:
 			t.Logf("[DIFFERENTIAL RATIONAL MISMATCH] Original AST: %s (Reason: %s)", tree.String(), reason)
+
+			shrinkCtx, shrinkCancel := context.WithTimeout(context.Background(), shrinker.MaxDuration)
+			defer shrinkCancel()
+
 			pred := func(cand ast.Node) bool {
 				candSimp, eErr := calc.EvalWithEnv(cand, env)
 				if eErr != nil || candSimp == nil {
 					return false
 				}
-				v, _ := oracle.EvaluateEquivalence(ctx, candSimp, cand, seed)
+				v, _ := oracle.EvaluateEquivalence(shrinkCtx, candSimp, cand, seed)
 				return v == verdict
 			}
 			shrunk := shrinker.Shrink(tree, pred)
+			saveCounterexample("rational", tree, shrunk, verdict, reason, seed)
 			t.Fatalf("Differential Rational Mismatch!\nOriginal: %s\nShrunk Minimal Counterexample: %s\nReason: %s",
 				tree.String(), shrunk.String(), reason)
 		}

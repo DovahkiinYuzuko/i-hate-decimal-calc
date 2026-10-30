@@ -14,8 +14,12 @@ import (
 // and does not introduce extraneous panics, timeouts, division by zero, or syntax degradation (Slippage).
 type ShrinkPredicate func(candidate ast.Node) bool
 
+// shrinkContext represents a path-copying substitution function mapping a sub-expression to the complete root AST.
+type shrinkContext func(replacement ast.Node) ast.Node
+
 // ASTShrinker performs Hierarchical Delta Debugging (HDD, Misherghi & Su 2006)
-// on mathematical ASTs with strict slippage safeguards and deterministic caching.
+// on mathematical ASTs with strict slippage safeguards, occurrence-aware contextual substitution,
+// and deterministic caching.
 type ASTShrinker struct {
 	MaxEvaluations int
 	MaxDuration    time.Duration
@@ -27,7 +31,7 @@ type ASTShrinker struct {
 // NewASTShrinker creates an ASTShrinker with default execution budgets.
 func NewASTShrinker() *ASTShrinker {
 	return &ASTShrinker{
-		MaxEvaluations: 150,
+		MaxEvaluations: 200,
 		MaxDuration:    4 * time.Second,
 		cache:          make(map[string]bool),
 	}
@@ -49,35 +53,36 @@ func (s *ASTShrinker) Shrink(root ast.Node, pred ShrinkPredicate) ast.Node {
 	}
 
 	current := root
+	idCtx := func(n ast.Node) ast.Node { return n }
 
 	// Multi-pass fixed-point loop:
-	// Pass 1: Top-down subtree hoisting (replace parent with child)
-	// Pass 2: Identity node replacement (replace subtree with 1, x, -1, 2, 0)
-	// Pass 3: n-ary node ddmin (prune terms/factors from Add/Mul)
+	// Pass 1: Subtree hoisting (replace parent with one of its direct children)
+	// Pass 2: n-ary node ddmin (remove terms/factors from Add/Mul)
+	// Pass 3: Identity node replacement (replace subtrees with 1, 0, x, -1)
 	// Pass 4: Constant coefficient binary-search reduction
-	for pass := 0; pass < 5; pass++ {
+	for pass := 0; pass < 6; pass++ {
 		progress := false
 
 		// Pass 1: Subtree hoisting
-		if next, ok := s.shrinkHoisting(current, pred); ok {
+		if next, ok := s.shrinkHoisting(current, idCtx, pred); ok {
 			current = next
 			progress = true
 		}
 
 		// Pass 2: n-ary list reduction (ddmin)
-		if next, ok := s.shrinkNaryNodes(current, pred); ok {
+		if next, ok := s.shrinkNaryNodes(current, idCtx, pred); ok {
 			current = next
 			progress = true
 		}
 
 		// Pass 3: Identity replacement
-		if next, ok := s.shrinkIdentities(current, pred); ok {
+		if next, ok := s.shrinkIdentities(current, idCtx, pred); ok {
 			current = next
 			progress = true
 		}
 
 		// Pass 4: Constant reduction
-		if next, ok := s.shrinkConstants(current, pred); ok {
+		if next, ok := s.shrinkConstants(current, idCtx, pred); ok {
 			current = next
 			progress = true
 		}
@@ -104,12 +109,14 @@ func (s *ASTShrinker) testCandidate(candidate ast.Node, pred ShrinkPredicate) bo
 	if candidate == nil || s.isBudgetExhausted() {
 		return false
 	}
-	s.evalCount++
 
 	key := candidate.String()
 	if res, found := s.cache[key]; found {
 		return res
 	}
+
+	// Increment evaluation count ONLY on cache miss
+	s.evalCount++
 
 	// Guard against panics during candidate evaluation
 	var passed bool
@@ -126,200 +133,224 @@ func (s *ASTShrinker) testCandidate(candidate ast.Node, pred ShrinkPredicate) bo
 	return passed
 }
 
-// shrinkHoisting attempts to replace parent nodes with their direct children (Misherghi & Su 2006).
-func (s *ASTShrinker) shrinkHoisting(root ast.Node, pred ShrinkPredicate) (ast.Node, bool) {
-	if root == nil || s.isBudgetExhausted() {
-		return root, false
+// shrinkHoisting attempts to replace parent nodes with their direct children inside the full expression context.
+func (s *ASTShrinker) shrinkHoisting(curr ast.Node, ctx shrinkContext, pred ShrinkPredicate) (ast.Node, bool) {
+	if curr == nil || s.isBudgetExhausted() {
+		return curr, false
 	}
 
-	// 1. Try hoisting root's own direct children first
-	children := getDirectChildren(root)
+	// 1. Try hoisting direct children to replace curr in root
+	children := getDirectChildren(curr)
 	for _, child := range children {
-		if s.testCandidate(child, pred) {
-			// Found smaller candidate! Recursively shrink from here
-			if next, ok := s.shrinkHoisting(child, pred); ok {
+		candRoot := ctx(child)
+		if s.testCandidate(candRoot, pred) {
+			// Found smaller candidate; recursively shrink from here
+			if next, ok := s.shrinkHoisting(child, ctx, pred); ok {
 				return next, true
 			}
-			return child, true
+			return candRoot, true
 		}
 	}
 
 	// 2. Recursively try hoisting inside children
-	changed := false
-	newRoot := replaceChildren(root, func(ch ast.Node) ast.Node {
-		if changed || s.isBudgetExhausted() {
-			return ch
+	for i, ch := range children {
+		if s.isBudgetExhausted() {
+			break
 		}
-		if next, ok := s.shrinkHoisting(ch, pred); ok {
-			changed = true
-			return next
+		childCtx := func(sub ast.Node) ast.Node {
+			return ctx(replaceNthChild(curr, i, sub))
 		}
-		return ch
-	})
-
-	if changed && s.testCandidate(newRoot, pred) {
-		return newRoot, true
+		if nextRoot, ok := s.shrinkHoisting(ch, childCtx, pred); ok {
+			return nextRoot, true
+		}
 	}
-	return root, false
+
+	return curr, false
 }
 
-// shrinkIdentities attempts to replace subtrees with minimal identities: 1, x, -1, 2, 0.
-// Invariant: 0 is tried last because it frequently triggers division-by-zero singularities (Slippage).
-func (s *ASTShrinker) shrinkIdentities(root ast.Node, pred ShrinkPredicate) (ast.Node, bool) {
-	if root == nil || s.isBudgetExhausted() {
-		return root, false
+// shrinkIdentities attempts to replace subtrees with minimal algebraic identities inside full root context: 1, 0, x, -1.
+func (s *ASTShrinker) shrinkIdentities(curr ast.Node, ctx shrinkContext, pred ShrinkPredicate) (ast.Node, bool) {
+	if curr == nil || s.isBudgetExhausted() {
+		return curr, false
 	}
 
 	// Do not replace minimal leaves with themselves
-	switch root.(type) {
-	case *ast.VarNode:
-		return root, false
-	case *ast.RationalNode:
-		return root, false
+	isLeaf := false
+	switch curr.(type) {
+	case *ast.VarNode, *ast.RationalNode, *ast.ConstNode:
+		isLeaf = true
 	}
 
-	// Candidate replacement identities in order of safety
-	identities := []ast.Node{
-		ast.NewRationalFromBigRat(big.NewRat(1, 1)),
-		ast.NewVar("x"),
-		ast.NewRationalFromBigRat(big.NewRat(-1, 1)),
-		ast.NewRationalFromBigRat(big.NewRat(2, 1)),
-		ast.NewRationalFromBigRat(big.NewRat(0, 1)),
-	}
+	if !isLeaf {
+		// Canonical identity replacements in increasing risk order
+		identities := []ast.Node{
+			ast.NewRationalFromBigRat(big.NewRat(1, 1)),
+			ast.NewRationalFromBigRat(big.NewRat(0, 1)),
+			ast.NewVar("x"),
+			ast.NewRationalFromBigRat(big.NewRat(-1, 1)),
+		}
 
-	// Try replacing current root with an identity
-	for _, idNode := range identities {
-		if s.testCandidate(idNode, pred) {
-			return idNode, true
+		for _, idNode := range identities {
+			candRoot := ctx(idNode)
+			if s.testCandidate(candRoot, pred) {
+				return candRoot, true
+			}
 		}
 	}
 
-	// Recursively try replacing children
-	changed := false
-	newRoot := replaceChildren(root, func(ch ast.Node) ast.Node {
-		if changed || s.isBudgetExhausted() {
-			return ch
+	// Recursively try replacing inside children
+	children := getDirectChildren(curr)
+	for i, ch := range children {
+		if s.isBudgetExhausted() {
+			break
 		}
-		if next, ok := s.shrinkIdentities(ch, pred); ok {
-			changed = true
-			return next
+		childCtx := func(sub ast.Node) ast.Node {
+			return ctx(replaceNthChild(curr, i, sub))
 		}
-		return ch
-	})
-
-	if changed && s.testCandidate(newRoot, pred) {
-		return newRoot, true
+		if nextRoot, ok := s.shrinkIdentities(ch, childCtx, pred); ok {
+			return nextRoot, true
+		}
 	}
-	return root, false
+
+	return curr, false
 }
 
-// shrinkNaryNodes applies ddmin (Zeller 2002) to multi-child nodes (*ast.AddNode, *ast.MulNode).
-func (s *ASTShrinker) shrinkNaryNodes(root ast.Node, pred ShrinkPredicate) (ast.Node, bool) {
-	if root == nil || s.isBudgetExhausted() {
-		return root, false
+// shrinkNaryNodes applies ddmin (Zeller 2002) to multi-child nodes (*ast.AddNode, *ast.MulNode) inside full root context.
+func (s *ASTShrinker) shrinkNaryNodes(curr ast.Node, ctx shrinkContext, pred ShrinkPredicate) (ast.Node, bool) {
+	if curr == nil || s.isBudgetExhausted() {
+		return curr, false
 	}
 
-	switch n := root.(type) {
+	switch n := curr.(type) {
 	case *ast.AddNode:
-		if len(n.Terms) > 2 {
+		if len(n.Terms) >= 2 {
 			// Try 1-minimal removal of each term
 			for i := 0; i < len(n.Terms); i++ {
-				subTerms := make([]ast.Node, 0, len(n.Terms)-1)
-				subTerms = append(subTerms, n.Terms[:i]...)
-				subTerms = append(subTerms, n.Terms[i+1:]...)
-				cand := ast.NewAdd(subTerms)
-				if s.testCandidate(cand, pred) {
-					// Recurse on the successfully reduced node
-					if next, ok := s.shrinkNaryNodes(cand, pred); ok {
-						return next, true
+				var candNode ast.Node
+				if len(n.Terms) == 2 {
+					// 2-term addition reduces to the single remaining term
+					candNode = n.Terms[1-i]
+				} else {
+					subTerms := make([]ast.Node, 0, len(n.Terms)-1)
+					subTerms = append(subTerms, n.Terms[:i]...)
+					subTerms = append(subTerms, n.Terms[i+1:]...)
+					candNode = ast.NewAdd(subTerms)
+				}
+				candRoot := ctx(candNode)
+				if s.testCandidate(candRoot, pred) {
+					if nextRoot, ok := s.shrinkNaryNodes(candNode, ctx, pred); ok {
+						return nextRoot, true
 					}
-					return cand, true
+					return candRoot, true
 				}
 			}
 		}
 
 	case *ast.MulNode:
-		if len(n.Factors) > 2 {
-			// Try 1-minimal removal of each factor
+		if len(n.Factors) >= 2 {
 			for i := 0; i < len(n.Factors); i++ {
-				subFactors := make([]ast.Node, 0, len(n.Factors)-1)
-				subFactors = append(subFactors, n.Factors[:i]...)
-				subFactors = append(subFactors, n.Factors[i+1:]...)
-				cand := ast.NewMul(subFactors)
-				if s.testCandidate(cand, pred) {
-					if next, ok := s.shrinkNaryNodes(cand, pred); ok {
-						return next, true
+				var candNode ast.Node
+				if len(n.Factors) == 2 {
+					candNode = n.Factors[1-i]
+				} else {
+					subFactors := make([]ast.Node, 0, len(n.Factors)-1)
+					subFactors = append(subFactors, n.Factors[:i]...)
+					subFactors = append(subFactors, n.Factors[i+1:]...)
+					candNode = ast.NewMul(subFactors)
+				}
+				candRoot := ctx(candNode)
+				if s.testCandidate(candRoot, pred) {
+					if nextRoot, ok := s.shrinkNaryNodes(candNode, ctx, pred); ok {
+						return nextRoot, true
 					}
-					return cand, true
+					return candRoot, true
 				}
 			}
 		}
 	}
 
 	// Recursively shrink inside children
-	changed := false
-	newRoot := replaceChildren(root, func(ch ast.Node) ast.Node {
-		if changed || s.isBudgetExhausted() {
-			return ch
+	children := getDirectChildren(curr)
+	for i, ch := range children {
+		if s.isBudgetExhausted() {
+			break
 		}
-		if next, ok := s.shrinkNaryNodes(ch, pred); ok {
-			changed = true
-			return next
+		childCtx := func(sub ast.Node) ast.Node {
+			return ctx(replaceNthChild(curr, i, sub))
 		}
-		return ch
-	})
-
-	if changed && s.testCandidate(newRoot, pred) {
-		return newRoot, true
+		if nextRoot, ok := s.shrinkNaryNodes(ch, childCtx, pred); ok {
+			return nextRoot, true
+		}
 	}
-	return root, false
+
+	return curr, false
 }
 
-// shrinkConstants reduces large integer/rational coefficients towards 0 or 1.
-func (s *ASTShrinker) shrinkConstants(root ast.Node, pred ShrinkPredicate) (ast.Node, bool) {
-	if root == nil || s.isBudgetExhausted() {
-		return root, false
+// shrinkConstants reduces large integer/rational coefficients towards 0 or 1 without mutating big.Int in-place.
+func (s *ASTShrinker) shrinkConstants(curr ast.Node, ctx shrinkContext, pred ShrinkPredicate) (ast.Node, bool) {
+	if curr == nil || s.isBudgetExhausted() {
+		return curr, false
 	}
 
-	if r, ok := root.(*ast.RationalNode); ok && r.Val != nil {
+	if r, ok := curr.(*ast.RationalNode); ok && r.Val != nil {
 		num := new(big.Int).Set(r.Val.Num())
 		den := new(big.Int).Set(r.Val.Denom())
 
 		// If denominator > 1, try reducing to integer (denominator = 1)
 		if den.Cmp(big.NewInt(1)) > 0 {
 			cand := ast.NewRationalFromBigRat(new(big.Rat).SetInt(num))
-			if s.testCandidate(cand, pred) {
-				return cand, true
+			candRoot := ctx(cand)
+			if s.testCandidate(candRoot, pred) {
+				return candRoot, true
 			}
 		}
 
-		// Try binary search towards 0 or 1
-		if num.Abs(num).Cmp(big.NewInt(2)) > 0 {
-			half := new(big.Int).Div(num, big.NewInt(2))
+		// Try binary search towards 0 while strictly preserving sign
+		absNum := new(big.Int).Abs(num)
+		if absNum.Cmp(big.NewInt(2)) > 0 {
+			half := new(big.Int).Div(absNum, big.NewInt(2))
+			if num.Sign() < 0 {
+				half.Neg(half)
+			}
 			cand := ast.NewRationalFromBigRat(new(big.Rat).SetFrac(half, den))
-			if s.testCandidate(cand, pred) {
-				return cand, true
+			candRoot := ctx(cand)
+			if s.testCandidate(candRoot, pred) {
+				return candRoot, true
+			}
+		}
+
+		// Try setting to 1 or 0 directly
+		if num.Cmp(big.NewInt(1)) != 0 {
+			cand1 := ast.NewRationalFromBigRat(big.NewRat(1, 1))
+			candRoot1 := ctx(cand1)
+			if s.testCandidate(candRoot1, pred) {
+				return candRoot1, true
+			}
+		}
+		if num.Sign() != 0 {
+			cand0 := ast.NewRationalFromBigRat(big.NewRat(0, 1))
+			candRoot0 := ctx(cand0)
+			if s.testCandidate(candRoot0, pred) {
+				return candRoot0, true
 			}
 		}
 	}
 
 	// Recursively shrink child constants
-	changed := false
-	newRoot := replaceChildren(root, func(ch ast.Node) ast.Node {
-		if changed || s.isBudgetExhausted() {
-			return ch
+	children := getDirectChildren(curr)
+	for i, ch := range children {
+		if s.isBudgetExhausted() {
+			break
 		}
-		if next, ok := s.shrinkConstants(ch, pred); ok {
-			changed = true
-			return next
+		childCtx := func(sub ast.Node) ast.Node {
+			return ctx(replaceNthChild(curr, i, sub))
 		}
-		return ch
-	})
-
-	if changed && s.testCandidate(newRoot, pred) {
-		return newRoot, true
+		if nextRoot, ok := s.shrinkConstants(ch, childCtx, pred); ok {
+			return nextRoot, true
+		}
 	}
-	return root, false
+
+	return curr, false
 }
 
 func getDirectChildren(node ast.Node) []ast.Node {
@@ -344,51 +375,74 @@ func getDirectChildren(node ast.Node) []ast.Node {
 	}
 }
 
-func replaceChildren(node ast.Node, transform func(ast.Node) ast.Node) ast.Node {
+func replaceNthChild(node ast.Node, idx int, replacement ast.Node) ast.Node {
 	if node == nil {
 		return nil
 	}
 	switch n := node.(type) {
 	case *ast.AddNode:
+		if idx < 0 || idx >= len(n.Terms) {
+			return node
+		}
 		newTerms := make([]ast.Node, len(n.Terms))
-		for i, t := range n.Terms {
-			newTerms[i] = transform(t)
-		}
+		copy(newTerms, n.Terms)
+		newTerms[idx] = replacement
 		return ast.NewAdd(newTerms)
+
 	case *ast.MulNode:
+		if idx < 0 || idx >= len(n.Factors) {
+			return node
+		}
 		newFactors := make([]ast.Node, len(n.Factors))
-		for i, f := range n.Factors {
-			newFactors[i] = transform(f)
-		}
+		copy(newFactors, n.Factors)
+		newFactors[idx] = replacement
 		return ast.NewMul(newFactors)
+
 	case *ast.PowNode:
-		newBase := transform(n.Base)
-		newExp := transform(n.Exp)
-		pow, err := ast.NewPow(newBase, newExp)
-		if err != nil {
-			return node
+		if idx == 0 {
+			pow, err := ast.NewPow(replacement, n.Exp)
+			if err != nil {
+				return node
+			}
+			return pow
+		} else if idx == 1 {
+			pow, err := ast.NewPow(n.Base, replacement)
+			if err != nil {
+				return node
+			}
+			return pow
 		}
-		return pow
+		return node
+
 	case *ast.UnaryOpNode:
-		newExpr := transform(n.Expr)
-		uop, err := ast.NewUnaryOp(n.Op, newExpr)
-		if err != nil {
+		if idx == 0 {
+			uop, err := ast.NewUnaryOp(n.Op, replacement)
+			if err != nil {
+				return node
+			}
+			return uop
+		}
+		return node
+
+	case *ast.SqrtNode:
+		if idx == 0 {
+			return ast.NewSqrt(replacement)
+		}
+		return node
+
+	case *ast.FuncNode:
+		if idx < 0 || idx >= len(n.Args) {
 			return node
 		}
-		return uop
-	case *ast.SqrtNode:
-		newRad := transform(n.Radicand)
-		return ast.NewSqrt(newRad)
-	case *ast.FuncNode:
 		newArgs := make([]ast.Node, len(n.Args))
-		for i, a := range n.Args {
-			newArgs[i] = transform(a)
-		}
+		copy(newArgs, n.Args)
+		newArgs[idx] = replacement
 		fn, err := ast.NewFunc(n.Name, newArgs)
 		if err != nil {
 			return node
 		}
 		return fn
+
 	default:
 		return node
 	}
