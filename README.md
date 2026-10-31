@@ -161,7 +161,7 @@ ihd "１＋２×３"
 - **ループ暴走ガード (`--warn-loop` / `--max-loop`)**: CAS反復構文（`table`, `for`, `product`）において、警告閾値超過時にパイプラインを汚さず `os.Stderr` へ非破壊警告を発出し、上限到達時は強制遮断します。
 
 > [!TIP]
-> ターミナル組版のアスキーアート、点字グラフ描画、途中式ツリー、Typst/Lean4出力コードなどの詳細な出力見本は **[出力見本集 (sample/sample.ja.md)](./sample/sample.ja.md)** をご覧ください。
+> ターミナル組版のアスキーアート、点字グラフ描画、途中式ツリー、Typst/Lean4出力コードなどの詳細な出力見本は **[出力サンプル集 (sample/sample.ja.md)](./sample/sample.ja.md)** をご覧ください。
 
 ---
 
