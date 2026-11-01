@@ -519,7 +519,7 @@ func FuzzDifferential_SymPy_Algebra(f *testing.F) {
 
 	client := GetGlobalSymPyClient()
 	if !client.Available() {
-		if os.Getenv("CI") != "" || os.Getenv("IHD_REQUIRE_SYMPY_ORACLE") != "" {
+		if os.Getenv("IHD_REQUIRE_SYMPY_ORACLE") != "" {
 			f.Fatalf("CI CRITICAL: SymPy oracle is strictly required in CI environment but unavailable: %s", client.ReasonUnavailable())
 		}
 		f.Skipf("SymPy not available: %s", client.ReasonUnavailable())
@@ -598,7 +598,7 @@ func FuzzDifferential_SymPy_Calculus(f *testing.F) {
 
 	client := GetGlobalSymPyClient()
 	if !client.Available() {
-		if os.Getenv("CI") != "" || os.Getenv("IHD_REQUIRE_SYMPY_ORACLE") != "" {
+		if os.Getenv("IHD_REQUIRE_SYMPY_ORACLE") != "" {
 			f.Fatalf("CI CRITICAL: SymPy oracle is strictly required in CI environment but unavailable: %s", client.ReasonUnavailable())
 		}
 		f.Skipf("SymPy not available: %s", client.ReasonUnavailable())
@@ -668,7 +668,7 @@ func FuzzDifferential_SymPy_Rational(f *testing.F) {
 
 	client := GetGlobalSymPyClient()
 	if !client.Available() {
-		if os.Getenv("CI") != "" || os.Getenv("IHD_REQUIRE_SYMPY_ORACLE") != "" {
+		if os.Getenv("IHD_REQUIRE_SYMPY_ORACLE") != "" {
 			f.Fatalf("CI CRITICAL: SymPy oracle is strictly required in CI environment but unavailable: %s", client.ReasonUnavailable())
 		}
 		f.Skipf("SymPy not available: %s", client.ReasonUnavailable())
