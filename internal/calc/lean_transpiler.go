@@ -81,6 +81,15 @@ func isEnclosedInParens(s string) bool {
 	return false
 }
 
+// unwrapOuterParens safely strips outermost matching parentheses pairs.
+func unwrapOuterParens(s string) string {
+	s = strings.TrimSpace(s)
+	for isEnclosedInParens(s) {
+		s = strings.TrimSpace(s[1 : len(s)-1])
+	}
+	return s
+}
+
 // ToLeanSyntax converts an internal AST node to Lean 4 / Mathlib syntax string.
 func ToLeanSyntax(node Node) (string, error) {
 	if node == nil {
@@ -1072,7 +1081,7 @@ func GenerateLeanSourceWithConditions(theoremName string, cert *VerificationCert
 	// Inject domain hypotheses if present, and collect variable denominators
 	binders := make([]string, 0)
 	hasNonzeroHyp := false
-	seenNonzero := make(map[string]bool)
+	seenProps := make(map[string]bool)
 
 	if condSet != nil && condSet.Len() > 0 {
 		conds := condSet.Conditions()
@@ -1081,39 +1090,48 @@ func GenerateLeanSourceWithConditions(theoremName string, cert *VerificationCert
 			if err != nil {
 				continue
 			}
-			hName := fmt.Sprintf("h%d", i)
+			cleanExpr := unwrapOuterParens(exprLean)
+			var prop string
 			switch cond.Kind {
 			case CondNonZero:
-				binders = append(binders, fmt.Sprintf("(%s : %s ≠ 0)", hName, exprLean))
+				prop = fmt.Sprintf("%s ≠ 0", cleanExpr)
 				hasNonzeroHyp = true
-				seenNonzero[strings.Trim(exprLean, "()")] = true
 			case CondNonNegative:
-				binders = append(binders, fmt.Sprintf("(%s : 0 ≤ %s)", hName, exprLean))
+				prop = fmt.Sprintf("0 ≤ %s", cleanExpr)
 			case CondPositive:
-				binders = append(binders, fmt.Sprintf("(%s : 0 < %s)", hName, exprLean))
+				prop = fmt.Sprintf("0 < %s", cleanExpr)
+			}
+			if prop != "" && !seenProps[prop] {
+				seenProps[prop] = true
+				hName := fmt.Sprintf("h%d", i)
+				binders = append(binders, fmt.Sprintf("(%s : %s)", hName, prop))
 			}
 		}
 	}
 
 	// Always collect variable denominators automatically to prevent division junk values
 	denoms := collectNonzeroDenominators(allNodes...)
-	for i, d := range denoms {
-		normD := strings.Trim(d, "()")
-		if !seenNonzero[normD] {
-			seenNonzero[normD] = true
-			hName := fmt.Sprintf("h_denom%d", i)
-			binders = append(binders, fmt.Sprintf("(%s : %s ≠ 0)", hName, d))
+	denomIdx := 0
+	for _, d := range denoms {
+		cleanD := unwrapOuterParens(d)
+		prop := fmt.Sprintf("%s ≠ 0", cleanD)
+		if !seenProps[prop] {
+			seenProps[prop] = true
+			hName := fmt.Sprintf("h_denom%d", denomIdx)
+			denomIdx++
+			binders = append(binders, fmt.Sprintf("(%s : %s)", hName, prop))
 			hasNonzeroHyp = true
 		}
 	}
 
 	// Always collect domain conditions (log > 0, sqrt >= 0) to guard against total function junk values
 	domConds := collectDomainConditions(allNodes...)
-	for i, dc := range domConds {
-		normDC := strings.Trim(dc, "()")
-		if !seenNonzero[normDC] {
-			seenNonzero[normDC] = true
-			hName := fmt.Sprintf("h_dom%d", i)
+	domIdx := 0
+	for _, dc := range domConds {
+		if !seenProps[dc] {
+			seenProps[dc] = true
+			hName := fmt.Sprintf("h_dom%d", domIdx)
+			domIdx++
 			binders = append(binders, fmt.Sprintf("(%s : %s)", hName, dc))
 		}
 	}
@@ -1124,7 +1142,11 @@ func GenerateLeanSourceWithConditions(theoremName string, cert *VerificationCert
 		theoremCode = strings.Replace(theoremCode, origThmPrefix, newThmPrefix, 1)
 
 		if hasNonzeroHyp && strings.Contains(theoremCode, ":= by ring") {
-			theoremCode = strings.Replace(theoremCode, ":= by ring", ":= by field_simp; ring", 1)
+			if containsTanNodes(allNodes...) {
+				theoremCode = strings.Replace(theoremCode, ":= by ring", ":= by first | (ring; done) | (unfold Real.tan; field_simp; ring) | (field_simp; ring)", 1)
+			} else {
+				theoremCode = strings.Replace(theoremCode, ":= by ring", ":= by field_simp; ring", 1)
+			}
 		}
 	}
 
@@ -1339,6 +1361,54 @@ func containsRealNodes(nodes ...Node) bool {
 		walk(n)
 	}
 	return hasReal
+}
+
+// containsTanNodes checks whether any of the given nodes contain tangent or related quotient trigonometric functions.
+func containsTanNodes(nodes ...Node) bool {
+	hasTan := false
+	var walk func(n Node)
+	walk = func(n Node) {
+		if n == nil || hasTan {
+			return
+		}
+		switch curr := n.(type) {
+		case *FuncNode:
+			switch strings.ToLower(curr.Name) {
+			case "tan", "cot", "sec", "csc":
+				hasTan = true
+				return
+			}
+			for _, a := range curr.Args {
+				walk(a)
+			}
+		case *AddNode:
+			for _, t := range curr.Terms {
+				walk(t)
+			}
+		case *MulNode:
+			for _, f := range curr.Factors {
+				walk(f)
+			}
+		case *PowNode:
+			walk(curr.Base)
+			walk(curr.Exp)
+		case *UnaryOpNode:
+			walk(curr.Expr)
+		case *RelOpNode:
+			walk(curr.LHS)
+			walk(curr.RHS)
+		case *MatrixNode:
+			for _, r := range curr.Data {
+				for _, elem := range r {
+					walk(elem)
+				}
+			}
+		}
+	}
+	for _, n := range nodes {
+		walk(n)
+	}
+	return hasTan
 }
 
 // containsTrigNodes checks whether any of the given nodes contain trigonometric functions.
@@ -1760,10 +1830,7 @@ func isNegativeExponent(n Node) bool {
 		return exp.Val != nil && exp.Val.Sign() < 0
 	case *UnaryOpNode:
 		if exp.Op == "-" {
-			if ratN, ok := exp.Expr.(*RationalNode); ok && ratN.Val != nil {
-				return ratN.Val.Sign() > 0
-			}
-			return true
+			return !isNegativeExponent(exp.Expr)
 		}
 	}
 	return false
@@ -1802,10 +1869,10 @@ func collectNonzeroDenominators(nodes ...Node) []string {
 						baseSyntax, err := ToLeanSyntax(base)
 						if err == nil && baseSyntax != "" {
 							baseSyntax = formatCalcTerm(baseSyntax)
-							normKey := strings.Trim(baseSyntax, "()")
+							normKey := unwrapOuterParens(baseSyntax)
 							if !seen[normKey] {
 								seen[normKey] = true
-								denoms = append(denoms, baseSyntax)
+								denoms = append(denoms, normKey)
 							}
 						}
 					}
@@ -1822,10 +1889,10 @@ func collectNonzeroDenominators(nodes ...Node) []string {
 					baseSyntax, err := ToLeanSyntax(cosNode)
 					if err == nil && baseSyntax != "" {
 						baseSyntax = formatCalcTerm(baseSyntax)
-						normKey := strings.Trim(baseSyntax, "()")
+						normKey := unwrapOuterParens(baseSyntax)
 						if !seen[normKey] {
 							seen[normKey] = true
-							denoms = append(denoms, baseSyntax)
+							denoms = append(denoms, normKey)
 						}
 					}
 				}
@@ -1835,10 +1902,10 @@ func collectNonzeroDenominators(nodes ...Node) []string {
 					baseSyntax, err := ToLeanSyntax(sinNode)
 					if err == nil && baseSyntax != "" {
 						baseSyntax = formatCalcTerm(baseSyntax)
-						normKey := strings.Trim(baseSyntax, "()")
+						normKey := unwrapOuterParens(baseSyntax)
 						if !seen[normKey] {
 							seen[normKey] = true
-							denoms = append(denoms, baseSyntax)
+							denoms = append(denoms, normKey)
 						}
 					}
 				}
@@ -1898,9 +1965,8 @@ func collectDomainConditions(nodes ...Node) []string {
 					if err == nil && argSyntax != "" {
 						argSyntax = formatCalcTerm(argSyntax)
 						condStr := fmt.Sprintf("0 < %s", argSyntax)
-						normKey := strings.Trim(condStr, "()")
-						if !seen[normKey] {
-							seen[normKey] = true
+						if !seen[condStr] {
+							seen[condStr] = true
 							conds = append(conds, condStr)
 						}
 					}
@@ -1916,14 +1982,33 @@ func collectDomainConditions(nodes ...Node) []string {
 				if err == nil && argSyntax != "" {
 					argSyntax = formatCalcTerm(argSyntax)
 					condStr := fmt.Sprintf("0 ≤ %s", argSyntax)
-					normKey := strings.Trim(condStr, "()")
-					if !seen[normKey] {
-						seen[normKey] = true
+					if !seen[condStr] {
+						seen[condStr] = true
 						conds = append(conds, condStr)
 					}
 				}
 			}
 			walk(curr.Radicand)
+		case *PowNode:
+			// For fractional powers with even denominator (e.g. x^(1/2)), enforce 0 ≤ Base
+			if rat, ok := curr.Exp.(*RationalNode); ok && rat.Val != nil && rat.Val.Sign() > 0 {
+				denom := rat.Val.Denom()
+				if denom.Bit(0) == 0 { // even denominator
+					if len(CollectFreeVariables(curr.Base)) > 0 {
+						baseSyntax, err := ToLeanSyntax(curr.Base)
+						if err == nil && baseSyntax != "" {
+							baseSyntax = formatCalcTerm(baseSyntax)
+							condStr := fmt.Sprintf("0 ≤ %s", baseSyntax)
+							if !seen[condStr] {
+								seen[condStr] = true
+								conds = append(conds, condStr)
+							}
+						}
+					}
+				}
+			}
+			walk(curr.Base)
+			walk(curr.Exp)
 		case *AddNode:
 			for _, t := range curr.Terms {
 				walk(t)
@@ -1932,9 +2017,6 @@ func collectDomainConditions(nodes ...Node) []string {
 			for _, f := range curr.Factors {
 				walk(f)
 			}
-		case *PowNode:
-			walk(curr.Base)
-			walk(curr.Exp)
 		case *UnaryOpNode:
 			walk(curr.Expr)
 		case *RelOpNode:
@@ -2072,28 +2154,27 @@ func buildHasDerivAtCombinator(node Node, varName string) (string, error) {
 		return sub, nil
 
 	case *PowNode:
-		var intExp int64
-		isPosInt := false
-		if rat, ok := n.Exp.(*RationalNode); ok && rat.Val != nil && rat.Val.IsInt() && rat.Val.Sign() > 0 {
-			intExp = rat.Val.Num().Int64()
-			isPosInt = true
-		}
-
-		if isPosInt {
-			if v, ok := n.Base.(*VarNode); ok && v.Name == varName {
-				return fmt.Sprintf("(hasDerivAt_pow %d %s)", intExp, varName), nil
+		if rat, ok := n.Exp.(*RationalNode); ok && rat.Val != nil && rat.Val.IsInt() {
+			if rat.Val.Sign() == 0 {
+				return fmt.Sprintf("(hasDerivAt_const %s 1)", varName), nil
 			}
-			baseComb, err := buildHasDerivAtCombinator(n.Base, varName)
-			if err != nil {
-				return "", err
+			if rat.Val.Sign() > 0 && rat.Val.Num().IsInt64() {
+				intExp := rat.Val.Num().Int64()
+				if v, ok := n.Base.(*VarNode); ok && v.Name == varName {
+					return fmt.Sprintf("(hasDerivAt_pow %d %s)", intExp, varName), nil
+				}
+				baseComb, err := buildHasDerivAtCombinator(n.Base, varName)
+				if err != nil {
+					return "", err
+				}
+				baseSyntax, err := ToLeanSyntax(n.Base)
+				if err != nil {
+					return "", err
+				}
+				baseSyntax = formatCalcTerm(baseSyntax)
+				powComb := fmt.Sprintf("(hasDerivAt_pow %d %s)", intExp, baseSyntax)
+				return fmt.Sprintf("(%s.comp %s %s)", powComb, varName, baseComb), nil
 			}
-			baseSyntax, err := ToLeanSyntax(n.Base)
-			if err != nil {
-				return "", err
-			}
-			baseSyntax = formatCalcTerm(baseSyntax)
-			powComb := fmt.Sprintf("(hasDerivAt_pow %d %s)", intExp, baseSyntax)
-			return fmt.Sprintf("(%s.comp %s %s)", powComb, varName, baseComb), nil
 		}
 
 	case *FuncNode:
@@ -2322,21 +2403,25 @@ func GenerateLeanSourceFromTrace(theoremName string, trace *ProofTrace) (string,
 
 	// Collect variable denominators and domain conditions for calc mode
 	binders := make([]string, 0)
-	seenConds := make(map[string]bool)
+	seenProps := make(map[string]bool)
 	denoms := collectNonzeroDenominators(allNodes...)
-	for i, d := range denoms {
-		normD := strings.Trim(d, "()")
-		if !seenConds[normD] {
-			seenConds[normD] = true
-			binders = append(binders, fmt.Sprintf("(h_denom%d : %s ≠ 0)", i, d))
+	denomIdx := 0
+	for _, d := range denoms {
+		cleanD := unwrapOuterParens(d)
+		prop := fmt.Sprintf("%s ≠ 0", cleanD)
+		if !seenProps[prop] {
+			seenProps[prop] = true
+			binders = append(binders, fmt.Sprintf("(h_denom%d : %s)", denomIdx, prop))
+			denomIdx++
 		}
 	}
 	domConds := collectDomainConditions(allNodes...)
-	for i, dc := range domConds {
-		normDC := strings.Trim(dc, "()")
-		if !seenConds[normDC] {
-			seenConds[normDC] = true
-			binders = append(binders, fmt.Sprintf("(h_dom%d : %s)", i, dc))
+	domIdx := 0
+	for _, dc := range domConds {
+		if !seenProps[dc] {
+			seenProps[dc] = true
+			binders = append(binders, fmt.Sprintf("(h_dom%d : %s)", domIdx, dc))
+			domIdx++
 		}
 	}
 

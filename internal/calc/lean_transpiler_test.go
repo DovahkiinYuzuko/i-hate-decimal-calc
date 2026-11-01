@@ -1125,3 +1125,56 @@ func TestLeanTranspiler_Tier2_CompositeCases(t *testing.T) {
 		t.Errorf("expected denominator condition in calc mode theorem header, got:\n%s", calcSrc)
 	}
 }
+
+func TestLeanTranspiler_ReviewFindings(t *testing.T) {
+	x := NewVar("x")
+	one := mustRational(1, 1)
+
+	// 1. unwrapOuterParens prevents key corruption for (x + 1)
+	xPlus1 := &AddNode{Terms: []Node{x, one}}
+	logXPlus1 := &FuncNode{Name: "log", Args: []Node{xPlus1}}
+	vCert := &VerificationCertificate{
+		Domain:     DomainGeneral,
+		Equation:   "log(x+1) == log(x+1)",
+		IsVerified: true,
+	}
+
+	src, err := GenerateLeanSourceWithConditions("log_composite_proof", vCert, logXPlus1, logXPlus1, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Verify that closing parenthesis is preserved in hypothesis (0 < (x + 1) or 0 < x + 1)
+	if strings.Contains(src, "0 < (x + 1") && !strings.Contains(src, "0 < (x + 1)") {
+		t.Errorf("found corrupted unclosed parenthesis in hypothesis: %s", src)
+	}
+
+	// 2. Fractional power with even denominator (x^(1/2)) requires 0 ≤ x
+	half := mustRational(1, 2)
+	sqrtPow := &PowNode{Base: x, Exp: half}
+	srcPow, err := GenerateLeanSourceWithConditions("even_denom_pow_proof", vCert, sqrtPow, sqrtPow, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(srcPow, "0 ≤ x") {
+		t.Errorf("expected '0 ≤ x' for even denominator power x^(1/2), got:\n%s", srcPow)
+	}
+
+	// 3. Constant power 0 in buildHasDerivAtCombinator returns (hasDerivAt_const varName 1)
+	zero := mustRational(0, 1)
+	xZero := &PowNode{Base: x, Exp: zero}
+	combZero, err := buildHasDerivAtCombinator(xZero, "x")
+	if err != nil {
+		t.Fatalf("unexpected error for x^0 derivative combinator: %v", err)
+	}
+	if combZero != "(hasDerivAt_const x 1)" {
+		t.Errorf("expected '(hasDerivAt_const x 1)', got: %s", combZero)
+	}
+
+	// 4. Double unary minus -(-2) is positive, not negative
+	two := mustRational(2, 1)
+	negTwo := &UnaryOpNode{Op: "-", Expr: two}
+	doubleNegTwo := &UnaryOpNode{Op: "-", Expr: negTwo}
+	if isNegativeExponent(doubleNegTwo) {
+		t.Errorf("expected -(-2) to NOT be recognized as negative exponent")
+	}
+}
