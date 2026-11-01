@@ -14,6 +14,7 @@ INSTALL_DIR="$IHD_HOME/bin"
 EXAM_DIR="$IHD_HOME/exam"
 REFERENCES_DIR="$IHD_HOME/references"
 VERIFIER_SRC_DIR="$IHD_HOME/tools/micro-verifier"
+SYMPY_ORACLE_DIR="$IHD_HOME/tools/sympy-oracle"
 
 mkdir -p "$INSTALL_DIR"
 
@@ -45,6 +46,13 @@ if [ "$LOCAL_MODE" = true ]; then
     if [ -f "$SCRIPT_DIR/tools/micro-verifier/main.go" ]; then
         mkdir -p "$VERIFIER_SRC_DIR"
         cp "$SCRIPT_DIR/tools/micro-verifier/main.go" "$VERIFIER_SRC_DIR/main.go"
+    fi
+    if [ -f "$SCRIPT_DIR/tools/sympy-oracle/sympy_oracle.py" ]; then
+        mkdir -p "$SYMPY_ORACLE_DIR"
+        cp "$SCRIPT_DIR/tools/sympy-oracle/sympy_oracle.py" "$SYMPY_ORACLE_DIR/sympy_oracle.py"
+        if [ -f "$SCRIPT_DIR/tools/sympy-oracle/README.md" ]; then
+            cp "$SCRIPT_DIR/tools/sympy-oracle/README.md" "$SYMPY_ORACLE_DIR/README.md"
+        fi
     fi
 else
     OS="$(uname -s)"
@@ -169,6 +177,13 @@ else
         mkdir -p "$VERIFIER_SRC_DIR"
         cp "$TMP_DIR/tools/micro-verifier/main.go" "$VERIFIER_SRC_DIR/main.go"
     fi
+    if [ -f "$TMP_DIR/tools/sympy-oracle/sympy_oracle.py" ]; then
+        mkdir -p "$SYMPY_ORACLE_DIR"
+        cp "$TMP_DIR/tools/sympy-oracle/sympy_oracle.py" "$SYMPY_ORACLE_DIR/sympy_oracle.py"
+        if [ -f "$TMP_DIR/tools/sympy-oracle/README.md" ]; then
+            cp "$TMP_DIR/tools/sympy-oracle/README.md" "$SYMPY_ORACLE_DIR/README.md"
+        fi
+    fi
 fi
 
 echo ""
@@ -214,6 +229,10 @@ if [ -f "$VERIFIER_SRC_DIR/main.go" ]; then
     echo "Standalone Micro-Verifier binary & source installed:"
     echo "  - Binary: $INSTALL_DIR/micro-verifier"
     echo "  - Source: $VERIFIER_SRC_DIR/main.go"
+fi
+if [ -f "$SYMPY_ORACLE_DIR/sympy_oracle.py" ]; then
+    echo "SymPy Differential Verification Oracle installed:"
+    echo "  - Oracle: $SYMPY_ORACLE_DIR/sympy_oracle.py"
 fi
 if [ -d "$COMPLETIONS_DIR" ]; then
     echo "Shell completion scripts generated in: $COMPLETIONS_DIR"

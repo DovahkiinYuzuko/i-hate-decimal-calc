@@ -16,6 +16,14 @@ const (
 	VerifyCertaintyInconclusive  VerifyCertainty = "INCONCLUSIVE"
 )
 
+// MaxDeterministicPITDegree is the safe upper bound on polynomial degree for deterministic point sampling.
+// Expressions exceeding this degree threshold are evaluated via structural checks or fail-safe to INCONCLUSIVE
+// to prevent denial-of-service (OOM / catastrophic evaluation timeout).
+const MaxDeterministicPITDegree = 2048
+
+// DegreeOverflow sentinel returned by integer-downcasting estimators when degree exceeds int32/int64 bounds.
+const DegreeOverflow = 1 << 30
+
 // IsPurePolynomial checks if the expression tree is a pure polynomial in varName
 // (no division, no negative exponents, no transcendental functions, and no other free variables).
 func IsPurePolynomial(n Node, varName string) bool {
@@ -74,60 +82,93 @@ func IsPurePolynomial(n Node, varName string) bool {
 	}
 }
 
-// EstimateDegreeUpperBound computes a safe compositional upper bound on the degree of varName in node n.
-func EstimateDegreeUpperBound(n Node, varName string) int {
+// EstimateDegreeUpperBoundBig computes a safe compositional upper bound on the degree of varName in node n
+// using arbitrary-precision big.Int. Returns (bound, true) on success, or (nil, false) if the expression
+// is non-polynomial or contains an unbounded/unsupported operation.
+func EstimateDegreeUpperBoundBig(n Node, varName string) (*big.Int, bool) {
 	if n == nil {
-		return 0
+		return big.NewInt(0), true
 	}
 
 	switch v := n.(type) {
 	case *RationalNode, *ConstNode:
-		return 0
+		return big.NewInt(0), true
 
 	case *VarNode:
 		if v.Name == varName {
-			return 1
+			return big.NewInt(1), true
 		}
-		return 0
+		return big.NewInt(0), true
 
 	case *UnaryOpNode:
-		return EstimateDegreeUpperBound(v.Expr, varName)
+		if v.Op == "-" {
+			return EstimateDegreeUpperBoundBig(v.Expr, varName)
+		}
+		return nil, false
 
 	case *AddNode:
-		maxD := 0
+		maxD := big.NewInt(0)
 		for _, term := range v.Terms {
-			d := EstimateDegreeUpperBound(term, varName)
-			if d > maxD {
+			d, ok := EstimateDegreeUpperBoundBig(term, varName)
+			if !ok {
+				return nil, false
+			}
+			if d.Cmp(maxD) > 0 {
 				maxD = d
 			}
 		}
-		return maxD
+		return maxD, true
 
 	case *MulNode:
-		sumD := 0
+		sumD := big.NewInt(0)
 		for _, factor := range v.Factors {
-			sumD += EstimateDegreeUpperBound(factor, varName)
+			d, ok := EstimateDegreeUpperBoundBig(factor, varName)
+			if !ok {
+				return nil, false
+			}
+			sumD.Add(sumD, d)
 		}
-		return sumD
+		return sumD, true
 
 	case *PowNode:
-		baseD := EstimateDegreeUpperBound(v.Base, varName)
-		if rn, ok := v.Exp.(*RationalNode); ok && rn.Val.IsInt() {
-			num := rn.Val.Num()
-			if num.Sign() > 0 && num.IsInt64() {
-				expInt := int(num.Int64())
-				// Guard against arithmetic overflow in degree calculation
-				if expInt > 0 && baseD <= (1<<30)/expInt {
-					return baseD * expInt
-				}
-			}
-			return baseD
+		baseD, ok := EstimateDegreeUpperBoundBig(v.Base, varName)
+		if !ok {
+			return nil, false
 		}
-		return baseD + 1
+		rn, okExp := v.Exp.(*RationalNode)
+		if !okExp || !rn.Val.IsInt() {
+			return nil, false
+		}
+		num := rn.Val.Num()
+		if num.Sign() < 0 {
+			// Negative powers are rational functions, not polynomials
+			return nil, false
+		}
+		if num.Sign() == 0 || baseD.Sign() == 0 {
+			return big.NewInt(0), true
+		}
+		product := new(big.Int).Mul(baseD, num)
+		return product, true
 
 	default:
-		return 1
+		return nil, false
 	}
+}
+
+// EstimateDegreeUpperBound computes a safe compositional upper bound on the degree of varName in node n.
+// Returns a conservative integer, saturating at DegreeOverflow rather than underestimating on huge exponents.
+func EstimateDegreeUpperBound(n Node, varName string) int {
+	bigD, ok := EstimateDegreeUpperBoundBig(n, varName)
+	if !ok {
+		return DegreeOverflow
+	}
+	if bigD.IsInt64() {
+		val := bigD.Int64()
+		if val >= 0 && val <= int64(DegreeOverflow) {
+			return int(val)
+		}
+	}
+	return DegreeOverflow
 }
 
 // ratPowBigInt computes base^exp using binary exponentiation (O(log exp)) without downcasting to int.
@@ -272,6 +313,59 @@ func isUnsupportedError(err error) bool {
 	return len(s) >= 12 && s[:12] == "unsupported:"
 }
 
+// extractMonomial checks if node n is a pure monomial of the form c * varName^k (with k >= 0).
+// Returns (coefficient, exponent, true) if it matches, or (nil, nil, false) otherwise.
+func extractMonomial(n Node, varName string) (*big.Rat, *big.Int, bool) {
+	if n == nil {
+		return nil, nil, false
+	}
+
+	switch v := n.(type) {
+	case *RationalNode:
+		return v.Val, big.NewInt(0), true
+
+	case *VarNode:
+		if v.Name == varName {
+			return big.NewRat(1, 1), big.NewInt(1), true
+		}
+		return nil, nil, false
+
+	case *UnaryOpNode:
+		if v.Op == "-" {
+			c, exp, ok := extractMonomial(v.Expr, varName)
+			if ok {
+				negC := new(big.Rat).Neg(c)
+				return negC, exp, true
+			}
+		}
+		return nil, nil, false
+
+	case *PowNode:
+		if vn, ok := v.Base.(*VarNode); ok && vn.Name == varName {
+			if rn, ok2 := v.Exp.(*RationalNode); ok2 && rn.Val.IsInt() && rn.Val.Sign() >= 0 {
+				return big.NewRat(1, 1), rn.Val.Num(), true
+			}
+		}
+		return nil, nil, false
+
+	case *MulNode:
+		coeff := big.NewRat(1, 1)
+		exp := big.NewInt(0)
+		for _, f := range v.Factors {
+			c, e, ok := extractMonomial(f, varName)
+			if !ok {
+				return nil, nil, false
+			}
+			coeff.Mul(coeff, c)
+			exp.Add(exp, e)
+		}
+		return coeff, exp, true
+
+	default:
+		return nil, nil, false
+	}
+}
+
 // VerifyEquivalencePIT verifies if lhs == rhs algebraically using D+1 deterministic PIT
 // for univariate polynomials, or returns Inconclusive for non-polynomials / multivariate expressions.
 func VerifyEquivalencePIT(lhs, rhs Node, varName string) (VerifyCertainty, *CounterexampleWitness, error) {
@@ -299,13 +393,53 @@ func VerifyEquivalencePIT(lhs, rhs Node, varName string) (VerifyCertainty, *Coun
 		return VerifyCertaintyInconclusive, nil, nil
 	}
 
-	degL := EstimateDegreeUpperBound(lhs, varName)
-	degR := EstimateDegreeUpperBound(rhs, varName)
-	maxDeg := degL
-	if degR > maxDeg {
-		maxDeg = degR
+	// 3. Fast structural check for pure monomials (Claude Sonnet P0 recommendation)
+	// For expressions like c1 * x^n vs c2 * x^m, if exponents differ and coeffs != 0,
+	// they cannot be equivalent. We can refute immediately with an explicit witness at x = 2.
+	coeffL, expL, isMonoL := extractMonomial(lhs, varName)
+	coeffR, expR, isMonoR := extractMonomial(rhs, varName)
+	if isMonoL && isMonoR {
+		if coeffL.Sign() == 0 && coeffR.Sign() == 0 {
+			return VerifyCertaintyExact, nil, nil
+		}
+		if coeffL.Sign() != 0 && coeffR.Sign() != 0 {
+			if expL.Cmp(expR) != 0 || coeffL.Cmp(coeffR) != 0 {
+				// Construct refutation witness at x = 2
+				testPt := big.NewRat(2, 1)
+				vL, _ := EvalAtRational(lhs, varName, testPt)
+				vR, _ := EvalAtRational(rhs, varName, testPt)
+				wit := &CounterexampleWitness{
+					Kind:        WitnessValueMismatch,
+					Assignments: map[string]*big.Rat{varName: testPt},
+					LHSVal:      vL,
+					RHSVal:      vR,
+					Message:     fmt.Sprintf("Monomial degree/coefficient mismatch: LHS has deg %s, RHS has deg %s", expL.String(), expR.String()),
+				}
+				return VerifyCertaintyRefuted, wit, nil
+			}
+			return VerifyCertaintyExact, nil, nil
+		}
 	}
 
+	// 4. Safe degree upper bound estimation using arbitrary precision big.Int
+	bigDegL, okL := EstimateDegreeUpperBoundBig(lhs, varName)
+	bigDegR, okR := EstimateDegreeUpperBoundBig(rhs, varName)
+	if !okL || !okR {
+		return VerifyCertaintyInconclusive, nil, nil
+	}
+
+	maxBigDeg := bigDegL
+	if bigDegR.Cmp(maxBigDeg) > 0 {
+		maxBigDeg = bigDegR
+	}
+
+	// If maximum degree exceeds the deterministic budget (2048), fail-safe to Inconclusive
+	// to prevent catastrophic point sampling overhead, or avoid false EXACT on untrusted bounds.
+	if maxBigDeg.Cmp(big.NewInt(MaxDeterministicPITDegree)) > 0 {
+		return VerifyCertaintyInconclusive, nil, nil
+	}
+
+	maxDeg := int(maxBigDeg.Int64())
 	neededPoints := maxDeg + 1
 	if neededPoints < 3 {
 		neededPoints = 3

@@ -205,7 +205,7 @@ ihd "１＋２×３"
 | `--typst` | 組版システム Typst の数式記法（`$ ... $`）で出力。<br>`ihd --typst "1/2 + sqrt(2)"` |
 | `--latex` | LaTeX 形式（`$$ ... $$`）で数式を出力。<br>`ihd --latex "1/2 + sqrt(2)"` |
 | `--ascii` | 数学記号（`√`, `π`）をASCII文字列（`sqrt`, `pi`）にフォールバック。<br>`ihd --ascii "sqrt(2) + pi"` |
-| `--approx` | 厳密解の横に参考用の浮動小数点小数近似値（float64）を併記。<br>`ihd --approx "sqrt(2)"` |
+| `--approx` | 有理数区間演算に基づく任意精度 `big.Float` 近似（`--approx-digits`）および外側丸めによる厳密誤差上限 `±` 表示。<br>`ihd --approx "sqrt(2)"` |
 | `--verify` | 計算結果に対し、定義式や導関数に基づく逆算検算を実行。<br>`ihd --verify "integrate(1/(x^2 + 1), x)"` |
 | `--certificate [file]` | 計算結果と導出ステップ列を証明書 JSON（`ihd-proof-trace-v1`）として出力または保存。<br>`ihd --certificate cert.json "factor(x^2 - 1)"` |
 | `--replay <file>` | 保存された証明書 JSON ファイルを読み込み、各ステップの残差が0かを再検証。<br>`ihd --replay cert.json` |
@@ -262,6 +262,13 @@ pwsh exam/exam.ps1
 
 # Linux / macOS (Bash)
 ./exam/exam.sh
+```
+
+#### 5. SymPy 常駐差分ファジングオラクル (`tools/sympy-oracle`)
+配布パッケージにも同梱されている Python スクリプト（`tools/sympy-oracle/sympy_oracle.py`）により、常駐 JSON-RPC プロセス経由で SymPy との差分テスト（微分・代数簡約・有理式等）を高速に実行可能です。
+```bash
+# SymPy オラクル単体テストおよび差分検証
+go test -v ./internal/calc -run "^(TestSymPyClient_|TestDifferentialOracle_)"
 ```
 
 ---
@@ -472,7 +479,7 @@ ihd "１＋２×３"
 | `--typst` | Output expression in Typst math mode format (`$ ... $`).<br>`ihd --typst "1/2 + sqrt(2)"` |
 | `--latex` | Output expression in LaTeX format (`$$ ... $$`).<br>`ihd --latex "1/2 + sqrt(2)"` |
 | `--ascii` | Output using standard ASCII strings (`sqrt`, `pi`) instead of Unicode symbols.<br>`ihd --ascii "sqrt(2) + pi"` |
-| `--approx` | Display approximate floating-point decimal value alongside the exact form.<br>`ihd --approx "sqrt(2)"` |
+| `--approx` | Display arbitrary-precision `big.Float` decimal approximation (`--approx-digits`) with rigorous directed outward rounding interval bounds (`±`).<br>`ihd --approx "sqrt(2)"` |
 | `--verify` | Reverse-verifies algebraic correctness by checking residual vanishing.<br>`ihd --verify "integrate(1/(x^2 + 1), x)"` |
 | `--certificate [file]` | Exports calculation steps and residuals into a certificate JSON file.<br>`ihd --certificate cert.json "factor(x^2 - 1)"` |
 | `--replay <file>` | Reads a certificate JSON file and verifies that residuals vanish.<br>`ihd --replay cert.json` |
@@ -529,6 +536,13 @@ pwsh exam/exam.ps1
 
 # Linux / macOS (Bash)
 ./exam/exam.sh
+```
+
+#### 5. Resident SymPy Differential Fuzzing Oracle (`tools/sympy-oracle`)
+Bundled in binary release packages, the standalone script (`tools/sympy-oracle/sympy_oracle.py`) enables high-throughput differential equivalence verification against SymPy over a persistent JSON-RPC IPC channel.
+```bash
+# Run SymPy differential oracle unit tests
+go test -v ./internal/calc -run "^(TestSymPyClient_|TestDifferentialOracle_)"
 ```
 
 ---

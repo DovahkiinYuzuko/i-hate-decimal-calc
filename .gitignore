@@ -91,3 +91,6 @@
 !tools/reference-builder/assets/**
 !tools/reference-builder/README.md
 !tools/reference-builder/NOTICE.md
+
+!tools/sympy-oracle/
+!tools/sympy-oracle/sympy_oracle.py

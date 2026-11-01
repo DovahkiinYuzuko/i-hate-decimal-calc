@@ -127,3 +127,52 @@ func TestRatPowBigInt_BinaryExponentiation(t *testing.T) {
 		t.Errorf("expected 32, got %s", resNeg.String())
 	}
 }
+
+func TestVerifyEquivalencePIT_HugeExponent_Soundness(t *testing.T) {
+	// x^2147483648 vs x^2 (False identity with giant exponent)
+	// Must NEVER return VerifyCertaintyExact!
+	hugeExp := new(big.Int)
+	hugeExp.SetString("2147483648", 10)
+	hugePow, err := NewPow(NewVar("x"), NewRationalFromBigRat(new(big.Rat).SetInt(hugeExp)))
+	if err != nil {
+		t.Fatalf("failed to create huge pow node: %v", err)
+	}
+
+	x2, _ := NewPow(NewVar("x"), mustRational(2, 1))
+
+	cert, wit, err := VerifyEquivalencePIT(hugePow, x2, "x")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cert == VerifyCertaintyExact {
+		t.Fatalf("CRITICAL SOUNDNESS BUG: x^2147483648 vs x^2 certified as EXACT!")
+	}
+	t.Logf("Huge exponent test returned certainty: %s, witness: %v", cert, wit)
+}
+
+func TestVerifyEquivalencePIT_ExceedsDegreeCap_Inconclusive(t *testing.T) {
+	// (x + 1)^3000 vs (x + 2)^3000 (Non-monomial polynomials exceeding degree budget 2048)
+	// Must fail safe to INCONCLUSIVE instead of attempting 3001 point evaluations.
+	xPlus1 := NewAdd([]Node{NewVar("x"), mustRational(1, 1)})
+	poly1, err := NewPow(xPlus1, mustRational(3000, 1))
+	if err != nil {
+		t.Fatalf("failed to create poly1: %v", err)
+	}
+
+	xPlus2 := NewAdd([]Node{NewVar("x"), mustRational(2, 1)})
+	poly2, err := NewPow(xPlus2, mustRational(3000, 1))
+	if err != nil {
+		t.Fatalf("failed to create poly2: %v", err)
+	}
+
+	cert, wit, err := VerifyEquivalencePIT(poly1, poly2, "x")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cert != VerifyCertaintyInconclusive {
+		t.Errorf("expected INCONCLUSIVE for degree 3000 exceeding cap %d, got %s", MaxDeterministicPITDegree, cert)
+	}
+	if wit != nil {
+		t.Errorf("expected nil witness for inconclusive, got %v", wit)
+	}
+}

@@ -12,6 +12,7 @@ $InstallDir = "$IhdHome\bin"
 $ExamDir = "$IhdHome\exam"
 $ReferencesDir = "$IhdHome\references"
 $VerifierSrcDir = "$IhdHome\tools\micro-verifier"
+$SympyOracleDir = "$IhdHome\tools\sympy-oracle"
 
 if (-not (Test-Path $InstallDir)) {
     New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
@@ -68,6 +69,17 @@ if ($Local) {
             New-Item -ItemType Directory -Path $VerifierSrcDir -Force | Out-Null
         }
         Copy-Item -Path $LocalVerifierSrc -Destination (Join-Path $VerifierSrcDir "main.go") -Force
+    }
+    $LocalOracleSrc = Join-Path $LocalRoot "tools\sympy-oracle\sympy_oracle.py"
+    if (Test-Path $LocalOracleSrc) {
+        if (-not (Test-Path $SympyOracleDir)) {
+            New-Item -ItemType Directory -Path $SympyOracleDir -Force | Out-Null
+        }
+        Copy-Item -Path $LocalOracleSrc -Destination (Join-Path $SympyOracleDir "sympy_oracle.py") -Force
+        $LocalOracleReadme = Join-Path $LocalRoot "tools\sympy-oracle\README.md"
+        if (Test-Path $LocalOracleReadme) {
+            Copy-Item -Path $LocalOracleReadme -Destination (Join-Path $SympyOracleDir "README.md") -Force
+        }
     }
 } else {
     # Determine architecture
@@ -170,6 +182,18 @@ if ($Local) {
             }
             Copy-Item -Path $VerifierGoSource -Destination (Join-Path $VerifierSrcDir "main.go") -Force
         }
+
+        $OraclePySource = Join-Path $TmpExtract "tools\sympy-oracle\sympy_oracle.py"
+        if (Test-Path $OraclePySource) {
+            if (-not (Test-Path $SympyOracleDir)) {
+                New-Item -ItemType Directory -Path $SympyOracleDir -Force | Out-Null
+            }
+            Copy-Item -Path $OraclePySource -Destination (Join-Path $SympyOracleDir "sympy_oracle.py") -Force
+            $OracleReadmeSource = Join-Path $TmpExtract "tools\sympy-oracle\README.md"
+            if (Test-Path $OracleReadmeSource) {
+                Copy-Item -Path $OracleReadmeSource -Destination (Join-Path $SympyOracleDir "README.md") -Force
+            }
+        }
     } finally {
         if (Test-Path $TmpZip) { Remove-Item -Path $TmpZip -Force -ErrorAction SilentlyContinue }
         if (Test-Path $TmpSums) { Remove-Item -Path $TmpSums -Force -ErrorAction SilentlyContinue }
@@ -264,5 +288,9 @@ if (Test-Path (Join-Path $VerifierSrcDir "main.go")) {
     Write-Host "Standalone Micro-Verifier binary & source installed:" -ForegroundColor Cyan
     Write-Host "  - Binary: $InstallDir\micro-verifier.exe" -ForegroundColor Gray
     Write-Host "  - Source: $VerifierSrcDir\main.go" -ForegroundColor Gray
+}
+if (Test-Path (Join-Path $SympyOracleDir "sympy_oracle.py")) {
+    Write-Host "SymPy Differential Verification Oracle installed:" -ForegroundColor Cyan
+    Write-Host "  - Oracle: $SympyOracleDir\sympy_oracle.py" -ForegroundColor Gray
 }
 Write-Host "Run 'ihd --help' or 'ihd' to start calculating." -ForegroundColor Cyan
