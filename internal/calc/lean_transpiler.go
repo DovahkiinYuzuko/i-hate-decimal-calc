@@ -1058,9 +1058,10 @@ func GenerateLeanSourceWithConditions(theoremName string, cert *VerificationCert
 	// Replace default theorem name with requested one
 		theoremCode = strings.ReplaceAll(theoremCode, "ihd_verified_proof", escapeLeanIdent(theoremName))
 
-	// Inject domain hypotheses if present, or extract from variable denominators
+	// Inject domain hypotheses if present, and collect variable denominators
 	binders := make([]string, 0)
 	hasNonzeroHyp := false
+	seenNonzero := make(map[string]bool)
 
 	if condSet != nil && condSet.Len() > 0 {
 		conds := condSet.Conditions()
@@ -1074,16 +1075,20 @@ func GenerateLeanSourceWithConditions(theoremName string, cert *VerificationCert
 			case CondNonZero:
 				binders = append(binders, fmt.Sprintf("(%s : %s ≠ 0)", hName, exprLean))
 				hasNonzeroHyp = true
+				seenNonzero[exprLean] = true
 			case CondNonNegative:
 				binders = append(binders, fmt.Sprintf("(%s : 0 ≤ %s)", hName, exprLean))
 			case CondPositive:
 				binders = append(binders, fmt.Sprintf("(%s : 0 < %s)", hName, exprLean))
 			}
 		}
-	} else {
-		// Collect variable denominators automatically to prevent division junk values
-		denoms := collectNonzeroDenominators(allNodes...)
-		for i, d := range denoms {
+	}
+
+	// Always collect variable denominators automatically to prevent division junk values
+	denoms := collectNonzeroDenominators(allNodes...)
+	for i, d := range denoms {
+		if !seenNonzero[d] {
+			seenNonzero[d] = true
 			hName := fmt.Sprintf("h_denom%d", i)
 			binders = append(binders, fmt.Sprintf("(%s : %s ≠ 0)", hName, d))
 			hasNonzeroHyp = true
@@ -1831,7 +1836,7 @@ func buildHasDerivAtCombinator(node Node, varName string) string {
 			leanVal = "0"
 		}
 		leanVal = strings.ReplaceAll(leanVal, ": ℚ", ": ℝ")
-		if strings.HasPrefix(leanVal, "(") && strings.HasSuffix(leanVal, ")") {
+		if isEnclosedInParens(leanVal) {
 			leanVal = fmt.Sprintf("(%s : ℝ)", leanVal[1:len(leanVal)-1])
 		} else {
 			leanVal = fmt.Sprintf("(%s : ℝ)", leanVal)
@@ -1914,7 +1919,8 @@ func buildHasDerivAtCombinator(node Node, varName string) string {
 		}
 	}
 
-	return fmt.Sprintf("(hasDerivAt_id' %s)", varName)
+	// Fallback for unsupported composite nodes: treat as constant derivative 0 rather than bogus identity derivative
+	return fmt.Sprintf("(hasDerivAt_const %s 0)", varName)
 }
 
 // formatCalcTerm ensures the Lean expression is syntactically safe on either side of an equality in a calc line.
@@ -1979,8 +1985,8 @@ func selectTacticForStep(step ProofStep) string {
 		return "by ring"
 	}
 
-	// Robust single-line fallback ladder
-	return "by first | norm_num | omega | linarith | (field_simp; ring) | ring"
+	// Robust single-line fallback ladder with explicit done check to avoid partial-success hanging
+	return "by first | norm_num | omega | linarith | (field_simp; ring; done) | (ring; done)"
 }
 
 // ProofTraceToLeanCalc transforms a ProofTrace into a Lean 4 'calc' block.
