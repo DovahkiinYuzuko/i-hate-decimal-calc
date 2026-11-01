@@ -183,7 +183,7 @@ func TestTranspileCertificateIRToLean_Direct(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(leanDeriv, "deriv (fun x => F) x = x := by simp") {
+	if !strings.Contains(leanDeriv, "HasDerivAt (fun x => F) (x) x") || !strings.Contains(leanDeriv, "HasDerivAt.congr_deriv") {
 		t.Errorf("unexpected Lean output: %s", leanDeriv)
 	}
 
@@ -709,3 +709,146 @@ func TestGenerateLeanSource_IdealDecomposition(t *testing.T) {
 
 
 
+
+
+func TestLeanTranspiler_HasDerivAt_Calculus(t *testing.T) {
+	x := NewVar("x")
+	three := mustRational(3, 1)
+	oneThird := mustRational(1, 3)
+	x3 := &PowNode{Base: x, Exp: three}
+	f := &PowNode{Base: x, Exp: mustRational(2, 1)} // x^2
+	F := &MulNode{Factors: []Node{oneThird, x3}}   // (1/3) * x^3
+
+	cert := NewDerivCertificate(f, F, mustRational(0, 1), "x", true, "Integration holds")
+	vCert := &VerificationCertificate{
+		Domain:     DomainIntegral,
+		Equation:   cert.EquationString(),
+		IsVerified: true,
+		CertIR:     cert,
+	}
+
+	src, err := GenerateLeanSource("integral_proof", vCert, f, F)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !strings.Contains(src, "HasDerivAt") {
+		t.Errorf("expected HasDerivAt predicate in: %s", src)
+	}
+	if !strings.Contains(src, "congr_deriv") {
+		t.Errorf("expected congr_deriv bridge in: %s", src)
+	}
+	if !strings.Contains(src, "Mathlib.Analysis.Calculus.Deriv.Basic") {
+		t.Errorf("missing Deriv.Basic import in: %s", src)
+	}
+	if !strings.Contains(src, "Mathlib.Analysis.Calculus.Deriv.Pow") {
+		t.Errorf("missing Deriv.Pow import in: %s", src)
+	}
+}
+
+func TestLeanTranspiler_DomainTypes(t *testing.T) {
+	// 1. Integer domain for Pell certificate
+	x := NewVar("x")
+	y := NewVar("y")
+	pellCert := NewPellCertificate(mustRational(2, 1), mustRational(3, 1), mustRational(2, 1), mustRational(0, 1), true, "Pell solution")
+	vPell := &VerificationCertificate{
+		Domain:     DomainPell,
+		Equation:   pellCert.EquationString(),
+		IsVerified: true,
+		CertIR:     pellCert,
+	}
+	pellSrc, err := GenerateLeanSource("pell_proof", vPell, x, y)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(pellSrc, "variable (x y : ℤ)") {
+		t.Errorf("expected Int domain annotation in: %s", pellSrc)
+	}
+	if !strings.Contains(pellSrc, "Mathlib.Data.Int.Basic") {
+		t.Errorf("missing Int import in: %s", pellSrc)
+	}
+
+	// 2. Real domain for trigonometric nodes
+	sinX := &FuncNode{Name: "sin", Args: []Node{x}}
+	idCert := NewIdentityCertificate(IdentityKindEquivalence, sinX, sinX, mustRational(0, 1), true, "Trig identity")
+	vReal := &VerificationCertificate{
+		Domain:     DomainGeneral,
+		Equation:   idCert.EquationString(),
+		IsVerified: true,
+		CertIR:     idCert,
+	}
+	realSrc, err := GenerateLeanSource("real_proof", vReal, sinX, sinX)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(realSrc, "variable (x : ℝ)") {
+		t.Errorf("expected Real domain annotation in: %s", realSrc)
+	}
+	if !strings.Contains(realSrc, "Mathlib.Basic.Real.Basic") {
+		t.Errorf("missing Real import in: %s", realSrc)
+	}
+
+	// 3. Complex domain for imaginary unit
+	iConst := &ConstNode{Name: "i"}
+	idComplex := NewIdentityCertificate(IdentityKindEquivalence, iConst, iConst, mustRational(0, 1), true, "Complex identity")
+	vComplex := &VerificationCertificate{
+		Domain:     DomainGeneral,
+		Equation:   idComplex.EquationString(),
+		IsVerified: true,
+		CertIR:     idComplex,
+	}
+	complexSrc, err := GenerateLeanSource("complex_proof", vComplex, iConst, iConst)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(complexSrc, "Mathlib.Data.Complex.Basic") {
+		t.Errorf("missing Complex import in: %s", complexSrc)
+	}
+}
+
+func TestLeanTranspiler_NonzeroDenominatorHypotheses(t *testing.T) {
+	x := NewVar("x")
+	minusOne := mustRational(-1, 1)
+	xMinus1 := &AddNode{Terms: []Node{x, minusOne}}
+	// Expr with 1 / (x - 1) represented as (x - 1) ^ -1
+	invXMinus1 := &PowNode{Base: xMinus1, Exp: mustRational(-1, 1)}
+
+	idCert := NewIdentityCertificate(IdentityKindApart, invXMinus1, invXMinus1, mustRational(0, 1), true, "Rational identity")
+	vCert := &VerificationCertificate{
+		Domain:     DomainRationalApart,
+		Equation:   idCert.EquationString(),
+		IsVerified: true,
+		CertIR:     idCert,
+	}
+
+	src, err := GenerateLeanSource("rational_proof", vCert, invXMinus1, invXMinus1)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !strings.Contains(src, "≠ 0") {
+		t.Errorf("expected non-zero denominator hypothesis in: %s", src)
+	}
+	if !strings.Contains(src, "field_simp") {
+		t.Errorf("expected field_simp tactic in: %s", src)
+	}
+	if !strings.Contains(src, "Mathlib.Tactic.FieldSimp") {
+		t.Errorf("missing FieldSimp import in: %s", src)
+	}
+}
+
+func TestLeanTranspiler_TacticLadderInCalc(t *testing.T) {
+	x := NewVar("x")
+	sinX := &FuncNode{Name: "sin", Args: []Node{x}}
+	// Complex/Transcendental step with generic/unknown rule
+	step := ProofStep{
+		Before: sinX,
+		After:  sinX,
+		Rule:   "UnknownGenericTransform",
+	}
+
+	tactic := selectTacticForStep(step)
+	if !strings.Contains(tactic, "by first") {
+		t.Errorf("expected fallback ladder 'by first' for generic transcendental step, got: %s", tactic)
+	}
+}

@@ -566,8 +566,8 @@ func TestCLI_LeanAndLeanFile(t *testing.T) {
 		t.Fatalf("expected exit code 0, got %d. stderr: %s", codeExp, errOutExp.String())
 	}
 	expStr := outExp.String()
-	if !strings.Contains(expStr, "by simp") {
-		t.Errorf("expected 'by simp' for exp deriv proof, got %q", expStr)
+	if !strings.Contains(expStr, "HasDerivAt") || !strings.Contains(expStr, "congr_deriv") {
+		t.Errorf("expected HasDerivAt with congr_deriv for exp deriv proof, got %q", expStr)
 	}
 	if !strings.Contains(expStr, "#print axioms ihd_certified_proof") {
 		t.Errorf("expected '#print axioms ihd_certified_proof' in output, got %q", expStr)

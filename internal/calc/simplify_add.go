@@ -215,14 +215,19 @@ func simplifyAdd(terms []Node) (Node, error) {
 // canonicalTermKey generates a canonical map key for like-term collection,
 // treating commutative product factors equivalently (e.g. x*y == y*x).
 func canonicalTermKey(n Node) string {
+	if n == nil {
+		return "<nil>"
+	}
 	mul, ok := n.(*MulNode)
 	if !ok {
 		return n.String()
 	}
 
-	factorStrs := make([]string, len(mul.Factors))
-	for i, f := range mul.Factors {
-		factorStrs[i] = f.String()
+	factorStrs := make([]string, 0, len(mul.Factors))
+	for _, f := range mul.Factors {
+		if f != nil {
+			factorStrs = append(factorStrs, f.String())
+		}
 	}
 	sort.Strings(factorStrs)
 	return strings.Join(factorStrs, "*")

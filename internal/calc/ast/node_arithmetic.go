@@ -90,6 +90,9 @@ type AddNode struct {
 func NewAdd(terms []Node) *AddNode {
 	var flattened []Node
 	for _, t := range terms {
+		if t == nil {
+			continue
+		}
 		if add, ok := t.(*AddNode); ok {
 			flattened = append(flattened, add.Terms...)
 		} else {
@@ -104,6 +107,10 @@ func (n *AddNode) Type() NodeType { return NodeAdd }
 func (n *AddNode) String() string {
 	strs := make([]string, len(n.Terms))
 	for i, t := range n.Terms {
+		if t == nil {
+			strs[i] = "<nil>"
+			continue
+		}
 		strs[i] = t.String()
 	}
 	return strings.Join(strs, " + ")
@@ -135,6 +142,9 @@ type MulNode struct {
 func NewMul(factors []Node) *MulNode {
 	var flattened []Node
 	for _, f := range factors {
+		if f == nil {
+			continue
+		}
 		if mul, ok := f.(*MulNode); ok {
 			flattened = append(flattened, mul.Factors...)
 		} else {
@@ -175,6 +185,10 @@ func (n *MulNode) String() string {
 	}
 	strs := make([]string, len(n.Factors))
 	for i, f := range n.Factors {
+		if f == nil {
+			strs[i] = "<nil>"
+			continue
+		}
 		s := f.String()
 		if _, isAdd := f.(*AddNode); isAdd {
 			s = fmt.Sprintf("(%s)", s)
