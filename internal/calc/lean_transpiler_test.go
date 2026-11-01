@@ -852,3 +852,148 @@ func TestLeanTranspiler_TacticLadderInCalc(t *testing.T) {
 		t.Errorf("expected fallback ladder 'by first' for generic transcendental step, got: %s", tactic)
 	}
 }
+
+func TestLeanTranspiler_Soundness_UnsupportedDerivNode(t *testing.T) {
+	x := NewVar("x")
+	// x^(1/2) has rational exponent not yet directly supported as a combinator
+	half := mustRational(1, 2)
+	unsupportedPow := &PowNode{Base: x, Exp: half}
+
+	cert := NewDerivCertificate(unsupportedPow, unsupportedPow, mustRational(0, 1), "x", true, "Unsupported test")
+	vCert := &VerificationCertificate{
+		Domain:     DomainIntegral,
+		Equation:   cert.EquationString(),
+		IsVerified: true,
+		CertIR:     cert,
+	}
+
+	_, err := GenerateLeanSource("unsupported_deriv", vCert, unsupportedPow, unsupportedPow)
+	if err == nil {
+		t.Fatalf("expected error for unsupported derivative node, but got nil")
+	}
+	if !strings.Contains(err.Error(), "unsupported AST node") {
+		t.Errorf("expected 'unsupported AST node' error message, got: %v", err)
+	}
+}
+
+func TestLeanTranspiler_Soundness_EmptyIdealDecomposition(t *testing.T) {
+	x := NewVar("x")
+	// IdealDecompositionCertificate with empty syzygies must not cheat with 1 = 1 := by rfl
+	cert := NewIdealDecompositionCertificate(
+		[]Node{x},
+		[][]Node{{x}},
+		[][]Node{{x}},
+		0,
+		nil, // empty syzygies
+		nil,
+		nil,
+		mustRational(0, 1),
+		true,
+		"Empty syzygies",
+	)
+
+	_, err := TranspileCertificateIRToLean(cert)
+	if err == nil {
+		t.Fatalf("expected error for empty ideal decomposition certificate, got nil")
+	}
+	if !strings.Contains(err.Error(), "no syzygies available") {
+		t.Errorf("expected 'no syzygies available' error, got: %v", err)
+	}
+}
+
+func TestLeanTranspiler_Soundness_UnsupportedCertificates(t *testing.T) {
+	// 1. ODECertificate must return explicit unsupported error
+	odeCert := &ODECertificate{
+		BaseCertificate: BaseCertificate{Verified: true},
+		ODE:             NewVar("ode"),
+		Solution:        NewVar("sol"),
+		DependentVar:    "y",
+		IndependentVar:  "x",
+	}
+	_, err := TranspileCertificateIRToLean(odeCert)
+	if err == nil || !strings.Contains(err.Error(), "ODECertificate is not yet supported") {
+		t.Errorf("expected unsupported ODE error, got: %v", err)
+	}
+
+	// 2. WZCertificate must return explicit unsupported error
+	wzCert := &WZCertificate{
+		BaseCertificate:     BaseCertificate{Verified: true},
+		Summand:             NewVar("F"),
+		CertificateFunction: NewVar("G"),
+	}
+	_, err = TranspileCertificateIRToLean(wzCert)
+	if err == nil || !strings.Contains(err.Error(), "WZCertificate is not yet supported") {
+		t.Errorf("expected unsupported WZ error, got: %v", err)
+	}
+
+	// 3. ImpossibilityCertificate with unknown kind must return explicit unsupported error
+	impCert := &ImpossibilityCertificate{
+		BaseCertificate: BaseCertificate{Verified: true},
+		Kind:            "UnknownImpossibilityKind",
+		Problem:         NewVar("prob"),
+	}
+	_, err = TranspileCertificateIRToLean(impCert)
+	if err == nil || !strings.Contains(err.Error(), "unsupported impossibility kind") {
+		t.Errorf("expected unsupported impossibility kind error, got: %v", err)
+	}
+}
+
+func TestLeanTranspiler_Soundness_IntegerRelationDomain(t *testing.T) {
+	// 1. Pure integer relation -> DomainInt
+	two := mustRational(2, 1)
+	three := mustRational(3, 1)
+	pureIntCert := NewIntegerRelationCertificate(
+		[]Node{two, three},
+		[]Node{mustRational(-3, 1), mustRational(2, 1)},
+		mustRational(0, 1),
+		true,
+		"Pure int",
+	)
+	domain := inferTheoremDomainType(pureIntCert)
+	if domain != DomainInt {
+		t.Errorf("expected DomainInt for pure integer relation, got: %s", domain)
+	}
+
+	// 2. Relation with real node (sqrt(2)) -> DomainReal
+	sqrt2 := &SqrtNode{Radicand: two}
+	realCert := NewIntegerRelationCertificate(
+		[]Node{sqrt2, two},
+		[]Node{mustRational(1, 1), mustRational(-1, 1)},
+		mustRational(0, 1),
+		true,
+		"Real relation",
+	)
+	domainReal := inferTheoremDomainType(realCert)
+	if domainReal != DomainReal {
+		t.Errorf("expected DomainReal for real integer relation, got: %s", domainReal)
+	}
+}
+
+func TestLeanTranspiler_Soundness_FactoredDenominators(t *testing.T) {
+	x := NewVar("x")
+	minusOne := mustRational(-1, 1)
+	xMinus1 := &AddNode{Terms: []Node{x, minusOne}}
+
+	// (x * (x - 1))^-1
+	mulBase := &MulNode{Factors: []Node{x, xMinus1}}
+	invMul := &PowNode{Base: mulBase, Exp: minusOne}
+
+	vCert := &VerificationCertificate{
+		Domain:     DomainGeneral,
+		Equation:   "inv == inv",
+		IsVerified: true,
+	}
+
+	src, err := GenerateLeanSourceWithConditions("factored_denom_proof", vCert, invMul, invMul, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Must contain both x ≠ 0 and (x - 1) ≠ 0
+	if !strings.Contains(src, "x ≠ 0") {
+		t.Errorf("expected 'x ≠ 0' in generated source: %s", src)
+	}
+	if !strings.Contains(src, "(x - 1) ≠ 0") && !strings.Contains(src, "-(1) + x ≠ 0") && !strings.Contains(src, "x - 1 ≠ 0") {
+		t.Errorf("expected factored term '(x - 1) ≠ 0' in generated source: %s", src)
+	}
+}

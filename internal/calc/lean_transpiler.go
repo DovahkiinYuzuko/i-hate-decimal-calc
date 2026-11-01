@@ -411,11 +411,11 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 	case *DerivCertificate:
 		fStr, err := ToLeanSyntax(c.Integrand)
 		if err != nil {
-			fStr = "f"
+			return "", fmt.Errorf("transpile integrand: %w", err)
 		}
 		resStr, err := ToLeanSyntax(c.Antiderivative)
 		if err != nil {
-			resStr = "F"
+			return "", fmt.Errorf("transpile antiderivative: %w", err)
 		}
 		fStr = strings.ReplaceAll(fStr, ": ℚ", ": ℝ")
 		resStr = strings.ReplaceAll(resStr, ": ℚ", ": ℝ")
@@ -423,7 +423,10 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 		if intVar == "" {
 			intVar = "x"
 		}
-		combinatorTerm := buildHasDerivAtCombinator(c.Antiderivative, intVar)
+		combinatorTerm, err := buildHasDerivAtCombinator(c.Antiderivative, intVar)
+		if err != nil {
+			return "", fmt.Errorf("build derivative proof: %w", err)
+		}
 		combinatorTerm = strings.ReplaceAll(combinatorTerm, ": ℚ", ": ℝ")
 		equalityStr = fmt.Sprintf("HasDerivAt (fun %s => %s) (%s) %s", intVar, resStr, fStr, intVar)
 		tactic = fmt.Sprintf("by exact HasDerivAt.congr_deriv (%s) (by first | (ring; done) | (dsimp; ring) | (dsimp; field_simp; ring) | rfl)", combinatorTerm)
@@ -479,14 +482,10 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 		}
 
 	case *ODECertificate:
-		odeStr, _ := ToLeanSyntax(c.ODE)
-		solStr, _ := ToLeanSyntax(c.Solution)
-		equalityStr = fmt.Sprintf("%s [%s(%s) = %s] = 0", odeStr, c.DependentVar, c.IndependentVar, solStr)
-		tactic = "by ring"
+		return "", fmt.Errorf("lean transpilation for ODECertificate is not yet supported in Mathlib4")
 
 	case *WZCertificate:
-		equalityStr = c.EquationString()
-		tactic = "by ring"
+		return "", fmt.Errorf("lean transpilation for WZCertificate is not yet supported in Mathlib4")
 
 	case *GeometricCertificate:
 		return transpileGeometricCertificateIR(c, "ihd_verified_proof")
@@ -759,35 +758,45 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 	case *IdealDecompositionCertificate:
 		var eqs []string
 		allSyzygies := append(append([]IdealSyzygyRelation{}, c.ForwardSyzygies...), c.BackwardSyzygies...)
-		if len(allSyzygies) > 0 {
-			for _, syz := range allSyzygies {
-				lhsStr, _ := ToLeanSyntax(syz.TargetNode)
-				var terms []string
-				for j, q := range syz.CombCoeffs {
-					qStr, _ := ToLeanSyntax(q)
-					gStr, _ := ToLeanSyntax(syz.Gens[j])
-					if qStr == "1" {
-						terms = append(terms, gStr)
-					} else {
-						terms = append(terms, fmt.Sprintf("(%s) * (%s)", qStr, gStr))
-					}
-				}
-				rhs := "0"
-				if len(terms) > 0 {
-					rhs = strings.Join(terms, " + ")
-				}
-				eqs = append(eqs, fmt.Sprintf("(%s = %s)", lhsStr, rhs))
+		if len(allSyzygies) == 0 {
+			return "", fmt.Errorf("cannot transpile IdealDecompositionCertificate: no syzygies available")
+		}
+		for _, syz := range allSyzygies {
+			if len(syz.CombCoeffs) != len(syz.Gens) {
+				return "", fmt.Errorf("invalid syzygy relation: mismatched CombCoeffs and Gens length (%d != %d)", len(syz.CombCoeffs), len(syz.Gens))
 			}
-			if len(eqs) == 1 {
-				equalityStr = eqs[0]
-				tactic = "by ring"
-			} else {
-				equalityStr = strings.Join(eqs, " ∧ ")
-				tactic = "by repeat constructor <;> ring"
+			lhsStr, err := ToLeanSyntax(syz.TargetNode)
+			if err != nil {
+				return "", fmt.Errorf("transpile syzygy target: %w", err)
 			}
+			var terms []string
+			for j, q := range syz.CombCoeffs {
+				qStr, err := ToLeanSyntax(q)
+				if err != nil {
+					return "", fmt.Errorf("transpile syzygy coeff: %w", err)
+				}
+				gStr, err := ToLeanSyntax(syz.Gens[j])
+				if err != nil {
+					return "", fmt.Errorf("transpile syzygy gen: %w", err)
+				}
+				if qStr == "1" {
+					terms = append(terms, gStr)
+				} else {
+					terms = append(terms, fmt.Sprintf("(%s) * (%s)", qStr, gStr))
+				}
+			}
+			rhs := "0"
+			if len(terms) > 0 {
+				rhs = strings.Join(terms, " + ")
+			}
+			eqs = append(eqs, fmt.Sprintf("(%s = %s)", lhsStr, rhs))
+		}
+		if len(eqs) == 1 {
+			equalityStr = eqs[0]
+			tactic = "by ring"
 		} else {
-			equalityStr = "1 = 1"
-			tactic = "by rfl"
+			equalityStr = strings.Join(eqs, " ∧ ")
+			tactic = "by repeat constructor <;> ring"
 		}
 
 	case *RecurrenceCertificate:
@@ -831,12 +840,14 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 
 	case *ImpossibilityCertificate:
 		if c.Kind == ImpossibilityAbelRuffini {
-			fStr, _ := ToLeanSyntax(c.Problem)
+			fStr, err := ToLeanSyntax(c.Problem)
+			if err != nil {
+				return "", fmt.Errorf("transpile problem polynomial: %w", err)
+			}
 			equalityStr = fmt.Sprintf("¬ IsSolvable (Polynomial.galoisGroup (%s : Polynomial ℚ))", fStr)
 			tactic = "by decide"
 		} else {
-			equalityStr = "False"
-			tactic = "by contradiction"
+			return "", fmt.Errorf("unsupported impossibility kind %q for Lean 4 formalization", c.Kind)
 		}
 
 	default:
@@ -1075,7 +1086,7 @@ func GenerateLeanSourceWithConditions(theoremName string, cert *VerificationCert
 			case CondNonZero:
 				binders = append(binders, fmt.Sprintf("(%s : %s ≠ 0)", hName, exprLean))
 				hasNonzeroHyp = true
-				seenNonzero[exprLean] = true
+				seenNonzero[strings.Trim(exprLean, "()")] = true
 			case CondNonNegative:
 				binders = append(binders, fmt.Sprintf("(%s : 0 ≤ %s)", hName, exprLean))
 			case CondPositive:
@@ -1087,8 +1098,9 @@ func GenerateLeanSourceWithConditions(theoremName string, cert *VerificationCert
 	// Always collect variable denominators automatically to prevent division junk values
 	denoms := collectNonzeroDenominators(allNodes...)
 	for i, d := range denoms {
-		if !seenNonzero[d] {
-			seenNonzero[d] = true
+		normD := strings.Trim(d, "()")
+		if !seenNonzero[normD] {
+			seenNonzero[normD] = true
 			hName := fmt.Sprintf("h_denom%d", i)
 			binders = append(binders, fmt.Sprintf("(%s : %s ≠ 0)", hName, d))
 			hasNonzeroHyp = true
@@ -1302,7 +1314,8 @@ func containsRealNodes(nodes ...Node) bool {
 			walk(curr.LHS)
 			walk(curr.RHS)
 		case *SqrtNode:
-			walk(curr.Radicand)
+			hasReal = true
+			return
 		case *MatrixNode:
 			for _, r := range curr.Data {
 				for _, elem := range r {
@@ -1740,16 +1753,27 @@ func collectNonzeroDenominators(nodes ...Node) []string {
 		switch curr := n.(type) {
 		case *PowNode:
 			if rat, ok := curr.Exp.(*RationalNode); ok && rat.Val != nil && rat.Val.Sign() < 0 {
-				if len(CollectFreeVariables(curr.Base)) > 0 {
-					baseSyntax, err := ToLeanSyntax(curr.Base)
-					if err == nil && baseSyntax != "" {
-						baseSyntax = formatCalcTerm(baseSyntax)
-						if !seen[baseSyntax] {
-							seen[baseSyntax] = true
-							denoms = append(denoms, baseSyntax)
+				var addDenom func(base Node)
+				addDenom = func(base Node) {
+					if mul, ok := base.(*MulNode); ok {
+						for _, f := range mul.Factors {
+							addDenom(f)
+						}
+						return
+					}
+					if len(CollectFreeVariables(base)) > 0 {
+						baseSyntax, err := ToLeanSyntax(base)
+						if err == nil && baseSyntax != "" {
+							baseSyntax = formatCalcTerm(baseSyntax)
+							normKey := strings.Trim(baseSyntax, "()")
+							if !seen[normKey] {
+								seen[normKey] = true
+								denoms = append(denoms, baseSyntax)
+							}
 						}
 					}
 				}
+				addDenom(curr.Base)
 			}
 			walk(curr.Base)
 			walk(curr.Exp)
@@ -1796,8 +1820,16 @@ func hasVariableDenominator(nodes ...Node) bool {
 // inferTheoremDomainType determines the most specific and sound mathematical carrier type.
 func inferTheoremDomainType(cert Certificate, nodes ...Node) LeanDomainType {
 	if cert != nil {
-		switch cert.(type) {
-		case *PellCertificate, *LinearDiophantineCertificate, *IntegerRelationCertificate:
+		switch c := cert.(type) {
+		case *PellCertificate, *LinearDiophantineCertificate:
+			return DomainInt
+		case *IntegerRelationCertificate:
+			allNodes := append([]Node{}, c.Elements...)
+			allNodes = append(allNodes, c.Coefficients...)
+			allNodes = append(allNodes, nodes...)
+			if containsRealNodes(allNodes...) {
+				return DomainReal
+			}
 			return DomainInt
 		case *DerivCertificate, *ODECertificate, *GeometricCertificate:
 			return DomainReal
@@ -1817,9 +1849,9 @@ func inferTheoremDomainType(cert Certificate, nodes ...Node) LeanDomainType {
 }
 
 // buildHasDerivAtCombinator constructs a Lean 4 HasDerivAt proof term from the antiderivative AST.
-func buildHasDerivAtCombinator(node Node, varName string) string {
+func buildHasDerivAtCombinator(node Node, varName string) (string, error) {
 	if node == nil {
-		return fmt.Sprintf("(hasDerivAt_const %s 0)", varName)
+		return "", fmt.Errorf("cannot build HasDerivAt combinator for nil node")
 	}
 
 	vars := CollectFreeVariables(node)
@@ -1833,7 +1865,7 @@ func buildHasDerivAtCombinator(node Node, varName string) string {
 	if isConst {
 		leanVal, err := ToLeanSyntax(node)
 		if err != nil || leanVal == "" {
-			leanVal = "0"
+			return "", fmt.Errorf("failed to transpile constant derivative node: %w", err)
 		}
 		leanVal = strings.ReplaceAll(leanVal, ": ℚ", ": ℝ")
 		if isEnclosedInParens(leanVal) {
@@ -1841,54 +1873,78 @@ func buildHasDerivAtCombinator(node Node, varName string) string {
 		} else {
 			leanVal = fmt.Sprintf("(%s : ℝ)", leanVal)
 		}
-		return fmt.Sprintf("(hasDerivAt_const %s %s)", varName, leanVal)
+		return fmt.Sprintf("(hasDerivAt_const %s %s)", varName, leanVal), nil
 	}
 
 	switch n := node.(type) {
 	case *VarNode:
 		if n.Name == varName {
-			return fmt.Sprintf("(hasDerivAt_id' %s)", varName)
+			return fmt.Sprintf("(hasDerivAt_id' %s)", varName), nil
 		}
-		return fmt.Sprintf("(hasDerivAt_const %s %s)", varName, escapeLeanIdent(n.Name))
+		return fmt.Sprintf("(hasDerivAt_const %s %s)", varName, escapeLeanIdent(n.Name)), nil
 
 	case *AddNode:
 		if len(n.Terms) == 0 {
-			return fmt.Sprintf("(hasDerivAt_const %s 0)", varName)
+			return fmt.Sprintf("(hasDerivAt_const %s 0)", varName), nil
 		}
-		term := buildHasDerivAtCombinator(n.Terms[0], varName)
+		term, err := buildHasDerivAtCombinator(n.Terms[0], varName)
+		if err != nil {
+			return "", err
+		}
 		for i := 1; i < len(n.Terms); i++ {
-			term = fmt.Sprintf("(%s.add %s)", term, buildHasDerivAtCombinator(n.Terms[i], varName))
+			nextTerm, err := buildHasDerivAtCombinator(n.Terms[i], varName)
+			if err != nil {
+				return "", err
+			}
+			term = fmt.Sprintf("(%s.add %s)", term, nextTerm)
 		}
-		return term
+		return term, nil
 
 	case *MulNode:
 		if len(n.Factors) == 0 {
-			return fmt.Sprintf("(hasDerivAt_const %s 1)", varName)
+			return fmt.Sprintf("(hasDerivAt_const %s 1)", varName), nil
 		}
-		factor := buildHasDerivAtCombinator(n.Factors[0], varName)
+		factor, err := buildHasDerivAtCombinator(n.Factors[0], varName)
+		if err != nil {
+			return "", err
+		}
 		for i := 1; i < len(n.Factors); i++ {
-			factor = fmt.Sprintf("(%s.mul %s)", factor, buildHasDerivAtCombinator(n.Factors[i], varName))
+			nextFactor, err := buildHasDerivAtCombinator(n.Factors[i], varName)
+			if err != nil {
+				return "", err
+			}
+			factor = fmt.Sprintf("(%s.mul %s)", factor, nextFactor)
 		}
-		return factor
+		return factor, nil
 
 	case *UnaryOpNode:
-		if n.Op == "-" {
-			return fmt.Sprintf("(%s.neg)", buildHasDerivAtCombinator(n.Expr, varName))
+		sub, err := buildHasDerivAtCombinator(n.Expr, varName)
+		if err != nil {
+			return "", err
 		}
-		return buildHasDerivAtCombinator(n.Expr, varName)
+		if n.Op == "-" {
+			return fmt.Sprintf("(%s.neg)", sub), nil
+		}
+		return sub, nil
 
 	case *PowNode:
 		if v, ok := n.Base.(*VarNode); ok && v.Name == varName {
 			if rat, ok := n.Exp.(*RationalNode); ok && rat.Val != nil && rat.Val.IsInt() && rat.Val.Sign() > 0 {
-				return fmt.Sprintf("(hasDerivAt_pow %s %s)", rat.Val.Num().String(), varName)
+				return fmt.Sprintf("(hasDerivAt_pow %s %s)", rat.Val.Num().String(), varName), nil
 			}
 		}
 		if rat, ok := n.Exp.(*RationalNode); ok && rat.Val != nil && rat.Val.IsInt() && rat.Val.Sign() > 0 {
-			baseComb := buildHasDerivAtCombinator(n.Base, varName)
-			baseSyntax, _ := ToLeanSyntax(n.Base)
+			baseComb, err := buildHasDerivAtCombinator(n.Base, varName)
+			if err != nil {
+				return "", err
+			}
+			baseSyntax, err := ToLeanSyntax(n.Base)
+			if err != nil {
+				return "", err
+			}
 			baseSyntax = formatCalcTerm(baseSyntax)
 			powComb := fmt.Sprintf("(hasDerivAt_pow %s %s)", rat.Val.Num().String(), baseSyntax)
-			return fmt.Sprintf("(%s.comp %s %s)", powComb, varName, baseComb)
+			return fmt.Sprintf("(%s.comp %s %s)", powComb, varName, baseComb), nil
 		}
 
 	case *FuncNode:
@@ -1898,29 +1954,34 @@ func buildHasDerivAtCombinator(node Node, varName string) string {
 			if v, ok := arg.(*VarNode); ok && v.Name == varName {
 				switch name {
 				case "sin":
-					return fmt.Sprintf("(Real.hasDerivAt_sin %s)", varName)
+					return fmt.Sprintf("(Real.hasDerivAt_sin %s)", varName), nil
 				case "cos":
-					return fmt.Sprintf("(Real.hasDerivAt_cos %s)", varName)
+					return fmt.Sprintf("(Real.hasDerivAt_cos %s)", varName), nil
 				case "exp":
-					return fmt.Sprintf("(Real.hasDerivAt_exp %s)", varName)
+					return fmt.Sprintf("(Real.hasDerivAt_exp %s)", varName), nil
 				}
 			}
-			argComb := buildHasDerivAtCombinator(arg, varName)
-			argSyntax, _ := ToLeanSyntax(arg)
+			argComb, err := buildHasDerivAtCombinator(arg, varName)
+			if err != nil {
+				return "", err
+			}
+			argSyntax, err := ToLeanSyntax(arg)
+			if err != nil {
+				return "", err
+			}
 			argSyntax = formatCalcTerm(argSyntax)
 			switch name {
 			case "sin":
-				return fmt.Sprintf("((Real.hasDerivAt_sin %s).comp %s %s)", argSyntax, varName, argComb)
+				return fmt.Sprintf("((Real.hasDerivAt_sin %s).comp %s %s)", argSyntax, varName, argComb), nil
 			case "cos":
-				return fmt.Sprintf("((Real.hasDerivAt_cos %s).comp %s %s)", argSyntax, varName, argComb)
+				return fmt.Sprintf("((Real.hasDerivAt_cos %s).comp %s %s)", argSyntax, varName, argComb), nil
 			case "exp":
-				return fmt.Sprintf("((Real.hasDerivAt_exp %s).comp %s %s)", argSyntax, varName, argComb)
+				return fmt.Sprintf("((Real.hasDerivAt_exp %s).comp %s %s)", argSyntax, varName, argComb), nil
 			}
 		}
 	}
 
-	// Fallback for unsupported composite nodes: treat as constant derivative 0 rather than bogus identity derivative
-	return fmt.Sprintf("(hasDerivAt_const %s 0)", varName)
+	return "", fmt.Errorf("unsupported AST node %T for HasDerivAt combinator", node)
 }
 
 // formatCalcTerm ensures the Lean expression is syntactically safe on either side of an equality in a calc line.
