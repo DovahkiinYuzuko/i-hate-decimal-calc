@@ -997,3 +997,184 @@ func TestLeanTranspiler_Soundness_FactoredDenominators(t *testing.T) {
 		t.Errorf("expected factored term '(x - 1) ≠ 0' in generated source: %s", src)
 	}
 }
+
+// ==============================================================================
+// Tier 0, Tier 1, Tier 2 Adversarial Stress Test Suite (issue-159.2)
+// ==============================================================================
+
+func TestLeanTranspiler_Tier0_RepresentationFidelity(t *testing.T) {
+	// 1. Variable name escaping and scope collision
+	vDef := NewVar("def")
+	vTheorem := NewVar("theorem")
+	sumNode := &AddNode{Terms: []Node{vDef, vTheorem}}
+	syntax, err := ToLeanSyntax(sumNode)
+	if err != nil {
+		t.Fatalf("unexpected error transpiling reserved identifiers: %v", err)
+	}
+	if !strings.Contains(syntax, "«def»") || !strings.Contains(syntax, "«theorem»") {
+		t.Errorf("expected escaped identifiers «def» and «theorem», got: %s", syntax)
+	}
+
+	// 2. Unary minus with powers: -(x^2) vs (-x)^2
+	x := NewVar("x")
+	two := mustRational(2, 1)
+	xSquared := &PowNode{Base: x, Exp: two}
+	negXSquared := &UnaryOpNode{Op: "-", Expr: xSquared}
+	negSyntax, err := ToLeanSyntax(negXSquared)
+	if err != nil {
+		t.Fatalf("unexpected error transpiling unary negation: %v", err)
+	}
+	if negSyntax != "-(x ^ 2)" {
+		t.Errorf("expected '-(x ^ 2)', got: %s", negSyntax)
+	}
+}
+
+func TestLeanTranspiler_Tier1_JunkValueDefense(t *testing.T) {
+	x := NewVar("x")
+
+	// 1. log(x) requires 0 < x hypothesis to guard against Lean's Real.log(-1) = 0 junk value
+	logX := &FuncNode{Name: "log", Args: []Node{x}}
+	vCert := &VerificationCertificate{
+		Domain:     DomainGeneral,
+		Equation:   "log(x) == log(x)",
+		IsVerified: true,
+	}
+	srcLog, err := GenerateLeanSourceWithConditions("log_domain_proof", vCert, logX, logX, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(srcLog, "0 < x") {
+		t.Errorf("expected domain condition '0 < x' for log(x) to prevent junk values, got:\n%s", srcLog)
+	}
+
+	// 2. sqrt(x) requires 0 ≤ x hypothesis
+	sqrtX := &SqrtNode{Radicand: x}
+	srcSqrt, err := GenerateLeanSourceWithConditions("sqrt_domain_proof", vCert, sqrtX, sqrtX, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(srcSqrt, "0 ≤ x") {
+		t.Errorf("expected domain condition '0 ≤ x' for sqrt(x) to prevent junk values, got:\n%s", srcSqrt)
+	}
+
+	// 3. tan(x) requires cos(x) ≠ 0 denominator hypothesis
+	tanX := &FuncNode{Name: "tan", Args: []Node{x}}
+	vCertTan := &VerificationCertificate{
+		Domain:     DomainGeneral,
+		Equation:   "tan(x) == tan(x)",
+		IsVerified: true,
+	}
+	srcTan, err := GenerateLeanSourceWithConditions("tan_domain_proof", vCertTan, tanX, tanX, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(srcTan, "Real.cos") && !strings.Contains(srcTan, "cos") {
+		t.Errorf("expected denominator condition involving cos for tan(x), got:\n%s", srcTan)
+	}
+}
+
+func TestLeanTranspiler_Tier2_CompositeCases(t *testing.T) {
+	x := NewVar("x")
+	two := mustRational(2, 1)
+	one := mustRational(1, 1)
+	minusOne := mustRational(-1, 1)
+
+	// Composite case: d/dx (1 / (x^2 + 1))
+	// x^2 + 1
+	xSqPlus1 := &AddNode{Terms: []Node{&PowNode{Base: x, Exp: two}, one}}
+	// (x^2 + 1)^(-1)
+	rationalFunc := &PowNode{Base: xSqPlus1, Exp: minusOne}
+
+	vCert := &VerificationCertificate{
+		Domain:     DomainGeneral,
+		Equation:   "rational_func == rational_func",
+		IsVerified: true,
+	}
+
+	src, err := GenerateLeanSourceWithConditions("composite_rational_proof", vCert, rationalFunc, rationalFunc, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Must bind denominator hypothesis for x^2 + 1 ≠ 0
+	if !strings.Contains(src, "≠ 0") {
+		t.Errorf("expected denominator condition in composite rational source, got:\n%s", src)
+	}
+	// Tactic should downgrade to field_simp; ring
+	if !strings.Contains(src, "field_simp; ring") {
+		t.Errorf("expected 'field_simp; ring' for rational identity, got:\n%s", src)
+	}
+
+	// 4. ProofTrace calc mode with denominators
+	trace := &ProofTrace{
+		Original: rationalFunc,
+		Result:   rationalFunc,
+		Steps: []ProofStep{
+			{
+				Rule:   "identity",
+				Before: rationalFunc,
+				After:  rationalFunc,
+			},
+		},
+	}
+	calcSrc, err := GenerateLeanSourceFromTrace("calc_rational_proof", trace)
+	if err != nil {
+		t.Fatalf("unexpected error generating calc source: %v", err)
+	}
+	if !strings.Contains(calcSrc, "≠ 0") {
+		t.Errorf("expected denominator condition in calc mode theorem header, got:\n%s", calcSrc)
+	}
+}
+
+func TestLeanTranspiler_ReviewFindings(t *testing.T) {
+	x := NewVar("x")
+	one := mustRational(1, 1)
+
+	// 1. unwrapOuterParens prevents key corruption for (x + 1)
+	xPlus1 := &AddNode{Terms: []Node{x, one}}
+	logXPlus1 := &FuncNode{Name: "log", Args: []Node{xPlus1}}
+	vCert := &VerificationCertificate{
+		Domain:     DomainGeneral,
+		Equation:   "log(x+1) == log(x+1)",
+		IsVerified: true,
+	}
+
+	src, err := GenerateLeanSourceWithConditions("log_composite_proof", vCert, logXPlus1, logXPlus1, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Verify that closing parenthesis is preserved in hypothesis (0 < (x + 1) or 0 < x + 1)
+	if strings.Contains(src, "0 < (x + 1") && !strings.Contains(src, "0 < (x + 1)") {
+		t.Errorf("found corrupted unclosed parenthesis in hypothesis: %s", src)
+	}
+
+	// 2. Fractional power with even denominator (x^(1/2)) requires 0 ≤ x
+	half := mustRational(1, 2)
+	sqrtPow := &PowNode{Base: x, Exp: half}
+	srcPow, err := GenerateLeanSourceWithConditions("even_denom_pow_proof", vCert, sqrtPow, sqrtPow, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(srcPow, "0 ≤ x") {
+		t.Errorf("expected '0 ≤ x' for even denominator power x^(1/2), got:\n%s", srcPow)
+	}
+
+	// 3. Constant power 0 in buildHasDerivAtCombinator returns (hasDerivAt_const varName 1)
+	zero := mustRational(0, 1)
+	xZero := &PowNode{Base: x, Exp: zero}
+	combZero, err := buildHasDerivAtCombinator(xZero, "x")
+	if err != nil {
+		t.Fatalf("unexpected error for x^0 derivative combinator: %v", err)
+	}
+	if combZero != "(hasDerivAt_const x 1)" {
+		t.Errorf("expected '(hasDerivAt_const x 1)', got: %s", combZero)
+	}
+
+	// 4. Double unary minus -(-2) is positive, not negative
+	two := mustRational(2, 1)
+	negTwo := &UnaryOpNode{Op: "-", Expr: two}
+	doubleNegTwo := &UnaryOpNode{Op: "-", Expr: negTwo}
+	if isNegativeExponent(doubleNegTwo) {
+		t.Errorf("expected -(-2) to NOT be recognized as negative exponent")
+	}
+}
