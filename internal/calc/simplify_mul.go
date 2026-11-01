@@ -121,14 +121,35 @@ func simplifyMul(factors []Node) (Node, error) {
 				currentComplex = cf
 			} else {
 				// Multiply currentComplex by cf
-				ac, _ := simplifyMul([]Node{currentComplex.Real, cf.Real})
-				bd, _ := simplifyMul([]Node{currentComplex.Imag, cf.Imag})
-				negBd, _ := simplifyUnaryOp("-", bd)
-				realPart, _ := simplifyAdd([]Node{ac, negBd})
+				ac, err := simplifyMul([]Node{currentComplex.Real, cf.Real})
+				if err != nil {
+					return nil, err
+				}
+				bd, err := simplifyMul([]Node{currentComplex.Imag, cf.Imag})
+				if err != nil {
+					return nil, err
+				}
+				negBd, err := simplifyUnaryOp("-", bd)
+				if err != nil {
+					return nil, err
+				}
+				realPart, err := simplifyAdd([]Node{ac, negBd})
+				if err != nil {
+					return nil, err
+				}
 
-				ad, _ := simplifyMul([]Node{currentComplex.Real, cf.Imag})
-				bc, _ := simplifyMul([]Node{currentComplex.Imag, cf.Real})
-				imagPart, _ := simplifyAdd([]Node{ad, bc})
+				ad, err := simplifyMul([]Node{currentComplex.Real, cf.Imag})
+				if err != nil {
+					return nil, err
+				}
+				bc, err := simplifyMul([]Node{currentComplex.Imag, cf.Real})
+				if err != nil {
+					return nil, err
+				}
+				imagPart, err := simplifyAdd([]Node{ad, bc})
+				if err != nil {
+					return nil, err
+				}
 
 				currentComplex = NewComplex(realPart, imagPart)
 			}
@@ -137,8 +158,14 @@ func simplifyMul(factors []Node) (Node, error) {
 			// If coeff != 1, scale currentComplex
 			if coeff.Cmp(big.NewRat(1, 1)) != 0 {
 				scale := &RationalNode{Val: coeff}
-				newReal, _ := simplifyMul([]Node{scale, currentComplex.Real})
-				newImag, _ := simplifyMul([]Node{scale, currentComplex.Imag})
+				newReal, err := simplifyMul([]Node{scale, currentComplex.Real})
+				if err != nil {
+					return nil, err
+				}
+				newImag, err := simplifyMul([]Node{scale, currentComplex.Imag})
+				if err != nil {
+					return nil, err
+				}
 				currentComplex = NewComplex(newReal, newImag)
 			}
 			// If imag is 0, reduce to real part
@@ -373,8 +400,14 @@ func simplifyMul(factors []Node) (Node, error) {
 	}
 
 	if currentComplex != nil {
-		newReal, _ := simplifyMul([]Node{realScalar, currentComplex.Real})
-		newImag, _ := simplifyMul([]Node{realScalar, currentComplex.Imag})
+		newReal, err := simplifyMul([]Node{realScalar, currentComplex.Real})
+		if err != nil {
+			return nil, err
+		}
+		newImag, err := simplifyMul([]Node{realScalar, currentComplex.Imag})
+		if err != nil {
+			return nil, err
+		}
 		if isZero(newImag) {
 			return newReal, nil
 		}

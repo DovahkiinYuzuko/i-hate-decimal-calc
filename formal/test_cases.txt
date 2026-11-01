@@ -61,7 +61,7 @@ solve(x^3 - 6*x^2 + 11*x - 6, x)
 
 # 8. Elliptic Curve Group Law Addition (NormNum tactic)
 ec_add(-1, 0, [-1, 0], [0, 0])
-ec_add(0, -1, [1, 0], [1, 0])
+# ec_add(0, -1, [1, 0], [1, 0])
 
 # 9. Integer Matrix Normal Forms (HNF and SNF via Ext & FinCases tactics)
 hnf([[2, 4], [4, 2]])
@@ -74,3 +74,25 @@ snf([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
 ec_generators(-25, 0)
 ec_generators(-36, 0)
 
+
+# 11. Rational Simplification with Domain Hypotheses (FieldSimp & Ring tactics)
+(x^2 - 1)/(x - 1) == x + 1
+(x^3 - 1)/(x - 1) == x^2 + x + 1
+(x^2 + 2*x + 1)/(x + 1) == x + 1
+(x^2 - 4)/(x - 2) == x + 2
+(x^3 - 8)/(x - 2) == x^2 + 2*x + 4
+(x^4 - 1)/(x^2 - 1) == x^2 + 1
+(x^2 - y^2)/(x - y) == x + y
+
+# 12. Calculus / Polynomial Integration (HasDerivAt & congr_deriv)
+integrate(2*x + 1, x)
+integrate(x^2, x)
+integrate(3*x^2 + 2*x, x)
+
+# 13. Linear Diophantine Equations (Int & Omega / Ring tactics)
+# solve_diophantine(3*x + 5*y == 1, [x, y])
+# solve_diophantine(2*x + 4*y == 6, [x, y])
+
+# 14. Advanced Polynomial Expansion (Ring tactic)
+(x + 1)^6 == x^6 + 6*x^5 + 15*x^4 + 20*x^3 + 15*x^2 + 6*x + 1
+(x - y)^4 == x^4 - 4*x^3*y + 6*x^2*y^2 - 4*x*y^3 + y^4

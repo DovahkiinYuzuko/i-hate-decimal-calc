@@ -183,7 +183,7 @@ func TestTranspileCertificateIRToLean_Direct(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(leanDeriv, "deriv (fun x => F) x = x := by simp") {
+	if !strings.Contains(leanDeriv, "HasDerivAt (fun x => F) (x) x") || !strings.Contains(leanDeriv, "HasDerivAt.congr_deriv") {
 		t.Errorf("unexpected Lean output: %s", leanDeriv)
 	}
 
@@ -709,3 +709,472 @@ func TestGenerateLeanSource_IdealDecomposition(t *testing.T) {
 
 
 
+
+
+func TestLeanTranspiler_HasDerivAt_Calculus(t *testing.T) {
+	x := NewVar("x")
+	three := mustRational(3, 1)
+	oneThird := mustRational(1, 3)
+	x3 := &PowNode{Base: x, Exp: three}
+	f := &PowNode{Base: x, Exp: mustRational(2, 1)} // x^2
+	F := &MulNode{Factors: []Node{oneThird, x3}}   // (1/3) * x^3
+
+	cert := NewDerivCertificate(f, F, mustRational(0, 1), "x", true, "Integration holds")
+	vCert := &VerificationCertificate{
+		Domain:     DomainIntegral,
+		Equation:   cert.EquationString(),
+		IsVerified: true,
+		CertIR:     cert,
+	}
+
+	src, err := GenerateLeanSource("integral_proof", vCert, f, F)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !strings.Contains(src, "HasDerivAt") {
+		t.Errorf("expected HasDerivAt predicate in: %s", src)
+	}
+	if !strings.Contains(src, "congr_deriv") {
+		t.Errorf("expected congr_deriv bridge in: %s", src)
+	}
+	if !strings.Contains(src, "Mathlib.Analysis.Calculus.Deriv.Basic") {
+		t.Errorf("missing Deriv.Basic import in: %s", src)
+	}
+	if !strings.Contains(src, "Mathlib.Analysis.Calculus.Deriv.Pow") {
+		t.Errorf("missing Deriv.Pow import in: %s", src)
+	}
+}
+
+func TestLeanTranspiler_DomainTypes(t *testing.T) {
+	// 1. Integer domain for Pell certificate
+	x := NewVar("x")
+	y := NewVar("y")
+	pellCert := NewPellCertificate(mustRational(2, 1), mustRational(3, 1), mustRational(2, 1), mustRational(0, 1), true, "Pell solution")
+	vPell := &VerificationCertificate{
+		Domain:     DomainPell,
+		Equation:   pellCert.EquationString(),
+		IsVerified: true,
+		CertIR:     pellCert,
+	}
+	pellSrc, err := GenerateLeanSource("pell_proof", vPell, x, y)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(pellSrc, "variable (x y : ℤ)") {
+		t.Errorf("expected Int domain annotation in: %s", pellSrc)
+	}
+	if !strings.Contains(pellSrc, "Mathlib.Data.Int.Basic") {
+		t.Errorf("missing Int import in: %s", pellSrc)
+	}
+
+	// 2. Real domain for trigonometric nodes
+	sinX := &FuncNode{Name: "sin", Args: []Node{x}}
+	idCert := NewIdentityCertificate(IdentityKindEquivalence, sinX, sinX, mustRational(0, 1), true, "Trig identity")
+	vReal := &VerificationCertificate{
+		Domain:     DomainGeneral,
+		Equation:   idCert.EquationString(),
+		IsVerified: true,
+		CertIR:     idCert,
+	}
+	realSrc, err := GenerateLeanSource("real_proof", vReal, sinX, sinX)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(realSrc, "variable (x : ℝ)") {
+		t.Errorf("expected Real domain annotation in: %s", realSrc)
+	}
+	if !strings.Contains(realSrc, "Mathlib.Basic.Real.Basic") {
+		t.Errorf("missing Real import in: %s", realSrc)
+	}
+
+	// 3. Complex domain for imaginary unit
+	iConst := &ConstNode{Name: "i"}
+	idComplex := NewIdentityCertificate(IdentityKindEquivalence, iConst, iConst, mustRational(0, 1), true, "Complex identity")
+	vComplex := &VerificationCertificate{
+		Domain:     DomainGeneral,
+		Equation:   idComplex.EquationString(),
+		IsVerified: true,
+		CertIR:     idComplex,
+	}
+	complexSrc, err := GenerateLeanSource("complex_proof", vComplex, iConst, iConst)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(complexSrc, "Mathlib.Data.Complex.Basic") {
+		t.Errorf("missing Complex import in: %s", complexSrc)
+	}
+}
+
+func TestLeanTranspiler_NonzeroDenominatorHypotheses(t *testing.T) {
+	x := NewVar("x")
+	minusOne := mustRational(-1, 1)
+	xMinus1 := &AddNode{Terms: []Node{x, minusOne}}
+	// Expr with 1 / (x - 1) represented as (x - 1) ^ -1
+	invXMinus1 := &PowNode{Base: xMinus1, Exp: mustRational(-1, 1)}
+
+	idCert := NewIdentityCertificate(IdentityKindApart, invXMinus1, invXMinus1, mustRational(0, 1), true, "Rational identity")
+	vCert := &VerificationCertificate{
+		Domain:     DomainRationalApart,
+		Equation:   idCert.EquationString(),
+		IsVerified: true,
+		CertIR:     idCert,
+	}
+
+	src, err := GenerateLeanSource("rational_proof", vCert, invXMinus1, invXMinus1)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !strings.Contains(src, "≠ 0") {
+		t.Errorf("expected non-zero denominator hypothesis in: %s", src)
+	}
+	if !strings.Contains(src, "field_simp") {
+		t.Errorf("expected field_simp tactic in: %s", src)
+	}
+	if !strings.Contains(src, "Mathlib.Tactic.FieldSimp") {
+		t.Errorf("missing FieldSimp import in: %s", src)
+	}
+}
+
+func TestLeanTranspiler_TacticLadderInCalc(t *testing.T) {
+	x := NewVar("x")
+	sinX := &FuncNode{Name: "sin", Args: []Node{x}}
+	// Complex/Transcendental step with generic/unknown rule
+	step := ProofStep{
+		Before: sinX,
+		After:  sinX,
+		Rule:   "UnknownGenericTransform",
+	}
+
+	tactic := selectTacticForStep(step)
+	if !strings.Contains(tactic, "by first") {
+		t.Errorf("expected fallback ladder 'by first' for generic transcendental step, got: %s", tactic)
+	}
+}
+
+func TestLeanTranspiler_Soundness_UnsupportedDerivNode(t *testing.T) {
+	x := NewVar("x")
+	// x^(1/2) has rational exponent not yet directly supported as a combinator
+	half := mustRational(1, 2)
+	unsupportedPow := &PowNode{Base: x, Exp: half}
+
+	cert := NewDerivCertificate(unsupportedPow, unsupportedPow, mustRational(0, 1), "x", true, "Unsupported test")
+	vCert := &VerificationCertificate{
+		Domain:     DomainIntegral,
+		Equation:   cert.EquationString(),
+		IsVerified: true,
+		CertIR:     cert,
+	}
+
+	_, err := GenerateLeanSource("unsupported_deriv", vCert, unsupportedPow, unsupportedPow)
+	if err == nil {
+		t.Fatalf("expected error for unsupported derivative node, but got nil")
+	}
+	if !strings.Contains(err.Error(), "unsupported AST node") {
+		t.Errorf("expected 'unsupported AST node' error message, got: %v", err)
+	}
+}
+
+func TestLeanTranspiler_Soundness_EmptyIdealDecomposition(t *testing.T) {
+	x := NewVar("x")
+	// IdealDecompositionCertificate with empty syzygies must not cheat with 1 = 1 := by rfl
+	cert := NewIdealDecompositionCertificate(
+		[]Node{x},
+		[][]Node{{x}},
+		[][]Node{{x}},
+		0,
+		nil, // empty syzygies
+		nil,
+		nil,
+		mustRational(0, 1),
+		true,
+		"Empty syzygies",
+	)
+
+	_, err := TranspileCertificateIRToLean(cert)
+	if err == nil {
+		t.Fatalf("expected error for empty ideal decomposition certificate, got nil")
+	}
+	if !strings.Contains(err.Error(), "no syzygies available") {
+		t.Errorf("expected 'no syzygies available' error, got: %v", err)
+	}
+}
+
+func TestLeanTranspiler_Soundness_UnsupportedCertificates(t *testing.T) {
+	// 1. ODECertificate must return explicit unsupported error
+	odeCert := &ODECertificate{
+		BaseCertificate: BaseCertificate{Verified: true},
+		ODE:             NewVar("ode"),
+		Solution:        NewVar("sol"),
+		DependentVar:    "y",
+		IndependentVar:  "x",
+	}
+	_, err := TranspileCertificateIRToLean(odeCert)
+	if err == nil || !strings.Contains(err.Error(), "ODECertificate is not yet supported") {
+		t.Errorf("expected unsupported ODE error, got: %v", err)
+	}
+
+	// 2. WZCertificate must return explicit unsupported error
+	wzCert := &WZCertificate{
+		BaseCertificate:     BaseCertificate{Verified: true},
+		Summand:             NewVar("F"),
+		CertificateFunction: NewVar("G"),
+	}
+	_, err = TranspileCertificateIRToLean(wzCert)
+	if err == nil || !strings.Contains(err.Error(), "WZCertificate is not yet supported") {
+		t.Errorf("expected unsupported WZ error, got: %v", err)
+	}
+
+	// 3. ImpossibilityCertificate with unknown kind must return explicit unsupported error
+	impCert := &ImpossibilityCertificate{
+		BaseCertificate: BaseCertificate{Verified: true},
+		Kind:            "UnknownImpossibilityKind",
+		Problem:         NewVar("prob"),
+	}
+	_, err = TranspileCertificateIRToLean(impCert)
+	if err == nil || !strings.Contains(err.Error(), "unsupported impossibility kind") {
+		t.Errorf("expected unsupported impossibility kind error, got: %v", err)
+	}
+}
+
+func TestLeanTranspiler_Soundness_IntegerRelationDomain(t *testing.T) {
+	// 1. Pure integer relation -> DomainInt
+	two := mustRational(2, 1)
+	three := mustRational(3, 1)
+	pureIntCert := NewIntegerRelationCertificate(
+		[]Node{two, three},
+		[]Node{mustRational(-3, 1), mustRational(2, 1)},
+		mustRational(0, 1),
+		true,
+		"Pure int",
+	)
+	domain := inferTheoremDomainType(pureIntCert)
+	if domain != DomainInt {
+		t.Errorf("expected DomainInt for pure integer relation, got: %s", domain)
+	}
+
+	// 2. Relation with real node (sqrt(2)) -> DomainReal
+	sqrt2 := &SqrtNode{Radicand: two}
+	realCert := NewIntegerRelationCertificate(
+		[]Node{sqrt2, two},
+		[]Node{mustRational(1, 1), mustRational(-1, 1)},
+		mustRational(0, 1),
+		true,
+		"Real relation",
+	)
+	domainReal := inferTheoremDomainType(realCert)
+	if domainReal != DomainReal {
+		t.Errorf("expected DomainReal for real integer relation, got: %s", domainReal)
+	}
+}
+
+func TestLeanTranspiler_Soundness_FactoredDenominators(t *testing.T) {
+	x := NewVar("x")
+	minusOne := mustRational(-1, 1)
+	xMinus1 := &AddNode{Terms: []Node{x, minusOne}}
+
+	// (x * (x - 1))^-1
+	mulBase := &MulNode{Factors: []Node{x, xMinus1}}
+	invMul := &PowNode{Base: mulBase, Exp: minusOne}
+
+	vCert := &VerificationCertificate{
+		Domain:     DomainGeneral,
+		Equation:   "inv == inv",
+		IsVerified: true,
+	}
+
+	src, err := GenerateLeanSourceWithConditions("factored_denom_proof", vCert, invMul, invMul, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Must contain both x ≠ 0 and (x - 1) ≠ 0
+	if !strings.Contains(src, "x ≠ 0") {
+		t.Errorf("expected 'x ≠ 0' in generated source: %s", src)
+	}
+	if !strings.Contains(src, "(x - 1) ≠ 0") && !strings.Contains(src, "-(1) + x ≠ 0") && !strings.Contains(src, "x - 1 ≠ 0") {
+		t.Errorf("expected factored term '(x - 1) ≠ 0' in generated source: %s", src)
+	}
+}
+
+// ==============================================================================
+// Tier 0, Tier 1, Tier 2 Adversarial Stress Test Suite (issue-159.2)
+// ==============================================================================
+
+func TestLeanTranspiler_Tier0_RepresentationFidelity(t *testing.T) {
+	// 1. Variable name escaping and scope collision
+	vDef := NewVar("def")
+	vTheorem := NewVar("theorem")
+	sumNode := &AddNode{Terms: []Node{vDef, vTheorem}}
+	syntax, err := ToLeanSyntax(sumNode)
+	if err != nil {
+		t.Fatalf("unexpected error transpiling reserved identifiers: %v", err)
+	}
+	if !strings.Contains(syntax, "«def»") || !strings.Contains(syntax, "«theorem»") {
+		t.Errorf("expected escaped identifiers «def» and «theorem», got: %s", syntax)
+	}
+
+	// 2. Unary minus with powers: -(x^2) vs (-x)^2
+	x := NewVar("x")
+	two := mustRational(2, 1)
+	xSquared := &PowNode{Base: x, Exp: two}
+	negXSquared := &UnaryOpNode{Op: "-", Expr: xSquared}
+	negSyntax, err := ToLeanSyntax(negXSquared)
+	if err != nil {
+		t.Fatalf("unexpected error transpiling unary negation: %v", err)
+	}
+	if negSyntax != "-(x ^ 2)" {
+		t.Errorf("expected '-(x ^ 2)', got: %s", negSyntax)
+	}
+}
+
+func TestLeanTranspiler_Tier1_JunkValueDefense(t *testing.T) {
+	x := NewVar("x")
+
+	// 1. log(x) requires 0 < x hypothesis to guard against Lean's Real.log(-1) = 0 junk value
+	logX := &FuncNode{Name: "log", Args: []Node{x}}
+	vCert := &VerificationCertificate{
+		Domain:     DomainGeneral,
+		Equation:   "log(x) == log(x)",
+		IsVerified: true,
+	}
+	srcLog, err := GenerateLeanSourceWithConditions("log_domain_proof", vCert, logX, logX, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(srcLog, "0 < x") {
+		t.Errorf("expected domain condition '0 < x' for log(x) to prevent junk values, got:\n%s", srcLog)
+	}
+
+	// 2. sqrt(x) requires 0 ≤ x hypothesis
+	sqrtX := &SqrtNode{Radicand: x}
+	srcSqrt, err := GenerateLeanSourceWithConditions("sqrt_domain_proof", vCert, sqrtX, sqrtX, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(srcSqrt, "0 ≤ x") {
+		t.Errorf("expected domain condition '0 ≤ x' for sqrt(x) to prevent junk values, got:\n%s", srcSqrt)
+	}
+
+	// 3. tan(x) requires cos(x) ≠ 0 denominator hypothesis
+	tanX := &FuncNode{Name: "tan", Args: []Node{x}}
+	vCertTan := &VerificationCertificate{
+		Domain:     DomainGeneral,
+		Equation:   "tan(x) == tan(x)",
+		IsVerified: true,
+	}
+	srcTan, err := GenerateLeanSourceWithConditions("tan_domain_proof", vCertTan, tanX, tanX, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(srcTan, "Real.cos") && !strings.Contains(srcTan, "cos") {
+		t.Errorf("expected denominator condition involving cos for tan(x), got:\n%s", srcTan)
+	}
+}
+
+func TestLeanTranspiler_Tier2_CompositeCases(t *testing.T) {
+	x := NewVar("x")
+	two := mustRational(2, 1)
+	one := mustRational(1, 1)
+	minusOne := mustRational(-1, 1)
+
+	// Composite case: d/dx (1 / (x^2 + 1))
+	// x^2 + 1
+	xSqPlus1 := &AddNode{Terms: []Node{&PowNode{Base: x, Exp: two}, one}}
+	// (x^2 + 1)^(-1)
+	rationalFunc := &PowNode{Base: xSqPlus1, Exp: minusOne}
+
+	vCert := &VerificationCertificate{
+		Domain:     DomainGeneral,
+		Equation:   "rational_func == rational_func",
+		IsVerified: true,
+	}
+
+	src, err := GenerateLeanSourceWithConditions("composite_rational_proof", vCert, rationalFunc, rationalFunc, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Must bind denominator hypothesis for x^2 + 1 ≠ 0
+	if !strings.Contains(src, "≠ 0") {
+		t.Errorf("expected denominator condition in composite rational source, got:\n%s", src)
+	}
+	// Tactic should downgrade to field_simp; ring
+	if !strings.Contains(src, "field_simp; ring") {
+		t.Errorf("expected 'field_simp; ring' for rational identity, got:\n%s", src)
+	}
+
+	// 4. ProofTrace calc mode with denominators
+	trace := &ProofTrace{
+		Original: rationalFunc,
+		Result:   rationalFunc,
+		Steps: []ProofStep{
+			{
+				Rule:   "identity",
+				Before: rationalFunc,
+				After:  rationalFunc,
+			},
+		},
+	}
+	calcSrc, err := GenerateLeanSourceFromTrace("calc_rational_proof", trace)
+	if err != nil {
+		t.Fatalf("unexpected error generating calc source: %v", err)
+	}
+	if !strings.Contains(calcSrc, "≠ 0") {
+		t.Errorf("expected denominator condition in calc mode theorem header, got:\n%s", calcSrc)
+	}
+}
+
+func TestLeanTranspiler_ReviewFindings(t *testing.T) {
+	x := NewVar("x")
+	one := mustRational(1, 1)
+
+	// 1. unwrapOuterParens prevents key corruption for (x + 1)
+	xPlus1 := &AddNode{Terms: []Node{x, one}}
+	logXPlus1 := &FuncNode{Name: "log", Args: []Node{xPlus1}}
+	vCert := &VerificationCertificate{
+		Domain:     DomainGeneral,
+		Equation:   "log(x+1) == log(x+1)",
+		IsVerified: true,
+	}
+
+	src, err := GenerateLeanSourceWithConditions("log_composite_proof", vCert, logXPlus1, logXPlus1, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Verify that closing parenthesis is preserved in hypothesis (0 < (x + 1) or 0 < x + 1)
+	if strings.Contains(src, "0 < (x + 1") && !strings.Contains(src, "0 < (x + 1)") {
+		t.Errorf("found corrupted unclosed parenthesis in hypothesis: %s", src)
+	}
+
+	// 2. Fractional power with even denominator (x^(1/2)) requires 0 ≤ x
+	half := mustRational(1, 2)
+	sqrtPow := &PowNode{Base: x, Exp: half}
+	srcPow, err := GenerateLeanSourceWithConditions("even_denom_pow_proof", vCert, sqrtPow, sqrtPow, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(srcPow, "0 ≤ x") {
+		t.Errorf("expected '0 ≤ x' for even denominator power x^(1/2), got:\n%s", srcPow)
+	}
+
+	// 3. Constant power 0 in buildHasDerivAtCombinator returns (hasDerivAt_const varName 1)
+	zero := mustRational(0, 1)
+	xZero := &PowNode{Base: x, Exp: zero}
+	combZero, err := buildHasDerivAtCombinator(xZero, "x")
+	if err != nil {
+		t.Fatalf("unexpected error for x^0 derivative combinator: %v", err)
+	}
+	if combZero != "(hasDerivAt_const x 1)" {
+		t.Errorf("expected '(hasDerivAt_const x 1)', got: %s", combZero)
+	}
+
+	// 4. Double unary minus -(-2) is positive, not negative
+	two := mustRational(2, 1)
+	negTwo := &UnaryOpNode{Op: "-", Expr: two}
+	doubleNegTwo := &UnaryOpNode{Op: "-", Expr: negTwo}
+	if isNegativeExponent(doubleNegTwo) {
+		t.Errorf("expected -(-2) to NOT be recognized as negative exponent")
+	}
+}
