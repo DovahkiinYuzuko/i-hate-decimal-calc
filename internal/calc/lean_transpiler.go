@@ -1107,6 +1107,17 @@ func GenerateLeanSourceWithConditions(theoremName string, cert *VerificationCert
 		}
 	}
 
+	// Always collect domain conditions (log > 0, sqrt >= 0) to guard against total function junk values
+	domConds := collectDomainConditions(allNodes...)
+	for i, dc := range domConds {
+		normDC := strings.Trim(dc, "()")
+		if !seenNonzero[normDC] {
+			seenNonzero[normDC] = true
+			hName := fmt.Sprintf("h_dom%d", i)
+			binders = append(binders, fmt.Sprintf("(%s : %s)", hName, dc))
+		}
+	}
+
 	if len(binders) > 0 {
 		origThmPrefix := fmt.Sprintf("theorem %s :", escapeLeanIdent(theoremName))
 		newThmPrefix := fmt.Sprintf("theorem %s %s :", escapeLeanIdent(theoremName), strings.Join(binders, " "))
@@ -1739,6 +1750,25 @@ func containsModNodes(nodes ...Node) bool {
 	return hasMod
 }
 
+// isNegativeExponent checks if an AST node represents a negative power exponent.
+func isNegativeExponent(n Node) bool {
+	if n == nil {
+		return false
+	}
+	switch exp := n.(type) {
+	case *RationalNode:
+		return exp.Val != nil && exp.Val.Sign() < 0
+	case *UnaryOpNode:
+		if exp.Op == "-" {
+			if ratN, ok := exp.Expr.(*RationalNode); ok && ratN.Val != nil {
+				return ratN.Val.Sign() > 0
+			}
+			return true
+		}
+	}
+	return false
+}
+
 // collectNonzeroDenominators extracts non-constant denominator expressions from the AST nodes.
 // In ihd, division by an expression E is represented as E ^ (-k) where k > 0.
 func collectNonzeroDenominators(nodes ...Node) []string {
@@ -1752,13 +1782,20 @@ func collectNonzeroDenominators(nodes ...Node) []string {
 		}
 		switch curr := n.(type) {
 		case *PowNode:
-			if rat, ok := curr.Exp.(*RationalNode); ok && rat.Val != nil && rat.Val.Sign() < 0 {
+			if isNegativeExponent(curr.Exp) {
 				var addDenom func(base Node)
 				addDenom = func(base Node) {
+					if base == nil {
+						return
+					}
 					if mul, ok := base.(*MulNode); ok {
 						for _, f := range mul.Factors {
 							addDenom(f)
 						}
+						return
+					}
+					if pow, ok := base.(*PowNode); ok {
+						addDenom(pow.Base)
 						return
 					}
 					if len(CollectFreeVariables(base)) > 0 {
@@ -1777,6 +1814,38 @@ func collectNonzeroDenominators(nodes ...Node) []string {
 			}
 			walk(curr.Base)
 			walk(curr.Exp)
+		case *FuncNode:
+			name := strings.ToLower(curr.Name)
+			if (name == "tan" || name == "sec") && len(curr.Args) == 1 {
+				cosNode := &FuncNode{Name: "cos", Args: []Node{curr.Args[0]}}
+				if len(CollectFreeVariables(curr.Args[0])) > 0 {
+					baseSyntax, err := ToLeanSyntax(cosNode)
+					if err == nil && baseSyntax != "" {
+						baseSyntax = formatCalcTerm(baseSyntax)
+						normKey := strings.Trim(baseSyntax, "()")
+						if !seen[normKey] {
+							seen[normKey] = true
+							denoms = append(denoms, baseSyntax)
+						}
+					}
+				}
+			} else if (name == "cot" || name == "csc") && len(curr.Args) == 1 {
+				sinNode := &FuncNode{Name: "sin", Args: []Node{curr.Args[0]}}
+				if len(CollectFreeVariables(curr.Args[0])) > 0 {
+					baseSyntax, err := ToLeanSyntax(sinNode)
+					if err == nil && baseSyntax != "" {
+						baseSyntax = formatCalcTerm(baseSyntax)
+						normKey := strings.Trim(baseSyntax, "()")
+						if !seen[normKey] {
+							seen[normKey] = true
+							denoms = append(denoms, baseSyntax)
+						}
+					}
+				}
+			}
+			for _, a := range curr.Args {
+				walk(a)
+			}
 		case *AddNode:
 			for _, t := range curr.Terms {
 				walk(t)
@@ -1790,10 +1859,6 @@ func collectNonzeroDenominators(nodes ...Node) []string {
 		case *RelOpNode:
 			walk(curr.LHS)
 			walk(curr.RHS)
-		case *FuncNode:
-			for _, a := range curr.Args {
-				walk(a)
-			}
 		case *SqrtNode:
 			walk(curr.Radicand)
 		case *MatrixNode:
@@ -1810,6 +1875,85 @@ func collectNonzeroDenominators(nodes ...Node) []string {
 	}
 	sort.Strings(denoms)
 	return denoms
+}
+
+// collectDomainConditions extracts non-division domain conditions (e.g. 0 < x for log(x), 0 ≤ x for sqrt(x))
+// to guard against Lean 4 total function junk-value soundness holes.
+func collectDomainConditions(nodes ...Node) []string {
+	seen := make(map[string]bool)
+	var conds []string
+
+	var walk func(n Node)
+	walk = func(n Node) {
+		if n == nil {
+			return
+		}
+		switch curr := n.(type) {
+		case *FuncNode:
+			name := strings.ToLower(curr.Name)
+			if (name == "log" || name == "ln") && len(curr.Args) == 1 {
+				arg := curr.Args[0]
+				if len(CollectFreeVariables(arg)) > 0 {
+					argSyntax, err := ToLeanSyntax(arg)
+					if err == nil && argSyntax != "" {
+						argSyntax = formatCalcTerm(argSyntax)
+						condStr := fmt.Sprintf("0 < %s", argSyntax)
+						normKey := strings.Trim(condStr, "()")
+						if !seen[normKey] {
+							seen[normKey] = true
+							conds = append(conds, condStr)
+						}
+					}
+				}
+			}
+			for _, a := range curr.Args {
+				walk(a)
+			}
+		case *SqrtNode:
+			arg := curr.Radicand
+			if len(CollectFreeVariables(arg)) > 0 {
+				argSyntax, err := ToLeanSyntax(arg)
+				if err == nil && argSyntax != "" {
+					argSyntax = formatCalcTerm(argSyntax)
+					condStr := fmt.Sprintf("0 ≤ %s", argSyntax)
+					normKey := strings.Trim(condStr, "()")
+					if !seen[normKey] {
+						seen[normKey] = true
+						conds = append(conds, condStr)
+					}
+				}
+			}
+			walk(curr.Radicand)
+		case *AddNode:
+			for _, t := range curr.Terms {
+				walk(t)
+			}
+		case *MulNode:
+			for _, f := range curr.Factors {
+				walk(f)
+			}
+		case *PowNode:
+			walk(curr.Base)
+			walk(curr.Exp)
+		case *UnaryOpNode:
+			walk(curr.Expr)
+		case *RelOpNode:
+			walk(curr.LHS)
+			walk(curr.RHS)
+		case *MatrixNode:
+			for _, r := range curr.Data {
+				for _, elem := range r {
+					walk(elem)
+				}
+			}
+		}
+	}
+
+	for _, n := range nodes {
+		walk(n)
+	}
+	sort.Strings(conds)
+	return conds
 }
 
 // hasVariableDenominator returns true if any of the nodes contain a variable denominator.
@@ -1928,12 +2072,17 @@ func buildHasDerivAtCombinator(node Node, varName string) (string, error) {
 		return sub, nil
 
 	case *PowNode:
-		if v, ok := n.Base.(*VarNode); ok && v.Name == varName {
-			if rat, ok := n.Exp.(*RationalNode); ok && rat.Val != nil && rat.Val.IsInt() && rat.Val.Sign() > 0 {
-				return fmt.Sprintf("(hasDerivAt_pow %s %s)", rat.Val.Num().String(), varName), nil
-			}
-		}
+		var intExp int64
+		isPosInt := false
 		if rat, ok := n.Exp.(*RationalNode); ok && rat.Val != nil && rat.Val.IsInt() && rat.Val.Sign() > 0 {
+			intExp = rat.Val.Num().Int64()
+			isPosInt = true
+		}
+
+		if isPosInt {
+			if v, ok := n.Base.(*VarNode); ok && v.Name == varName {
+				return fmt.Sprintf("(hasDerivAt_pow %d %s)", intExp, varName), nil
+			}
 			baseComb, err := buildHasDerivAtCombinator(n.Base, varName)
 			if err != nil {
 				return "", err
@@ -1943,7 +2092,7 @@ func buildHasDerivAtCombinator(node Node, varName string) (string, error) {
 				return "", err
 			}
 			baseSyntax = formatCalcTerm(baseSyntax)
-			powComb := fmt.Sprintf("(hasDerivAt_pow %s %s)", rat.Val.Num().String(), baseSyntax)
+			powComb := fmt.Sprintf("(hasDerivAt_pow %d %s)", intExp, baseSyntax)
 			return fmt.Sprintf("(%s.comp %s %s)", powComb, varName, baseComb), nil
 		}
 
@@ -2171,8 +2320,34 @@ func GenerateLeanSourceFromTrace(theoremName string, trace *ProofTrace) (string,
 		indentedCalc.WriteByte('\n')
 	}
 
-	theoremCode := fmt.Sprintf("theorem %s : %s = %s := by\n%s",
-		escapeLeanIdent(theoremName), origStr, resStr, strings.TrimRight(indentedCalc.String(), "\n"))
+	// Collect variable denominators and domain conditions for calc mode
+	binders := make([]string, 0)
+	seenConds := make(map[string]bool)
+	denoms := collectNonzeroDenominators(allNodes...)
+	for i, d := range denoms {
+		normD := strings.Trim(d, "()")
+		if !seenConds[normD] {
+			seenConds[normD] = true
+			binders = append(binders, fmt.Sprintf("(h_denom%d : %s ≠ 0)", i, d))
+		}
+	}
+	domConds := collectDomainConditions(allNodes...)
+	for i, dc := range domConds {
+		normDC := strings.Trim(dc, "()")
+		if !seenConds[normDC] {
+			seenConds[normDC] = true
+			binders = append(binders, fmt.Sprintf("(h_dom%d : %s)", i, dc))
+		}
+	}
+
+	var theoremCode string
+	if len(binders) > 0 {
+		theoremCode = fmt.Sprintf("theorem %s %s : %s = %s := by\n%s",
+			escapeLeanIdent(theoremName), strings.Join(binders, " "), origStr, resStr, strings.TrimRight(indentedCalc.String(), "\n"))
+	} else {
+		theoremCode = fmt.Sprintf("theorem %s : %s = %s := by\n%s",
+			escapeLeanIdent(theoremName), origStr, resStr, strings.TrimRight(indentedCalc.String(), "\n"))
+	}
 
 	requiredImports := DetermineRequiredImports(nil, allNodes...)
 	// Ensure Ring tactic import is present for calc algebraic steps
