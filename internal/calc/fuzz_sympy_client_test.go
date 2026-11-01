@@ -128,7 +128,17 @@ func resolvePythonPath() (string, error) {
 }
 
 func resolveScriptPath() (string, error) {
+	if envPath := os.Getenv("IHD_SYMPY_ORACLE_PATH"); envPath != "" {
+		if abs, err := filepath.Abs(envPath); err == nil {
+			if _, statErr := os.Stat(abs); statErr == nil {
+				return abs, nil
+			}
+		}
+	}
+
 	candidates := []string{
+		filepath.Join("tools", "sympy-oracle", "sympy_oracle.py"),
+		filepath.Join("..", "..", "tools", "sympy-oracle", "sympy_oracle.py"),
 		filepath.Join("test-scripts", "go", "fuzz", "sympy_oracle.py"),
 		filepath.Join("..", "..", "test-scripts", "go", "fuzz", "sympy_oracle.py"),
 	}
@@ -140,7 +150,7 @@ func resolveScriptPath() (string, error) {
 			}
 		}
 	}
-	return "", errors.New("cannot locate test-scripts/go/fuzz/sympy_oracle.py")
+	return "", errors.New("cannot locate tools/sympy-oracle/sympy_oracle.py or test-scripts/go/fuzz/sympy_oracle.py")
 }
 
 func (c *SymPyClient) startWorker() error {
@@ -581,6 +591,11 @@ func (c *SymPyClient) SubtractiveZero(ctx context.Context, lhsAST, rhsAST map[st
 
 // ASTToSymPyJSON converts an ihd AST Node into a structured JSON dictionary for SymPy.
 func ASTToSymPyJSON(node ast.Node) (map[string]any, error) {
+	return ASTToSymPyJSONWithAssumptions(node, nil)
+}
+
+// ASTToSymPyJSONWithAssumptions converts an ihd AST Node into a structured JSON dictionary with symbol assumptions.
+func ASTToSymPyJSONWithAssumptions(node ast.Node, assumptions map[string]bool) (map[string]any, error) {
 	if node == nil {
 		return map[string]any{"op": "Integer", "val": 0}, nil
 	}
@@ -597,15 +612,32 @@ func ASTToSymPyJSON(node ast.Node) (map[string]any, error) {
 		}, nil
 
 	case *ast.VarNode:
-		return map[string]any{
+		res := map[string]any{
 			"op":   "Symbol",
 			"name": n.Name,
-		}, nil
+		}
+		if len(assumptions) > 0 {
+			res["assumptions"] = assumptions
+		}
+		return res, nil
+
+	case *ast.ComplexNode:
+		realJSON, err := ASTToSymPyJSONWithAssumptions(n.Real, assumptions)
+		if err != nil {
+			return nil, err
+		}
+		imagJSON, err := ASTToSymPyJSONWithAssumptions(n.Imag, assumptions)
+		if err != nil {
+			return nil, err
+		}
+		iConst := map[string]any{"op": "Constant", "name": "I"}
+		mulImag := map[string]any{"op": "Mul", "args": []map[string]any{imagJSON, iConst}}
+		return map[string]any{"op": "Add", "args": []map[string]any{realJSON, mulImag}}, nil
 
 	case *ast.AddNode:
 		args := make([]map[string]any, 0, len(n.Terms))
 		for _, a := range n.Terms {
-			j, err := ASTToSymPyJSON(a)
+			j, err := ASTToSymPyJSONWithAssumptions(a, assumptions)
 			if err != nil {
 				return nil, err
 			}
@@ -616,7 +648,7 @@ func ASTToSymPyJSON(node ast.Node) (map[string]any, error) {
 	case *ast.MulNode:
 		args := make([]map[string]any, 0, len(n.Factors))
 		for _, a := range n.Factors {
-			j, err := ASTToSymPyJSON(a)
+			j, err := ASTToSymPyJSONWithAssumptions(a, assumptions)
 			if err != nil {
 				return nil, err
 			}
@@ -625,18 +657,18 @@ func ASTToSymPyJSON(node ast.Node) (map[string]any, error) {
 		return map[string]any{"op": "Mul", "args": args}, nil
 
 	case *ast.PowNode:
-		base, err := ASTToSymPyJSON(n.Base)
+		base, err := ASTToSymPyJSONWithAssumptions(n.Base, assumptions)
 		if err != nil {
 			return nil, err
 		}
-		exp, err := ASTToSymPyJSON(n.Exp)
+		exp, err := ASTToSymPyJSONWithAssumptions(n.Exp, assumptions)
 		if err != nil {
 			return nil, err
 		}
 		return map[string]any{"op": "Pow", "base": base, "exp": exp}, nil
 
 	case *ast.UnaryOpNode:
-		arg, err := ASTToSymPyJSON(n.Expr)
+		arg, err := ASTToSymPyJSONWithAssumptions(n.Expr, assumptions)
 		if err != nil {
 			return nil, err
 		}
@@ -646,7 +678,7 @@ func ASTToSymPyJSON(node ast.Node) (map[string]any, error) {
 		return arg, nil
 
 	case *ast.SqrtNode:
-		arg, err := ASTToSymPyJSON(n.Radicand)
+		arg, err := ASTToSymPyJSONWithAssumptions(n.Radicand, assumptions)
 		if err != nil {
 			return nil, err
 		}
@@ -661,7 +693,7 @@ func ASTToSymPyJSON(node ast.Node) (map[string]any, error) {
 			if len(n.Args) != 1 {
 				return nil, fmt.Errorf("sin expects 1 arg, got %d", len(n.Args))
 			}
-			arg, err := ASTToSymPyJSON(n.Args[0])
+			arg, err := ASTToSymPyJSONWithAssumptions(n.Args[0], assumptions)
 			if err != nil {
 				return nil, err
 			}
@@ -670,7 +702,7 @@ func ASTToSymPyJSON(node ast.Node) (map[string]any, error) {
 			if len(n.Args) != 1 {
 				return nil, fmt.Errorf("cos expects 1 arg, got %d", len(n.Args))
 			}
-			arg, err := ASTToSymPyJSON(n.Args[0])
+			arg, err := ASTToSymPyJSONWithAssumptions(n.Args[0], assumptions)
 			if err != nil {
 				return nil, err
 			}
@@ -679,7 +711,7 @@ func ASTToSymPyJSON(node ast.Node) (map[string]any, error) {
 			if len(n.Args) != 1 {
 				return nil, fmt.Errorf("tan expects 1 arg, got %d", len(n.Args))
 			}
-			arg, err := ASTToSymPyJSON(n.Args[0])
+			arg, err := ASTToSymPyJSONWithAssumptions(n.Args[0], assumptions)
 			if err != nil {
 				return nil, err
 			}
@@ -688,7 +720,7 @@ func ASTToSymPyJSON(node ast.Node) (map[string]any, error) {
 			if len(n.Args) != 1 {
 				return nil, fmt.Errorf("exp expects 1 arg, got %d", len(n.Args))
 			}
-			arg, err := ASTToSymPyJSON(n.Args[0])
+			arg, err := ASTToSymPyJSONWithAssumptions(n.Args[0], assumptions)
 			if err != nil {
 				return nil, err
 			}
@@ -697,7 +729,7 @@ func ASTToSymPyJSON(node ast.Node) (map[string]any, error) {
 			if len(n.Args) != 1 {
 				return nil, fmt.Errorf("log expects 1 arg, got %d", len(n.Args))
 			}
-			arg, err := ASTToSymPyJSON(n.Args[0])
+			arg, err := ASTToSymPyJSONWithAssumptions(n.Args[0], assumptions)
 			if err != nil {
 				return nil, err
 			}
@@ -706,7 +738,7 @@ func ASTToSymPyJSON(node ast.Node) (map[string]any, error) {
 			if len(n.Args) != 1 {
 				return nil, fmt.Errorf("abs expects 1 arg, got %d", len(n.Args))
 			}
-			arg, err := ASTToSymPyJSON(n.Args[0])
+			arg, err := ASTToSymPyJSONWithAssumptions(n.Args[0], assumptions)
 			if err != nil {
 				return nil, err
 			}
@@ -715,7 +747,7 @@ func ASTToSymPyJSON(node ast.Node) (map[string]any, error) {
 			if len(n.Args) < 2 {
 				return nil, fmt.Errorf("diff expects at least 2 args, got %d", len(n.Args))
 			}
-			arg, err := ASTToSymPyJSON(n.Args[0])
+			arg, err := ASTToSymPyJSONWithAssumptions(n.Args[0], assumptions)
 			if err != nil {
 				return nil, err
 			}
@@ -734,7 +766,7 @@ func ASTToSymPyJSON(node ast.Node) (map[string]any, error) {
 			if len(n.Args) != 1 {
 				return nil, fmt.Errorf("expand expects 1 arg, got %d", len(n.Args))
 			}
-			arg, err := ASTToSymPyJSON(n.Args[0])
+			arg, err := ASTToSymPyJSONWithAssumptions(n.Args[0], assumptions)
 			if err != nil {
 				return nil, err
 			}
@@ -743,7 +775,7 @@ func ASTToSymPyJSON(node ast.Node) (map[string]any, error) {
 			if len(n.Args) != 1 {
 				return nil, fmt.Errorf("factor expects 1 arg, got %d", len(n.Args))
 			}
-			arg, err := ASTToSymPyJSON(n.Args[0])
+			arg, err := ASTToSymPyJSONWithAssumptions(n.Args[0], assumptions)
 			if err != nil {
 				return nil, err
 			}

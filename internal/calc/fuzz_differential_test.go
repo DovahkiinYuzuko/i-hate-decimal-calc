@@ -66,10 +66,25 @@ func NewDifferentialOracle(client *SymPyClient) *DifferentialOracle {
 	}
 }
 
+// DifferentialDomain specifies the mathematical variable domain for differential sampling and assumptions.
+type DifferentialDomain int
+
+const (
+	// DomainReal indicates variables are purely real (Q sampling including negatives, real: True assumptions).
+	DomainReal DifferentialDomain = iota
+	// DomainComplex indicates variables are generic complex (Q[i] sampling across 4 quadrants).
+	DomainComplex
+)
+
 // EvaluateEquivalence performs the 5-way classification protocol between ihd and SymPy ASTs.
-func (o *DifferentialOracle) EvaluateEquivalence(ctx context.Context, ihdAST, sympyAST ast.Node, seed int64) (DifferentialVerdict, string) {
+func (o *DifferentialOracle) EvaluateEquivalence(ctx context.Context, ihdAST, sympyAST ast.Node, seed int64, domain ...DifferentialDomain) (DifferentialVerdict, string) {
 	if ihdAST == nil || sympyAST == nil {
 		return VerdictDiffInconclusive, "nil AST provided"
+	}
+
+	activeDomain := DomainReal
+	if len(domain) > 0 {
+		activeDomain = domain[0]
 	}
 
 	// Tier 0: Direct structural AST match
@@ -77,11 +92,16 @@ func (o *DifferentialOracle) EvaluateEquivalence(ctx context.Context, ihdAST, sy
 		return VerdictDiffExactMatch, "Tier-0 exact structural AST match"
 	}
 
-	ihdJSON, err := ASTToSymPyJSON(ihdAST)
+	var assumptions map[string]bool
+	if activeDomain == DomainReal {
+		assumptions = map[string]bool{"real": true}
+	}
+
+	ihdJSON, err := ASTToSymPyJSONWithAssumptions(ihdAST, assumptions)
 	if err != nil {
 		return VerdictDiffInconclusive, fmt.Sprintf("ihd AST serialization skipped: %v", err)
 	}
-	sympJSON, err := ASTToSymPyJSON(sympyAST)
+	sympJSON, err := ASTToSymPyJSONWithAssumptions(sympyAST, assumptions)
 	if err != nil {
 		return VerdictDiffInconclusive, fmt.Sprintf("sympy AST serialization skipped: %v", err)
 	}
@@ -135,11 +155,29 @@ func (o *DifferentialOracle) EvaluateEquivalence(ctx context.Context, ihdAST, sy
 		symPointMap := make(map[string]map[string]string)
 
 		for _, vName := range vars {
-			// Bias towards safe first-quadrant wedge Re in [1, 30], Im in [0, 15] to avoid negative real axis branch cuts
-			re := int64(rng.Intn(30) + 1)
-			im := int64(0)
-			if rng.Intn(2) == 1 {
-				im = int64(rng.Intn(15) + 1)
+			var re, im int64
+			if activeDomain == DomainReal {
+				// Purely real rational sampling from Q, explicitly testing both positive and negative values
+				// (GPT-6 recommendation: negative reals are essential to verify abs(x) and sqrt(x^2) sign flips).
+				sign := int64(1)
+				if rng.Intn(2) == 1 {
+					sign = -1
+				}
+				re = sign * int64(rng.Intn(30)+1)
+				im = 0
+			} else {
+				// Complex sampling across all four quadrants in Q[i]
+				signRe := int64(1)
+				if rng.Intn(2) == 1 {
+					signRe = -1
+				}
+				re = signRe * int64(rng.Intn(30)+1)
+
+				signIm := int64(1)
+				if rng.Intn(2) == 1 {
+					signIm = -1
+				}
+				im = signIm * int64(rng.Intn(15)+1)
 			}
 
 			pointMap[vName] = newGaussianRatFromInt(re, im)
@@ -218,10 +256,9 @@ func substituteVariables(node ast.Node, values map[string]gaussianRat) ast.Node 
 					return reNode
 				}
 				imNode := ast.NewRationalFromBigRat(val.im)
-				iNode, err := ast.NewConst("i")
-				if err != nil {
-					return reNode
-				}
+				zeroNode := ast.NewRationalFromBigRat(big.NewRat(0, 1))
+				oneNode := ast.NewRationalFromBigRat(big.NewRat(1, 1))
+				iNode := ast.NewComplex(zeroNode, oneNode)
 				mulI := ast.NewMul([]ast.Node{imNode, iNode})
 				return ast.NewAdd([]ast.Node{reNode, mulI})
 			}
@@ -482,6 +519,9 @@ func FuzzDifferential_SymPy_Algebra(f *testing.F) {
 
 	client := GetGlobalSymPyClient()
 	if !client.Available() {
+		if os.Getenv("CI") != "" || os.Getenv("IHD_REQUIRE_SYMPY_ORACLE") != "" {
+			f.Fatalf("CI CRITICAL: SymPy oracle is strictly required in CI environment but unavailable: %s", client.ReasonUnavailable())
+		}
 		f.Skipf("SymPy not available: %s", client.ReasonUnavailable())
 	}
 	oracle := NewDifferentialOracle(client)
@@ -534,6 +574,22 @@ func FuzzDifferential_SymPy_Algebra(f *testing.F) {
 	})
 }
 
+// isNonHolomorphic detects nodes that are non-holomorphic in the complex plane (e.g. abs, floor, ceil).
+func isNonHolomorphic(n ast.Node) bool {
+	hasNonHolomorphic := false
+	ast.Walk(n, func(curr ast.Node) bool {
+		if fn, ok := curr.(*ast.FuncNode); ok {
+			switch strings.ToLower(fn.Name) {
+			case "abs", "floor", "ceil", "re", "im", "conj", "conjugate", "arg":
+				hasNonHolomorphic = true
+				return false
+			}
+		}
+		return true
+	})
+	return hasNonHolomorphic
+}
+
 // FuzzDifferential_SymPy_Calculus explores symbolic differentiation identities against SymPy oracle.
 func FuzzDifferential_SymPy_Calculus(f *testing.F) {
 	f.Add([]byte{0x05, 0x06, 0x07, 0x08, 0x09})
@@ -542,6 +598,9 @@ func FuzzDifferential_SymPy_Calculus(f *testing.F) {
 
 	client := GetGlobalSymPyClient()
 	if !client.Available() {
+		if os.Getenv("CI") != "" || os.Getenv("IHD_REQUIRE_SYMPY_ORACLE") != "" {
+			f.Fatalf("CI CRITICAL: SymPy oracle is strictly required in CI environment but unavailable: %s", client.ReasonUnavailable())
+		}
 		f.Skipf("SymPy not available: %s", client.ReasonUnavailable())
 	}
 	oracle := NewDifferentialOracle(client)
@@ -551,7 +610,7 @@ func FuzzDifferential_SymPy_Calculus(f *testing.F) {
 		p := NewByteStreamProvider(data)
 		budget := 20
 		tree := p.GenNode(3, &budget, ProfileCalculus)
-		if tree == nil || containsLiteralPole(tree) {
+		if tree == nil || containsLiteralPole(tree) || isNonHolomorphic(tree) {
 			return
 		}
 
@@ -570,7 +629,7 @@ func FuzzDifferential_SymPy_Calculus(f *testing.F) {
 		defer cancel()
 
 		seed := int64(p.NextByte())<<24 | int64(p.NextByte())<<16 | int64(p.NextByte())<<8 | int64(p.NextByte())
-		verdict, reason := oracle.EvaluateEquivalence(ctx, ihdResult, diffCall, seed)
+		verdict, reason := oracle.EvaluateEquivalence(ctx, ihdResult, diffCall, seed, DomainReal)
 
 		switch verdict {
 		case VerdictDiffExactMatch, VerdictDiffSampledAgreement, VerdictDiffInconclusive:
@@ -590,7 +649,7 @@ func FuzzDifferential_SymPy_Calculus(f *testing.F) {
 				if eErr != nil || cRes == nil {
 					return false
 				}
-				v, _ := oracle.EvaluateEquivalence(shrinkCtx, cRes, cDiff, seed)
+				v, _ := oracle.EvaluateEquivalence(shrinkCtx, cRes, cDiff, seed, DomainReal)
 				return v == verdict
 			}
 			shrunk := shrinker.Shrink(tree, pred)
@@ -609,6 +668,9 @@ func FuzzDifferential_SymPy_Rational(f *testing.F) {
 
 	client := GetGlobalSymPyClient()
 	if !client.Available() {
+		if os.Getenv("CI") != "" || os.Getenv("IHD_REQUIRE_SYMPY_ORACLE") != "" {
+			f.Fatalf("CI CRITICAL: SymPy oracle is strictly required in CI environment but unavailable: %s", client.ReasonUnavailable())
+		}
 		f.Skipf("SymPy not available: %s", client.ReasonUnavailable())
 	}
 	oracle := NewDifferentialOracle(client)
