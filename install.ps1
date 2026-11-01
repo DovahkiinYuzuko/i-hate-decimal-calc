@@ -76,6 +76,10 @@ if ($Local) {
             New-Item -ItemType Directory -Path $SympyOracleDir -Force | Out-Null
         }
         Copy-Item -Path $LocalOracleSrc -Destination (Join-Path $SympyOracleDir "sympy_oracle.py") -Force
+        $LocalOracleReadme = Join-Path $LocalRoot "tools\sympy-oracle\README.md"
+        if (Test-Path $LocalOracleReadme) {
+            Copy-Item -Path $LocalOracleReadme -Destination (Join-Path $SympyOracleDir "README.md") -Force
+        }
     }
 } else {
     # Determine architecture
@@ -185,6 +189,10 @@ if ($Local) {
                 New-Item -ItemType Directory -Path $SympyOracleDir -Force | Out-Null
             }
             Copy-Item -Path $OraclePySource -Destination (Join-Path $SympyOracleDir "sympy_oracle.py") -Force
+            $OracleReadmeSource = Join-Path $TmpExtract "tools\sympy-oracle\README.md"
+            if (Test-Path $OracleReadmeSource) {
+                Copy-Item -Path $OracleReadmeSource -Destination (Join-Path $SympyOracleDir "README.md") -Force
+            }
         }
     } finally {
         if (Test-Path $TmpZip) { Remove-Item -Path $TmpZip -Force -ErrorAction SilentlyContinue }

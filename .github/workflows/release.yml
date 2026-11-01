@@ -63,9 +63,9 @@ jobs:
           go build -ldflags="-s -w" -o "${VERIFIER_BIN}" ./tools/micro-verifier
           mkdir -p dist
           if [ "${{ matrix.archive }}" = "zip" ]; then
-            zip -r "dist/${{ matrix.target }}.zip" "${BIN_NAME}" "${VERIFIER_BIN}" LICENSE.MIT NOTICE.md README.md exam docs/references tools/micro-verifier/main.go tools/sympy-oracle/sympy_oracle.py
+            zip -r "dist/${{ matrix.target }}.zip" "${BIN_NAME}" "${VERIFIER_BIN}" LICENSE.MIT NOTICE.md README.md exam docs/references tools/micro-verifier/main.go tools/sympy-oracle/sympy_oracle.py tools/sympy-oracle/README.md
           else
-            tar -czvf "dist/${{ matrix.target }}.tar.gz" "${BIN_NAME}" "${VERIFIER_BIN}" LICENSE.MIT NOTICE.md README.md exam docs/references tools/micro-verifier/main.go tools/sympy-oracle/sympy_oracle.py
+            tar -czvf "dist/${{ matrix.target }}.tar.gz" "${BIN_NAME}" "${VERIFIER_BIN}" LICENSE.MIT NOTICE.md README.md exam docs/references tools/micro-verifier/main.go tools/sympy-oracle/sympy_oracle.py tools/sympy-oracle/README.md
           fi
 
       - name: Upload build artifact

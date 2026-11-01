@@ -50,6 +50,9 @@ if [ "$LOCAL_MODE" = true ]; then
     if [ -f "$SCRIPT_DIR/tools/sympy-oracle/sympy_oracle.py" ]; then
         mkdir -p "$SYMPY_ORACLE_DIR"
         cp "$SCRIPT_DIR/tools/sympy-oracle/sympy_oracle.py" "$SYMPY_ORACLE_DIR/sympy_oracle.py"
+        if [ -f "$SCRIPT_DIR/tools/sympy-oracle/README.md" ]; then
+            cp "$SCRIPT_DIR/tools/sympy-oracle/README.md" "$SYMPY_ORACLE_DIR/README.md"
+        fi
     fi
 else
     OS="$(uname -s)"
@@ -177,6 +180,9 @@ else
     if [ -f "$TMP_DIR/tools/sympy-oracle/sympy_oracle.py" ]; then
         mkdir -p "$SYMPY_ORACLE_DIR"
         cp "$TMP_DIR/tools/sympy-oracle/sympy_oracle.py" "$SYMPY_ORACLE_DIR/sympy_oracle.py"
+        if [ -f "$TMP_DIR/tools/sympy-oracle/README.md" ]; then
+            cp "$TMP_DIR/tools/sympy-oracle/README.md" "$SYMPY_ORACLE_DIR/README.md"
+        fi
     fi
 fi
 
