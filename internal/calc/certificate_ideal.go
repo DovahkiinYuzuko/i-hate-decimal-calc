@@ -69,3 +69,66 @@ func NewIdealDecompositionCertificate(
 		IrredundancyWitness: witnesses,
 	}
 }
+
+
+// IdealMembershipCertificate represents a verified algebraic proof of ideal membership
+// via cofactor decomposition f = sum_{i=1}^m h_i * f_i.
+type IdealMembershipCertificate struct {
+	BaseCertificate
+	Target     Node     // The target polynomial f
+	Generators []Node   // The ideal generators [f_1, ..., f_m]
+	Cofactors  []Node   // The derived cofactors [h_1, ..., h_m]
+	IsMember   bool     // True if f in <f_1, ..., f_m>
+	Variables  []string // Variable identifiers
+}
+
+// NewIdealMembershipCertificate constructs a new IdealMembershipCertificate.
+func NewIdealMembershipCertificate(
+	target Node,
+	gens []Node,
+	cofactors []Node,
+	isMember bool,
+	vars []string,
+	residual Node,
+	isVerified bool,
+	details string,
+) *IdealMembershipCertificate {
+	var genStrs []string
+	for _, g := range gens {
+		genStrs = append(genStrs, g.String())
+	}
+	var sumStrs []string
+	for i, c := range cofactors {
+		if i < len(gens) {
+			sumStrs = append(sumStrs, fmt.Sprintf("(%s) * (%s)", c.String(), gens[i].String()))
+		}
+	}
+	eqStr := fmt.Sprintf("%s == %s", target.String(), strings.Join(sumStrs, " + "))
+
+	status := StatusVerified
+	if !isVerified {
+		if !isMember {
+			status = StatusRefuted
+		} else {
+			status = StatusUnknown
+		}
+	} else if !isMember {
+		status = StatusRefuted
+	}
+
+	return &IdealMembershipCertificate{
+		BaseCertificate: BaseCertificate{
+			DomainVal:    CertDomainIdeal,
+			Verified:     isVerified,
+			Status:       status,
+			ResidualNode: residual,
+			DetailsMsg:   details,
+			EquationStr:  eqStr,
+		},
+		Target:     target,
+		Generators: gens,
+		Cofactors:  cofactors,
+		IsMember:   isMember,
+		Variables:  vars,
+	}
+}

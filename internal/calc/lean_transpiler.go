@@ -859,6 +859,12 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 			return "", fmt.Errorf("unsupported impossibility kind %q for Lean 4 formalization", c.Kind)
 		}
 
+	case *IdealMembershipCertificate:
+		return transpileIdealMembershipCertificate(c, "ihd_verified_proof")
+
+	case *SOSCertificate:
+		return transpileSOSCertificate(c, "ihd_verified_proof")
+
 	default:
 		eq := cert.EquationString()
 		if eq != "" && (cert.Domain() == CertificateDomain(DomainFactor) || cert.Domain() == CertificateDomain(DomainGeneral) || cert.Domain() == CertificateDomain(DomainRationalApart)) {
@@ -1065,6 +1071,21 @@ func GenerateLeanSourceWithConditions(theoremName string, cert *VerificationCert
 					allNodes = append(allNodes, s.CombCoeffs...)
 					allNodes = append(allNodes, s.Gens...)
 				}
+			case *IdealMembershipCertificate:
+				if c.Target != nil {
+					allNodes = append(allNodes, c.Target)
+				}
+				allNodes = append(allNodes, c.Generators...)
+				allNodes = append(allNodes, c.Cofactors...)
+			case *SOSCertificate:
+				if c.Target != nil {
+					allNodes = append(allNodes, c.Target)
+				}
+				for _, t := range c.Terms {
+					if t.Poly != nil {
+						allNodes = append(allNodes, t.Poly)
+					}
+				}
 			}
 		}
 
@@ -1137,9 +1158,12 @@ func GenerateLeanSourceWithConditions(theoremName string, cert *VerificationCert
 	}
 
 	if len(binders) > 0 {
-		origThmPrefix := fmt.Sprintf("theorem %s :", escapeLeanIdent(theoremName))
-		newThmPrefix := fmt.Sprintf("theorem %s %s :", escapeLeanIdent(theoremName), strings.Join(binders, " "))
-		theoremCode = strings.Replace(theoremCode, origThmPrefix, newThmPrefix, 1)
+		thmHead := fmt.Sprintf("theorem %s", escapeLeanIdent(theoremName))
+		if idx := strings.Index(theoremCode, thmHead); idx != -1 {
+			insertPos := idx + len(thmHead)
+			binderStr := " " + strings.Join(binders, " ")
+			theoremCode = theoremCode[:insertPos] + binderStr + theoremCode[insertPos:]
+		}
 
 		if hasNonzeroHyp && strings.Contains(theoremCode, ":= by ring") {
 			if containsTanNodes(allNodes...) {
@@ -1236,6 +1260,10 @@ func DetermineRequiredImports(cert Certificate, nodes ...Node) []string {
 		case *RecurrenceCertificate:
 			importsMap["Mathlib.Algebra.LinearRecurrence"] = true
 			importsMap["Mathlib.Tactic.NormNum"] = true
+		case *IdealMembershipCertificate:
+			importsMap["Mathlib.Tactic.LinearCombination"] = true
+		case *SOSCertificate:
+			importsMap["Mathlib.Tactic.Positivity"] = true
 		case *PolynomialRootCertificate, *IntegerRelationCertificate, *EllipticPointCertificate:
 			importsMap["Mathlib.Data.Rat.Defs"] = true
 			importsMap["Mathlib.Tactic.NormNum"] = true
@@ -2477,3 +2505,88 @@ func GenerateLeanSourceFromTrace(theoremName string, trace *ProofTrace) (string,
 }
 
 
+
+
+// transpileIdealMembershipCertificate transforms an IdealMembershipCertificate into a Lean 4 linear_combination theorem.
+func transpileIdealMembershipCertificate(c *IdealMembershipCertificate, theoremName string) (string, error) {
+	if !c.IsVerified() || !c.IsMember {
+		return "", fmt.Errorf("cannot transpile IdealMembershipCertificate: membership not verified")
+	}
+
+	targetStr, err := ToLeanSyntax(c.Target)
+	if err != nil {
+		return "", fmt.Errorf("transpile ideal target: %w", err)
+	}
+
+	var binders []string
+	var combTerms []string
+	for i, gen := range c.Generators {
+		hName := fmt.Sprintf("h%d", i+1)
+		genStr, err := ToLeanSyntax(gen)
+		if err != nil {
+			return "", fmt.Errorf("transpile ideal generator: %w", err)
+		}
+		binders = append(binders, fmt.Sprintf("(%s : %s = 0)", hName, genStr))
+
+		if i < len(c.Cofactors) {
+			cof := c.Cofactors[i]
+			cofStr, err := ToLeanSyntax(cof)
+			if err != nil {
+				return "", fmt.Errorf("transpile ideal cofactor: %w", err)
+			}
+			if cofStr != "0" {
+				combTerms = append(combTerms, fmt.Sprintf("(%s) * %s", cofStr, hName))
+			}
+		}
+	}
+
+	var tactic string
+	if len(combTerms) == 0 {
+		tactic = "by ring"
+	} else {
+		tactic = fmt.Sprintf("by\n  linear_combination %s", strings.Join(combTerms, " + "))
+	}
+
+	if len(binders) > 0 {
+		return fmt.Sprintf("theorem %s %s : %s = 0 := %s", escapeLeanIdent(theoremName), strings.Join(binders, " "), targetStr, tactic), nil
+	}
+	return fmt.Sprintf("theorem %s : %s = 0 := %s", escapeLeanIdent(theoremName), targetStr, tactic), nil
+}
+
+// transpileSOSCertificate transforms an SOSCertificate into a Lean 4 positivity theorem.
+func transpileSOSCertificate(c *SOSCertificate, theoremName string) (string, error) {
+	if !c.IsVerified() || c.Status != SOSCertified {
+		return "", fmt.Errorf("cannot transpile SOSCertificate: SOS decomposition not certified")
+	}
+
+	targetStr, err := ToLeanSyntax(c.Target)
+	if err != nil {
+		return "", fmt.Errorf("transpile SOS target: %w", err)
+	}
+
+	var sumTerms []string
+	for _, term := range c.Terms {
+		qStr, err := ToLeanSyntax(term.Poly)
+		if err != nil {
+			return "", fmt.Errorf("transpile SOS component: %w", err)
+		}
+		if term.Weight.Cmp(big.NewRat(1, 1)) == 0 {
+			sumTerms = append(sumTerms, fmt.Sprintf("(%s)^2", qStr))
+		} else {
+			wNode := NewRationalFromBigRat(term.Weight)
+			wStr, err := ToLeanSyntax(wNode)
+			if err != nil {
+				return "", fmt.Errorf("transpile SOS weight: %w", err)
+			}
+			sumTerms = append(sumTerms, fmt.Sprintf("(%s) * (%s)^2", wStr, qStr))
+		}
+	}
+
+	rhsStr := "0"
+	if len(sumTerms) > 0 {
+		rhsStr = strings.Join(sumTerms, " + ")
+	}
+
+	tactic := fmt.Sprintf("by\n  have h_sos : %s = %s := by ring\n  rw [h_sos]\n  positivity", targetStr, rhsStr)
+	return fmt.Sprintf("theorem %s : 0 ≤ %s := %s", escapeLeanIdent(theoremName), targetStr, tactic), nil
+}
