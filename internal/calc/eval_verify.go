@@ -29,6 +29,7 @@ const (
 	DomainSNF           VerificationDomain = "snf"
 	DomainHNF           VerificationDomain = "hnf"
 	DomainIdeal         VerificationDomain = "ideal"
+	DomainSOS           VerificationDomain = "sos"
 	DomainUnits         VerificationDomain = "units"
 	DomainRecurrence    VerificationDomain = "recurrence"
 	DomainTransform     VerificationDomain = "transform"
@@ -211,6 +212,14 @@ func VerifyComputation(expr, result Node, env *Env) (*VerificationCertificate, e
 		case "primary_decomposition", "ideal_radical", "ideal_dimension":
 			_ = fsm.TransitionTo(VerifyStateTargetClassified)
 			return verifyIdealDecomposition(fn, result, env, fsm)
+
+		case "ideal_member":
+			_ = fsm.TransitionTo(VerifyStateTargetClassified)
+			return verifyIdealMember(fn, result, env, fsm)
+
+		case "sos_decompose":
+			_ = fsm.TransitionTo(VerifyStateTargetClassified)
+			return verifySOSDecompose(fn, result, env, fsm)
 
 		case "is_solvable_by_radicals":
 			_ = fsm.TransitionTo(VerifyStateTargetClassified)
@@ -2970,5 +2979,288 @@ func substituteRecurrence(node Node, seqName, idxVar string, ySol Node) Node {
 		return &FuncNode{Name: v.Name, Args: args}
 	default:
 		return node
+	}
+}
+
+
+func verifyIdealMember(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
+	if len(fn.Args) < 2 {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		return nil, fmt.Errorf("ideal_member requires at least 2 arguments")
+	}
+	targetNode := fn.Args[0]
+	gensNode := fn.Args[1]
+	gensList, ok := gensNode.(*ListNode)
+	if !ok {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		return nil, fmt.Errorf("ideal_member generators must be a list")
+	}
+
+	var vars []string
+	if len(fn.Args) >= 3 {
+		if vList, ok := fn.Args[2].(*ListNode); ok {
+			for _, ve := range vList.Elements {
+				if vn, ok := ve.(*VarNode); ok {
+					vars = append(vars, vn.Name)
+				}
+			}
+		}
+	}
+	if len(vars) == 0 {
+		vars = CollectFreeVariables(targetNode, gensNode)
+		if len(vars) == 0 {
+			vars = []string{"x"}
+		}
+	}
+
+	listRes, ok := result.(*ListNode)
+	if !ok || len(listRes.Elements) != 2 {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		return &VerificationCertificate{
+			Domain:     DomainIdeal,
+			Equation:   fmt.Sprintf("%s in <%s>", targetNode.String(), gensNode.String()),
+			IsVerified: false,
+			Details:    "membership refuted or invalid result format",
+			State:      VerifyStateRefuted,
+		}, nil
+	}
+
+	isMemberVar, ok := listRes.Elements[0].(*VarNode)
+	if !ok || isMemberVar.Name != "true" {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		return &VerificationCertificate{
+			Domain:     DomainIdeal,
+			Equation:   fmt.Sprintf("%s not in <%s>", targetNode.String(), gensNode.String()),
+			IsVerified: false,
+			Details:    "target is not a member of the ideal",
+			State:      VerifyStateRefuted,
+		}, nil
+	}
+
+	cofList, ok := listRes.Elements[1].(*ListNode)
+	if !ok {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		return nil, fmt.Errorf("expected cofactor list")
+	}
+
+	order := OrderGRevLex
+	residual, holds, err := VerifyIdealMembership(targetNode, gensList.Elements, cofList.Elements, vars, order)
+	if err != nil {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		return nil, err
+	}
+
+	resNode := mpolyToNode(residual, vars)
+	if !holds {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		return &VerificationCertificate{
+			Domain:     DomainIdeal,
+			Equation:   fmt.Sprintf("%s == sum h_i f_i", targetNode.String()),
+			Residual:   resNode,
+			IsVerified: false,
+			Details:    "ideal cofactor identity failed: non-zero residual",
+			State:      VerifyStateRefuted,
+		}, nil
+	}
+
+	_ = fsm.TransitionTo(VerifyStateResidualConstructed)
+	_ = fsm.TransitionTo(VerifyStateCertified)
+
+	idealCert := NewIdealMembershipCertificate(
+		targetNode,
+		gensList.Elements,
+		cofList.Elements,
+		true,
+		vars,
+		resNode,
+		true,
+		"ideal membership certified with cofactors",
+	)
+
+	return &VerificationCertificate{
+		Domain:     DomainIdeal,
+		Equation:   idealCert.EquationString(),
+		Residual:   resNode,
+		IsVerified: true,
+		Details:    idealCert.Details(),
+		State:      VerifyStateCertified,
+		CertIR:     idealCert,
+	}, nil
+}
+
+func verifySOSDecompose(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
+	if len(fn.Args) < 1 {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		return nil, fmt.Errorf("sos_decompose requires at least 1 argument")
+	}
+	targetNode := fn.Args[0]
+
+	var vars []string
+	if len(fn.Args) >= 2 {
+		if vList, ok := fn.Args[1].(*ListNode); ok {
+			for _, ve := range vList.Elements {
+				if vn, ok := ve.(*VarNode); ok {
+					vars = append(vars, vn.Name)
+				}
+			}
+		}
+	}
+	if len(vars) == 0 {
+		vars = CollectFreeVariables(targetNode)
+		if len(vars) == 0 {
+			vars = []string{"x"}
+		}
+	}
+
+	listRes, ok := result.(*ListNode)
+	if !ok || len(listRes.Elements) != 2 {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		return nil, fmt.Errorf("invalid SOS result format")
+	}
+
+	statusVar, ok := listRes.Elements[0].(*VarNode)
+	if !ok {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		return nil, fmt.Errorf("invalid SOS status node")
+	}
+
+	switch statusVar.Name {
+	case "certified":
+		termsList, ok := listRes.Elements[1].(*ListNode)
+		if !ok {
+			_ = fsm.TransitionTo(VerifyStateRefuted)
+			return nil, fmt.Errorf("invalid SOS terms list")
+		}
+
+		var certTerms []SOSCertificateTerm
+		for _, te := range termsList.Elements {
+			tList, ok := te.(*ListNode)
+			if !ok || len(tList.Elements) != 2 {
+				continue
+			}
+			ratNode, ok := tList.Elements[0].(*RationalNode)
+			if !ok {
+				continue
+			}
+			certTerms = append(certTerms, SOSCertificateTerm{
+				Weight: ratNode.Val,
+				Poly:   tList.Elements[1],
+			})
+		}
+
+		order := OrderGRevLex
+		residual, holds, err := VerifySOSDecomposition(targetNode, certTerms, vars, order)
+		if err != nil {
+			_ = fsm.TransitionTo(VerifyStateRefuted)
+			return nil, err
+		}
+
+		resNode := mpolyToNode(residual, vars)
+		if !holds {
+			_ = fsm.TransitionTo(VerifyStateRefuted)
+			return &VerificationCertificate{
+				Domain:     DomainSOS,
+				Equation:   fmt.Sprintf("%s == sum c_i q_i^2", targetNode.String()),
+				Residual:   resNode,
+				IsVerified: false,
+				Details:    "SOS identity failed: non-zero residual",
+				State:      VerifyStateRefuted,
+			}, nil
+		}
+
+		_ = fsm.TransitionTo(VerifyStateResidualConstructed)
+		_ = fsm.TransitionTo(VerifyStateCertified)
+
+		sosCert := NewSOSCertificate(
+			targetNode,
+			certTerms,
+			SOSCertified,
+			nil,
+			vars,
+			resNode,
+			true,
+			"SOS decomposition certified",
+		)
+
+		return &VerificationCertificate{
+			Domain:     DomainSOS,
+			Equation:   sosCert.EquationString(),
+			Residual:   resNode,
+			IsVerified: true,
+			Details:    sosCert.Details(),
+			State:      VerifyStateCertified,
+			CertIR:     sosCert,
+		}, nil
+
+	case "refuted":
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		// Extract counterexample point if present and algebraically verify negative evaluation
+		var ceMap map[string]*big.Rat
+		if ceList, ok := listRes.Elements[1].(*ListNode); ok && len(ceList.Elements) > 0 {
+			ceMap = make(map[string]*big.Rat)
+			for _, elem := range ceList.Elements {
+				if pair, ok := elem.(*ListNode); ok && len(pair.Elements) == 2 {
+					if vn, ok := pair.Elements[0].(*VarNode); ok {
+						if rn, ok := pair.Elements[1].(*RationalNode); ok {
+							ceMap[vn.Name] = rn.Val
+						}
+					}
+				}
+			}
+		}
+
+		if len(ceMap) > 0 {
+			varMap := make(map[string]int, len(vars))
+			for i, v := range vars {
+				varMap[v] = i
+			}
+			order := OrderGRevLex
+			evalP, _ := Eval(expandNode(targetNode))
+			if mp, err := nodeToMPoly(evalP, varMap, len(vars), order); err == nil {
+				pt := make([]*big.Rat, len(vars))
+				for i, v := range vars {
+					if r, exists := ceMap[v]; exists {
+						pt[i] = r
+					} else {
+						pt[i] = new(big.Rat)
+					}
+				}
+				val := evaluateAt(mp, pt)
+				if val.Sign() >= 0 {
+					return &VerificationCertificate{
+						Domain:     DomainSOS,
+						Equation:   fmt.Sprintf("not (0 <= %s)", targetNode.String()),
+						IsVerified: false,
+						Details:    fmt.Sprintf("invalid refutation witness: evaluates to %s >= 0", val.String()),
+						State:      VerifyStateRefuted,
+					}, nil
+				}
+				return &VerificationCertificate{
+					Domain:     DomainSOS,
+					Equation:   fmt.Sprintf("not (0 <= %s)", targetNode.String()),
+					IsVerified: false,
+					Details:    fmt.Sprintf("polynomial refuted to be SOS via verified counterexample (value = %s)", val.String()),
+					State:      VerifyStateRefuted,
+				}, nil
+			}
+		}
+
+		return &VerificationCertificate{
+			Domain:     DomainSOS,
+			Equation:   fmt.Sprintf("not (0 <= %s)", targetNode.String()),
+			IsVerified: false,
+			Details:    "polynomial refuted to be SOS via counterexample",
+			State:      VerifyStateRefuted,
+		}, nil
+
+	default:
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return &VerificationCertificate{
+			Domain:     DomainSOS,
+			Equation:   fmt.Sprintf("sos(%s)", targetNode.String()),
+			IsVerified: false,
+			Details:    "no rational SOS certificate found",
+			State:      VerifyStateUnsupportedDomain,
+		}, nil
 	}
 }

@@ -996,3 +996,479 @@ func EvalGroebner(polysNode, varsNode, orderOpt Node, env *Env) (Node, error) {
 
 	return NewList(resElements), nil
 }
+
+
+// -------------------------------------------------------------------------
+// Extended Buchberger Algorithm & Ideal Membership with Cofactors
+// (Cox, Little, O'Shea 2015, Möller, Mora, Traverso 1992, Schreyer 1980)
+// -------------------------------------------------------------------------
+
+func oneMPoly(numVars int) *MPoly {
+	return &MPoly{
+		Terms: []Term{{Coeff: big.NewRat(1, 1), Mon: zeroMonomial(numVars)}},
+		Sugar: 0,
+	}
+}
+
+func addCofactorVector(v1, v2 []*MPoly, order MonomialOrder) []*MPoly {
+	res := make([]*MPoly, len(v1))
+	for i := range v1 {
+		res[i] = v1[i].Add(v2[i], order)
+	}
+	return res
+}
+
+func subCofactorVector(v1, v2 []*MPoly, order MonomialOrder) []*MPoly {
+	res := make([]*MPoly, len(v1))
+	for i := range v1 {
+		res[i] = v1[i].Sub(v2[i], order)
+	}
+	return res
+}
+
+func cofactorVectorNumVars(v []*MPoly, fallback int) int {
+	for _, p := range v {
+		if n := polyNumVars(p); n > 0 {
+			return n
+		}
+	}
+	if fallback > 0 {
+		return fallback
+	}
+	return 1
+}
+
+func scaleCofactorVector(v []*MPoly, scale *big.Rat, order MonomialOrder) []*MPoly {
+	numVars := cofactorVectorNumVars(v, 1)
+	term := Term{Coeff: scale, Mon: zeroMonomial(numVars)}
+	res := make([]*MPoly, len(v))
+	for i := range v {
+		res[i] = v[i].MulTerm(term, order)
+	}
+	return res
+}
+
+func mulCofactorVectorTerm(v []*MPoly, t Term, order MonomialOrder) []*MPoly {
+	res := make([]*MPoly, len(v))
+	for i := range v {
+		res[i] = v[i].MulTerm(t, order)
+	}
+	return res
+}
+
+func mulCofactorVectorPoly(v []*MPoly, q *MPoly, order MonomialOrder) []*MPoly {
+	res := make([]*MPoly, len(v))
+	for i := range v {
+		res[i] = v[i].Mul(q, order)
+	}
+	return res
+}
+
+// extendedBuchberger tracks cofactors g_j = sum_{i=1}^m A[j][i] * f_i alongside the Gröbner basis computation.
+// It also collects syzygies (S-polynomial zero reductions: sum s_i * f_i = 0).
+func extendedBuchberger(initial []*MPoly, order MonomialOrder) ([]*MPoly, [][]*MPoly, [][]*MPoly, error) {
+	m := len(initial)
+	numVars := 1
+	for _, p := range initial {
+		if n := polyNumVars(p); n > numVars {
+			numVars = n
+		}
+	}
+
+	var G []*MPoly
+	var cofactors [][]*MPoly // cofactors[j][i] is coeff of f_i in G[j]
+	var syzygies [][]*MPoly  // Syzygy relations: sum_i S[k][i] * f_i = 0
+
+	for i, p := range initial {
+		if p.IsZero() {
+			continue
+		}
+		// Initial unit vector in K[x]^m
+		unitVec := make([]*MPoly, m)
+		for j := 0; j < m; j++ {
+			if j == i {
+				unitVec[j] = oneMPoly(numVars)
+			} else {
+				unitVec[j] = NewZeroMPoly(numVars)
+			}
+		}
+
+		lc := p.LeadingCoeff()
+		if lc.Sign() != 0 && (lc.Num().Int64() != 1 || lc.Denom().Int64() != 1) {
+			invLC := new(big.Rat).Inv(lc)
+			G = append(G, p.Monic())
+			cofactors = append(cofactors, scaleCofactorVector(unitVec, invLC, order))
+		} else {
+			G = append(G, p.Clone())
+			cofactors = append(cofactors, unitVec)
+		}
+	}
+
+	if len(G) <= 1 {
+		return G, cofactors, syzygies, nil
+	}
+
+	processed := make(map[uint64]bool)
+	var pairs []critPair
+	var currentG []*MPoly
+	for i, p := range G {
+		if i > 0 {
+			pairs = updatePairsGebauerMoller(currentG, pairs, p, i, processed)
+		}
+		currentG = append(currentG, p)
+	}
+	G = currentG
+
+	maxIter := 500
+	iter := 0
+
+	for len(pairs) > 0 {
+		iter++
+		if iter > maxIter {
+			return nil, nil, nil, fmt.Errorf("%s", i18n.T("errors.groebner_limit_exceeded"))
+		}
+
+		bestIdx := 0
+		for k := 1; k < len(pairs); k++ {
+			if pairs[k].sugar < pairs[bestIdx].sugar ||
+				(pairs[k].sugar == pairs[bestIdx].sugar && pairs[k].lcm.TotalDeg < pairs[bestIdx].lcm.TotalDeg) {
+				bestIdx = k
+			}
+		}
+
+		cp := pairs[bestIdx]
+		pairs = append(pairs[:bestIdx], pairs[bestIdx+1:]...)
+
+		p1 := G[cp.i]
+		p2 := G[cp.j]
+
+		if canApplyChainCriterion(p1, p2, cp.i, cp.j, G, processed) {
+			processed[critPairKey(cp.i, cp.j)] = true
+			continue
+		}
+
+		// Compute S-polynomial multipliers:
+		// S(p1, p2) = (lcm / LT(p1)) * p1 - (lcm / LT(p2)) * p2
+		lt1 := p1.LeadingTerm()
+		lt2 := p2.LeadingTerm()
+		lcmMon := cp.lcm
+
+		t1Mon := lcmMon.Div(lt1.Mon)
+		t1Coeff := new(big.Rat).Inv(lt1.Coeff)
+		term1 := Term{Coeff: t1Coeff, Mon: t1Mon}
+
+		t2Mon := lcmMon.Div(lt2.Mon)
+		t2Coeff := new(big.Rat).Inv(lt2.Coeff)
+		term2 := Term{Coeff: t2Coeff, Mon: t2Mon}
+
+		sPoly := p1.MulTerm(term1, order).Sub(p2.MulTerm(term2, order), order)
+
+		// Compute S-poly cofactor vector: term1 * A[cp.i] - term2 * A[cp.j]
+		sCofactors := subCofactorVector(
+			mulCofactorVectorTerm(cofactors[cp.i], term1, order),
+			mulCofactorVectorTerm(cofactors[cp.j], term2, order),
+			order,
+		)
+
+		// Reduce S-polynomial against current basis G
+		qs, rem := polyDivisionWithQuotients(sPoly, G, order)
+		processed[critPairKey(cp.i, cp.j)] = true
+
+		// Update cofactor vector for the remainder: remCofactors = sCofactors - sum q_k * cofactors[k]
+		remCofactors := make([]*MPoly, m)
+		for k := 0; k < m; k++ {
+			remCofactors[k] = sCofactors[k].Clone()
+		}
+		for k, qk := range qs {
+			if !qk.IsZero() {
+				subK := mulCofactorVectorPoly(cofactors[k], qk, order)
+				remCofactors = subCofactorVector(remCofactors, subK, order)
+			}
+		}
+
+		if rem.IsZero() {
+			// S-poly reduced to zero: remCofactors represents a Syzygy relation (sum_i remCofactors[i] * f_i = 0)
+			isNonTrivial := false
+			for _, c := range remCofactors {
+				if !c.IsZero() {
+					isNonTrivial = true
+					break
+				}
+			}
+			if isNonTrivial {
+				syzygies = append(syzygies, remCofactors)
+			}
+		} else {
+			// Found new basis element: normalize to monic
+			lcRem := rem.LeadingCoeff()
+			invLCRem := new(big.Rat).Inv(lcRem)
+
+			newElem := rem.Monic()
+			newCofactors := scaleCofactorVector(remCofactors, invLCRem, order)
+
+			if newElem.LeadingMonomial().IsZero() {
+				// Constant 1 in ideal: ideal is <1>
+				return []*MPoly{newElem}, [][]*MPoly{newCofactors}, syzygies, nil
+			}
+
+			newIdx := len(G)
+			pairs = updatePairsGebauerMoller(G, pairs, newElem, newIdx, processed)
+			G = append(G, newElem)
+			cofactors = append(cofactors, newCofactors)
+		}
+	}
+
+	return G, cofactors, syzygies, nil
+}
+
+// reduceExtendedGroebnerBasis cleans up G and cofactors into a unique reduced Gröbner basis with exact cofactors.
+func reduceExtendedGroebnerBasis(G []*MPoly, cofactors [][]*MPoly, order MonomialOrder) ([]*MPoly, [][]*MPoly) {
+	if len(G) == 0 {
+		return G, cofactors
+	}
+	m := len(cofactors[0])
+
+	// 1. Filter redundancies
+	var minimal []*MPoly
+	var minCofactors [][]*MPoly
+	for i, gi := range G {
+		if gi.IsZero() {
+			continue
+		}
+		redundant := false
+		for j, gj := range G {
+			if i != j && !gj.IsZero() {
+				if gj.LeadingMonomial().Divides(gi.LeadingMonomial()) {
+					if CompareMonomials(gj.LeadingMonomial(), gi.LeadingMonomial(), order) == 0 {
+						if j < i {
+							redundant = true
+							break
+						}
+					} else {
+						redundant = true
+						break
+					}
+				}
+			}
+		}
+		if !redundant {
+			minimal = append(minimal, gi.Monic())
+			minCofactors = append(minCofactors, cofactors[i])
+		}
+	}
+
+	// 2. Interreduction (tail-reduction) with lockstep cofactor transformation
+	for i := 0; i < len(minimal); i++ {
+		gi := minimal[i]
+		ai := minCofactors[i]
+
+		var others []*MPoly
+		var otherIndices []int
+		for j, gj := range minimal {
+			if i != j {
+				others = append(others, gj)
+				otherIndices = append(otherIndices, j)
+			}
+		}
+
+		qs, red := polyDivisionWithQuotients(gi, others, order)
+		if !red.IsZero() {
+			// Update cofactors: ai_new = ai - sum q_k * minCofactors[otherIndices[k]]
+			aiNew := make([]*MPoly, m)
+			for k := 0; k < m; k++ {
+				aiNew[k] = ai[k].Clone()
+			}
+			for k, qk := range qs {
+				if !qk.IsZero() {
+					subK := mulCofactorVectorPoly(minCofactors[otherIndices[k]], qk, order)
+					aiNew = subCofactorVector(aiNew, subK, order)
+				}
+			}
+
+			lcRed := red.LeadingCoeff()
+			if lcRed.Sign() != 0 && (lcRed.Num().Int64() != 1 || lcRed.Denom().Int64() != 1) {
+				invLCRed := new(big.Rat).Inv(lcRed)
+				minimal[i] = red.Monic()
+				minCofactors[i] = scaleCofactorVector(aiNew, invLCRed, order)
+			} else {
+				minimal[i] = red
+				minCofactors[i] = aiNew
+			}
+		}
+	}
+
+	return minimal, minCofactors
+}
+
+// reduceCofactorsModuloSyzygies simplifies cofactors h modulo the syzygy module to minimize monomial term count.
+func reduceCofactorsModuloSyzygies(h []*MPoly, syzygies [][]*MPoly, generators []*MPoly, target *MPoly, order MonomialOrder) []*MPoly {
+	if len(syzygies) == 0 {
+		return h
+	}
+	res := make([]*MPoly, len(h))
+	for i := range h {
+		res[i] = h[i].Clone()
+	}
+
+	// Greedily reduce high-degree terms if a syzygy can cancel leading monomials
+	for _, syz := range syzygies {
+		for i := range res {
+			if res[i].IsZero() || syz[i].IsZero() {
+				continue
+			}
+			ltH := res[i].LeadingTerm()
+			ltS := syz[i].LeadingTerm()
+			if ltS.Mon.Divides(ltH.Mon) {
+				qMon := ltH.Mon.Div(ltS.Mon)
+				qCoeff := new(big.Rat).Quo(ltH.Coeff, ltS.Coeff)
+				qTerm := Term{Coeff: qCoeff, Mon: qMon}
+
+				// Candidate simplified cofactors: res - qTerm * syz
+				candidate := subCofactorVector(res, mulCofactorVectorTerm(syz, qTerm, order), order)
+
+				// Verify candidate still satisfies identity
+				reconstructed := NewZeroMPoly(polyNumVars(target))
+				for k := range candidate {
+					reconstructed = reconstructed.Add(candidate[k].Mul(generators[k], order), order)
+				}
+				if target.Sub(reconstructed, order).IsZero() {
+					res = candidate
+				}
+			}
+		}
+	}
+	return res
+}
+
+// polyIdealMembershipWithCofactors determines if f in <generators> and computes cofactors h_i such that f = sum h_i f_i.
+func polyIdealMembershipWithCofactors(f *MPoly, generators []*MPoly, order MonomialOrder) ([]*MPoly, bool, error) {
+	if f.IsZero() {
+		numVars := polyNumVars(f)
+		m := len(generators)
+		zeros := make([]*MPoly, m)
+		for i := 0; i < m; i++ {
+			zeros[i] = NewZeroMPoly(numVars)
+		}
+		return zeros, true, nil
+	}
+
+	// 1. Run extended Buchberger to obtain Gröbner basis G and representation matrix A
+	G, cofactors, syzygies, err := extendedBuchberger(generators, order)
+	if err != nil {
+		return nil, false, err
+	}
+
+	// 2. Clean up to reduced Gröbner basis with exact cofactors
+	G, cofactors = reduceExtendedGroebnerBasis(G, cofactors, order)
+
+	// 3. Divide target f by G: f = sum q_j G_j + r
+	qs, r := polyDivisionWithQuotients(f, G, order)
+	if !r.IsZero() {
+		return nil, false, nil // Remainder non-zero => f not in ideal
+	}
+
+	// 4. Back-substitute cofactors: h_i = sum_j q_j * A[j][i]
+	m := len(generators)
+	numVars := polyNumVars(f)
+	h := make([]*MPoly, m)
+	for i := 0; i < m; i++ {
+		h[i] = NewZeroMPoly(numVars)
+	}
+
+	for j, qj := range qs {
+		if !qj.IsZero() {
+			for i := 0; i < m; i++ {
+				termI := qj.Mul(cofactors[j][i], order)
+				h[i] = h[i].Add(termI, order)
+			}
+		}
+	}
+
+	// 5. Simplify cofactors modulo syzygies to minimize term count
+	h = reduceCofactorsModuloSyzygies(h, syzygies, generators, f, order)
+
+	// 6. Defensive self-check: verify exact identity f == sum h_i f_i
+	reconstructed := NewZeroMPoly(numVars)
+	for i := 0; i < m; i++ {
+		reconstructed = reconstructed.Add(h[i].Mul(generators[i], order), order)
+	}
+	diff := f.Sub(reconstructed, order)
+	if !diff.IsZero() {
+		return nil, false, fmt.Errorf("internal verification failed: target - sum h_i f_i != 0")
+	}
+
+	return h, true, nil
+}
+
+// EvalIdealMember checks whether targetNode belongs to the ideal generated by gensNode.
+// Syntax: ideal_member(target, [f1, f2, ...], [x, y, ...], [order])
+func EvalIdealMember(targetNode, gensNode, varsNode Node, env *Env) (Node, error) {
+	varList, ok := varsNode.(*ListNode)
+	if !ok || len(varList.Elements) == 0 {
+		// Collect free variables from target and gens
+		freeVars := CollectFreeVariables(targetNode, gensNode)
+		if len(freeVars) == 0 {
+			return nil, fmt.Errorf("%s", i18n.T("errors.groebner_no_vars"))
+		}
+		varNodes := make([]Node, len(freeVars))
+		for i, v := range freeVars {
+			varNodes[i] = &VarNode{Name: v}
+		}
+		varList = NewList(varNodes)
+	}
+
+	order := OrderGRevLex
+	gensList, ok := gensNode.(*ListNode)
+	if !ok {
+		return nil, fmt.Errorf("%s", i18n.T("errors.groebner_polys_not_list"))
+	}
+
+	varNames := make([]string, len(varList.Elements))
+	varMap := make(map[string]int, len(varList.Elements))
+	for i, ve := range varList.Elements {
+		vn, ok := ve.(*VarNode)
+		if !ok {
+			return nil, fmt.Errorf("%s", i18n.T("errors.groebner_var_not_symbol"))
+		}
+		varNames[i] = vn.Name
+		varMap[vn.Name] = i
+	}
+
+	evalTarget, err := Eval(expandNode(targetNode))
+	if err != nil {
+		evalTarget = targetNode
+	}
+	f, err := nodeToMPoly(evalTarget, varMap, len(varNames), order)
+	if err != nil {
+		return nil, err
+	}
+
+	var gens []*MPoly
+	for _, ge := range gensList.Elements {
+		evalG, err := Eval(expandNode(ge))
+		if err != nil {
+			evalG = ge
+		}
+		gp, err := nodeToMPoly(evalG, varMap, len(varNames), order)
+		if err != nil {
+			return nil, err
+		}
+		gens = append(gens, gp)
+	}
+
+	cofactors, isMember, err := polyIdealMembershipWithCofactors(f, gens, order)
+	if err != nil {
+		return nil, err
+	}
+
+	if !isMember {
+		return &VarNode{Name: "false"}, nil
+	}
+
+	var cofNodes []Node
+	for _, c := range cofactors {
+		cofNodes = append(cofNodes, mpolyToNode(c, varNames))
+	}
+
+	return NewList([]Node{&VarNode{Name: "true"}, NewList(cofNodes)}), nil
+}

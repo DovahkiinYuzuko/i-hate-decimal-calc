@@ -269,3 +269,103 @@ func BenchmarkGroebner_ChainCriterion(b *testing.B) {
 	}
 }
 
+
+
+func TestPolyIdealMembershipWithCofactors(t *testing.T) {
+	// Test case 1: Linear combination
+	// f1 = x + y - 1, f2 = x - y - 3
+	// target = x^2 - y^2 - 3
+	vars := []string{"x", "y"}
+	order := OrderGRevLex
+
+	varMap := map[string]int{"x": 0, "y": 1}
+	f1, err := nodeToMPoly(mustParseNode(t, "x + y - 1"), varMap, 2, order)
+	if err != nil {
+		t.Fatalf("nodeToMPoly f1 error: %v", err)
+	}
+	f2, err := nodeToMPoly(mustParseNode(t, "x - y - 3"), varMap, 2, order)
+	if err != nil {
+		t.Fatalf("nodeToMPoly f2 error: %v", err)
+	}
+	target, err := nodeToMPoly(mustParseNode(t, "x^2 - y^2 - 3"), varMap, 2, order)
+	if err != nil {
+		t.Fatalf("nodeToMPoly target error: %v", err)
+	}
+
+	cofactors, isMember, err := polyIdealMembershipWithCofactors(target, []*MPoly{f1, f2}, order)
+	if err != nil {
+		t.Fatalf("polyIdealMembershipWithCofactors error: %v", err)
+	}
+	if !isMember {
+		t.Fatalf("expected target to be member of ideal")
+	}
+	if len(cofactors) != 2 {
+		t.Fatalf("expected 2 cofactors, got %d", len(cofactors))
+	}
+
+	// Verify identity: target == h1 * f1 + h2 * f2
+	h1 := cofactors[0]
+	h2 := cofactors[1]
+	reconstructed := h1.Mul(f1, order).Add(h2.Mul(f2, order), order)
+	diff := target.Sub(reconstructed, order)
+	if !diff.IsZero() {
+		t.Fatalf("reconstruction mismatch: target - (h1*f1 + h2*f2) != 0, got %v", mpolyToNode(diff, vars))
+	}
+
+	// Test case 2: Non-member
+	nonMember, err := nodeToMPoly(mustParseNode(t, "x + 1"), varMap, 2, order)
+	if err != nil {
+		t.Fatalf("nodeToMPoly nonMember error: %v", err)
+	}
+	_, isMember2, err := polyIdealMembershipWithCofactors(nonMember, []*MPoly{f1, f2}, order)
+	if err != nil {
+		t.Fatalf("polyIdealMembershipWithCofactors nonMember error: %v", err)
+	}
+	if isMember2 {
+		t.Fatalf("expected nonMember to NOT be member of ideal")
+	}
+}
+
+
+func TestEvalIdealMember_Builtin(t *testing.T) {
+	env := NewEnv()
+	node, err := Parse("ideal_member(x^2 - 1, [x - 1], [x])")
+	if err != nil {
+		t.Fatalf("Parse error: %v", err)
+	}
+	res, err := EvalWithEnv(node, env)
+	if err != nil {
+		t.Fatalf("EvalWithEnv error: %v", err)
+	}
+
+	listNode, ok := res.(*ListNode)
+	if !ok || len(listNode.Elements) != 2 {
+		t.Fatalf("expected 2-element list result, got: %s", Format(res))
+	}
+	vn, ok := listNode.Elements[0].(*VarNode)
+	if !ok || vn.Name != "true" {
+		t.Fatalf("expected true, got: %s", Format(listNode.Elements[0]))
+	}
+}
+
+func TestEvalIdealMember_ZeroVectorScaling(t *testing.T) {
+	// Tests that scaling cofactor vectors where earlier entries are zero polynomials does not panic
+	env := NewEnv()
+	node, err := Parse("ideal_member(x, [y, 2*x], [x, y])")
+	if err != nil {
+		t.Fatalf("Parse error: %v", err)
+	}
+	res, err := EvalWithEnv(node, env)
+	if err != nil {
+		t.Fatalf("EvalWithEnv error: %v", err)
+	}
+
+	listNode, ok := res.(*ListNode)
+	if !ok || len(listNode.Elements) != 2 {
+		t.Fatalf("expected 2-element list result, got: %s", Format(res))
+	}
+	vn, ok := listNode.Elements[0].(*VarNode)
+	if !ok || vn.Name != "true" {
+		t.Fatalf("expected true, got: %s", Format(listNode.Elements[0]))
+	}
+}

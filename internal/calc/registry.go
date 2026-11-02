@@ -235,6 +235,8 @@ var defaultFunctionArgs = map[string][]string{
 	"poly_lcm":              {"a", "b", "var"},
 	"resultant":             {"p1", "p2", "var"},
 	"groebner":              {"polys", "vars", "order"},
+	"ideal_member":          {"target", "generators", "vars"},
+	"sos_decompose":         {"poly", "vars"},
 	"ideal_intersection":    {"i1", "i2", "vars"},
 	"ideal_colon":           {"i1", "i2", "vars"},
 	"ideal_saturation":      {"i1", "i2", "vars"},
@@ -1136,6 +1138,16 @@ func init() {
 		Name:    "ideal_saturation",
 		MinArgs: 3,
 		MaxArgs: 4,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "ideal_member",
+		MinArgs: 2,
+		MaxArgs: 3,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "sos_decompose",
+		MinArgs: 1,
+		MaxArgs: 2,
 	})
 
 	// Exact Matrix Decompositions Pack (issue-59)

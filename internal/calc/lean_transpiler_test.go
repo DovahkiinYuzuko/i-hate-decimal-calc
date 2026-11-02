@@ -1178,3 +1178,95 @@ func TestLeanTranspiler_ReviewFindings(t *testing.T) {
 		t.Errorf("expected -(-2) to NOT be recognized as negative exponent")
 	}
 }
+
+
+func TestTranspileIdealMembershipCertificate(t *testing.T) {
+	// f = x^2 - y^2, f1 = x - y, f2 = x + y
+	// f = (x + y) * f1 + 0 * f2
+	f := mustParseNode(t, "x^2 - y^2")
+	f1 := mustParseNode(t, "x - y")
+	f2 := mustParseNode(t, "x + y")
+	h1 := mustParseNode(t, "x + y")
+	h2 := mustParseNode(t, "0")
+
+	cert := NewIdealMembershipCertificate(
+		f,
+		[]Node{f1, f2},
+		[]Node{h1, h2},
+		true,
+		[]string{"x", "y"},
+		mustParseNode(t, "0"),
+		true,
+		"ideal membership certified",
+	)
+
+	leanCode, err := TranspileCertificateIRToLean(cert)
+	if err != nil {
+		t.Fatalf("TranspileCertificateIRToLean failed: %v", err)
+	}
+
+	if !strings.Contains(leanCode, "linear_combination") {
+		t.Errorf("expected linear_combination tactic in code, got:\n%s", leanCode)
+	}
+	if !strings.Contains(leanCode, "h1 : (x - y) = 0") && !strings.Contains(leanCode, "h1 : x - y = 0") && !strings.Contains(leanCode, "h1 : x - (y) = 0") {
+		t.Errorf("missing hypothesis h1 in code, got:\n%s", leanCode)
+	}
+
+	imports := DetermineRequiredImports(cert, f, f1, f2)
+	hasLC := false
+	for _, imp := range imports {
+		if imp == "Mathlib.Tactic.LinearCombination" {
+			hasLC = true
+			break
+		}
+	}
+	if !hasLC {
+		t.Errorf("expected Mathlib.Tactic.LinearCombination in imports, got: %v", imports)
+	}
+}
+
+func TestTranspileSOSCertificate(t *testing.T) {
+	// P = x^2 + 2*x + 1 = 1 * (x + 1)^2
+	p := mustParseNode(t, "x^2 + 2*x + 1")
+	q := mustParseNode(t, "x + 1")
+
+	cert := NewSOSCertificate(
+		p,
+		[]SOSCertificateTerm{
+			{
+				Weight: big.NewRat(1, 1),
+				Poly:   q,
+			},
+		},
+		SOSCertified,
+		nil,
+		[]string{"x"},
+		mustParseNode(t, "0"),
+		true,
+		"SOS certified",
+	)
+
+	leanCode, err := TranspileCertificateIRToLean(cert)
+	if err != nil {
+		t.Fatalf("TranspileCertificateIRToLean failed: %v", err)
+	}
+
+	if !strings.Contains(leanCode, "positivity") {
+		t.Errorf("expected positivity tactic in code, got:\n%s", leanCode)
+	}
+	if !strings.Contains(leanCode, "have h_sos :") {
+		t.Errorf("expected have h_sos in code, got:\n%s", leanCode)
+	}
+
+	imports := DetermineRequiredImports(cert, p)
+	hasPos := false
+	for _, imp := range imports {
+		if imp == "Mathlib.Tactic.Positivity" {
+			hasPos = true
+			break
+		}
+	}
+	if !hasPos {
+		t.Errorf("expected Mathlib.Tactic.Positivity in imports, got: %v", imports)
+	}
+}

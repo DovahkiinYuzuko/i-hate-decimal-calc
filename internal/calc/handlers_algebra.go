@@ -40,6 +40,8 @@ func init() {
 	RegisterHandler("ideal_intersection", handleIdealIntersection)
 	RegisterHandler("ideal_colon", handleIdealColon)
 	RegisterHandler("ideal_saturation", handleIdealSaturation)
+	RegisterHandler("ideal_member", handleIdealMember)
+	RegisterHandler("sos_decompose", handleSOSDecompose)
 }
 
 func handlePolyGCD(args []Node, env *Env) (Node, error) {
@@ -358,4 +360,27 @@ func handleCAD(args []Node, env *Env) (Node, error) {
 		}
 	}
 	return CADDecompose(polys, vars, env)
+}
+
+
+func handleIdealMember(args []Node, env *Env) (Node, error) {
+	if len(args) < 2 {
+		return nil, fmt.Errorf("%s", i18n.T("errors.func_args_between", "ideal_member", 2, 3, len(args)))
+	}
+	var varsOpt Node
+	if len(args) >= 3 {
+		varsOpt = args[2]
+	}
+	return EvalIdealMember(args[0], args[1], varsOpt, env)
+}
+
+func handleSOSDecompose(args []Node, env *Env) (Node, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("%s", i18n.T("errors.func_args_between", "sos_decompose", 1, 2, len(args)))
+	}
+	var varsOpt Node
+	if len(args) >= 2 {
+		varsOpt = args[1]
+	}
+	return EvalSOSDecompose(args[0], varsOpt, env)
 }
