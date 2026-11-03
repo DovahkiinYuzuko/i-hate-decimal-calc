@@ -20,9 +20,9 @@ CATALOG_OUTPUT = REPO_ROOT / "formal" / "proof_debt.json"
 
 def safe_relpath(p: Path) -> str:
     try:
-        return str(p.relative_to(REPO_ROOT))
+        return p.relative_to(REPO_ROOT).as_posix()
     except ValueError:
-        return str(p)
+        return p.as_posix() if hasattr(p, "as_posix") else str(p)
 
 
 def scan_test_cases():
@@ -50,6 +50,10 @@ def analyze_proofs(cases):
         "linarith": 0,
         "omega": 0,
         "calc": 0,
+        "decide": 0,
+        "ext": 0,
+        "fin_cases": 0,
+        "field_simp": 0,
         "sorry": 0,
     }
 
@@ -66,7 +70,7 @@ def analyze_proofs(cases):
         entry = {
             "id": idx,
             "expr": expr,
-            "proof_file": str(proof_file.relative_to(REPO_ROOT)) if proof_file.exists() else None,
+            "proof_file": safe_relpath(proof_file) if proof_file.exists() else None,
             "status": "None",
             "tactics": [],
             "line_count": 0,
@@ -134,6 +138,9 @@ def main():
             if cur_unverified > old_unverified:
                 print(f"[RATCHET FAIL] Proof debt increased! Old: {old_unverified}, Current: {cur_unverified}", file=sys.stderr)
                 return 1
+        except json.JSONDecodeError as e:
+            print(f"[ERROR] Corrupted debt ledger JSON: {e}", file=sys.stderr)
+            return 1
         except Exception as e:
             print(f"Notice: could not read old debt file: {e}")
 

@@ -2604,19 +2604,41 @@ type NegativeMutant struct {
 // GenerateNegativeMutants generates 4 deterministic type-preserving mutant Lean theorems
 // from a target AST expression or certificate.
 func GenerateNegativeMutants(theoremName string, node ast.Node, cert Certificate) ([]NegativeMutant, error) {
-	var mutants []NegativeMutant
+	if node == nil && cert == nil {
+		return nil, fmt.Errorf("both node and cert are nil")
+	}
 
-	baseExpr, err := ToLeanSyntax(node)
-	if err != nil {
-		return nil, fmt.Errorf("transpile baseExpr for mutants: %w", err)
+	var baseExpr string
+	var err error
+	var targetNode ast.Node = node
+
+	if targetNode == nil && cert != nil {
+		if sos, ok := cert.(*SOSCertificate); ok {
+			targetNode = sos.Target
+		} else if ideal, ok := cert.(*IdealMembershipCertificate); ok {
+			targetNode = ideal.Target
+		}
+	}
+
+	if targetNode != nil {
+		baseExpr, err = ToLeanSyntax(targetNode)
+		if err != nil {
+			return nil, fmt.Errorf("transpile baseExpr for mutants: %w", err)
+		}
 	}
 
 	// Collect free variables to inject explicit type binders for autoImplicit = false
-	vars := CollectFreeVariables(node)
+	vars := CollectFreeVariables(targetNode)
+	carrierType := inferTheoremDomainType(cert, targetNode)
+	if carrierType == "" {
+		carrierType = DomainRat
+	}
 	var binderPrefix string
 	if len(vars) > 0 {
-		binderPrefix = fmt.Sprintf(" (%s : ℚ)", strings.Join(vars, " "))
+		binderPrefix = fmt.Sprintf(" (%s : %s)", strings.Join(vars, " "), carrierType)
 	}
+
+	var mutants []NegativeMutant
 
 	// 1. Constant Perturbation (RHS + 1)
 	m1Name := fmt.Sprintf("%s_mutant_c_add_1", theoremName)
@@ -2629,9 +2651,9 @@ func GenerateNegativeMutants(theoremName string, node ast.Node, cert Certificate
 		ExpectedResult: "REJECT",
 	})
 
-	// 2. Unconditional Constant Shift (RHS + 2) avoiding fixed-point risks like -1/2
+	// 2. Unconditional Sign Inversion (LHS = -(RHS))
 	m2Name := fmt.Sprintf("%s_mutant_sign_flip", theoremName)
-	m2Code := fmt.Sprintf("/--\nerror: ring failed\n-/\n#guard_msgs (whitespace := lax) in\nexample%s : %s = (%s) + 2 := by ring", binderPrefix, baseExpr, baseExpr)
+	m2Code := fmt.Sprintf("/--\nerror: ring failed\n-/\n#guard_msgs (whitespace := lax) in\nexample%s : %s = -(%s) := by ring", binderPrefix, baseExpr, baseExpr)
 	mutants = append(mutants, NegativeMutant{
 		ID:             m2Name,
 		Operator:       "operator_inversion",
@@ -2651,11 +2673,28 @@ func GenerateNegativeMutants(theoremName string, node ast.Node, cert Certificate
 		ExpectedResult: "REJECT",
 	})
 
-	// 4. Certificate Perturbation (if cert is an IdealMembershipCertificate or SOSCertificate)
+	// 4. Certificate Perturbation (if cert is an SOSCertificate or IdealMembershipCertificate)
 	if sosCert, ok := cert.(*SOSCertificate); ok && sosCert.IsVerified() {
 		m4Name := fmt.Sprintf("%s_mutant_sos_perturb", theoremName)
-		targetStr, _ := ToLeanSyntax(sosCert.Target)
-		m4Code := fmt.Sprintf("/--\nerror: ring failed\n-/\n#guard_msgs (whitespace := lax) in\nexample%s : %s = -1 := by ring", binderPrefix, targetStr)
+		sosTarget, err := ToLeanSyntax(sosCert.Target)
+		if err != nil {
+			return nil, fmt.Errorf("transpile SOS target for mutant: %w", err)
+		}
+		m4Code := fmt.Sprintf("/--\nerror: positivity failed\n-/\n#guard_msgs (whitespace := lax) in\nexample%s : 0 ≤ -(%s) - 1 := by positivity", binderPrefix, sosTarget)
+		mutants = append(mutants, NegativeMutant{
+			ID:             m4Name,
+			Operator:       "certificate_perturbation",
+			TheoremName:    m4Name,
+			LeanCode:       m4Code,
+			ExpectedResult: "REJECT",
+		})
+	} else if idealCert, ok := cert.(*IdealMembershipCertificate); ok && idealCert.IsVerified() {
+		m4Name := fmt.Sprintf("%s_mutant_ideal_perturb", theoremName)
+		idealTarget, err := ToLeanSyntax(idealCert.Target)
+		if err != nil {
+			return nil, fmt.Errorf("transpile ideal target for mutant: %w", err)
+		}
+		m4Code := fmt.Sprintf("/--\nerror: ring failed\n-/\n#guard_msgs (whitespace := lax) in\nexample%s : %s + 1 = 0 := by ring", binderPrefix, idealTarget)
 		mutants = append(mutants, NegativeMutant{
 			ID:             m4Name,
 			Operator:       "certificate_perturbation",
