@@ -32,7 +32,8 @@
 !formal/lean-toolchain
 !formal/lakefile.toml
 !formal/test_cases.txt
-!formal/lake-manifest.json
+!formal/lake-manifest.json!formal/Tools/
+!formal/Tools/AxiomAudit.lean
 # .gitignores/internal.gitignore
 !internal/
 !internal/calc/
@@ -94,3 +95,6 @@
 
 !tools/sympy-oracle/
 !tools/sympy-oracle/sympy_oracle.py
+
+!tools/lean/
+!tools/lean/proof_catalog.py
