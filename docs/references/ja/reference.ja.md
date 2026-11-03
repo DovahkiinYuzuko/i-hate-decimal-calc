@@ -122,15 +122,17 @@
 | `totient` | `totient(n)` | オイラーのトーシェント関数 $\phi(n) = n \prod_{p \mid n} (1 - 1/p)$ |
 | `is_prime` | `is_prime(n)` | 素数判定（64bit範囲はSinclair/Sorenson-Webster基底による完全決定論的判定、巨大数はBaillie-PSWによる素数候補判定（反例未発見）） |
 | `solve` | `solve(expr, var)` | 厳密代数・初等超越方程式ソルバー（1次・2次・3次・4次代数方程式の代数的根号求解に加え、ランバートW関数 `lambert_w` による初等超越方程式 $f(x)e^{f(x)}=c$, $ax+b\ln x=c$, $x^x=c$, $a^x=bx$ の完全閉形式解に対応。カルダノ公式・フェラーリ法・チルンハウス変換・分解3次方程式レゾルベントによる厳密解、重解・複素数解対応） |
+| `sos_decompose` | `sos_decompose(poly)` / `sos_decompose(poly, [vars])` | 多項式の二乗和分解（Sum of Squares Decomposition）。Gram行列の半正定値分解により多項式を二乗和形式 $\sum_i c_i q_i^2$ へ分解 |
+| `interval` | `interval(low, high)` | 厳密有理数区間ノード `IntervalNode` の直接構築（下限 `low`、上限 `high`） |
 | `to_poly` | `to_poly(expr, [x, y], "lex")` | 式を指定変数・単項式順序（`lex`, `grevlex`）の正規形多項式ノード `PolyNode` へ明示変換 |
 | `to_alg` | `to_alg(rep, min_poly, [var])` | 代数拡大体 $\mathbb{Q}(\alpha) \cong \mathbb{Q}[x]/\langle m(x) \rangle$ の代数数ノード `AlgNode` を構築 |
-| `alg_inv` | `alg_inv(rep, min_poly)` | 拡大ユークリッド互除法による代数数 $\beta \in \mathbb{Q}(\alpha)$ の乗法逆元 $\beta^{-1}$ 算出 |
-| `min_poly` | `min_poly(rep, min_poly)` | 代数数の既約モニック最小多項式 $m(x) \in \mathbb{Q}[x]$ の導出 |
+| `alg_inv` | `alg_inv(alg_node)` | 拡大ユークリッド互除法による代数数ノード $\beta \in \mathbb{Q}(\alpha)$ の乗法逆元 $\beta^{-1}$ 算出 |
+| `min_poly` / `minimal_polynomial` | `min_poly(rep, min_poly)` | 代数数の既約モニック最小多項式 $m(x) \in \mathbb{Q}[x]$ の導出 |
 | `solve_diophantine` | `solve_diophantine(3*x + 5*y == 7, [x, y])` | 不定整数方程式（ディオファントス方程式）の完全厳密ソルバー。1次線形不定方程式（拡張ユークリッド互除法およびベズーの等式に基づく整数パラメータ $t$ による一般解系）およびピタゴラス方程式（$x^2+y^2=z^2$ 等の代数曲線有理点媒介変数表示）を判定・求解。`--verify` 時には代数的残差ゼロ証明書、`--lean` 時には Lean 4 形式証明を出力 |
-| `pell_solve` | `pell_solve(D)` / `pell_solve(D, 1)` / `pell_solve(D, -1)` | ペル方程式 $x^2 - D y^2 = 1$（および負のペル方程式 $x^2 - D y^2 = -1$）の最小整数解（基本解 $(x_1, y_1)$）の完全厳密導出。非平方正整数 $D$ に対する連分数展開周期アルゴリズム（Continued Fraction Expansion）により巨大桁整数でも決定論的に求解。`--verify` および `--lean`（Mathlib4 `by decide` 定理コード生成）に対応 |
+| `pell_solve` / `solve_pell` / `pell` | `pell_solve(D)` / `pell_solve(D, 1)` / `pell_solve(D, -1)` | ペル方程式 $x^2 - D y^2 = 1$（および負のペル方程式 $x^2 - D y^2 = -1$）の最小整数解（基本解 $(x_1, y_1)$）の完全厳密導出。非平方正整数 $D$ に対する連分数展開周期アルゴリズム（Continued Fraction Expansion）により巨大桁整数でも決定論的に求解。`--verify` および `--lean`（Mathlib4 `by decide` 定理コード生成）に対応 |
 | `to_primitive_element` / `primitive_element` | `to_primitive_element([sqrt(2), sqrt(3)])` / `to_primitive_element([x^2 - 2, x^2 - 3])` | 原始元定理（Primitive Element Theorem）に基づき、多重代数拡大体 $\mathbb{Q}(\alpha_1, \dots, \alpha_k)$ を単一の代数的数 $\theta$ による単拡大 $\mathbb{Q}(\theta)$ へ同型変換し、原始元シンボル、合成最小多項式 $m_\theta(x)$、および各生成元の表現多項式リスト $[P_{\alpha_1}(\theta), \dots, P_{\alpha_k}(\theta)]$ を導出。シルベスター終結式と拡大体上多項式GCDにより決定論的に求解。`--verify` および `--lean` による代数関係式検証に対応 |
 | `fib` / `fibonacci` | `fib(n)` / `fibonacci(n)` | フィボナッチ数 $F_n$。Fast Doubling アルゴリズム（$O(\log n)$ 準線形時間ステップ）により数万〜十万番台の巨大フィボナッチ数を高速算出。負の整数引数に対するネガフィボナッチ数 $F_{-n} = (-1)^{n+1} F_n$ にも完全対応 |
-| `digit_count` | `digit_count(n)` / `digit_count(n, base)` | 巨大整数の厳密桁数算定。基数 `base`（省略時10）における桁数を高速に算定（例: `digit_count(fib(10000))` $\to$ `2090`） |
+| `digit_count` | `digit_count(n)` | 巨大整数の厳密桁数算定（例: `digit_count(fib(10000))` $\to$ `2090`） |
 | `to_base` | `to_base(n, base)` | 任意基数進数変換（$2 \le \text{base} \le 64$）。整数の位取り記数法表現および有理数 $p/q$ の長除法余り追跡による循環小数展開（例: `to_base(255, 16)` $\to$ `ff`、`to_base(1/3, 2)` $\to$ `0.(01)_2`、`to_base(1/3, 16)` $\to$ `0.(5)_16`、`to_base(4031, 64)` $\to$ `@_`） |
 | `from_base` | `from_base(str, base)` | 任意基数進数表現（$2 \le \text{base} \le 64$）から多倍長整数への復元。`0x`, `0b`, `0o` 接頭辞の自動処理、および Base 64 の `@`/`_` または `+`/`/` 表記に対応（例: `from_base("ff", 16)` $\to$ `255`、`from_base("@_", 64)` $\to$ `4031`） |
 | `bin` | `bin(n)` | 2進数変換ショートカット（接頭辞 `0b` 付き、例: `bin(13)` $\to$ `0b1101`） |
@@ -234,7 +236,7 @@
 | `collinear` | `collinear(A, B, C)` | 3点 $A, B, C$ が同一直線上に存在（共線条件: 外積 $(B_x - A_x)(C_y - A_y) - (B_y - A_y)(C_x - A_x) = 0$） |
 | `parallel` | `parallel(A, B, C, D)` | 直線 $AB$ と $CD$ が平行（方向ベクトルの外積 $= 0$） |
 | `perpendicular` | `perpendicular(A, B, C, D)` | 直線 $AB$ と $CD$ が垂直直交（方向ベクトルの内積 $= 0$） |
-| `equal_length_sq` | `equal_length_sq(A, B, C, D)` | 線分長の平方一致関係（距離自乗の等値関係: $AB^2 = CD^2$） |
+| `equal_length` / `equal_length_sq` | `equal_length(A, B, C, D)`, `equal_length_sq(A, B, C, D)` | 線分長の一致関係（距離の等値関係 $AB = CD$ および距離自乗の等値関係 $AB^2 = CD^2$） |
 | `circle_concyclic` | `circle_concyclic(A, B, C, D)` | 4点 $A, B, C, D$ が同一円周上に存在（共円条件） |
 
 ---
@@ -279,13 +281,13 @@
 
 | 関数 | 書式・例 | 説明 |
 | :--- | :--- | :--- |
-| `ec_add` | `ec_add([A, B], P1, P2)` | ワイエルシュトラス標準形 $y^2 = x^3 + Ax + B$ 上の有理点加算（Chord and Tangent 法、単位元・無限遠点 `O` 対応） |
-| `ec_mul` | `ec_mul([A, B], n, P)` | 楕円曲線上の有理点のスカラー倍算 $n P$（バイナリ Double-and-Add アルゴリズム） |
+| `ec_add` | `ec_add(A, B, P1, P2)` / `ec_add(A, B, x1, y1, x2, y2)` | ワイエルシュトラス標準形 $y^2 = x^3 + Ax + B$ 上の有理点加算（Chord and Tangent 法、単位元・無限遠点 `O` 対応） |
+| `ec_mul` | `ec_mul(A, B, n, P)` / `ec_mul(A, B, n, x, y)` | 楕円曲線上の有理点のスカラー倍算 $n P$（バイナリ Double-and-Add アルゴリズム） |
 | `ec_torsion` | `ec_torsion(A, B)` | Nagell-Lutz の定理および Mazur の定理に基づく有限位数有理点群（捩れ群 $E(\mathbb{Q})_{\text{tors}}$）の完全決定アルゴリズム |
-| `ec_p_order` | `ec_p_order(A, B, p)` | 素有限体 $\mathbb{F}_p$ 上の非特異楕円曲線 $y^2 \equiv x^3 + Ax + B \pmod p$ の群位数 $\#E(\mathbb{F}_p)$ を決定論的 Schoof アルゴリズム（分割多項式・フロベニウス写像・CRT合成）により多項式時間で算定 |
-| `ec_p_trace` | `ec_p_trace(A, B, p)` | 素有限体 $\mathbb{F}_p$ 上の楕円曲線のフロベニウストレース $a = p + 1 - \#E(\mathbb{F}_p)$ を決定論的に算出（Hasseの定理 $|a| \le 2\sqrt{p}$ を満たす整数） |
-| `ec_p_add` | `ec_p_add(A, B, p, P, Q)` | 素有限体 $\mathbb{F}_p$ 上の楕円曲線群における点加算 $P + Q$（$\pmod p$ の有理逆元とChord and Tangent幾何演算、単位元・無限遠点 `O` 対応） |
-| `ec_p_mul` | `ec_p_mul(A, B, p, n, P)` | 素有限体 $\mathbb{F}_p$ 上の楕円曲線群における点のスカラー倍算 $n P$（$\pmod p$ 上のDouble-and-Add高速累乗算） |
+| `ec_p_order` | `ec_p_order([A, B], p)` | 素有限体 $\mathbb{F}_p$ 上の非特異楕円曲線 $y^2 \equiv x^3 + Ax + B \pmod p$ の群位数 $\#E(\mathbb{F}_p)$ を決定論的 Schoof アルゴリズム（分割多項式・フロベニウス写像・CRT合成）により多項式時間で算定 |
+| `ec_p_trace` | `ec_p_trace([A, B], p)` | 素有限体 $\mathbb{F}_p$ 上の楕円曲線のフロベニウストレース $a = p + 1 - \#E(\mathbb{F}_p)$ を決定論的に算出（Hasseの定理 $|a| \le 2\sqrt{p}$ を満たす整数） |
+| `ec_p_add` | `ec_p_add([A, B], P, Q, p)` | 素有限体 $\mathbb{F}_p$ 上の楕円曲線群における点加算 $P + Q$（$\pmod p$ の有理逆元とChord and Tangent幾何演算、単位元・無限遠点 `O` 対応） |
+| `ec_p_mul` | `ec_p_mul([A, B], n, P, p)` | 素有限体 $\mathbb{F}_p$ 上の楕円曲線群における点のスカラー倍算 $n P$（$\pmod p$ 上のDouble-and-Add高速累乗算） |
 | `ec_rank_bound` | `ec_rank_bound(A, B)` | 有理数体上の楕円曲線 $y^2 = x^3 + Ax + B$ に対し、有理2等分点を用いた2降下法（2-isogeny descent）によりセルマー群次元を算定し、モーデル・ヴェイユ階数の保証区間 $[r_{\text{lower}}, r_{\text{upper}}]$ を決定論的に算出 |
 | `ec_generators` | `ec_generators(A, B)` | 2降下法の等質空間有理点探索により得られた無限位数の独立有理点集合（階数下限を成す自由部分群の生成元）を抽出 |
 
@@ -363,7 +365,7 @@
 | `clifford_wedge` | `clifford_wedge(e0, e1, 3, 0)` | グラスマン外積（ウェッジ積） $A \wedge B$。計量 $(p, q, [r])$ 上で完全反对称化された次数ブレードを算出 |
 | `clifford_contract` | `clifford_contract(e0, e0, "left", 3, 0)` | 左右縮約（内積拡張）。第3引数で方向（`"left"`: 左縮約 $\lrcorner$、`"right"`: 右縮約 $\llcorner$）を指定 |
 | `clifford_dual` | `clifford_dual(e3, 3, 0, 1)` | ポアンカレ補集合双対（Poincaré Complement Dual）。擬スカラー単位ブレード $I$ の縮約による双対マルチベクトルの導出（退化計量 $r > 0$ にも完全対応） |
-| `quantum_equiv` | `quantum_equiv(c1, c2, n, [k])` | 二進円分環 $\mathbb{Z}[1/\sqrt{2}, i]$ を用いた小数ゼロの Clifford+T 量子回路厳密等価性判定。$n$ 量子ビット回路 $c1, c2$ が大域位相 $\omega^k$（$\omega = e^{i\pi/4}$）を除いて等価であるかを判定。不等価時は反例基底状態（Witness State）を出力 |
+| `quantum_equiv` | `quantum_equiv(c1, c2)` / `quantum_equiv(c1, c2, strict)` | 二進円分環 $\mathbb{Z}[1/\sqrt{2}, i]$ を用いた小数ゼロの Clifford+T 量子回路厳密等価性判定。Clifford+T 量子回路 $c1, c2$ が大域位相を除いて等価であるかを判定。不等価時は反例基底状態（Witness State）を出力 |
 | `quantum_eval` | `quantum_eval(circuit, numQubits)` | Clifford+T 量子回路の記号ユニタリ行列を二進円分環係数で厳密シミュレーション・導出 |
 
 ---
@@ -374,7 +376,7 @@
 
 | 関数・構文 | 書式・例 | 説明 |
 | :--- | :--- | :--- |
-| `table` | `table(x^2, x, 1, 5)` / `table(i + j, i, 1, 3, 1, j, 1, 2)` | Mathematica 準拠のリスト内包表記・反復リスト生成。引数 `table(expr, var, start, end, [step])` による動的スコープ反復 |
+| `table` | `table(x^2, x, 1, 5)` / `table(k, k, 1, 9, 2)` | リスト内包表記・反復リスト生成。引数 `table(expr, var, start, end, [step])` による動的スコープ反復（ネスト呼び出しによる多次元リスト生成も対応） |
 | `product` | `product(k, k, 1, 5)` / `product(2*k + 1, k, 0, 4)` | 離散総乗（乗乗計算 $\prod_{k=\text{start}}^{\text{end}} \text{expr}$）。動的スコープ保護およびゼロ短絡評価対応 |
 | `for` | `for(i, 1, 5, s = s + i)` | 手続き型反復ループ。引数 `for(var, start, end, [step], body)` による順次実行（返却値は最終式の評価結果） |
 | `to_base` | `to_base(255, 16)` / `to_base(1/3, 2)` | 任意基数（2〜64）への基底変換文字列生成。有理数の場合は循環小数表記を出力 |
@@ -415,6 +417,7 @@
 
 | 関数 | 書式・例 | 説明 |
 | :--- | :--- | :--- |
+| `ideal_member` | `ideal_member(target, [f1, f2, ...], [x, y, ...])` | 多項式が多項式系によって生成されるイデアルに属するかをグレブナー基底により判定し、所属時は余因子係数ベクトル（代数的証明書）を返却 |
 | `primary_decomposition` | `primary_decomposition([x^2 - 1, y], [x, y])` | 多変数多項式イデアル $I = \langle p_1, \dots \rangle$ に対し、Gianni-Trager-Zacharias (GTZ) 法により準素分解 $I = \bigcap Q_i$ を計算し、各準素成分 $Q_i$ とその素イデアル $P_i = \sqrt{Q_i}$ のペアリスト `[[Q_1, P_1], ...]` を返却。第3引数で単項式順序（`"grevlex"` または `"lex"`）を指定可能 |
 | `ideal_radical` | `ideal_radical([x^2, x*y], [x, y])` | イデアル $I$ の根基イデアル $\sqrt{I}$ の生成元リストを計算（零次元成分にはSeidenbergの補題を適用） |
 | `ideal_dimension` | `ideal_dimension([x*y, x*z], [x, y, z])` | グレブナー基底の先頭単項式イデアルから最大独立変数集合を求め、代数多様体（イデアル）のKrull次元を整数で返却 |
@@ -452,7 +455,7 @@
 | 関数・構文 | 書式・例 | 説明 |
 | :--- | :--- | :--- |
 | `[unit]` 記法 | `10 [m/s]`, `5 [kg*m/s^2]`, `(1/4) [h]` | 数値または数式に単位を付与。単位式内では乗算 `*`、除算 `/`、累乗 `^` が使用可能。分数の場合は `(1/4) [h]` のように括弧で括る |
-| `unit` | `unit(m/s)`, `unit(N)` | 単位表現から値 1 の物理量を生成 |
+| `unit` / `u` | `unit(m/s)`, `u(N)` | 単位表現から値 1 の物理量を生成 |
 | `convert_unit` | `convert_unit(100 [km/h], m/s)`, `convert_unit((1/4) [h], min)` | 物理量を同一の次元を持つ目標単位へ厳密有理数比率で換算。次元が異なる場合はエラー |
 | 代数演算 | `10 [m/s] * 5 [s]` $\to$ `50 [m]`, `1 [km] - 200 [m]` $\to$ `4/5 [km]` | 加減算時は次元が一致していることを検証。乗除算時は有理数次数ベクトルを加減算。すべての次数が0となった場合は通常数値へ自動縮約 |
 | 超越関数ガード | `sin(10 [m])` $\to$ エラー | `sin`, `cos`, `exp`, `ln` 等の初等超越関数に有次元の引数を渡すとエラーを返却 |

@@ -60,6 +60,19 @@ func RunCompletion(shell string, w io.Writer) error {
 		{"--help", "cli.flag_help"},
 		{"-v", "cli.flag_version"},
 		{"--version", "cli.flag_version"},
+		{"-a", "cli.flag_approx"},
+		{"--approx-digits", "cli.flag_approx_digits"},
+		{"--digits", "cli.flag_approx_digits"},
+		{"--step", "cli.flag_step"},
+		{"--trace", "cli.flag_trace"},
+		{"-i", "cli.flag_interval"},
+		{"--interval", "cli.flag_interval"},
+		{"--interval-eps", "cli.flag_interval_eps"},
+		{"--timeout", "cli.flag_timeout"},
+		{"--budget-steps", "cli.flag_budget_steps"},
+		{"--max-nodes", "cli.flag_max_nodes"},
+		{"--max-depth", "cli.flag_max_depth"},
+		{"--deterministic", "cli.flag_deterministic"},
 	}
 
 	var flags []completionItem
@@ -74,6 +87,7 @@ func RunCompletion(shell string, w io.Writer) error {
 		name    string
 		i18nKey string
 	}{
+		{"diff", "cli.subcmd_diff"},
 		{"run", "cli.subcmd_run"},
 		{"completion", "cli.subcmd_completion"},
 		{"update", "cli.cmd_update_desc"},

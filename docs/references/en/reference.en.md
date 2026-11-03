@@ -122,15 +122,17 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `totient` | `totient(n)` | Euler's totient function $\phi(n) = n \prod_{p \mid n} (1 - 1/p)$ |
 | `is_prime` | `is_prime(n)` | Primality test (unconditionally deterministic for 64-bit integers via minimal bases; deterministic Baillie-PSW probable prime test for big integers with no known counterexamples) |
 | `solve` | `solve(expr, var)` | Exact algebraic and elementary transcendental equation solver for linear, quadratic, cubic, and quartic polynomials (exact radical solutions via Cardano's formula, Ferrari's method, Tschirnhaus transformation, and resolvent cubics), as well as closed-form solutions for elementary transcendental equations via the Lambert W function `lambert_w` ($f(x)e^{f(x)}=c$, $ax+b\ln x=c$, $x^x=c$, $a^x=bx$); supports multiple and complex roots |
+| `sos_decompose` | `sos_decompose(x^4 + 2*x^2 + 1, [x])` | Decomposes a positive semidefinite polynomial into a sum of squares (SOS) via Gram matrix method / SDP formulation |
+| `interval` | `interval(lower, upper)` | Constructs an exact verified interval $[a, b]$ with rational bounds for guaranteed rigorous arithmetic |
 | `to_poly` | `to_poly(expr, [x, y], "lex")` | Explicitly converts an expression to a canonical `PolyNode` under specified variables and monomial order (`lex`, `grevlex`) |
 | `to_alg` | `to_alg(rep, min_poly, [var])` | Constructs an algebraic number node `AlgNode` in field extension $\mathbb{Q}(\alpha) \cong \mathbb{Q}[x]/\langle m(x) \rangle$ |
-| `alg_inv` | `alg_inv(rep, min_poly)` | Computes multiplicative inverse $\beta^{-1} \in \mathbb{Q}(\alpha)$ via Extended Euclidean Algorithm |
-| `min_poly` | `min_poly(rep, min_poly)` | Derives the irreducible monic minimal polynomial $m(x) \in \mathbb{Q}[x]$ of an algebraic element |
+| `alg_inv` | `alg_inv(rep)` | Computes multiplicative inverse $\beta^{-1} \in \mathbb{Q}(\alpha)$ via Extended Euclidean Algorithm |
+| `min_poly` / `minimal_polynomial` | `min_poly(rep, min_poly)` | Derives the irreducible monic minimal polynomial $m(x) \in \mathbb{Q}[x]$ of an algebraic element |
 | `solve_diophantine` | `solve_diophantine(3*x + 5*y == 7, [x, y])` | Exact Diophantine equation solver for linear Diophantine equations (via Extended Euclidean Algorithm and Bezout's identity parameterized by integer $t$) and Pythagorean triples. Supports `--verify` algebraic certificate and `--lean` formal proof generation |
-| `pell_solve` | `pell_solve(D)` / `pell_solve(D, 1)` / `pell_solve(D, -1)` | Exact solver for Pell's equation $x^2 - D y^2 = 1$ and negative Pell's equation $x^2 - D y^2 = -1$, computing fundamental integer solutions $(x_1, y_1)$ via continuous fraction expansion of $\sqrt{D}$. Supports `--verify` and `--lean` (`by decide` proof) |
+| `pell_solve` / `solve_pell` / `pell` | `pell_solve(D)` / `pell_solve(D, 1)` / `pell_solve(D, -1)` | Exact solver for Pell's equation $x^2 - D y^2 = 1$ and negative Pell's equation $x^2 - D y^2 = -1$, computing fundamental integer solutions $(x_1, y_1)$ via continuous fraction expansion of $\sqrt{D}$. Supports `--verify` and `--lean` (`by decide` proof) |
 | `to_primitive_element` / `primitive_element` | `to_primitive_element([sqrt(2), sqrt(3)])` / `to_primitive_element([x^2 - 2, x^2 - 3])` | Derives the simple extension isomorphism $\mathbb{Q}(\theta) \cong \mathbb{Q}(\alpha_1, \dots, \alpha_k)$ via the Primitive Element Theorem. Computes primitive element symbol, composite minimal polynomial $m_\theta(x)$, and generator representation polynomial list $[P_{\alpha_1}(\theta), \dots, P_{\alpha_k}(\theta)]$ using Sylvester resultants and algebraic field GCD. `primitive_element` is an alias. Supports `--verify` and `--lean` formal proof verification |
 | `fib` / `fibonacci` | `fib(n)` / `fibonacci(n)` | Fibonacci number $F_n$. Evaluated in $O(\log n)$ sub-quadratic time via the Fast Doubling algorithm. Fully supports negative integer inputs via negafibonacci relations $F_{-n} = (-1)^{n+1} F_n$ |
-| `digit_count` | `digit_count(n)` / `digit_count(n, base)` | Exact digit count of giant integers in specified `base` (default 10). Example: `digit_count(fib(10000))` $\to$ `2090` |
+| `digit_count` | `digit_count(n)` | Exact digit count of giant integers in base 10. Example: `digit_count(fib(10000))` $\to$ `2090` |
 | `to_base` | `to_base(n, base)` | Arbitrary-base conversion ($2 \le \text{base} \le 64$). Formats integers into positional numeral notation and rational fractions $p/q$ into repeating repetend notation via long division remainder hashing (e.g., `to_base(255, 16)` $\to$ `ff`, `to_base(1/3, 2)` $\to$ `0.(01)_2`, `to_base(1/3, 16)` $\to$ `0.(5)_16`, `to_base(4031, 64)` $\to$ `@_`) |
 | `from_base` | `from_base(str, base)` | Parses an arbitrary-base string ($2 \le \text{base} \le 64$) into an exact integer. Automatically accepts optional `0x`, `0b`, `0o` prefixes, and Base 64 `@`/`_` or `+`/`/` representations (e.g., `from_base("ff", 16)` $\to$ `255`, `from_base("@_", 64)` $\to$ `4031`) |
 | `bin` | `bin(n)` | Binary conversion shortcut with `0b` prefix (e.g., `bin(13)` $\to$ `0b1101`) |
@@ -234,7 +236,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `collinear` | `collinear(A, B, C)` | Predicate asserting points $A, B, C$ are collinear (cross product determinant $(B_x - A_x)(C_y - A_y) - (B_y - A_y)(C_x - A_x) = 0$) |
 | `parallel` | `parallel(A, B, C, D)` | Predicate asserting line $AB$ is parallel to line $CD$ (direction vector cross product $= 0$) |
 | `perpendicular` | `perpendicular(A, B, C, D)` | Predicate asserting line $AB$ is perpendicular to line $CD$ (direction vector dot product $= 0$) |
-| `equal_length_sq` | `equal_length_sq(A, B, C, D)` | Predicate asserting equality of squared segment lengths ($AB^2 = CD^2$) |
+| `equal_length_sq` / `equal_length` | `equal_length_sq(A, B, C, D)` | Predicate asserting equality of squared segment lengths ($AB^2 = CD^2$) |
 | `circle_concyclic` | `circle_concyclic(A, B, C, D)` | Predicate asserting points $A, B, C, D$ lie on a common circle (concyclic condition) |
 
 ---
@@ -279,13 +281,13 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 
 | Function | Syntax & Example | Description |
 | :--- | :--- | :--- |
-| `ec_add` | `ec_add([A, B], P1, P2)` | Rational point addition on Weierstrass elliptic curve $y^2 = x^3 + Ax + B$ via Chord and Tangent method (handles point at infinity `O`) |
-| `ec_mul` | `ec_mul([A, B], n, P)` | Scalar multiplication $n P$ of rational points on elliptic curves via binary Double-and-Add algorithm |
+| `ec_add` | `ec_add(A, B, P1, P2)` / `ec_add(A, B, x1, y1, x2, y2)` | Rational point addition on Weierstrass elliptic curve $y^2 = x^3 + Ax + B$ via Chord and Tangent method (handles point at infinity `O`) |
+| `ec_mul` | `ec_mul(A, B, n, P)` / `ec_mul(A, B, n, x, y)` | Scalar multiplication $n P$ of rational points on elliptic curves via binary Double-and-Add algorithm |
 | `ec_torsion` | `ec_torsion(A, B)` | Full determination of the rational torsion subgroup $E(\mathbb{Q})_{\text{tors}}$ based on the Nagell-Lutz and Mazur theorems |
-| `ec_p_order` | `ec_p_order(A, B, p)` | Polynomial-time deterministic group order computation $\#E(\mathbb{F}_p)$ of non-singular elliptic curves over prime finite fields $\mathbb{F}_p$ via Schoof's algorithm (division polynomials, Frobenius endomorphism & CRT) |
-| `ec_p_trace` | `ec_p_trace(A, B, p)` | Computes the Frobenius trace $a = p + 1 - \#E(\mathbb{F}_p)$ of elliptic curves over $\mathbb{F}_p$ (satisfying Hasse's bound $|a| \le 2\sqrt{p}$) |
-| `ec_p_add` | `ec_p_add(A, B, p, P, Q)` | Group point addition $P + Q$ on elliptic curves over prime finite field $\mathbb{F}_p$ (via modular inverse and Chord-and-Tangent law, supporting identity `O`) |
-| `ec_p_mul` | `ec_p_mul(A, B, p, n, P)` | Scalar point multiplication $n P$ on elliptic curves over prime finite field $\mathbb{F}_p$ (via Double-and-Add algorithm $\pmod p$) |
+| `ec_p_order` | `ec_p_order([A, B], p)` | Polynomial-time deterministic group order computation $\#E(\mathbb{F}_p)$ of non-singular elliptic curves over prime finite fields $\mathbb{F}_p$ via Schoof's algorithm (division polynomials, Frobenius endomorphism & CRT) |
+| `ec_p_trace` | `ec_p_trace([A, B], p)` | Computes the Frobenius trace $a = p + 1 - \#E(\mathbb{F}_p)$ of elliptic curves over $\mathbb{F}_p$ (satisfying Hasse's bound $|a| \le 2\sqrt{p}$) |
+| `ec_p_add` | `ec_p_add([A, B], P, Q, p)` | Group point addition $P + Q$ on elliptic curves over prime finite field $\mathbb{F}_p$ (via modular inverse and Chord-and-Tangent law, supporting identity `O`) |
+| `ec_p_mul` | `ec_p_mul([A, B], n, P, p)` | Scalar point multiplication $n P$ on elliptic curves over prime finite field $\mathbb{F}_p$ (via Double-and-Add algorithm $\pmod p$) |
 | `ec_rank_bound` | `ec_rank_bound(A, B)` | Computes deterministic Mordell-Weil rank bounds $[r_{\text{lower}}, r_{\text{upper}}]$ via 2-isogeny descent and Selmer group dimension calculation for curves with rational 2-torsion |
 | `ec_generators` | `ec_generators(A, B)` | Extracts a set of linearly independent infinite-order rational points (generators of the lower-bound subgroup) via rational point search on 2-covering homogeneous spaces |
 
@@ -363,7 +365,7 @@ Supports real Clifford geometric algebras $\mathrm{Cl}(p, q, r)$ equipped with o
 | `clifford_wedge` | `clifford_wedge(e0, e1, 3, 0)` | Grassmann exterior product (wedge product) $A \wedge B$. Evaluates completely anti-symmetrized graded blades under metric $(p, q, [r])$ |
 | `clifford_contract` | `clifford_contract(e0, e0, "left", 3, 0)` | Left/Right contractions (inner product extensions). The 3rd argument selects contraction direction (`"left"`: left contraction $\lrcorner$, `"right"`: right contraction $\llcorner$) |
 | `clifford_dual` | `clifford_dual(e3, 3, 0, 1)` | Poincaré complement dual. Computes the dual multivector via contraction with the unit pseudoscalar blade $I$ (fully supports degenerate metrics $r > 0$) |
-| `quantum_equiv` | `quantum_equiv(c1, c2, n, [k])` | Strictly verifies algebraic equivalence between two $n$-qubit Clifford+T circuits $c1, c2$ over the binary cyclotomic ring $\mathbb{Z}[1/\sqrt{2}, i]$ up to global phase $\omega^k$ ($\omega = e^{i\pi/4}$). If inequivalent, extracts a concrete refuting witness basis state |
+| `quantum_equiv` | `quantum_equiv(c1, c2)` / `quantum_equiv(c1, c2, strict)` | Strictly verifies algebraic equivalence between two Clifford+T circuits $c1, c2$ over the binary cyclotomic ring $\mathbb{Z}[1/\sqrt{2}, i]$ up to global phase. If inequivalent, extracts a concrete refuting witness basis state |
 | `quantum_eval` | `quantum_eval(circuit, numQubits)` | Exactly simulates and computes the symbolic unitary matrix of a Clifford+T quantum circuit over binary cyclotomic ring coefficients |
 
 ---
@@ -374,7 +376,7 @@ Provides list comprehension, discrete products, procedural loops, and multi-radi
 
 | Function / Syntax | Syntax & Example | Description |
 | :--- | :--- | :--- |
-| `table` | `table(x^2, x, 1, 5)` / `table(i + j, i, 1, 3, 1, j, 1, 2)` | Mathematica-style list comprehension. Evaluates `table(expr, var, start, end, [step])` under automatic dynamic scope protection |
+| `table` | `table(x^2, x, 1, 5)` / `table(k, k, 1, 9, 2)` | Mathematica-style list comprehension. Evaluates `table(expr, var, start, end, [step])` under automatic dynamic scope protection (supports nested multidimensional table generation) |
 | `product` | `product(k, k, 1, 5)` / `product(2*k + 1, k, 0, 4)` | Discrete product computation ($\prod_{k=\text{start}}^{\text{end}} \text{expr}$) with dynamic scope protection and zero-short-circuiting |
 | `for` | `for(i, 1, 5, s = s + i)` | Procedural iteration loop with syntax `for(var, start, end, [step], body)`. Returns the evaluation result of the final iteration |
 | `to_base` | `to_base(255, 16)` / `to_base(1/3, 2)` | Converts an integer or exact rational into a string representation in the specified base (2 to 64), outputting repeating fractional digits when periodic |
@@ -415,6 +417,7 @@ Interactive control commands, high-contrast color themes, and real-time lexical 
 
 | Function | Syntax & Example | Description |
 | :--- | :--- | :--- |
+| `ideal_member` | `ideal_member(target, [f1, f2, ...], [x, y, ...])` | Tests polynomial ideal membership via Groebner basis reduction and returns cofactor certificate coefficients if contained |
 | `primary_decomposition` | `primary_decomposition([x^2 - 1, y], [x, y])` | Computes primary decomposition $I = \bigcap Q_i$ of multivariate polynomial ideal $I = \langle p_1, \dots \rangle$ via Gianni-Trager-Zacharias (GTZ) algorithm, returning a list of `[[Q_1, P_1], ...]` pairs of primary component $Q_i$ and associated prime $P_i = \sqrt{Q_i}$. Optional 3rd argument specifies monomial order (`"grevlex"` or `"lex"`). |
 | `ideal_radical` | `ideal_radical([x^2, x*y], [x, y])` | Computes generator list of radical ideal $\sqrt{I}$. |
 | `ideal_dimension` | `ideal_dimension([x*y, x*z], [x, y, z])` | Finds maximal independent variable set from leading monomial ideal of Groebner basis and returns Krull dimension as an integer. |
@@ -452,7 +455,7 @@ Performs dimensional analysis and physical unit calculations over the 7-dimensio
 | Function / Syntax | Syntax & Example | Description |
 | :--- | :--- | :--- |
 | `[unit]` Syntax | `10 [m/s]`, `5 [kg*m/s^2]`, `(1/4) [h]` | Attaches a unit expression to a value or expression. Operators `*`, `/`, `^` are supported inside the unit expression. Use parentheses for fractions such as `(1/4) [h]` |
-| `unit` | `unit(m/s)`, `unit(N)` | Constructs a unit quantity with magnitude 1 |
+| `unit` / `u` | `unit(m/s)`, `u(N)` | Constructs a unit quantity with magnitude 1 |
 | `convert_unit` | `convert_unit(100 [km/h], m/s)`, `convert_unit((1/4) [h], min)` | Converts a physical quantity to dimensionally compatible target units via exact rational ratio. Returns an error on dimension mismatch |
 | Arithmetic Operations | `10 [m/s] * 5 [s]` $\to$ `50 [m]`, `1 [km] - 200 [m]` $\to$ `4/5 [km]` | Validates dimensional consistency on addition/subtraction. Multiplies/divides rational dimension vectors. Automatically unboxes to standard numbers when dimensionless |
 | Transcendental Guards | `sin(10 [m])` $\to$ Error | Rejects dimensioned arguments to elementary transcendental functions (`sin`, `cos`, `exp`, `ln`, etc.) |
