@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -135,7 +136,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 	leanFileFlag := fs.String("lean-file", "", i18n.T("cli.flag_lean_file"))
 	intervalFlag := fs.Bool("interval", false, i18n.T("cli.flag_interval"))
 	fs.BoolVar(intervalFlag, "i", false, i18n.T("cli.flag_interval"))
-	intervalEpsFlag := fs.String("interval-eps", "", i18n.T("cli.flag_interval"))
+	intervalEpsFlag := fs.String("interval-eps", "", i18n.T("cli.flag_interval_eps"))
 	noColorFlag := fs.Bool("no-color", false, i18n.T("cli.flag_no_color"))
 	themeFlag := fs.String("theme", "", i18n.T("cli.flag_theme"))
 	warnLoopFlag := fs.String("warn-loop", "", i18n.T("cli.flag_warn_loop"))
@@ -175,7 +176,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 	}
 
 	if *helpFlag {
-		fmt.Fprintln(out, i18n.T("cli.help"))
+		printHelp(fs, out)
 		return 0
 	}
 
@@ -1012,4 +1013,110 @@ func runUpdate(args []string, out, errOut io.Writer) int {
 		return 1
 	}
 	return 0
+}
+
+func printHelp(fs *flag.FlagSet, out io.Writer) {
+	if i18n.CurrentLocale() == "ja" {
+		fmt.Fprintf(out, "ihd - 厳密数式処理計算機\n\n")
+	} else {
+		fmt.Fprintf(out, "ihd - Exact Arithmetic Calculator\n\n")
+	}
+	fmt.Fprintf(out, "%s:\n", i18n.T("cli.help_usage_label"))
+	fmt.Fprintln(out, "  ihd [flags] [expression]")
+	fmt.Fprintln(out, "  ihd [flags]                (Starts interactive REPL)")
+	fmt.Fprintln(out, "  echo \"expr\" | ihd [flags]   (Evaluates piped input)")
+	fmt.Fprintln(out, "  ihd <command> [flags]")
+	fmt.Fprintln(out)
+	fmt.Fprintf(out, "%s:\n", i18n.T("cli.help_subcommands_label"))
+	fmt.Fprintf(out, "  diff <expr1|file1> <expr2|file2>  %s\n", i18n.T("cli.subcmd_diff"))
+	fmt.Fprintf(out, "  run <file.ihd>                    %s\n", i18n.T("cli.subcmd_run"))
+	fmt.Fprintf(out, "  completion <shell>                %s\n", i18n.T("cli.subcmd_completion"))
+	fmt.Fprintf(out, "  update                            %s\n", i18n.T("cli.cmd_update_desc"))
+	fmt.Fprintln(out)
+	fmt.Fprintf(out, "%s:\n", i18n.T("cli.help_flags_label"))
+
+	type flagEntry struct {
+		syntax string
+		usage  string
+	}
+
+	aliases := map[string]string{
+		"a":      "approx",
+		"digits": "approx-digits",
+		"i":      "interval",
+		"v":      "version",
+		"h":      "help",
+	}
+
+	argTypes := map[string]string{
+		"lang":          "<code>",
+		"approx-digits": "<int>",
+		"format":        "<fmt>",
+		"certificate":   "<file>",
+		"replay":        "<file>",
+		"lean-file":     "<path>",
+		"interval-eps":  "<rat>",
+		"theme":         "<theme>",
+		"warn-loop":     "<n>",
+		"max-loop":      "<n>",
+		"timeout":       "<dur>",
+		"budget-steps":  "<n>",
+		"max-nodes":     "<n>",
+		"max-depth":     "<n>",
+	}
+
+	flagMap := map[string]*flag.Flag{}
+	fs.VisitAll(func(f *flag.Flag) {
+		flagMap[f.Name] = f
+	})
+
+	var primaryNames []string
+	for name := range flagMap {
+		if _, isAlias := aliases[name]; !isAlias {
+			primaryNames = append(primaryNames, name)
+		}
+	}
+	sort.Strings(primaryNames)
+
+	var entries []flagEntry
+	maxLen := 0
+	for _, name := range primaryNames {
+		f := flagMap[name]
+		syntax := ""
+		shortName := ""
+		for s, p := range aliases {
+			if p == name && len(s) == 1 {
+				shortName = s
+				break
+			}
+		}
+
+		if shortName != "" {
+			syntax = fmt.Sprintf("-%s, --%s", shortName, name)
+		} else {
+			syntax = fmt.Sprintf("    --%s", name)
+		}
+
+		for s, p := range aliases {
+			if p == name && len(s) > 1 {
+				syntax += fmt.Sprintf(", --%s", s)
+			}
+		}
+
+		if arg, hasArg := argTypes[name]; hasArg {
+			syntax += " " + arg
+		}
+
+		if len(syntax) > maxLen {
+			maxLen = len(syntax)
+		}
+		entries = append(entries, flagEntry{
+			syntax: syntax,
+			usage:  f.Usage,
+		})
+	}
+
+	for _, e := range entries {
+		fmt.Fprintf(out, "  %-*s  %s\n", maxLen, e.syntax, e.usage)
+	}
 }

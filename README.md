@@ -167,7 +167,7 @@ ihd "１＋２×３"
 
 ### 構文・演算子・関数リファレンス
 
-`ihd` は大学理工系レベルを網羅する 50 種類以上の厳密代数関数を搭載しています。
+`ihd` は、初等代数や微積分から、代数幾何、代数体、有限体、実クリフォード幾何代数、量子計算、有理物理単位系に至るまで、理数系の極めて広範な数学領域を網羅する厳密代数関数群を搭載しています。
 
 - **基本代数・数論・方程式**: `expand`, `factor`, `apart`, `together`, `gcd`, `lcm`, `mod`, `is_prime`, `solve`, `cfrac`, `groebner`, `sturm` など
 - **三角関数・対数・複素数**: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `trig_expand`, `trig_reduce`, `exp`, `log`, `ln`, `polar` など
@@ -200,23 +200,33 @@ ihd "１＋２×３"
 | オプション | 説明・使用例 |
 | :--- | :--- |
 | `--explain` | 計算過程（有理化・因数分解・微分則・極限等）を途中式ツリーとして表示。<br>`ihd --explain "1 / (sqrt(2) + 1)"` |
+| `--step` | 各簡約ステップの適用ルールと中間式を標準出力にテキストで順次表示。<br>`ihd --step "expand((x+1)^3)"` |
+| `--trace` | 式木の書き換え過程および内部ルール適用の詳細トレースログを出力。<br>`ihd --trace "factor(x^2 - 1)"` |
 | `--pretty` | 分数線や根号を複数行アスキーアートで組版表示する2Dプリティプリント。<br>`ihd --pretty "1/2 + sqrt(2)/2"` |
 | `--format <fmt>` | 出力フォーマットを指定（`typst`, `latex`, `ascii`, `pretty`）。<br>`ihd --format typst "1/2 + sqrt(2)"` |
 | `--typst` | 組版システム Typst の数式記法（`$ ... $`）で出力。<br>`ihd --typst "1/2 + sqrt(2)"` |
 | `--latex` | LaTeX 形式（`$$ ... $$`）で数式を出力。<br>`ihd --latex "1/2 + sqrt(2)"` |
 | `--ascii` | 数学記号（`√`, `π`）をASCII文字列（`sqrt`, `pi`）にフォールバック。<br>`ihd --ascii "sqrt(2) + pi"` |
 | `--approx` | 有理数区間演算に基づく任意精度 `big.Float` 近似（`--approx-digits`）および外側丸めによる厳密誤差上限 `±` 表示。<br>`ihd --approx "sqrt(2)"` |
+| `-a`, `--approx-digits <N>` | 近似計算・表示における最大有効桁数を指定（デフォルト: 10、エイリアス: `--digits`）。<br>`ihd --approx -a 20 "sqrt(2)"` |
 | `--verify` | 計算結果に対し、定義式や導関数に基づく逆算検算を実行。<br>`ihd --verify "integrate(1/(x^2 + 1), x)"` |
-| `--certificate [file]` | 計算結果と導出ステップ列を証明書 JSON（`ihd-proof-trace-v1`）として出力または保存。<br>`ihd --certificate cert.json "factor(x^2 - 1)"` |
+| `--certificate <file>` | 計算結果と導出ステップ列を証明書 JSON（`ihd-proof-trace-v1`）として出力または保存。<br>`ihd --certificate cert.json "factor(x^2 - 1)"` |
 | `--replay <file>` | 保存された証明書 JSON ファイルを読み込み、各ステップの残差が0かを再検証。<br>`ihd --replay cert.json` |
 | `--lean` | 定理証明支援系 **Lean 4（Mathlib4）** の形式証明コードを出力。<br>`ihd --lean "factor(x^2 - 1)"` |
 | `--lean-file <path>` | 生成された Lean 4 証明コードをスタンドアロンな `.lean` ファイルとして保存。<br>`ihd --lean-file proof.lean "factor(x^2 - 1)"` |
 | `-i`, `--interval` | 適応的区間細分化（Rational Interval Arithmetic）による包含区間を算出。<br>`ihd -i "sin(1)"` |
+| `--interval-eps <eps>` | 区間演算における収束判定の許容誤差上限を指定（有理数または小数表記）。<br>`ihd -i --interval-eps 1/1000000 "sin(1)"` |
 | `--deg` | 三角関数および逆三角関数を度数法（Degree）として解釈・計算。<br>`ihd --deg "sin(30)"` |
 | `--theme <dark\|light\|none>` | REPLのカラーテーマを指定（`~/.ihd/config.json` に永続化）。<br>`ihd --theme light` |
 | `--lang <code/auto>` | 表示言語を指定（`ja`, `en`, `auto`）。<br>`ihd --lang en "1/2 + 1/3"` |
 | `--timeout <dur>` | 壁時計時間タイムアウトを指定（例: `2s`, `500ms`）。<br>`ihd --timeout 2s "factor(x^100 - 1)"` |
 | `--deterministic` | マップ反復や多項式順序を正規化し、バイト単位で決定論的な出力を保証。<br>`ihd --deterministic "factor(x^4 - 5*x^2 + 4)"` |
+| `--budget-steps <N>` | 単一簡約パスあたりの最大書き換えステップ数上限を指定。<br>`ihd --budget-steps 5000 "expand((x+1)^20)"` |
+| `--max-nodes <N>` | 式木展開における最大許容ASTノード数を制限。<br>`ihd --max-nodes 10000 "expand((x+1)^10)"` |
+| `--max-depth <N>` | 再帰的簡約処理の最大スタック深度を制限。<br>`ihd --max-depth 200 "diff(x^10, x)"` |
+| `--warn-loop <N>` | 反復構文（`table`, `for`, `product`）で警告を発出するループ回数閾値（デフォルト: 1000）。 |
+| `--max-loop <N>` | 反復構文で実行を強制遮断する最大ループ回数上限（デフォルト: 100000）。 |
+| `--no-color` | 端末出力時のANSIカラーシーケンス（色付け）を無効化。 |
 | `-h`, `--help` | 利用可能な全オプションと詳細なヘルプを表示。 |
 
 > [!NOTE]
@@ -441,7 +451,7 @@ ihd "１＋２×３"
 
 ### Syntax & Functions Reference
 
-`ihd` is equipped with over 50 exact symbolic functions covering university-level STEM domains:
+`ihd` is equipped with an extensive suite of exact symbolic functions covering university-level STEM domains—from elementary algebra and calculus to algebraic geometry, algebraic number fields, finite fields, Clifford geometric algebra, quantum circuits, and exact physical units:
 
 - **Basic Algebra, Number Theory & Equations**: `expand`, `factor`, `apart`, `together`, `gcd`, `lcm`, `mod`, `is_prime`, `solve`, `cfrac`, `groebner`, `sturm`, etc.
 - **Trigonometric, Logarithmic & Complex Functions**: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `trig_expand`, `trig_reduce`, `exp`, `log`, `ln`, `polar`, etc.
@@ -474,23 +484,33 @@ ihd "１＋２×３"
 | Option | Description & Examples |
 | :--- | :--- |
 | `--explain` | Displays step-by-step algebraic derivation trees.<br>`ihd --explain "1 / (sqrt(2) + 1)"` |
+| `--step` | Prints step-by-step algebraic transformations to stdout.<br>`ihd --step "expand((x+1)^3)"` |
+| `--trace` | Outputs detailed AST rewrite traces and rule application logs.<br>`ihd --trace "factor(x^2 - 1)"` |
 | `--pretty` | Output expression in multi-line 2D pretty-printed Unicode typography.<br>`ihd --pretty "1/2 + sqrt(2)/2"` |
 | `--format <fmt>` | Specify output format (`typst`, `latex`, `ascii`, `pretty`).<br>`ihd --format typst "1/2 + sqrt(2)"` |
 | `--typst` | Output expression in Typst math mode format (`$ ... $`).<br>`ihd --typst "1/2 + sqrt(2)"` |
 | `--latex` | Output expression in LaTeX format (`$$ ... $$`).<br>`ihd --latex "1/2 + sqrt(2)"` |
 | `--ascii` | Output using standard ASCII strings (`sqrt`, `pi`) instead of Unicode symbols.<br>`ihd --ascii "sqrt(2) + pi"` |
 | `--approx` | Display arbitrary-precision `big.Float` decimal approximation (`--approx-digits`) with rigorous directed outward rounding interval bounds (`±`).<br>`ihd --approx "sqrt(2)"` |
+| `-a`, `--approx-digits <N>` | Specifies maximum significant digits for decimal approximation (default: 10, alias: `--digits`).<br>`ihd --approx -a 20 "sqrt(2)"` |
 | `--verify` | Reverse-verifies algebraic correctness by checking residual vanishing.<br>`ihd --verify "integrate(1/(x^2 + 1), x)"` |
-| `--certificate [file]` | Exports calculation steps and residuals into a certificate JSON file.<br>`ihd --certificate cert.json "factor(x^2 - 1)"` |
+| `--certificate <file>` | Exports calculation steps and residuals into a certificate JSON file.<br>`ihd --certificate cert.json "factor(x^2 - 1)"` |
 | `--replay <file>` | Reads a certificate JSON file and verifies that residuals vanish.<br>`ihd --replay cert.json` |
 | `--lean` | Transpiles calculation results into formal **Lean 4 (Mathlib4)** proof theorems.<br>`ihd --lean "factor(x^2 - 1)"` |
 | `--lean-file <path>` | Save generated Lean 4 proof code as a standalone `.lean` file.<br>`ihd --lean-file proof.lean "factor(x^2 - 1)"` |
 | `-i`, `--interval` | Evaluates expressions using adaptive rational interval arithmetic enclosures.<br>`ihd -i "sin(1)"` |
+| `--interval-eps <eps>` | Specifies maximum allowed enclosure tolerance for interval arithmetic.<br>`ihd -i --interval-eps 1/1000000 "sin(1)"` |
 | `--deg` | Evaluate trigonometric functions in degrees.<br>`ihd --deg "sin(30)"` |
 | `--theme <dark\|light\|none>` | Specify REPL color theme (persisted to `~/.ihd/config.json`).<br>`ihd --theme light` |
 | `--lang <code/auto>` | Specify display language (`ja`, `en`, `auto`).<br>`ihd --lang en "1/2 + 1/3"` |
 | `--timeout <dur>` | Sets wall-clock execution timeout (e.g. `2s`, `500ms`).<br>`ihd --timeout 2s "factor(x^100 - 1)"` |
 | `--deterministic` | Normalizes iterations and polynomial ordering for byte-identical outputs.<br>`ihd --deterministic "factor(x^4 - 5*x^2 + 4)"` |
+| `--budget-steps <N>` | Maximum simplification step budget per rule pass.<br>`ihd --budget-steps 5000 "expand((x+1)^20)"` |
+| `--max-nodes <N>` | Maximum allowed AST node count during expression tree expansion.<br>`ihd --max-nodes 10000 "expand((x+1)^10)"` |
+| `--max-depth <N>` | Maximum recursion depth limit for symbolic rewrites.<br>`ihd --max-depth 200 "diff(x^10, x)"` |
+| `--warn-loop <N>` | Warning threshold iterations for CAS loops (`table`, `for`, `product`, default: 1000). |
+| `--max-loop <N>` | Hard limit cutoff for CAS loops (default: 100000). |
+| `--no-color` | Disables ANSI color sequence outputs. |
 | `-h`, `--help` | Display full options list and command help message. |
 
 > [!NOTE]
