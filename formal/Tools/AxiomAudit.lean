@@ -52,6 +52,12 @@ def auditDeclaration (env : Environment) (declName : Name) : IO (Bool × List Na
   if cinfo.isUnsafe then
     return (false, [], some s!"Declaration '{declName}' is marked unsafe!")
 
+  if Lean.isExtern env declName then
+    return (false, [declName], some s!"Declaration '{declName}' is an external definition (extern)!")
+
+  if (Lean.Compiler.getImplementedBy? env declName).isSome then
+    return (false, [declName], some s!"Declaration '{declName}' is overridden via implemented_by!")
+
   -- 3. Transitive axiom collection using Lean.collectAxioms inside CoreM
   let usedAxioms ← runCoreMInEnv env (Lean.collectAxioms declName)
   let mut disallowed : List Name := []

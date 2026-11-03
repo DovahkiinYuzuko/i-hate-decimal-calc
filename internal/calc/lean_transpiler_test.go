@@ -1315,6 +1315,31 @@ func TestGenerateNegativeMutants(t *testing.T) {
 	}
 }
 
+func TestGenerateNegativeMutants_WithCertificate(t *testing.T) {
+	p := mustParseNode(t, "x^2 + 1")
+	sos := &SOSCertificate{
+		BaseCertificate: BaseCertificate{Verified: true},
+		Target:          p,
+	}
+	mutants, err := GenerateNegativeMutants("test_sos", nil, sos)
+	if err != nil {
+		t.Fatalf("GenerateNegativeMutants with SOS failed: %v", err)
+	}
+
+	foundCertPerturb := false
+	for _, m := range mutants {
+		if m.Operator == "certificate_perturbation" {
+			foundCertPerturb = true
+			if !strings.Contains(m.LeanCode, "positivity") {
+				t.Errorf("expected positivity tactic in SOS mutant, got:\n%s", m.LeanCode)
+			}
+		}
+	}
+	if !foundCertPerturb {
+		t.Errorf("expected certificate_perturbation mutant for SOSCertificate")
+	}
+}
+
 func TestGeneratePremiseWitnessTheorem(t *testing.T) {
 	code := GeneratePremiseWitnessTheorem("test_positivity", "x", "x ≠ 0", "1")
 	expected := "theorem test_positivity_premise_witness : ∃ x : ℚ, x ≠ 0 := ⟨1, by norm_num⟩"
