@@ -1270,3 +1270,47 @@ func TestTranspileSOSCertificate(t *testing.T) {
 		t.Errorf("expected Mathlib.Tactic.Positivity in imports, got: %v", imports)
 	}
 }
+
+func TestGenerateNegativeMutants(t *testing.T) {
+	p := mustParseNode(t, "x^2 + 1")
+	mutants, err := GenerateNegativeMutants("test_theorem", p, nil)
+	if err != nil {
+		t.Fatalf("GenerateNegativeMutants failed: %v", err)
+	}
+
+	if len(mutants) < 3 {
+		t.Errorf("expected at least 3 mutants, got %d", len(mutants))
+	}
+
+	foundC := false
+	foundSign := false
+	foundRel := false
+
+	for _, m := range mutants {
+		if m.Operator == "constant_perturbation" {
+			foundC = true
+			if !strings.Contains(m.LeanCode, "#guard_msgs (whitespace := lax)") {
+				t.Errorf("expected #guard_msgs in mutant code, got: %s", m.LeanCode)
+			}
+		}
+		if m.Operator == "operator_inversion" {
+			foundSign = true
+		}
+		if m.Operator == "relation_inversion" {
+			foundRel = true
+		}
+	}
+
+	if !foundC || !foundSign || !foundRel {
+		t.Errorf("missing expected mutant operators: c=%v, sign=%v, rel=%v", foundC, foundSign, foundRel)
+	}
+}
+
+func TestGeneratePremiseWitnessTheorem(t *testing.T) {
+	code := GeneratePremiseWitnessTheorem("test_positivity", "x", "x ≠ 0", "1")
+	expected := "theorem test_positivity_premise_witness : ∃ x : ℚ, x ≠ 0 := ⟨1, by norm_num⟩"
+	if code != expected {
+		t.Errorf("expected:\n%s\ngot:\n%s", expected, code)
+	}
+}
+

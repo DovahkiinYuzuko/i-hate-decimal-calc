@@ -1,9 +1,17 @@
 name = "formal"
 defaultTargets = ["Proofs"]
 
+[leanOptions]
+autoImplicit = false
+relaxedAutoImplicit = false
+
 [[require]]
 name = "mathlib"
 git = "https://github.com/leanprover-community/mathlib4"
 
 [[lean_lib]]
 name = "Proofs"
+
+[[lean_exe]]
+name = "ihd-audit"
+root = "Tools.AxiomAudit"
