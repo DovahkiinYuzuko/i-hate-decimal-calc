@@ -161,7 +161,7 @@ ihd "１＋２×３"
 - **ループ暴走ガード (`--warn-loop` / `--max-loop`)**: CAS反復構文（`table`, `for`, `product`）において、警告閾値超過時にパイプラインを汚さず `os.Stderr` へ非破壊警告を発出し、上限到達時は強制遮断します。
 
 > [!TIP]
-> ターミナル組版のアスキーアート、点字グラフ描画、途中式ツリー、Typst/Lean4出力コードなどの詳細な出力見本は **[出力サンプル集 (sample/sample.ja.md)](./sample/sample.ja.md)** をご覧ください。
+> ターミナル組版のアスキーアート、点字グラフ描画、途中式ツリー、Typst/Lean4出力コードなどの詳細な出力見本は **[出力サンプル集](./sample/sample.ja.md)** をご覧ください。
 
 ---
 
@@ -179,8 +179,8 @@ ihd "１＋２×３"
 
 > [!TIP]
 > 各関数の詳細な仕様、引数定義、数学的解説、および使用例は専用リファレンスを参照してください。  
-> - **Markdown版**: [日本語版 (docs/references/ja/reference.ja.md)](docs/references/ja/reference.ja.md) / [英語版 (docs/references/en/reference.en.md)](docs/references/en/reference.en.md)  
-> - **オフラインSingle-File HTML版**: [日本語版 (docs/references/ja/reference.ja.html)](docs/references/ja/reference.ja.html) / [英語版 (docs/references/en/reference.en.html)](docs/references/en/reference.en.html)
+> - **Markdown版**: [日本語版](docs/references/ja/reference.ja.md) / [英語版](docs/references/en/reference.en.md)  
+> - **オフラインSingle-File HTML版**: [日本語版](docs/references/ja/reference.ja.html) / [英語版](docs/references/en/reference.en.html)
 
 ---
 
@@ -286,8 +286,8 @@ go test -v ./internal/calc -run "^(TestSymPyClient_|TestDifferentialOracle_)"
 ### 実践レシピ集（Exam & Cookbook）
 
 24問の代表的な数学問題（数I・A・II・B・III・C、難関大入試、線形代数、微積分、数論、幾何）に対する `ihd` を用いた解法と解説レシピ集です。
-- [日本語版レシピ集 (exam/problems.ja.md)](./exam/problems.ja.md)
-- [英語版レシピ集 (exam/problems.en.md)](./exam/problems.en.md)
+- [日本語版レシピ集](./exam/problems.ja.md)
+- [英語版レシピ集](./exam/problems.en.md)
 
 ---
 
@@ -445,7 +445,7 @@ ihd "１＋２×３"
 - **Iteration Runaway Guard (`--warn-loop` / `--max-loop`)**: Protects against runaway CAS loops (`table`, `for`, `product`) with non-destructive `stderr` warnings and hard cutoffs.
 
 > [!TIP]
-> For detailed visual examples, ASCII plots, derivation trees, and Typst/Lean4 outputs, see the **[Visual Samples & Showcases (sample/sample.en.md)](./sample/sample.en.md)**.
+> For detailed visual examples, ASCII plots, derivation trees, and Typst/Lean4 outputs, see the **[Visual Samples & Showcases](./sample/sample.en.md)**.
 
 ---
 
@@ -463,8 +463,8 @@ ihd "１＋２×３"
 
 > [!TIP]
 > For complete specifications, parameter definitions, mathematical explanations, and examples:  
-> - **Markdown Edition**: [Japanese (docs/references/ja/reference.ja.md)](docs/references/ja/reference.ja.md) / [English (docs/references/en/reference.en.md)](docs/references/en/reference.en.md)  
-> - **Offline Single-File HTML Edition**: [Japanese (docs/references/ja/reference.ja.html)](docs/references/ja/reference.ja.html) / [English (docs/references/en/reference.en.html)](docs/references/en/reference.en.html)
+> - **Markdown Edition**: [Japanese](docs/references/ja/reference.ja.md) / [English](docs/references/en/reference.en.md)  
+> - **Offline Single-File HTML Edition**: [Japanese](docs/references/ja/reference.ja.html) / [English](docs/references/en/reference.en.html)
 
 ---
 
@@ -570,8 +570,8 @@ go test -v ./internal/calc -run "^(TestSymPyClient_|TestDifferentialOracle_)"
 ### Practical Problem Cookbook (Exam & Cookbook)
 
 Practical cookbook recipes and explanations solving 24 benchmark problems using `ihd`:
-- [Japanese Edition Cookbook (exam/problems.ja.md)](./exam/problems.ja.md)
-- [English Edition Cookbook (exam/problems.en.md)](./exam/problems.en.md)
+- [Japanese Edition Cookbook](./exam/problems.ja.md)
+- [English Edition Cookbook](./exam/problems.en.md)
 
 ---
 
