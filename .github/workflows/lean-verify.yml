@@ -135,3 +135,14 @@ jobs:
           echo "============================================================"
           echo "All generated proofs successfully verified by Lean 4 kernel!"
           echo "============================================================"
+
+      - name: Stage 0 Canary Self-Test & Axiom Audit
+        working-directory: formal
+        run: |
+          echo "=== Building and Running In-Lean Axiom Audit ==="
+          $HOME/.elan/bin/lake build ihd-audit
+          $HOME/.elan/bin/lake exe ihd-audit --self-test
+
+      - name: Generate Proof Debt Catalog & Coverage Check
+        run: |
+          python3 tools/lean/proof_catalog.py

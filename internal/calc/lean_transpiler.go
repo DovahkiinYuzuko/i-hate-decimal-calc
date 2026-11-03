@@ -2590,3 +2590,127 @@ func transpileSOSCertificate(c *SOSCertificate, theoremName string) (string, err
 	tactic := fmt.Sprintf("by\n  have h_sos : %s = %s := by ring\n  rw [h_sos]\n  positivity", targetStr, rhsStr)
 	return fmt.Sprintf("theorem %s : 0 ≤ %s := %s", escapeLeanIdent(theoremName), targetStr, tactic), nil
 }
+
+// NegativeMutant represents an artificially altered Lean theorem designed to test
+// that the Lean kernel rejects falsified mathematical assertions (Negative Mutation Testing).
+type NegativeMutant struct {
+	ID             string `json:"id"`
+	Operator       string `json:"operator"` // "constant_perturbation", "operator_inversion", "relation_inversion", "certificate_perturbation"
+	TheoremName    string `json:"theorem_name"`
+	LeanCode       string `json:"lean_code"`
+	ExpectedResult string `json:"expected_result"` // "REJECT"
+}
+
+// GenerateNegativeMutants generates 4 deterministic type-preserving mutant Lean theorems
+// from a target AST expression or certificate.
+func GenerateNegativeMutants(theoremName string, node ast.Node, cert Certificate) ([]NegativeMutant, error) {
+	if node == nil && cert == nil {
+		return nil, fmt.Errorf("both node and cert are nil")
+	}
+
+	var baseExpr string
+	var err error
+	var targetNode ast.Node = node
+
+	if targetNode == nil && cert != nil {
+		if sos, ok := cert.(*SOSCertificate); ok {
+			targetNode = sos.Target
+		} else if ideal, ok := cert.(*IdealMembershipCertificate); ok {
+			targetNode = ideal.Target
+		}
+	}
+
+	if targetNode != nil {
+		baseExpr, err = ToLeanSyntax(targetNode)
+		if err != nil {
+			return nil, fmt.Errorf("transpile baseExpr for mutants: %w", err)
+		}
+	}
+
+	// Collect free variables to inject explicit type binders for autoImplicit = false
+	vars := CollectFreeVariables(targetNode)
+	carrierType := inferTheoremDomainType(cert, targetNode)
+	if carrierType == "" {
+		carrierType = DomainRat
+	}
+	var binderPrefix string
+	if len(vars) > 0 {
+		binderPrefix = fmt.Sprintf(" (%s : %s)", strings.Join(vars, " "), carrierType)
+	}
+
+	var mutants []NegativeMutant
+
+	// 1. Constant Perturbation (RHS + 1)
+	m1Name := fmt.Sprintf("%s_mutant_c_add_1", theoremName)
+	m1Code := fmt.Sprintf("/--\nerror: ring failed\n-/\n#guard_msgs (whitespace := lax) in\nexample%s : %s = (%s) + 1 := by ring", binderPrefix, baseExpr, baseExpr)
+	mutants = append(mutants, NegativeMutant{
+		ID:             m1Name,
+		Operator:       "constant_perturbation",
+		TheoremName:    m1Name,
+		LeanCode:       m1Code,
+		ExpectedResult: "REJECT",
+	})
+
+	// 2. Unconditional Sign Inversion (LHS = -(RHS))
+	m2Name := fmt.Sprintf("%s_mutant_sign_flip", theoremName)
+	m2Code := fmt.Sprintf("/--\nerror: ring failed\n-/\n#guard_msgs (whitespace := lax) in\nexample%s : %s = -(%s) := by ring", binderPrefix, baseExpr, baseExpr)
+	mutants = append(mutants, NegativeMutant{
+		ID:             m2Name,
+		Operator:       "operator_inversion",
+		TheoremName:    m2Name,
+		LeanCode:       m2Code,
+		ExpectedResult: "REJECT",
+	})
+
+	// 3. Relational Inversion dynamically derived from target expression
+	m3Name := fmt.Sprintf("%s_mutant_rel_inversion", theoremName)
+	m3Code := fmt.Sprintf("/--\nerror: linarith failed\n-/\n#guard_msgs (whitespace := lax) in\nexample%s : (%s) > (%s) + 1 := by linarith", binderPrefix, baseExpr, baseExpr)
+	mutants = append(mutants, NegativeMutant{
+		ID:             m3Name,
+		Operator:       "relation_inversion",
+		TheoremName:    m3Name,
+		LeanCode:       m3Code,
+		ExpectedResult: "REJECT",
+	})
+
+	// 4. Certificate Perturbation (if cert is an SOSCertificate or IdealMembershipCertificate)
+	if sosCert, ok := cert.(*SOSCertificate); ok && sosCert.IsVerified() {
+		m4Name := fmt.Sprintf("%s_mutant_sos_perturb", theoremName)
+		sosTarget, err := ToLeanSyntax(sosCert.Target)
+		if err != nil {
+			return nil, fmt.Errorf("transpile SOS target for mutant: %w", err)
+		}
+		m4Code := fmt.Sprintf("/--\nerror: positivity failed\n-/\n#guard_msgs (whitespace := lax) in\nexample%s : 0 ≤ -(%s) - 1 := by positivity", binderPrefix, sosTarget)
+		mutants = append(mutants, NegativeMutant{
+			ID:             m4Name,
+			Operator:       "certificate_perturbation",
+			TheoremName:    m4Name,
+			LeanCode:       m4Code,
+			ExpectedResult: "REJECT",
+		})
+	} else if idealCert, ok := cert.(*IdealMembershipCertificate); ok && idealCert.IsVerified() {
+		m4Name := fmt.Sprintf("%s_mutant_ideal_perturb", theoremName)
+		idealTarget, err := ToLeanSyntax(idealCert.Target)
+		if err != nil {
+			return nil, fmt.Errorf("transpile ideal target for mutant: %w", err)
+		}
+		m4Code := fmt.Sprintf("/--\nerror: ring failed\n-/\n#guard_msgs (whitespace := lax) in\nexample%s : %s + 1 = 0 := by ring", binderPrefix, idealTarget)
+		mutants = append(mutants, NegativeMutant{
+			ID:             m4Name,
+			Operator:       "certificate_perturbation",
+			TheoremName:    m4Name,
+			LeanCode:       m4Code,
+			ExpectedResult: "REJECT",
+		})
+	}
+
+	return mutants, nil
+}
+
+// GeneratePremiseWitnessTheorem generates a satisfiability witness theorem (`∃ x, H x := ⟨witness, by norm_num⟩`)
+// to eliminate vacuous truth bugs from contradictory premise hypotheses.
+func GeneratePremiseWitnessTheorem(theoremName string, variable string, premise string, witness string) string {
+	wName := fmt.Sprintf("%s_premise_witness", theoremName)
+	return fmt.Sprintf("theorem %s : ∃ %s : ℚ, %s := ⟨%s, by norm_num⟩", escapeLeanIdent(wName), variable, premise, witness)
+}
+
