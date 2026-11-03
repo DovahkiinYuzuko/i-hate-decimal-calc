@@ -1272,7 +1272,7 @@ func TestTranspileSOSCertificate(t *testing.T) {
 }
 
 func TestGenerateNegativeMutants(t *testing.T) {
-	p := mustParseNode(t, "x^2 + 1")
+	p := mustParseNode(t, "x^2 + y^2 + 1")
 	mutants, err := GenerateNegativeMutants("test_theorem", p, nil)
 	if err != nil {
 		t.Fatalf("GenerateNegativeMutants failed: %v", err)
@@ -1287,6 +1287,11 @@ func TestGenerateNegativeMutants(t *testing.T) {
 	foundRel := false
 
 	for _, m := range mutants {
+		// All mutants with free variables must contain explicit rational binders
+		if !strings.Contains(m.LeanCode, "(x y : ℚ)") && !strings.Contains(m.LeanCode, "(x : ℚ) (y : ℚ)") {
+			t.Errorf("expected explicit type binder in mutant %s, got:\n%s", m.ID, m.LeanCode)
+		}
+
 		if m.Operator == "constant_perturbation" {
 			foundC = true
 			if !strings.Contains(m.LeanCode, "#guard_msgs (whitespace := lax)") {
@@ -1298,6 +1303,10 @@ func TestGenerateNegativeMutants(t *testing.T) {
 		}
 		if m.Operator == "relation_inversion" {
 			foundRel = true
+			// Must not be a hardcoded dummy string
+			if strings.Contains(m.LeanCode, "x > 1 := by linarith") {
+				t.Errorf("relation_inversion mutant must be dynamically generated, but got dummy: %s", m.LeanCode)
+			}
 		}
 	}
 

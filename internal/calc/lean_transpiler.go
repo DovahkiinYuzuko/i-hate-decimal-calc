@@ -2611,9 +2611,16 @@ func GenerateNegativeMutants(theoremName string, node ast.Node, cert Certificate
 		return nil, fmt.Errorf("transpile baseExpr for mutants: %w", err)
 	}
 
+	// Collect free variables to inject explicit type binders for autoImplicit = false
+	vars := CollectFreeVariables(node)
+	var binderPrefix string
+	if len(vars) > 0 {
+		binderPrefix = fmt.Sprintf(" (%s : ℚ)", strings.Join(vars, " "))
+	}
+
 	// 1. Constant Perturbation (RHS + 1)
 	m1Name := fmt.Sprintf("%s_mutant_c_add_1", theoremName)
-	m1Code := fmt.Sprintf("/--\nerror: ring failed\n-/\n#guard_msgs (whitespace := lax) in\nexample : %s = (%s) + 1 := by ring", baseExpr, baseExpr)
+	m1Code := fmt.Sprintf("/--\nerror: ring failed\n-/\n#guard_msgs (whitespace := lax) in\nexample%s : %s = (%s) + 1 := by ring", binderPrefix, baseExpr, baseExpr)
 	mutants = append(mutants, NegativeMutant{
 		ID:             m1Name,
 		Operator:       "constant_perturbation",
@@ -2622,9 +2629,9 @@ func GenerateNegativeMutants(theoremName string, node ast.Node, cert Certificate
 		ExpectedResult: "REJECT",
 	})
 
-	// 2. Sign Inversion (Negation flip: expr = -expr)
+	// 2. Unconditional Constant Shift (RHS + 2) avoiding fixed-point risks like -1/2
 	m2Name := fmt.Sprintf("%s_mutant_sign_flip", theoremName)
-	m2Code := fmt.Sprintf("/--\nerror: ring failed\n-/\n#guard_msgs (whitespace := lax) in\nexample : %s = -((%s) + 1) := by ring", baseExpr, baseExpr)
+	m2Code := fmt.Sprintf("/--\nerror: ring failed\n-/\n#guard_msgs (whitespace := lax) in\nexample%s : %s = (%s) + 2 := by ring", binderPrefix, baseExpr, baseExpr)
 	mutants = append(mutants, NegativeMutant{
 		ID:             m2Name,
 		Operator:       "operator_inversion",
@@ -2633,9 +2640,9 @@ func GenerateNegativeMutants(theoremName string, node ast.Node, cert Certificate
 		ExpectedResult: "REJECT",
 	})
 
-	// 3. Relational Inversion (= flipped to > or strictly less with non-negative constant)
+	// 3. Relational Inversion dynamically derived from target expression
 	m3Name := fmt.Sprintf("%s_mutant_rel_inversion", theoremName)
-	m3Code := "/--\nerror: linarith failed\n-/\n#guard_msgs (whitespace := lax) in\nexample (x : ℚ) (h : x = 0) : x > 1 := by linarith"
+	m3Code := fmt.Sprintf("/--\nerror: linarith failed\n-/\n#guard_msgs (whitespace := lax) in\nexample%s : (%s) > (%s) + 1 := by linarith", binderPrefix, baseExpr, baseExpr)
 	mutants = append(mutants, NegativeMutant{
 		ID:             m3Name,
 		Operator:       "relation_inversion",
@@ -2648,7 +2655,7 @@ func GenerateNegativeMutants(theoremName string, node ast.Node, cert Certificate
 	if sosCert, ok := cert.(*SOSCertificate); ok && sosCert.IsVerified() {
 		m4Name := fmt.Sprintf("%s_mutant_sos_perturb", theoremName)
 		targetStr, _ := ToLeanSyntax(sosCert.Target)
-		m4Code := fmt.Sprintf("/--\nerror: ring failed\n-/\n#guard_msgs (whitespace := lax) in\nexample : %s = -1 := by ring", targetStr)
+		m4Code := fmt.Sprintf("/--\nerror: ring failed\n-/\n#guard_msgs (whitespace := lax) in\nexample%s : %s = -1 := by ring", binderPrefix, targetStr)
 		mutants = append(mutants, NegativeMutant{
 			ID:             m4Name,
 			Operator:       "certificate_perturbation",
