@@ -24,7 +24,41 @@ func simplifyPowWithEnv(base, exp Node, env *Env) (Node, error) {
 		if expIsRat && ratExp.Val.Sign() == 0 {
 			return mustRational(1, 1), nil // 0^0 = 1 by specification
 		}
-		return mustRational(0, 1), nil
+		if expIsRat && ratExp.Val.Sign() > 0 {
+			return mustRational(0, 1), nil
+		}
+
+		// Non-rational exponent:
+		if c, ok := exp.(*ComplexNode); ok {
+			if !isZero(c.Imag) {
+				return nil, NewDomainError("errors.domain_error", "domain error: 0 cannot be raised to a complex power with non-zero imaginary part")
+			}
+			if rRat, okR := c.Real.(*RationalNode); okR {
+				if rRat.Val.Sign() < 0 {
+					return nil, NewZeroDivisionError("division by zero: 0^(negative) is undefined")
+				} else if rRat.Val.Sign() == 0 {
+					return mustRational(1, 1), nil
+				}
+				return mustRational(0, 1), nil
+			}
+		}
+
+		if s, ok := exp.(*SqrtNode); ok {
+			if r, okR := s.Radicand.(*RationalNode); okR {
+				if r.Val.Sign() < 0 {
+					return nil, NewDomainError("errors.domain_error", "domain error: 0 cannot be raised to an imaginary power")
+				} else if r.Val.Sign() == 0 {
+					return mustRational(1, 1), nil
+				}
+				return mustRational(0, 1), nil
+			}
+		}
+
+		if hasImaginaryUnit(exp) {
+			return nil, NewDomainError("errors.domain_error", "domain error: 0 cannot be raised to a complex power")
+		}
+
+		return NewPow(base, exp)
 	}
 
 	// base^0 = 1
@@ -212,4 +246,35 @@ func simplifyPowWithEnv(base, exp Node, env *Env) (Node, error) {
 	}
 
 	return NewPow(base, exp)
+}
+
+// hasImaginaryUnit returns true if the given expression AST contains the imaginary unit (i or negative radicand sqrt).
+func hasImaginaryUnit(n Node) bool {
+	hasI := false
+	Walk(n, func(curr Node) bool {
+		switch v := curr.(type) {
+		case *ConstNode:
+			if v.Name == "i" {
+				hasI = true
+				return false
+			}
+		case *VarNode:
+			if v.Name == "i" {
+				hasI = true
+				return false
+			}
+		case *ComplexNode:
+			if !isZero(v.Imag) {
+				hasI = true
+				return false
+			}
+		case *SqrtNode:
+			if r, ok := v.Radicand.(*RationalNode); ok && r.Val != nil && r.Val.Sign() < 0 {
+				hasI = true
+				return false
+			}
+		}
+		return true
+	})
+	return hasI
 }

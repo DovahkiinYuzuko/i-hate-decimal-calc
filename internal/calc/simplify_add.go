@@ -116,7 +116,8 @@ func simplifyAdd(terms []Node) (Node, error) {
 				if entry, exists := termMap[baseKey]; exists {
 					entry.coeff.Add(entry.coeff, big.NewRat(1, 1))
 				} else {
-					termMap[baseKey] = &termEntry{coeff: big.NewRat(1, 1), base: baseKey, node: v}
+					pureImag := NewComplex(mustRational(0, 1), v.Imag)
+					termMap[baseKey] = &termEntry{coeff: big.NewRat(1, 1), base: baseKey, node: pureImag}
 					termOrder = append(termOrder, baseKey)
 				}
 			}

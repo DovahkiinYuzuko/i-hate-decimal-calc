@@ -548,8 +548,17 @@ func (c *SymPyClient) EvalNumerical(ctx context.Context, lhsAST, rhsAST map[stri
 	}, nil
 }
 
-// SubtractiveZero checks if SymPy simplifies LHS - RHS to zero.
-func (c *SymPyClient) SubtractiveZero(ctx context.Context, lhsAST, rhsAST map[string]any) (bool, bool, string, error) {
+// SubtractiveZeroResult represents the structured response from a subtractive zero check.
+type SubtractiveZeroResult struct {
+	IsZero            bool   `json:"is_zero"`
+	IsConstantNonzero bool   `json:"is_constant_nonzero"`
+	Simplified        string `json:"simplified"`
+	Verdict           string `json:"verdict"`
+	Reason            string `json:"reason"`
+}
+
+// SubtractiveZero checks if SymPy simplifies LHS - RHS to zero with 3-way tagged verdict support.
+func (c *SymPyClient) SubtractiveZero(ctx context.Context, lhsAST, rhsAST map[string]any) (SubtractiveZeroResult, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -568,25 +577,33 @@ func (c *SymPyClient) SubtractiveZero(ctx context.Context, lhsAST, rhsAST map[st
 
 	data, err := c.sendRequestLocked(req, timeout)
 	if err != nil {
-		return false, false, "", err
+		return SubtractiveZeroResult{}, err
 	}
 
 	var res struct {
-		ID                 uint64 `json:"id"`
-		Generation         uint64 `json:"generation"`
-		Status             string `json:"status"`
-		IsZero             bool   `json:"is_zero"`
-		IsConstantNonzero  bool   `json:"is_constant_nonzero"`
-		Simplified         string `json:"simplified"`
-		Error              string `json:"error"`
+		ID                uint64 `json:"id"`
+		Generation        uint64 `json:"generation"`
+		Status            string `json:"status"`
+		Verdict           string `json:"verdict"`
+		Reason            string `json:"reason"`
+		IsZero            bool   `json:"is_zero"`
+		IsConstantNonzero bool   `json:"is_constant_nonzero"`
+		Simplified        string `json:"simplified"`
+		Error             string `json:"error"`
 	}
 	if err := json.Unmarshal(data, &res); err != nil {
-		return false, false, "", fmt.Errorf("unmarshal error: %w", err)
+		return SubtractiveZeroResult{}, fmt.Errorf("unmarshal error: %w", err)
 	}
 	if res.Error != "" {
-		return false, false, "", errors.New(res.Error)
+		return SubtractiveZeroResult{}, errors.New(res.Error)
 	}
-	return res.IsZero, res.IsConstantNonzero, res.Simplified, nil
+	return SubtractiveZeroResult{
+		IsZero:            res.IsZero,
+		IsConstantNonzero: res.IsConstantNonzero,
+		Simplified:        res.Simplified,
+		Verdict:           res.Verdict,
+		Reason:            res.Reason,
+	}, nil
 }
 
 // ASTToSymPyJSON converts an ihd AST Node into a structured JSON dictionary for SymPy.
@@ -612,6 +629,15 @@ func ASTToSymPyJSONWithAssumptions(node ast.Node, assumptions map[string]bool) (
 		}, nil
 
 	case *ast.VarNode:
+		// Map reserved mathematical constants to SymPy constants if generated as VarNode
+		switch n.Name {
+		case "i", "I":
+			return map[string]any{"op": "Constant", "name": "I"}, nil
+		case "pi", "Pi":
+			return map[string]any{"op": "Constant", "name": "pi"}, nil
+		case "e", "E":
+			return map[string]any{"op": "Constant", "name": "e"}, nil
+		}
 		res := map[string]any{
 			"op":   "Symbol",
 			"name": n.Name,
@@ -685,7 +711,11 @@ func ASTToSymPyJSONWithAssumptions(node ast.Node, assumptions map[string]bool) (
 		return map[string]any{"op": "Sqrt", "arg": arg}, nil
 
 	case *ast.ConstNode:
-		return map[string]any{"op": "Constant", "name": n.Name}, nil
+		name := n.Name
+		if name == "i" {
+			name = "I"
+		}
+		return map[string]any{"op": "Constant", "name": name}, nil
 
 	case *ast.FuncNode:
 		switch strings.ToLower(n.Name) {

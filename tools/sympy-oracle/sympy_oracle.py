@@ -32,10 +32,40 @@ try:
     import sympy as sp
     import mpmath as mp
     from sympy.core.cache import clear_cache
+    from sympy.core.numbers import NaN, ComplexInfinity, Infinity, NegativeInfinity
 except ImportError as e:
     sys.stderr.write(f"[sympy_oracle] Fatal: failed to import sympy/mpmath: {e}\n")
     sys.stderr.flush()
     sys.exit(1)
+
+NONFINITE_CLASSES = (NaN, ComplexInfinity, Infinity, NegativeInfinity)
+NONFINITE_ATOMS = (sp.nan, sp.zoo, sp.oo, -sp.oo)
+
+
+def is_expr_nonfinite(expr):
+    """
+    Returns True if expr is undefined, infinite, or contains a singularity/pole (NaN, zoo, oo, -oo).
+    Note that SymPy's expr.is_finite returns None (not False) for NaN, so checking 'is_finite is False' alone is insufficient.
+    """
+    if expr is None:
+        return False
+    if expr in NONFINITE_ATOMS:
+        return True
+    if isinstance(expr, NONFINITE_CLASSES):
+        return True
+    if getattr(expr, "is_finite", None) is False:
+        return True
+    try:
+        if expr.has(*NONFINITE_ATOMS):
+            return True
+    except Exception:
+        pass
+    try:
+        if expr.atoms(*NONFINITE_CLASSES):
+            return True
+    except Exception:
+        pass
+    return False
 
 
 def build_ast(node):
@@ -88,6 +118,8 @@ def build_ast(node):
             return sp.I
         elif name in ("infinity", "oo"):
             return sp.oo
+        elif name == "deg":
+            return sp.pi / 180
         raise ValueError(f"Unknown constant: {name}")
 
     elif op == "Add":
@@ -381,23 +413,86 @@ def handle_request(req):
             base_res.update({"status": "error", "error": f"build_ast error: {e}"})
             return base_res
 
+        # Step 1: Pre-classify operands for poles and undefined values before subtraction
+        lhs_nonfinite = is_expr_nonfinite(lhs)
+        rhs_nonfinite = is_expr_nonfinite(rhs)
+
+        if lhs_nonfinite and rhs_nonfinite:
+            base_res.update({
+                "status": "ok",
+                "verdict": "inconclusive",
+                "reason": "both_operands_nonfinite",
+                "is_zero": False,
+                "is_constant_nonzero": False,
+                "simplified": "",
+            })
+            return base_res
+
+        if lhs_nonfinite != rhs_nonfinite:
+            base_res.update({
+                "status": "ok",
+                "verdict": "inequivalent",
+                "reason": "domain_mismatch_finite_vs_nonfinite",
+                "is_zero": False,
+                "is_constant_nonzero": True,
+                "simplified": f"lhs_nonfinite={lhs_nonfinite}, rhs_nonfinite={rhs_nonfinite}",
+            })
+            return base_res
+
+        # Step 2: Both operands are finite. Perform subtraction.
         diff = lhs - rhs
+        if is_expr_nonfinite(diff):
+            base_res.update({
+                "status": "ok",
+                "verdict": "inconclusive",
+                "reason": "nonfinite_difference",
+                "is_zero": False,
+                "is_constant_nonzero": False,
+                "simplified": str(diff),
+            })
+            return base_res
+
         is_zero = diff.equals(0)
         simplified_str = ""
         is_constant_nonzero = False
+        verdict = "unknown"
+        reason = ""
 
-        if not is_zero:
+        if is_zero is True:
+            verdict = "equivalent"
+            reason = "diff_equals_zero"
+        else:
             try:
                 simp = sp.simplify(diff)
-                is_zero = (simp == 0)
                 simplified_str = str(simp)
-                if simp.is_number and simp != 0:
+                if is_expr_nonfinite(simp):
+                    verdict = "inconclusive"
+                    reason = "simplified_diff_nonfinite"
+                    is_zero = False
+                    is_constant_nonzero = False
+                elif simp == 0 or simp.is_zero is True:
+                    is_zero = True
+                    verdict = "equivalent"
+                    reason = "simplified_diff_zero"
+                elif simp.is_number and simp.is_finite is True and simp.is_zero is False:
                     is_constant_nonzero = True
+                    verdict = "inequivalent"
+                    reason = "constant_nonzero"
+                elif simp.is_finite is True and simp.is_zero is False:
+                    verdict = "inequivalent"
+                    reason = "symbolic_nonzero"
+                else:
+                    verdict = "unknown"
+                    reason = "undecidable"
             except Exception as e:
                 simplified_str = f"simplify_failed: {e}"
+                verdict = "unknown"
+                reason = str(e)
 
         base_res.update({
             "status": "ok",
+            "verdict": verdict,
+            "reason": reason,
             "is_zero": bool(is_zero),
             "is_constant_nonzero": bool(is_constant_nonzero),
             "simplified": simplified_str,

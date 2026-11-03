@@ -107,13 +107,22 @@ func (o *DifferentialOracle) EvaluateEquivalence(ctx context.Context, ihdAST, sy
 	}
 
 	// Tier 1 Fast-Path: Subtractive zero check (equals(0) / simplify(A - B) == 0)
-	isZero, isConstantNonzero, simpStr, err := o.client.SubtractiveZero(ctx, ihdJSON, sympJSON)
+	subRes, err := o.client.SubtractiveZero(ctx, ihdJSON, sympJSON)
 	if err == nil {
-		if isZero {
+		switch subRes.Verdict {
+		case "equivalent":
 			return VerdictDiffExactMatch, "Tier-1 subtractive algebraic zero"
-		}
-		if isConstantNonzero {
-			return VerdictDiffExactMismatch, fmt.Sprintf("Tier-1 exact non-zero difference: %s", simpStr)
+		case "inconclusive":
+			return VerdictDiffInconclusive, fmt.Sprintf("Tier-1 inconclusive (%s): %s", subRes.Reason, subRes.Simplified)
+		case "inequivalent":
+			return VerdictDiffExactMismatch, fmt.Sprintf("Tier-1 exact non-zero difference (%s): %s", subRes.Reason, subRes.Simplified)
+		default:
+			if subRes.IsZero {
+				return VerdictDiffExactMatch, "Tier-1 subtractive algebraic zero"
+			}
+			if subRes.IsConstantNonzero {
+				return VerdictDiffExactMismatch, fmt.Sprintf("Tier-1 exact non-zero difference: %s", subRes.Simplified)
+			}
 		}
 	}
 
@@ -736,4 +745,80 @@ func containsLiteralPole(n ast.Node) bool {
 		return true
 	})
 	return hasPole
+}
+
+func TestSymPyOracle_SubtractiveProtocol(t *testing.T) {
+	client := GetGlobalSymPyClient()
+	if !client.Available() {
+		t.Skipf("SymPy unavailable: %s", client.ReasonUnavailable())
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	tests := []struct {
+		name        string
+		lhs         ast.Node
+		rhs         ast.Node
+		wantVerdict string
+	}{
+		{
+			name: "equivalent",
+			lhs: ast.NewAdd([]ast.Node{
+				&ast.VarNode{Name: "x"},
+				ast.NewRationalFromBigRat(big.NewRat(1, 1)),
+			}),
+			rhs: ast.NewAdd([]ast.Node{
+				ast.NewRationalFromBigRat(big.NewRat(1, 1)),
+				&ast.VarNode{Name: "x"},
+			}),
+			wantVerdict: "equivalent",
+		},
+		{
+			name: "inequivalent",
+			lhs: ast.NewAdd([]ast.Node{
+				&ast.VarNode{Name: "x"},
+				ast.NewRationalFromBigRat(big.NewRat(1, 1)),
+			}),
+			rhs: ast.NewAdd([]ast.Node{
+				&ast.VarNode{Name: "x"},
+				ast.NewRationalFromBigRat(big.NewRat(2, 1)),
+			}),
+			wantVerdict: "inequivalent",
+		},
+		{
+			name: "inconclusive_both_poles",
+			lhs: &ast.PowNode{
+				Base: ast.NewRationalFromBigRat(big.NewRat(0, 1)),
+				Exp:  ast.NewRationalFromBigRat(big.NewRat(-1, 1)),
+			},
+			rhs: &ast.PowNode{
+				Base: ast.NewRationalFromBigRat(big.NewRat(0, 1)),
+				Exp:  ast.NewRationalFromBigRat(big.NewRat(-2, 1)),
+			},
+			wantVerdict: "inconclusive",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			lhsJSON, errL := ASTToSymPyJSON(tc.lhs)
+			if errL != nil {
+				t.Fatalf("lhs serialization failed: %v", errL)
+			}
+			rhsJSON, errR := ASTToSymPyJSON(tc.rhs)
+			if errR != nil {
+				t.Fatalf("rhs serialization failed: %v", errR)
+			}
+
+			res, err := client.SubtractiveZero(ctx, lhsJSON, rhsJSON)
+			if err != nil {
+				t.Fatalf("SubtractiveZero failed: %v", err)
+			}
+			if res.Verdict != tc.wantVerdict {
+				t.Errorf("expected verdict %q, got %q (reason: %q, simplified: %q)",
+					tc.wantVerdict, res.Verdict, res.Reason, res.Simplified)
+			}
+		})
+	}
 }
