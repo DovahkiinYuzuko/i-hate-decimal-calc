@@ -1,0 +1,13 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT59-001,cat_59_lambert_w_function_transcendental_equation_solver,lambert_w(0),,exact,0,,0,deductive,LambertW: Special value zero
+CAT59-002,cat_59_lambert_w_function_transcendental_equation_solver,lambert_w(e),,exact,1,,0,deductive,LambertW: Special value e
+CAT59-003,cat_59_lambert_w_function_transcendental_equation_solver,erf(0),,exact,0,,0,deductive,Erf: Special value zero
+CAT59-004,cat_59_lambert_w_function_transcendental_equation_solver,erf(-x),,exact,-erf(x),,0,deductive,Erf: Odd function reflection
+CAT59-005,cat_59_lambert_w_function_transcendental_equation_solver,"""solve(x*exp(x) == 2, x)""",,exact,[lambert_w(2)],,0,deductive,Transcendental: Solve x*exp(x) == 2
+CAT59-006,cat_59_lambert_w_function_transcendental_equation_solver,"""solve(x + ln(x) == 0, x)""",,exact,[lambert_w(1)],,0,deductive,Transcendental: Solve x + ln(x) == 0
+CAT59-007,cat_59_lambert_w_function_transcendental_equation_solver,"""solve(x^x == 2, x)""",,exact,[exp(lambert_w(ln(2)))],,0,deductive,Transcendental: Solve x^x == 2
+CAT59-008,cat_59_lambert_w_function_transcendental_equation_solver,"""integrate(exp(-x^2), x)""",,exact,1/2*√(π)*erf(x),,0,deductive,Transcendental: Gaussian indefinite integral erf
+CAT59-009,cat_59_lambert_w_function_transcendental_equation_solver,"--verify ""solve(x*exp(x) == 2, x)""",,exact,"[lambert_w(2)]
+[VERIFIED: eq[x -> roots] == 0]",,0,deductive,Transcendental: Verify solve root certificate
+CAT59-010,cat_59_lambert_w_function_transcendental_equation_solver,"""lambert_w(1, 2, 3)""",,error,,function lambert_w requires between 1 and 2 arguments,1,contradiction,Negative: LambertW invalid arguments count
+CAT59-011,cat_59_lambert_w_function_transcendental_equation_solver,"""erf(1, 2)""",,error,,function erf requires 1 argument,1,contradiction,Negative: Erf invalid arguments count

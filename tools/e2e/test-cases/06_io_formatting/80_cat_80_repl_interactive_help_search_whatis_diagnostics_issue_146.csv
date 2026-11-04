@@ -1,0 +1,28 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT80-001,cat_80_repl_interactive_help_search_whatis_diagnostics_issue_146,,"help solve
+exit
+",contains,"solve(eq, var)",,0,deductive,REPL Dict Easy: Help specific function signature
+CAT80-002,cat_80_repl_interactive_help_search_whatis_diagnostics_issue_146,,"search diophantine
+exit
+",contains,solve_diophantine,,0,deductive,REPL Dict Easy: Search function by keyword
+CAT80-003,cat_80_repl_interactive_help_search_whatis_diagnostics_issue_146,,"whatis groebner
+exit
+",contains,"groebner(polys, vars, order)",,0,deductive,REPL Dict Easy: Whatis function concept
+CAT80-004,cat_80_repl_interactive_help_search_whatis_diagnostics_issue_146,,"whatis elliptic
+exit
+",contains,Elliptic Curves,,0,deductive,REPL Dict Medium: Whatis domain concept elliptic
+CAT80-005,cat_80_repl_interactive_help_search_whatis_diagnostics_issue_146,,"whatis(x^2 - 1 == 0)
+exit
+",contains,solve,,0,deductive,REPL Dict Medium: Whatis equation syntax
+CAT80-006,cat_80_repl_interactive_help_search_whatis_diagnostics_issue_146,,"whatis(x^3 + 2*x + 1)
+exit
+",contains,factor,,0,deductive,REPL Dict Medium: Whatis polynomial expression
+CAT80-007,cat_80_repl_interactive_help_search_whatis_diagnostics_issue_146,,"integrat(x, x)
+exit
+",error,,integrate,1,contradiction,REPL Diag Hard: Did-you-mean suggestion for typo function integrat
+CAT80-008,cat_80_repl_interactive_help_search_whatis_diagnostics_issue_146,,"solv(x == 0)
+exit
+",error,,solve,1,contradiction,REPL Diag Hard: Did-you-mean suggestion for typo function solv
+CAT80-009,cat_80_repl_interactive_help_search_whatis_diagnostics_issue_146,,"1 + * 2
+exit
+",error,,^,1,contradiction,REPL Diag Oni: Syntax error caret pointer display

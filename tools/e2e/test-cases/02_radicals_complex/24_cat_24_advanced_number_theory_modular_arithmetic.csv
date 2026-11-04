@@ -1,0 +1,13 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT24-001,cat_24_advanced_number_theory_modular_arithmetic,"""inv_mod(3, 11)""",,exact,4,,0,deductive,Number Theory: Modular inverse 3^-1 mod 11
+CAT24-002,cat_24_advanced_number_theory_modular_arithmetic,"""inv_mod(10, 17)""",,exact,12,,0,deductive,Number Theory: Modular inverse 10^-1 mod 17
+CAT24-003,cat_24_advanced_number_theory_modular_arithmetic,"""inv_mod(65537, 1000000007)""",,exact,743534192,,0,deductive,Number Theory: Large prime modular inverse
+CAT24-004,cat_24_advanced_number_theory_modular_arithmetic,"""crt([2, 3, 2], [3, 5, 7])""",,exact,23,,0,deductive,Number Theory: CRT with list arguments
+CAT24-005,cat_24_advanced_number_theory_modular_arithmetic,"""crt(2, 3, 3, 5, 2, 7)""",,exact,23,,0,deductive,Number Theory: CRT with pair arguments
+CAT24-006,cat_24_advanced_number_theory_modular_arithmetic,"""crt([3, 5], [4, 6])""",,exact,11,,0,deductive,Number Theory: CRT non-coprime compatible
+CAT24-007,cat_24_advanced_number_theory_modular_arithmetic,totient(36),,exact,12,,0,deductive,Number Theory: Totient function phi(36)
+CAT24-008,cat_24_advanced_number_theory_modular_arithmetic,totient(1000000007),,exact,1000000006,,0,deductive,Number Theory: Totient prime phi(1000000007)
+CAT24-009,cat_24_advanced_number_theory_modular_arithmetic,is_prime(13),,exact,1,,0,deductive,Number Theory: Prime test small prime 13
+CAT24-010,cat_24_advanced_number_theory_modular_arithmetic,is_prime(561),,exact,0,,0,deductive,Number Theory: Prime test Carmichael number 561
+CAT24-011,cat_24_advanced_number_theory_modular_arithmetic,is_prime(1000000007),,exact,1,,0,deductive,Number Theory: Prime test large prime 1000000007
+CAT24-012,cat_24_advanced_number_theory_modular_arithmetic,is_prime(2305843009213693951),,exact,1,,0,deductive,Number Theory: Prime test 64-bit Mersenne prime M61

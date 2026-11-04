@@ -1,0 +1,20 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT15-001,cat_15_step_by_step_explainer,"--lang ja --explain ""1 / (sqrt(2) + 1)""",,exact,"式: 1 / (sqrt(2) + 1)
+├── [Step 1: 分母の有理化]
+│   分母に共役式 (1 - √2) を乗算して有理化
+│   (1 + √2)^-1  ──>  -1 + √2
+└── [Result]
+    = -1 + √2",,0,deductive,Explain: Rationalize step tree
+CAT15-002,cat_15_step_by_step_explainer,"--lang ja --explain ""diff(x^3, x)""",,exact,"式: diff(x^3, x)
+├── [Step 1: べき乗の微分公式の適用]
+│   べき乗の微分公式: d/dx [x^3] = 3*x^2
+│   x^3  ──>  3*x^2
+└── [Result]
+    = 3*x^2",,0,deductive,Explain: Differentiation power rule step tree
+CAT15-003,cat_15_step_by_step_explainer,--lang ja,"explain 1 / (sqrt(2) + 1)
+",exact,"式: 1 / (sqrt(2) + 1)
+├── [Step 1: 分母の有理化]
+│   分母に共役式 (1 - √2) を乗算して有理化
+│   (1 + √2)^-1  ──>  -1 + √2
+└── [Result]
+    = -1 + √2",,0,deductive,Explain: Piped explain command

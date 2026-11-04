@@ -1,0 +1,7 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT28-001,cat_28_symbolic_laplace_inverse_laplace_transforms,laplace(t^2),,exact,2*s^-3,,0,deductive,Laplace: Polynomial t^2
+CAT28-002,cat_28_symbolic_laplace_inverse_laplace_transforms,laplace(exp(3*t)),,exact,(-3 + s)^-1,,0,deductive,Laplace: Exponential exp(3*t)
+CAT28-003,cat_28_symbolic_laplace_inverse_laplace_transforms,laplace(sin(2*t)),,exact,2*(4 + s^2)^-1,,0,deductive,Laplace: Sine wave sin(2*t)
+CAT28-004,cat_28_symbolic_laplace_inverse_laplace_transforms,"""inv_laplace(1 / (s - 3))""",,exact,exp(3*t),,0,deductive,InvLaplace: Simple pole 1/(s - 3)
+CAT28-005,cat_28_symbolic_laplace_inverse_laplace_transforms,"""inv_laplace(1 / s^2)""",,exact,t,,0,deductive,InvLaplace: Double pole 1/s^2
+CAT28-006,cat_28_symbolic_laplace_inverse_laplace_transforms,"""inv_laplace(s / (s^2 + 9))""",,exact,cos(3*t),,0,deductive,InvLaplace: Cosine pole s/(s^2 + 9)

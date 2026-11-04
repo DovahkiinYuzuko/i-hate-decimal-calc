@@ -1,0 +1,5 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT40-001,cat_40_concurrent_cas_engine_parallel_computation,"""150! / 148!""",,exact,22350,,0,deductive,Concurrent: Parallel product tree factorial ratio 150! / 148!
+CAT40-002,cat_40_concurrent_cas_engine_parallel_computation,"""200! / 199!""",,exact,200,,0,deductive,Concurrent: Parallel product tree factorial ratio 200! / 199!
+CAT40-003,cat_40_concurrent_cas_engine_parallel_computation,"""groebner([x^2 + y, y^2 - 1], [x, y], lex)""",,exact,"[y + x^2, -1 + y^2]",,0,deductive,Concurrent: Parallel Groebner tail reduction
+CAT40-004,cat_40_concurrent_cas_engine_parallel_computation,"""isolate_roots(x^4 - 4*x^2 + 1, x)""",,exact,"[[-5/2, -15/8], [-5/8, 0], [0, 5/8], [15/8, 5/2]]",,0,deductive,Concurrent: Parallel Sturm real root isolation multi-root bisection

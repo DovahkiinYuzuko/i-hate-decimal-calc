@@ -1,0 +1,10 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT67-001,cat_67_iteration_safety_loop_control_issue_127,"""table(k^2, k, 1, 5)""",,exact,"[1, 4, 9, 16, 25]",,0,deductive,Iteration: Normal table with safe limits
+CAT67-002,cat_67_iteration_safety_loop_control_issue_127,"--max-loop 10 ""table(k, k, 1, 20)""",,error,,iteration count exceeded maximum limit,1,contradiction,Iteration: CLI max-loop exceeded stops evaluation
+CAT67-003,cat_67_iteration_safety_loop_control_issue_127,"--warn-loop 5 ""table(k, k, 1, 10)""",,exact,"[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]",,0,deductive,Iteration: CLI warn-loop clean stdout non-destructive
+CAT67-004,cat_67_iteration_safety_loop_control_issue_127,"""product(k, k, 1, 5)""",,exact,120,,0,deductive,Iteration: Product calculation within limits
+CAT67-005,cat_67_iteration_safety_loop_control_issue_127,"""for(k, 1, 4, k)""",,exact,4,,0,deductive,Iteration: For loop within limits
+CAT67-006,cat_67_iteration_safety_loop_control_issue_127,,"warn-loop 50
+max-loop 100
+table(k, k, 1, 3)
+",contains,"[1, 2, 3]",,0,deductive,Iteration: Pipe stream bufio evaluation and REPL commands

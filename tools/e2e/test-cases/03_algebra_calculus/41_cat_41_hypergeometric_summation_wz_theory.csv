@@ -1,0 +1,5 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT41-001,cat_41_hypergeometric_summation_wz_theory,"""gosper_sum(k * k!, k)""",,exact,k!,,0,deductive,Gosper: Indefinite sum k * k!
+CAT41-002,cat_41_hypergeometric_summation_wz_theory,"""sum(k * k!, k, 1, n)""",,exact,-1 + (1 + n)!,,0,deductive,Gosper: Definite summation via evalSum dispatch
+CAT41-003,cat_41_hypergeometric_summation_wz_theory,"""wz_cert(comb(n, k) * 2^-n, n, k)""",,exact,-1/2*k*(1 - k + n)^-1,,0,deductive,WZ: Wilf-Zeilberger certificate for normalized binomial
+CAT41-004,cat_41_hypergeometric_summation_wz_theory,"""gosper_sum(k!, k)""",,error,,*not Gosper-summable*,1,contradiction,Gosper: Non-summable rejection error

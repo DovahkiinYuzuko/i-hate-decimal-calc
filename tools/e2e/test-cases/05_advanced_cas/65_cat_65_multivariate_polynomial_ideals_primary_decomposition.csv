@@ -1,0 +1,13 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT65-001,cat_65_multivariate_polynomial_ideals_primary_decomposition,"""ideal_dimension([x*y, x*z], [x, y, z])""",,exact,2,,0,deductive,Ideal: Dimension of intersecting planes
+CAT65-002,cat_65_multivariate_polynomial_ideals_primary_decomposition,"""ideal_radical([x^2, x*y], [x, y])""",,exact,[x],,0,deductive,Ideal: Radical of embedded point ideal
+CAT65-003,cat_65_multivariate_polynomial_ideals_primary_decomposition,"""ideal_colon([x^2], x, [x])""",,exact,[x],,0,deductive,Ideal: Colon ideal <x^2> : x
+CAT65-004,cat_65_multivariate_polynomial_ideals_primary_decomposition,"""ideal_saturation([x^2], x, [x])""",,exact,[1],,0,deductive,Ideal: Saturation <x^2> : x^inf
+CAT65-005,cat_65_multivariate_polynomial_ideals_primary_decomposition,"""ideal_intersection([x], [y], [x, y])""",,exact,[x*y],,0,deductive,Ideal: Intersection <x> cap <y>
+CAT65-006,cat_65_multivariate_polynomial_ideals_primary_decomposition,"""primary_decomposition([x^2 - 1, y], [x, y])""",,exact,"[[[-1 + x, y], [-1 + x, y]], [[1 + x, y], [1 + x, y]]]",,0,deductive,"Ideal: Primary decomposition of <x^2 - 1, y>"
+CAT65-007,cat_65_multivariate_polynomial_ideals_primary_decomposition,"--verify ""primary_decomposition([x^2 - 1, y], [x, y])""",,exact,"[[[-1 + x, y], [-1 + x, y]], [[1 + x, y], [1 + x, y]]]
+[VERIFIED: <x^2 + -1, y> == <x + -1, y> ∩ <x + 1, y>]",,0,deductive,"Ideal: Verified primary decomposition of <x^2 - 1, y>"
+CAT65-008,cat_65_multivariate_polynomial_ideals_primary_decomposition,"--explain ""primary_decomposition([x^2 - 1, y], [x, y])""",,contains,DimensionEliminationAnalysis,,0,deductive,"Ideal: Explain GTZ steps on <x^2 - 1, y>"
+CAT65-009,cat_65_multivariate_polynomial_ideals_primary_decomposition,"--lean ""primary_decomposition([x^2 - 1, y], [x, y])""",,contains,theorem ihd_certified_proof,,0,deductive,Ideal: Lean 4 syzygy proof theorem
+CAT65-010,cat_65_multivariate_polynomial_ideals_primary_decomposition,"""primary_decomposition([x^2 - 2, y^2 - 2], [x, y])""",,exact,"[[[-2 + y^2, -y + x], [-2 + y^2, -y + x]], [[-2 + y^2, x + y], [-2 + y^2, x + y]]]",,0,deductive,"Ideal: Adversarial T05 splitting across extension field <x^2 - 2, y^2 - 2>"
+CAT65-011,cat_65_multivariate_polynomial_ideals_primary_decomposition,"""primary_decomposition([x - y, x*y], [x, y])""",,exact,"[[[y^2, -y + x], [x, y]]]",,0,deductive,"Ideal: Counterexample <x - y, x*y> preserves x^2 without over-splitting"

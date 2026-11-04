@@ -1,0 +1,8 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT75-001,cat_75_adversarial_boundary_stress_cases_ai_review_audit,"""limit((sqrt(1 + x) - 1 - x/2) / x^2, x, 0)""",,exact,-1/8,,0,deductive,Adversarial: Second-order radical limit evaluation
+CAT75-002,cat_75_adversarial_boundary_stress_cases_ai_review_audit,"--explain ""limit((sqrt(1 + x) - 1 - x/2) / x^2, x, 0)""",,contains,-1/8,,0,deductive,Adversarial: Second-order radical limit explain trace
+CAT75-003,cat_75_adversarial_boundary_stress_cases_ai_review_audit,"""sqrt(3 - 2*sqrt(2))""",,exact,-1 + √2,,0,deductive,Adversarial: Nested radical sign selection (Real sqrt)
+CAT75-004,cat_75_adversarial_boundary_stress_cases_ai_review_audit,"""1 / (sqrt(5 + 2*sqrt(6)) - sqrt(3) - sqrt(2))""",,exact,,,1,contradiction,Adversarial: Hidden zero division rejection (Fast-fail)
+CAT75-005,cat_75_adversarial_boundary_stress_cases_ai_review_audit,"--explain --lean ""factor(x^4 + 4)""",,contains,calc,,0,deductive,Adversarial: Sophie Germain factorization Lean calc
+CAT75-006,cat_75_adversarial_boundary_stress_cases_ai_review_audit,"--explain --lean ""factor(x^4 + 4)""",,contains,by ring,,0,deductive,Adversarial: Sophie Germain factorization ring proof
+CAT75-007,cat_75_adversarial_boundary_stress_cases_ai_review_audit,"""expand((a+b+c)^3 - a^3 - b^3 - c^3 - 3*(a+b)*(b+c)*(c+a))""",,exact,0,,0,deductive,Adversarial: Trivariate symmetric polynomial identity

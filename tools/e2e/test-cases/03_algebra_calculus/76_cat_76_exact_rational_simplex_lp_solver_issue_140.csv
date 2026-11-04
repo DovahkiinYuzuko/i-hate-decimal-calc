@@ -1,0 +1,10 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT76-001,cat_76_exact_rational_simplex_lp_solver_issue_140,"""lp_maximize(2*x + 3*y, [x + y <= 4, x >= 0, y >= 0])""",,exact,"[x == 0, y == 4, optimal_value == 12]",,0,deductive,LP Easy: 2D basic maximization
+CAT76-002,cat_76_exact_rational_simplex_lp_solver_issue_140,"""lp_minimize(x/2 + y/3, [x + 2*y >= 6, 3*x + 2*y >= 12, x >= 0, y >= 0])""",,exact,"[x == 3, y == 3/2, optimal_value == 2]",,0,deductive,LP Medium: Fractional minimize with geq
+CAT76-003,cat_76_exact_rational_simplex_lp_solver_issue_140,,"lp_maximize([2, 3], [[1, 1]], [""<=""], [4])",exact,"[x1 == 0, x2 == 4, optimal_value == 12]",,0,deductive,LP Medium: Matrix mode solve
+CAT76-004,cat_76_exact_rational_simplex_lp_solver_issue_140,"""lp_maximize(10*x1 - 57*x2 - 9*x3 - 24*x4, [x1/2 - 11/2*x2 - 5/2*x3 + 9*x4 <= 0, x1/2 - 3/2*x2 - x3/2 + x4 <= 0, x1 <= 1, x1 >= 0, x2 >= 0, x3 >= 0, x4 >= 0])""",,exact,"[x1 == 1, x2 == 0, x3 == 1, x4 == 0, optimal_value == 1]",,0,deductive,LP Hard: Beale cycling anticycling rule
+CAT76-005,cat_76_exact_rational_simplex_lp_solver_issue_140,"""lp_maximize(x, [x <= 1, x >= 2])""",,exact,infeasible,,0,deductive,LP Hard: Infeasible Farkas certificate
+CAT76-006,cat_76_exact_rational_simplex_lp_solver_issue_140,"""lp_maximize(x + y, [x - y <= 2, x >= 0, y >= 0])""",,exact,unbounded,,0,deductive,LP Hard: Unbounded recession ray
+CAT76-007,cat_76_exact_rational_simplex_lp_solver_issue_140,"""lp_maximize(3*x*m + 2*y*m, [x*m + y*m <= 10*m, x >= 0, y >= 0])""",,exact,"[x == 10 [m], y == 0 [m], optimal_value == 30]",,0,deductive,LP Oni: Physical units compatibility
+CAT76-008,cat_76_exact_rational_simplex_lp_solver_issue_140,"--explain ""lp_maximize(2*x + 3*y, [x + y <= 4, x >= 0, y >= 0])""",,contains,lp.pivot,,0,deductive,LP Integration: Explain pivot trace
+CAT76-009,cat_76_exact_rational_simplex_lp_solver_issue_140,"--typst ""lp_maximize(2*x + 3*y, [x + y <= 4, x >= 0, y >= 0])""",,contains,optimal_value = 12,,0,deductive,LP Integration: Typst formatted output

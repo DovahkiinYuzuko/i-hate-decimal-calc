@@ -1,0 +1,8 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT52-001,cat_52_p_adic_arithmetic_hensel_lifting,"""padic_val(50, 5)""",,exact,2,,0,deductive,Padic: Valuation of 50 base 5
+CAT52-002,cat_52_p_adic_arithmetic_hensel_lifting,"""padic_val(3/20, 2)""",,exact,-2,,0,deductive,Padic: Valuation of 3/20 base 2
+CAT52-003,cat_52_p_adic_arithmetic_hensel_lifting,"""padic_norm(3/20, 2)""",,exact,4,,0,deductive,Padic: Norm of 3/20 base 2
+CAT52-004,cat_52_p_adic_arithmetic_hensel_lifting,"""padic_norm(50, 5)""",,exact,1/25,,0,deductive,Padic: Norm of 50 base 5
+CAT52-005,cat_52_p_adic_arithmetic_hensel_lifting,"""padic_expand(-1, 5, 3)""",,exact,4 + 4*5 + 4*5^2 + O(5^3),,0,deductive,Padic: Truncated expansion of -1 mod 5^3
+CAT52-006,cat_52_p_adic_arithmetic_hensel_lifting,"""factor(x^4 + 3*x^2 + 2)""",,exact,(1 + x^2)*(2 + x^2),,0,deductive,Hensel: Factor x^4 + 3*x^2 + 2 via Hensel lifting
+CAT52-007,cat_52_p_adic_arithmetic_hensel_lifting,"""factor(x^4 - 4)""",,exact,(-2 + x^2)*(2 + x^2),,0,deductive,Hensel: Factor x^4 - 4 via Hensel lifting

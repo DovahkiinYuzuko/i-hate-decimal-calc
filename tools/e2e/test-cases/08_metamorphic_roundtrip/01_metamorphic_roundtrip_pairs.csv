@@ -1,0 +1,20 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+MET-ALG-001,cat_88_metamorphic_roundtrip,"""expand(factor((x - (2))*(x - (-1))))""",,exact,-2 - x + x^2,,0,inductive,"メタモルフィック: 多項式の因数分解と展開の往復写像 (roots: 2, -1)"
+MET-ALG-002,cat_88_metamorphic_roundtrip,"""expand(factor((x - (1))*(x - (-2))))""",,exact,-2 + x + x^2,,0,inductive,"メタモルフィック: 多項式の因数分解と展開の往復写像 (roots: 1, -2)"
+MET-ALG-003,cat_88_metamorphic_roundtrip,"""expand(factor((x - (2))*(x - (-3))))""",,exact,-6 + x + x^2,,0,inductive,"メタモルフィック: 多項式の因数分解と展開の往復写像 (roots: 2, -3)"
+MET-ALG-004,cat_88_metamorphic_roundtrip,"""expand(factor((x - (3))*(x - (1))))""",,exact,3 - 4*x + x^2,,0,inductive,"メタモルフィック: 多項式の因数分解と展開の往復写像 (roots: 3, 1)"
+MET-ALG-005,cat_88_metamorphic_roundtrip,"""expand(factor((x - (1))*(x - (-2))))""",,exact,-2 + x + x^2,,0,inductive,"メタモルフィック: 多項式の因数分解と展開の往復写像 (roots: 1, -2)"
+MET-ALG-006,cat_88_metamorphic_roundtrip,"""expand(factor((x - (-3))*(x - (-2))))""",,exact,6 + 5*x + x^2,,0,inductive,"メタモルフィック: 多項式の因数分解と展開の往復写像 (roots: -3, -2)"
+MET-ALG-007,cat_88_metamorphic_roundtrip,"""expand(factor((x - (-1))*(x - (1))))""",,exact,-1 + x^2,,0,inductive,"メタモルフィック: 多項式の因数分解と展開の往復写像 (roots: -1, 1)"
+MET-ALG-008,cat_88_metamorphic_roundtrip,"""expand(factor((x - (2))*(x - (3))))""",,exact,6 - 5*x + x^2,,0,inductive,"メタモルフィック: 多項式の因数分解と展開の往復写像 (roots: 2, 3)"
+MET-ALG-009,cat_88_metamorphic_roundtrip,"""expand(factor((x - (1))*(x - (3))))""",,exact,3 - 4*x + x^2,,0,inductive,"メタモルフィック: 多項式の因数分解と展開の往復写像 (roots: 1, 3)"
+MET-ALG-010,cat_88_metamorphic_roundtrip,"""expand(factor((x - (1))*(x - (2))))""",,exact,2 - 3*x + x^2,,0,inductive,"メタモルフィック: 多項式の因数分解と展開の往復写像 (roots: 1, 2)"
+MET-CAL-001,cat_88_metamorphic_roundtrip,"""diff(integrate(x^2, x), x)""",,exact,x^2,,0,inductive,メタモルフィック: べき乗多項式 x^2 の微積分往復恒等性
+MET-CAL-002,cat_88_metamorphic_roundtrip,"""diff(integrate(x^3, x), x)""",,exact,x^3,,0,inductive,メタモルフィック: べき乗多項式 x^3 の微積分往復恒等性
+MET-CAL-003,cat_88_metamorphic_roundtrip,"""diff(integrate(x^4, x), x)""",,exact,x^4,,0,inductive,メタモルフィック: べき乗多項式 x^4 の微積分往復恒等性
+MET-CAL-004,cat_88_metamorphic_roundtrip,"""diff(integrate(x^5, x), x)""",,exact,x^5,,0,inductive,メタモルフィック: べき乗多項式 x^5 の微積分往復恒等性
+STURM-WIT-001,cat_88_metamorphic_roundtrip,"""root_count((x - 2)^2 + 1, x, -100, 100)""",,exact,0,,0,deductive,"自社証明: スツルム列による区間 [-100, 100] における実根非存在の決定論的証明 ((x-2)^2+1)"
+STURM-WIT-002,cat_88_metamorphic_roundtrip,"""root_count((x - 4)^2 + 1, x, -100, 100)""",,exact,0,,0,deductive,"自社証明: スツルム列による区間 [-100, 100] における実根非存在の決定論的証明 ((x-4)^2+1)"
+STURM-WIT-003,cat_88_metamorphic_roundtrip,"""root_count((x - 6)^2 + 1, x, -100, 100)""",,exact,0,,0,deductive,"自社証明: スツルム列による区間 [-100, 100] における実根非存在の決定論的証明 ((x-6)^2+1)"
+STURM-WIT-004,cat_88_metamorphic_roundtrip,"""root_count((x - 8)^2 + 1, x, -100, 100)""",,exact,0,,0,deductive,"自社証明: スツルム列による区間 [-100, 100] における実根非存在の決定論的証明 ((x-8)^2+1)"
+STURM-WIT-005,cat_88_metamorphic_roundtrip,"""root_count((x - 10)^2 + 1, x, -100, 100)""",,exact,0,,0,deductive,"自社証明: スツルム列による区間 [-100, 100] における実根非存在の決定論的証明 ((x-10)^2+1)"

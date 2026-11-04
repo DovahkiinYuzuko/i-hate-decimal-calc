@@ -98,3 +98,13 @@
 
 !tools/lean/
 !tools/lean/proof_catalog.py
+
+!tools/e2e/
+!tools/e2e/*.go
+!tools/e2e/runner/
+!tools/e2e/runner/*.go
+!tools/e2e/generator/
+!tools/e2e/generator/*.go
+!tools/e2e/test-cases/
+!tools/e2e/test-cases/**
+

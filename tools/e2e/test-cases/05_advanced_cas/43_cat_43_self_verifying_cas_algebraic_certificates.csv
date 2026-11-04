@@ -1,0 +1,10 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT43-001,cat_43_self_verifying_cas_algebraic_certificates,"""verify((x + 1)^2 == x^2 + 2*x + 1)""",,exact,[VERIFIED: (1 + x)^2 == 1 + x^2 + 2 * x],,0,deductive,Verify: Builtin algebraic identity verification
+CAT43-002,cat_43_self_verifying_cas_algebraic_certificates,"""verify((x - 1)*(x + 1), x^2 - 1)""",,exact,[VERIFIED: -1 + x^2 == -1 + x^2],,0,deductive,Verify: Builtin equivalence verification 2-arguments
+CAT43-003,cat_43_self_verifying_cas_algebraic_certificates,"""verify(1 == 2)""",,exact,[FAILED VERIFICATION: 1 == 2] Verification residual did not reduce to zero: residual = -1,,0,deductive,Verify: Builtin false equation refutation
+CAT43-004,cat_43_self_verifying_cas_algebraic_certificates,"--verify ""factor(x^2 - 1)""",,exact,"(-1 + x)*(1 + x)
+[VERIFIED: expand(factors) - P == 0]",,0,deductive,Verify: CLI flag --verify on factorization
+CAT43-005,cat_43_self_verifying_cas_algebraic_certificates,"--verify ""inv([[1, 2], [3, 4]])""",,exact,"[[-2, 1], [3/2, -1/2]]
+[VERIFIED: A * inv(A) - I == O]",,0,deductive,Verify: CLI flag --verify on matrix inverse
+CAT43-006,cat_43_self_verifying_cas_algebraic_certificates,"--verify ""integrate(x^2, x)""",,exact,"x^3/3
+[VERIFIED: diff(F, x) - f == 0]",,0,deductive,Verify: CLI flag --verify on indefinite integral

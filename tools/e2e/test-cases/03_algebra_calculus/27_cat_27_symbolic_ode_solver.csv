@@ -1,0 +1,7 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT27-001,cat_27_symbolic_ode_solver,"""dsolve(diff(y, x) == y, y, x)""",,exact,y == C_1*exp(x),,0,deductive,ODE: 1st-order linear homogeneous y' == y
+CAT27-002,cat_27_symbolic_ode_solver,"""dsolve(diff(y, x) + y == 1, y, x)""",,exact,y == 1 + C_1*exp(-x),,0,deductive,ODE: 1st-order linear non-homogeneous y' + y == 1
+CAT27-003,cat_27_symbolic_ode_solver,"""dsolve(diff(y, x, 2) == 0, y, x)""",,exact,y == C_1 + C_2*x,,0,deductive,ODE: 2nd-order repeated root y'' == 0
+CAT27-004,cat_27_symbolic_ode_solver,"""dsolve(diff(y, x, 2) + 4 * y == 0, y, x)""",,exact,y == C_1*cos(2*x) + C_2*sin(2*x),,0,deductive,ODE: 2nd-order harmonic oscillator y'' + 4y == 0
+CAT27-005,cat_27_symbolic_ode_solver,"""dsolve(diff(y, x, 2) + 4 * y == 8, y, x)""",,exact,y == 2 + C_1*cos(2*x) + C_2*sin(2*x),,0,deductive,ODE: 2nd-order non-homogeneous constant y'' + 4y == 8
+CAT27-006,cat_27_symbolic_ode_solver,"""dsolve(diff(y, x, 2) + y == sin(2 * x), y, x)""",,exact,y == -sin(2*x)/3 + C_1*cos(x) + C_2*sin(x),,0,deductive,ODE: 2nd-order non-homogeneous trig y'' + y == sin(2*x)

@@ -1,0 +1,8 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT31-001,cat_31_multivariate_polynomial_gcd_lcm,"""poly_gcd(x^2 - 1, x^2 - 2*x + 1, x)""",,exact,-1 + x,,0,deductive,PolyGCD: Univariate shared factor
+CAT31-002,cat_31_multivariate_polynomial_gcd_lcm,"""poly_gcd((x + 1)*(x + 2), (x + 1)*(x + 3), x)""",,exact,1 + x,,0,deductive,PolyGCD: Univariate product factoring
+CAT31-003,cat_31_multivariate_polynomial_gcd_lcm,"""poly_gcd(x + 1, x + 2, x)""",,exact,1,,0,deductive,PolyGCD: Coprime polynomials
+CAT31-004,cat_31_multivariate_polynomial_gcd_lcm,"""poly_gcd((x^2 + 1)*(x - 2), (x^2 + 1)*(x + 3), x)""",,exact,1 + x^2,,0,deductive,PolyGCD: Higher degree quadratic factor
+CAT31-005,cat_31_multivariate_polynomial_gcd_lcm,"""poly_gcd(x^2 - y^2, x - y, x)""",,exact,-y + x,,0,deductive,PolyGCD: Multivariate x^2 - y^2 and x - y
+CAT31-006,cat_31_multivariate_polynomial_gcd_lcm,"""poly_lcm(x - 1, x + 1, x)""",,exact,-1 + x^2,,0,deductive,PolyLCM: Basic coprime quadratic
+CAT31-007,cat_31_multivariate_polynomial_gcd_lcm,"""poly_lcm(x + 1, x + 2, x)""",,exact,2 + 3*x + x^2,,0,deductive,PolyLCM: Consecutive linear polynomials

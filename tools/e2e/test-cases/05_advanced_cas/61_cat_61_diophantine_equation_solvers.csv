@@ -1,0 +1,12 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT61-001,cat_61_diophantine_equation_solvers,pell_solve(2),,exact,"[3, 2]",,0,deductive,Diophantine: Pell fundamental solution D=2
+CAT61-002,cat_61_diophantine_equation_solvers,pell_solve(61),,exact,"[1766319049, 226153980]",,0,deductive,Diophantine: Pell fundamental solution Archimedes D=61
+CAT61-003,cat_61_diophantine_equation_solvers,pell_solve(109),,exact,"[158070671986249, 15140424455100]",,0,deductive,Diophantine: Pell fundamental solution D=109
+CAT61-004,cat_61_diophantine_equation_solvers,"""solve_diophantine(x^2 - 2*y^2 == 1, [x, y])""",,exact,"[x == 3, y == 2]",,0,deductive,Diophantine: solve_diophantine Pell equation
+CAT61-005,cat_61_diophantine_equation_solvers,"""solve_diophantine(x^2 - 2*y^2 == -1, [x, y])""",,exact,"[x == 1, y == 1]",,0,deductive,Diophantine: solve_diophantine Negative Pell equation
+CAT61-006,cat_61_diophantine_equation_solvers,"""solve_diophantine(3*x + 5*y == 1, [x, y])""",,exact,"[x == 2 + 5*t, y == -1 - 3*t]",,0,deductive,Diophantine: Linear Diophantine 3*x + 5*y == 1
+CAT61-007,cat_61_diophantine_equation_solvers,--verify pell_solve(61),,exact,"[1766319049, 226153980]
+[VERIFIED: x^2 - 61*y^2 == 1]",,0,deductive,Diophantine: Verify Pell solution D=61
+CAT61-008,cat_61_diophantine_equation_solvers,"""solve_diophantine(x^2 + y^2 == z^2, [x, y, z])""",,exact,"[x == -1*n^2*k + m^2*k, y == 2*k*m*n, z == m^2*k + n^2*k]",,0,deductive,Diophantine: Pythagorean equation parametric
+CAT61-009,cat_61_diophantine_equation_solvers,pell_solve(4),,error,,perfect square,1,contradiction,Negative: Pell square D error
+CAT61-010,cat_61_diophantine_equation_solvers,"""solve_diophantine(2*x + 4*y == 3, [x, y])""",,error,,no integer solution exists,1,contradiction,Negative: Linear Diophantine insoluble

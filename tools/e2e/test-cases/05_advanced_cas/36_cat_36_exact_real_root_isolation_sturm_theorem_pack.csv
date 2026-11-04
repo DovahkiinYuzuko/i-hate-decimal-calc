@@ -1,0 +1,8 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT36-001,cat_36_exact_real_root_isolation_sturm_theorem_pack,"""sturm(x^2 - 2, x)""",,exact,"[-2 + x^2, 2*x, 1]",,0,deductive,Sturm: Exact Sturm chain generator
+CAT36-002,cat_36_exact_real_root_isolation_sturm_theorem_pack,"""root_count(x^3 - 3*x + 1, x)""",,exact,3,,0,deductive,Sturm: Root count on entire real line
+CAT36-003,cat_36_exact_real_root_isolation_sturm_theorem_pack,"""root_count(x^3 - 3*x + 1, x, 0, 1)""",,exact,1,,0,deductive,Sturm: Root count in bounded open interval
+CAT36-004,cat_36_exact_real_root_isolation_sturm_theorem_pack,"""root_count(x^2 + 1, x)""",,exact,0,,0,deductive,Sturm: Zero real roots detection
+CAT36-005,cat_36_exact_real_root_isolation_sturm_theorem_pack,"""root_count(x^3 - 3*x + 2, x)""",,exact,2,,0,deductive,Sturm: Multiple roots count (distinct real roots)
+CAT36-006,cat_36_exact_real_root_isolation_sturm_theorem_pack,"""isolate_roots(x^2 - 2, x)""",,exact,"[[-3/2, -3/4], [3/4, 3/2]]",,0,deductive,Sturm: Root isolation into disjoint rational intervals
+CAT36-007,cat_36_exact_real_root_isolation_sturm_theorem_pack,"""root_count(x^2 - 2, x, 2, 0)""",,error,,*less than upper bound*,1,contradiction,Sturm: Invalid interval rejection

@@ -1,0 +1,13 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT66-001,cat_66_elliptic_curve_2_descent_mordell_weil_rank,"""ec_rank_bound(-25, 0)""",,exact,"[1, 1, true]",,0,deductive,Elliptic: Rank bound for congruent 5 (y^2 = x^3 - 25x)
+CAT66-002,cat_66_elliptic_curve_2_descent_mordell_weil_rank,"""ec_rank_bound(-1, 0)""",,exact,"[0, 0, true]",,0,deductive,Elliptic: Rank 0 for congruent 1 (y^2 = x^3 - x)
+CAT66-003,cat_66_elliptic_curve_2_descent_mordell_weil_rank,"""ec_rank_bound(-289, 0)""",,exact,"[0, 2, false]",,0,deductive,Elliptic: Sha[2] trap for n=17 (y^2 = x^3 - 289x)
+CAT66-004,cat_66_elliptic_curve_2_descent_mordell_weil_rank,"""ec_rank_bound(-2701/3, -280748/27)""",,exact,"[0, 2, false]",,0,deductive,Elliptic: SHA-960D1 rank interval gap
+CAT66-005,cat_66_elliptic_curve_2_descent_mordell_weil_rank,"""ec_generators(-25, 0)""",,contains,25/4,,0,deductive,Elliptic: Infinite order generator for n=5
+CAT66-006,cat_66_elliptic_curve_2_descent_mordell_weil_rank,"--verify ""ec_rank_bound(-25, 0)""",,contains,"[VERIFIED: ec_rank_bound(-25, 0)]",,0,deductive,Elliptic: Verified rank bound
+CAT66-007,cat_66_elliptic_curve_2_descent_mordell_weil_rank,"--verify ""ec_generators(-25, 0)""",,contains,"[VERIFIED: ec_generators(-25, 0)]",,0,deductive,Elliptic: Verified generators
+CAT66-008,cat_66_elliptic_curve_2_descent_mordell_weil_rank,"--explain ""ec_rank_bound(-25, 0)""",,contains,2-descent,,0,deductive,Elliptic: Explain 2-descent steps
+CAT66-009,cat_66_elliptic_curve_2_descent_mordell_weil_rank,"--lean ""ec_generators(-25, 0)""",,contains,theorem ihd_certified_proof,,0,deductive,Elliptic: Lean 4 theorem for generator
+CAT66-010,cat_66_elliptic_curve_2_descent_mordell_weil_rank,ec_rank_bound(-25),,error,,requires 2 arguments,1,contradiction,Negative: Invalid arguments to ec_rank_bound
+CAT66-011,cat_66_elliptic_curve_2_descent_mordell_weil_rank,"""ec_rank_bound(0, 0)""",,error,,singular elliptic curve,1,contradiction,Negative: Singular curve rejected
+CAT66-012,cat_66_elliptic_curve_2_descent_mordell_weil_rank,"""ec_rank_bound(1, 1)""",,error,,no rational 2-torsion,1,contradiction,Negative: Unsupported no rational 2-torsion

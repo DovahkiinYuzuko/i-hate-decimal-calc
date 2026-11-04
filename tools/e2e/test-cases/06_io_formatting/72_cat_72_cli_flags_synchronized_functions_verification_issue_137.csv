@@ -1,0 +1,16 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT72-001,cat_72_cli_flags_synchronized_functions_verification_issue_137,-i 1/3,,contains,"[1/3, 1/3]",,0,deductive,Flags: Interval enclosure with -i
+CAT72-002,cat_72_cli_flags_synchronized_functions_verification_issue_137,-i --interval-eps 1/1000 1/3,,contains,"[1/3, 1/3]",,0,deductive,Flags: Interval enclosure with --interval-eps
+CAT72-003,cat_72_cli_flags_synchronized_functions_verification_issue_137,"""perm(5, 2)""",,exact,20,,0,deductive,Sync Func: Permutations count (perm)
+CAT72-004,cat_72_cli_flags_synchronized_functions_verification_issue_137,"""comb(5, 2)""",,exact,10,,0,deductive,Sync Func: Combinations count (comb)
+CAT72-005,cat_72_cli_flags_synchronized_functions_verification_issue_137,fibonacci(10),,exact,55,,0,deductive,Sync Func: Fibonacci sequence (fibonacci)
+CAT72-006,cat_72_cli_flags_synchronized_functions_verification_issue_137,"""tr([[1, 2], [3, 4]])""",,exact,5,,0,deductive,Sync Func: Matrix trace (tr)
+CAT72-007,cat_72_cli_flags_synchronized_functions_verification_issue_137,"""linsolve([[1, 1], [1, -1]], [3, 1])""",,exact,"[2, 1]",,0,deductive,Sync Func: Linear system solver (linsolve)
+CAT72-008,cat_72_cli_flags_synchronized_functions_verification_issue_137,pell(2),,exact,"[3, 2]",,0,deductive,Sync Func: Pell equation solver (pell)
+CAT72-009,cat_72_cli_flags_synchronized_functions_verification_issue_137,"""find_min_poly(sqrt(2), 2)""",,exact,-2 + x^2,,0,deductive,Sync Func: Minimal polynomial finder (find_min_poly)
+CAT72-010,cat_72_cli_flags_synchronized_functions_verification_issue_137,"""lll([[1, 1, 1], [-1, 0, 2], [3, 5, 6]])""",,exact,"[[0, 1, 0], [1, 0, 1], [-2, 0, 1]]",,0,deductive,Sync Func: LLL lattice reduction (lll)
+CAT72-011,cat_72_cli_flags_synchronized_functions_verification_issue_137,"""geo_prove([midpoint(M, A, B)], equal_length(A, M, M, B))""",,exact,true,,0,deductive,Sync Func: Geometric equal length predicate (equal_length)
+CAT72-012,cat_72_cli_flags_synchronized_functions_verification_issue_137,"""interval(1/2, 1/2)""",,contains,"[1/2, 1/2]",,0,deductive,Sync Func: Interval node construction (interval)
+CAT72-013,cat_72_cli_flags_synchronized_functions_verification_issue_137,delta(x),,exact,delta(x),,0,deductive,Sync Func: Dirac delta representation (delta)
+CAT72-014,cat_72_cli_flags_synchronized_functions_verification_issue_137,"--certificate tools/e2e/test-cases/fixtures/e2e_cert_test.json ""factor(x^2 - 1)""",,contains,,,0,deductive,Micro-verifier: Certificate generation with --certificate
+CAT72-015,cat_72_cli_flags_synchronized_functions_verification_issue_137,--target-bin=$tmpVerifierBin tools/e2e/test-cases/fixtures/e2e_cert_test.json,,contains,100% independent equational transitivity verified,,0,deductive,Micro-verifier: Standalone certificate verification

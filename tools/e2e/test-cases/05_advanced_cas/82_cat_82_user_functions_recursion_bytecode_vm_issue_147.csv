@@ -1,0 +1,14 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT82-001,cat_82_user_functions_recursion_bytecode_vm_issue_147,,"f(x, y) = x^2 + y^2
+f(3, 4)
+exit
+",contains,25,,0,deductive,UserFunc Easy: Multi-argument function definition and evaluation
+CAT82-002,cat_82_user_functions_recursion_bytecode_vm_issue_147,"""table(x^2 + 2*x + 1, x, 1, 5)""",,exact,"[4, 9, 16, 25, 36]",,0,deductive,Table VM Medium: Fast table evaluation of arithmetic polynomial
+CAT82-003,cat_82_user_functions_recursion_bytecode_vm_issue_147,,"import ""tools/e2e/test-cases/fixtures/lib_test.ihd""
+sq(9)
+exit
+",contains,81,,0,deductive,Import Hard: Module import and function execution
+CAT82-004,cat_82_user_functions_recursion_bytecode_vm_issue_147,,"myfib(n) = piecewise([[n, n <= 1]], myfib(n - 1) + myfib(n - 2))
+myfib(8)
+exit
+",contains,21,,0,deductive,Recursion Oni: Recursive Fibonacci definition with memoization

@@ -1,0 +1,4 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT68-001,cat_68_typst_export_issue_129,"--typst ""1/2 + sqrt(2)/2""",,exact,$1 / 2 + (sqrt(2)) / 2$,,0,deductive,Typst: Fraction with radical
+CAT68-002,cat_68_typst_export_issue_129,"--format typst ""[[1, 2], [3, 4]]""",,exact,"$mat(1, 2; 3, 4)$",,0,deductive,Typst: Format flag matrix
+CAT68-003,cat_68_typst_export_issue_129,"--typst ""x^2 + 2*x + 1""",,exact,$1 + 2 x + x^2$,,0,deductive,Typst: Polynomial expression

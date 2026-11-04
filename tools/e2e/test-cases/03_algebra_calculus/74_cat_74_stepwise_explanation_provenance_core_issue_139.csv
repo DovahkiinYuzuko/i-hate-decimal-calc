@@ -1,0 +1,12 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT74-001,cat_74_stepwise_explanation_provenance_core_issue_139,"--explain ""2 + 3 * 4""",,contains,14,,0,deductive,Explain: Basic arithmetic step explain
+CAT74-002,cat_74_stepwise_explanation_provenance_core_issue_139,"--explain ""2 * (3 + 4)""",,contains,14,,0,deductive,Explain: Compound expression explain
+CAT74-003,cat_74_stepwise_explanation_provenance_core_issue_139,"--verify ""factor(x^2 - 1)""",,contains,[VERIFIED:,,0,deductive,Explain: Verified calculation output
+CAT74-004,cat_74_stepwise_explanation_provenance_core_issue_139,"--explain ""expand((x + 1)^2)""",,contains,1 + 2 * x + x^2,,0,deductive,Explain: Polynomial expansion step explain
+CAT74-005,cat_74_stepwise_explanation_provenance_core_issue_139,"--explain ""factor(x^2 - 1)""",,contains,(x + -1) * (x + 1),,0,deductive,Explain: Polynomial factorization step explain
+CAT74-006,cat_74_stepwise_explanation_provenance_core_issue_139,"--explain ""diff(x^3, x)""",,contains,3*x^2,,0,deductive,Explain: Derivative step explain
+CAT74-007,cat_74_stepwise_explanation_provenance_core_issue_139,"--explain ""integrate(x^2, x)""",,contains,x^3/3,,0,deductive,Explain: Integration step explain
+CAT74-008,cat_74_stepwise_explanation_provenance_core_issue_139,"--explain --typst ""expand((x + 1)^2)""",,contains,= Mathematical Derivation Report,,0,deductive,Explain: Typst document output
+CAT74-009,cat_74_stepwise_explanation_provenance_core_issue_139,"--explain --lean ""expand((x + 1)^2)""",,contains,calc,,0,deductive,Explain: Lean 4 calc proof output
+CAT74-010,cat_74_stepwise_explanation_provenance_core_issue_139,"--explain --lean ""expand((x + 1)^2)""",,contains,by ring,,0,deductive,Explain: Lean 4 ring tactic
+CAT74-011,cat_74_stepwise_explanation_provenance_core_issue_139,"--explain --lean ""expand((x + 1)^2)""",,contains,#print axioms,,0,deductive,Explain: Lean 4 axioms check

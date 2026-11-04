@@ -1,0 +1,10 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT32-001,cat_32_sylvester_resultant_algebraic_elimination,"""resultant(x^2 - 3*x + 2, x^2 - 5*x + 6, x)""",,exact,0,,0,deductive,Resultant: Univariate shared root
+CAT32-002,cat_32_sylvester_resultant_algebraic_elimination,"""resultant(x - 1, x - 2, x)""",,exact,-1,,0,deductive,Resultant: Linear coprime
+CAT32-003,cat_32_sylvester_resultant_algebraic_elimination,"""resultant(x^2 + 1, x - 1, x)""",,exact,2,,0,deductive,Resultant: Quadratic and linear coprime
+CAT32-004,cat_32_sylvester_resultant_algebraic_elimination,"""resultant(x^2 - 2, 2*x - 4, x)""",,exact,8,,0,deductive,Resultant: Radical roots coprime
+CAT32-005,cat_32_sylvester_resultant_algebraic_elimination,"""resultant(x^2 + y^2 - 1, x + y - 1, x)""",,exact,-2*y + 2*y^2,,0,deductive,Resultant: Elimination of x in circle and line
+CAT32-006,cat_32_sylvester_resultant_algebraic_elimination,"""resultant(x^2 + y^2 - 1, x + y - 1, y)""",,exact,-2*x + 2*x^2,,0,deductive,Resultant: Elimination of y in circle and line
+CAT32-007,cat_32_sylvester_resultant_algebraic_elimination,"""resultant(x^2 + 1, 3, x)""",,exact,9,,0,deductive,Resultant: Boundary constant right
+CAT32-008,cat_32_sylvester_resultant_algebraic_elimination,"""resultant(2, x^3 + 1, x)""",,exact,8,,0,deductive,Resultant: Boundary constant left
+CAT32-009,cat_32_sylvester_resultant_algebraic_elimination,"""resultant(x^2 - 1, x - 1)""",,exact,0,,0,deductive,Resultant: Auto deduce variable

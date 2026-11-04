@@ -1,0 +1,4 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT29-001,cat_29_update_notification_version_check,-v,,exact,ihd v0.4.0-dev,,0,deductive,Version: flag -v
+CAT29-002,cat_29_update_notification_version_check,--version,,exact,ihd v0.4.0-dev,,0,deductive,Version: flag --version
+CAT29-003,cat_29_update_notification_version_check,"--no-update-check ""1 + 1""",,exact,2,,0,deductive,UpdateCheck: flag --no-update-check

@@ -1,0 +1,38 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT04-001,cat_04_complex_numbers_trig_and_logarithms,"""(1 + 2*i) * (1 - 2*i)""",,exact,5,,0,deductive,Complex: Multiplication to real integer
+CAT04-002,cat_04_complex_numbers_trig_and_logarithms,"""(1 + i)^2""",,exact,2*i,,0,deductive,Complex: Square expansion
+CAT04-003,cat_04_complex_numbers_trig_and_logarithms,sqrt(-4),,exact,2*i,,0,deductive,Complex: Negative square root to imaginary
+CAT04-004,cat_04_complex_numbers_trig_and_logarithms,i^3,,exact,-i,,0,deductive,Complex: Imaginary unit powers
+CAT04-005,cat_04_complex_numbers_trig_and_logarithms,"""arg(1 + i)""",,exact,π/4,,0,deductive,Complex: Principal argument arg(1+i)
+CAT04-006,cat_04_complex_numbers_trig_and_logarithms,arg(-3),,exact,π,,0,deductive,Complex: Principal argument negative real arg(-3)
+CAT04-007,cat_04_complex_numbers_trig_and_logarithms,"""polar(1 + i)""",,exact,√2*(cos(π/4) + i*sin(π/4)),,0,deductive,Complex: Polar form polar(1+i)
+CAT04-008,cat_04_complex_numbers_trig_and_logarithms,"""polar_exp(1 + i)""",,exact,√2*e^(i*1/4*π),,0,deductive,Complex: Euler exponential polar_exp(1+i)
+CAT04-009,cat_04_complex_numbers_trig_and_logarithms,"""rect(sqrt(2), pi/4)""",,exact,1 + i,,0,deductive,"Complex: Rectangular conversion rect(sqrt(2), pi/4)"
+CAT04-010,cat_04_complex_numbers_trig_and_logarithms,"""rect(2, pi)""",,exact,-2,,0,deductive,"Complex: Rectangular conversion rect(2, pi)"
+CAT04-011,cat_04_complex_numbers_trig_and_logarithms,sin(pi/6),,exact,1/2,,0,deductive,Trig: Special value sin(pi/6)
+CAT04-012,cat_04_complex_numbers_trig_and_logarithms,cos(pi/3),,exact,1/2,,0,deductive,Trig: Special value cos(pi/3)
+CAT04-013,cat_04_complex_numbers_trig_and_logarithms,tan(pi/4),,exact,1,,0,deductive,Trig: Special value tan(pi/4)
+CAT04-014,cat_04_complex_numbers_trig_and_logarithms,"""sin(pi/3) * cos(pi/6) + cos(pi/3) * sin(pi/6)""",,exact,1,,0,deductive,Trig: Addition theorem identity sin(A+B)
+CAT04-015,cat_04_complex_numbers_trig_and_logarithms,"""sin(pi/6)^2 + cos(pi/6)^2""",,exact,1,,0,deductive,Trig: Pythagorean identity sin^2 + cos^2
+CAT04-016,cat_04_complex_numbers_trig_and_logarithms,"""cos(pi/4)^2 - sin(pi/4)^2""",,exact,0,,0,deductive,Trig: Double angle cosine cancellation
+CAT04-017,cat_04_complex_numbers_trig_and_logarithms,"""log(2, 8)""",,exact,3,,0,deductive,Log: Arbitrary base power logarithm
+CAT04-018,cat_04_complex_numbers_trig_and_logarithms,"""log(2, 64)""",,exact,6,,0,deductive,"Log: Arbitrary base log(2, 64)"
+CAT04-019,cat_04_complex_numbers_trig_and_logarithms,"""log(10, 1000)""",,exact,3,,0,deductive,"Log: Common logarithm log(10, 1000)"
+CAT04-020,cat_04_complex_numbers_trig_and_logarithms,ln(e^5),,exact,5,,0,deductive,Log: Natural logarithm of e power
+CAT04-021,cat_04_complex_numbers_trig_and_logarithms,asin(1/2),,exact,π/6,,0,deductive,InvTrig: asin(1/2) special angle
+CAT04-022,cat_04_complex_numbers_trig_and_logarithms,asin(-1/2),,exact,-π/6,,0,deductive,InvTrig: asin(-1/2) negative symmetry
+CAT04-023,cat_04_complex_numbers_trig_and_logarithms,asin(sqrt(2)/2),,exact,π/4,,0,deductive,InvTrig: asin(sqrt(2)/2)
+CAT04-024,cat_04_complex_numbers_trig_and_logarithms,asin(sqrt(3)/2),,exact,π/3,,0,deductive,InvTrig: asin(sqrt(3)/2)
+CAT04-025,cat_04_complex_numbers_trig_and_logarithms,acos(1/2),,exact,π/3,,0,deductive,InvTrig: acos(1/2) special angle
+CAT04-026,cat_04_complex_numbers_trig_and_logarithms,acos(-1/2),,exact,2/3*π,,0,deductive,InvTrig: acos(-1/2) principal branch
+CAT04-027,cat_04_complex_numbers_trig_and_logarithms,acos(sqrt(2)/2),,exact,π/4,,0,deductive,InvTrig: acos(sqrt(2)/2)
+CAT04-028,cat_04_complex_numbers_trig_and_logarithms,acos(-sqrt(2)/2),,exact,3/4*π,,0,deductive,InvTrig: acos(-sqrt(2)/2)
+CAT04-029,cat_04_complex_numbers_trig_and_logarithms,atan(1),,exact,π/4,,0,deductive,InvTrig: atan(1) special angle
+CAT04-030,cat_04_complex_numbers_trig_and_logarithms,atan(-1),,exact,-π/4,,0,deductive,InvTrig: atan(-1) negative symmetry
+CAT04-031,cat_04_complex_numbers_trig_and_logarithms,atan(sqrt(3)/3),,exact,π/6,,0,deductive,InvTrig: atan(sqrt(3)/3)
+CAT04-032,cat_04_complex_numbers_trig_and_logarithms,atan(sqrt(3)),,exact,π/3,,0,deductive,InvTrig: atan(sqrt(3))
+CAT04-033,cat_04_complex_numbers_trig_and_logarithms,sin(30*deg),,exact,1/2,,0,deductive,DegConstant: sin(30*deg)
+CAT04-034,cat_04_complex_numbers_trig_and_logarithms,cos(60*deg),,exact,1/2,,0,deductive,DegConstant: cos(60*deg)
+CAT04-035,cat_04_complex_numbers_trig_and_logarithms,tan(45*deg),,exact,1,,0,deductive,DegConstant: tan(45*deg)
+CAT04-036,cat_04_complex_numbers_trig_and_logarithms,"""asin(1/2) / deg""",,exact,30,,0,deductive,DegConstant: asin(1/2) / deg
+CAT04-037,cat_04_complex_numbers_trig_and_logarithms,"""atan(1) / deg""",,exact,45,,0,deductive,DegConstant: atan(1) / deg

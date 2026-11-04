@@ -1,0 +1,34 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT20-001,cat_20_symbolic_assumptions_system,,"assume(x > 0)
+sqrt(x^2)
+",exact,"ok
+x",,0,deductive,Assume: Positive variable sqrt simplification
+CAT20-002,cat_20_symbolic_assumptions_system,,"assume(x < 0)
+sqrt(x^2)
+",exact,"ok
+-x",,0,deductive,Assume: Negative variable sqrt simplification
+CAT20-003,cat_20_symbolic_assumptions_system,,"assume(n, integer)
+sin(n * pi)
+tan(n * pi)
+",exact,"ok
+0
+0",,0,deductive,Assume: Integer trig sin/tan cancellation
+CAT20-004,cat_20_symbolic_assumptions_system,,"assume(n, even)
+cos(n * pi)
+assume(m, odd)
+cos(m * pi)
+",exact,"ok
+1
+ok
+-1",,0,deductive,Assume: Even/Odd parity cos evaluation
+CAT20-005,cat_20_symbolic_assumptions_system,,"assume(x > 0)
+sqrt(x^2)
+unassume(x)
+sqrt(x^2)
+",exact,"ok
+x
+ok
+|x|",,0,deductive,Assume: Unassume resets simplification to abs
+CAT20-006,cat_20_symbolic_assumptions_system,,"assume(x > 0)
+assume(x < 0)
+",error,,inconsistent assumption,1,contradiction,Assume: Inconsistent assumption error

@@ -1,0 +1,5 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT56-001,cat_56_exact_algebraic_quartic_solver_ferrari_formula,"""solve(x^4 - 10*x^3 + 35*x^2 - 50*x + 24, x)""",,exact,"[1, 2, 3, 4]",,0,deductive,Quartic: 4 rational roots factor
+CAT56-002,cat_56_exact_algebraic_quartic_solver_ferrari_formula,"""solve(x^4 - 5*x^2 + 4, x)""",,exact,"[1, -1, -2, 2]",,0,deductive,Quartic: Biquadratic roots
+CAT56-003,cat_56_exact_algebraic_quartic_solver_ferrari_formula,"""solve(x^4 - 5*x^2 + 6, x)""",,exact,"[√2, -√2, √3, -√3]",,0,deductive,Quartic: Biquadratic irrational roots
+CAT56-004,cat_56_exact_algebraic_quartic_solver_ferrari_formula,"""eigenvals([[1, 0, 0, 0], [0, 2, 0, 0], [0, 0, 3, 0], [0, 0, 0, 4]])""",,exact,"[1, 2, 3, 4]",,0,deductive,Quartic: 4x4 matrix eigenvalues

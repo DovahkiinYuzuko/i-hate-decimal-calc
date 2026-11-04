@@ -1,0 +1,13 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT30-001,cat_30_matrix_eigenvalues_eigenvectors_trace,"""trace([[1, 2], [3, 4]])""",,exact,5,,0,deductive,Matrix: Trace 2x2 integer
+CAT30-002,cat_30_matrix_eigenvalues_eigenvectors_trace,"""tr([[1/2, 3], [4, 1/3]])""",,exact,5/6,,0,deductive,Matrix: Trace 2x2 rational (tr alias)
+CAT30-003,cat_30_matrix_eigenvalues_eigenvectors_trace,"""eigenvals([[3, 0], [0, 5]])""",,exact,"[3, 5]",,0,deductive,Matrix: Eigenvalues 2x2 diagonal
+CAT30-004,cat_30_matrix_eigenvalues_eigenvectors_trace,"""eigenvals([[2, 1], [1, 2]])""",,exact,"[1, 3]",,0,deductive,Matrix: Eigenvalues 2x2 symmetric
+CAT30-005,cat_30_matrix_eigenvalues_eigenvectors_trace,"""eigenvals([[2, 1], [0, 2]])""",,exact,"[2, 2]",,0,deductive,Matrix: Eigenvalues 2x2 repeated root
+CAT30-006,cat_30_matrix_eigenvalues_eigenvectors_trace,"""eigenvals([[0, -1], [1, 0]])""",,exact,"[-i, i]",,0,deductive,Matrix: Eigenvalues 2x2 complex roots
+CAT30-007,cat_30_matrix_eigenvalues_eigenvectors_trace,"""eigenvals([[1, 0, 0], [0, 2, 0], [0, 0, 3]])""",,exact,"[1, 2, 3]",,0,deductive,Matrix: Eigenvalues 3x3 diagonal
+CAT30-008,cat_30_matrix_eigenvalues_eigenvectors_trace,"""eigenvals([[0, 1, 0], [0, 0, 1], [2, 0, 0]])""",,exact,"[2^(1/3), -2^(1/3)/2 + 1/2*√3*i*2^(1/3), -1/2*√3*i*2^(1/3) - 2^(1/3)/2]",,0,deductive,Matrix: Eigenvalues 3x3 Cardano exact cubic
+CAT30-009,cat_30_matrix_eigenvalues_eigenvectors_trace,"""eigenvects([[3, 0], [0, 5]])""",,exact,"[[3, [[1, 0]]], [5, [[0, 1]]]]",,0,deductive,Matrix: Eigenvectors 2x2 diagonal
+CAT30-010,cat_30_matrix_eigenvalues_eigenvectors_trace,"""eigenvects([[2, 1], [1, 2]])""",,exact,"[[1, [[1, -1]]], [3, [[1, 1]]]]",,0,deductive,Matrix: Eigenvectors 2x2 symmetric
+CAT30-011,cat_30_matrix_eigenvalues_eigenvectors_trace,"""eigenvects([[2, 1], [0, 2]])""",,exact,"[[2, [[1, 0]]]]",,0,deductive,Matrix: Eigenvectors 2x2 Jordan block
+CAT30-012,cat_30_matrix_eigenvalues_eigenvectors_trace,"""eigenvects([[1, 0], [0, 1]])""",,exact,"[[1, [[1, 0], [0, 1]]]]",,0,deductive,Matrix: Eigenvectors 2x2 Identity (dim 2)

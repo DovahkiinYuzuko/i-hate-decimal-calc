@@ -1,0 +1,13 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT09-001,cat_09_piped_multiline_state_persistence,,"x = 1 + sqrt(2)
+x * 2
+",exact,"1 + √2
+2 + 2*√2",,0,deductive,Piped: Simple multiline variable persistence
+CAT09-002,cat_09_piped_multiline_state_persistence,,"a = 3
+b = 4
+hypot = sqrt(a^2 + b^2)
+hypot
+",exact,"3
+4
+5
+5",,0,deductive,Piped: Multi-variable Pythagorean geometry pipeline

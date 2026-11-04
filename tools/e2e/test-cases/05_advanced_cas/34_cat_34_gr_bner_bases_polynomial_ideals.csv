@@ -1,0 +1,5 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT34-001,cat_34_gr_bner_bases_polynomial_ideals,"""groebner([x^2 + y^2 - 1, x - y], [x, y], lex)""",,exact,"[-y + x, -1/2 + y^2]",,0,deductive,Groebner: Circle and line intersection in lex
+CAT34-002,cat_34_gr_bner_bases_polynomial_ideals,"""groebner([x - 1, x - 2], [x])""",,exact,[1],,0,deductive,Groebner: Inconsistent system leads to <1>
+CAT34-003,cat_34_gr_bner_bases_polynomial_ideals,"""groebner([x*y - 1, x^2 + y^2 - 4], [x, y], lex)""",,exact,"[-4*y + x + y^3, 1 - 4*y^2 + y^4]",,0,deductive,Groebner: Hyperbola and ellipse elimination
+CAT34-004,cat_34_gr_bner_bases_polynomial_ideals,"""groebner([x + y + z - 1, x - y, z - 2], [x, y, z], lex)""",,exact,"[1/2 + x, 1/2 + y, -2 + z]",,0,deductive,Groebner: 3-variable linear solved system

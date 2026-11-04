@@ -1,0 +1,6 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT83-001,cat_83_algebraic_pattern_matching_term_rewriting_system_issue_148,"""replace(sin(t)^2, rule(sin(_x)^2, 1 - cos(_x)^2))""",,contains,cos(t)^2,,0,deductive,Rewrite Easy: Single step algebraic replacement
+CAT83-002,cat_83_algebraic_pattern_matching_term_rewriting_system_issue_148,"""rewrite(sin(sin(sin(x))), rule(sin(_t), _t))""",,exact,x,,0,deductive,Rewrite Medium: Fixed point reduction across multiple applications
+CAT83-003,cat_83_algebraic_pattern_matching_term_rewriting_system_issue_148,"""rewrite(a, [rule(a, b), rule(b, a)])""",,contains,a,,0,deductive,Rewrite Hard: Cycle detection terminates cleanly
+CAT83-004,cat_83_algebraic_pattern_matching_term_rewriting_system_issue_148,"""replace(sin(x)^2, rule(sin(_t)^2, 1 - cos(_t)^2))"" --explain",,contains,TRS_RULE_APPLY,,0,deductive,Rewrite Oni: Trace recorder records TRS rule step
+CAT83-005,cat_83_algebraic_pattern_matching_term_rewriting_system_issue_148,"""rule(_x, _x + 1)"" --typst",,contains,arrow.r,,0,deductive,Rewrite Typst: Rule formatting in Typst export
