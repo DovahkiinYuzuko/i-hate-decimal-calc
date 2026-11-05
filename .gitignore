@@ -108,3 +108,5 @@
 !tools/e2e/test-cases/
 !tools/e2e/test-cases/**
 
+!tools/doc-auditor/
+!tools/doc-auditor/*.go
