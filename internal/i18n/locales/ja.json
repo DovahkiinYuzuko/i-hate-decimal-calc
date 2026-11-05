@@ -541,11 +541,11 @@
     "proof_solvable": "ガロア群 %s は可解群（導来列が自明群に縮退する）であるため、この方程式は四則演算と冪根によって代数的に解くことが可能です。"
   },
   "geometry": {
-    "circle_intersect_error": "circle_intersect エラー: %v",
-    "circle_intersect_error_in_circle": "circle_intersect 円1の中心エラー: %v",
-    "circle_intersect_error_in_circle_1": "circle_intersect 円2の中心エラー: %v",
-    "circle_intersect_error_in_r1": "circle_intersect 半径 r1^2 のエラー: %v",
-    "circle_intersect_error_in_r2": "circle_intersect 半径 r2^2 のエラー: %v",
+    "err_circle_intersect_error": "circle_intersect エラー: %v",
+    "err_circle_intersect_error_in_circle": "circle_intersect 円1の中心エラー: %v",
+    "err_circle_intersect_error_in_circle_1": "circle_intersect 円2の中心エラー: %v",
+    "err_circle_intersect_error_in_r1": "circle_intersect 半径 r1^2 のエラー: %v",
+    "err_circle_intersect_error_in_r2": "circle_intersect 半径 r2^2 のエラー: %v",
     "err_circles_are_coincident_infinite_intersections": "2つの円は一致しています (無数の交点が存在します)",
     "err_invalid_line_a_and_b": "不正な直線です: A と B の両方をゼロにすることはできません",
     "err_line_intersect_error": "line_intersect エラー: %v",
