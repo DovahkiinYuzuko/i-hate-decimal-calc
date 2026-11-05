@@ -1678,6 +1678,11 @@ M834 80h400000v40h-400000z"></path></svg></span></span></span><span class="vlist
 <td align="left"><code class="clickable-code" data-copy="wz_cert(F, n, k)" title="Click to copy">wz_cert(F, n, k)</code></td>
 <td align="left">Generates rational function certificate <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>R</mi><mo stretchy="false">(</mo><mi>n</mi><mo separator="true">,</mo><mi>k</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">R(n, k)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.0077em;">R</span><span class="mopen">(</span><span class="mord mathnormal">n</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal" style="margin-right:0.0315em;">k</span><span class="mclose">)</span></span></span></span> for hypergeometric identity verification via Wilf-Zeilberger (WZ) theory</td>
 </tr>
+<tr>
+<td align="left"><code class="clickable-code" data-copy="delta" title="Click to copy">delta</code></td>
+<td align="left"><code class="clickable-code" data-copy="delta(x)" title="Click to copy">delta(x)</code></td>
+<td align="left">Dirac delta function <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>δ</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\delta(x)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.0379em;">δ</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span> (Generalized function / impulse response in calculus, Laplace, and Z-transforms)</td>
+</tr>
 </tbody>
 </table></div>
 <hr>
@@ -1836,7 +1841,7 @@ M1001 80h400000v40h-400000z"></path></svg></span></span></span><span class="vlis
 </tr>
 <tr>
 <td align="left"><code class="clickable-code" data-copy="div" title="Click to copy">div</code>, <code class="clickable-code" data-copy="curl" title="Click to copy">curl</code></td>
-<td align="left"><code class="clickable-code" data-copy="div(F, [x, y, z])" title="Click to copy">div(F, [x, y, z])</code>, <code class="clickable-code" data-copy="curl(F, ...)" title="Click to copy">curl(F, ...)</code></td>
+<td align="left"><code class="clickable-code" data-copy="div(F, [x, y, z])" title="Click to copy">div(F, [x, y, z])</code>, <code class="clickable-code" data-copy="curl(F, [x, y, z])" title="Click to copy">curl(F, [x, y, z])</code></td>
 <td align="left">Divergence (<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">∇</mi><mo>⋅</mo><mi>F</mi></mrow><annotation encoding="application/x-tex">\nabla \cdot F</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord">∇</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.1389em;">F</span></span></span></span>) and 3D curl (<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">∇</mi><mo>×</mo><mi>F</mi></mrow><annotation encoding="application/x-tex">\nabla \times F</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7667em;vertical-align:-0.0833em;"></span><span class="mord">∇</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.1389em;">F</span></span></span></span>)</td>
 </tr>
 <tr>
@@ -1887,7 +1892,7 @@ M1001 80h400000v40h-400000z"></path></svg></span></span></span><span class="vlis
 </tr>
 <tr>
 <td align="left"><code class="clickable-code" data-copy="geo_prove" title="Click to copy">geo_prove</code></td>
-<td align="left"><code class="clickable-code" data-copy="geo_prove(hypotheses, conclusion [, var_order])" title="Click to copy">geo_prove(hypotheses, conclusion [, var_order])</code></td>
+<td align="left"><code class="clickable-code" data-copy="geo_prove(hypotheses, conclusion)" title="Click to copy">geo_prove(hypotheses, conclusion)</code> / <code class="clickable-code" data-copy="geo_prove(hypotheses, conclusion, [vars])" title="Click to copy">geo_prove(hypotheses, conclusion, [vars])</code></td>
 <td align="left">Automated geometric theorem proving via Wu Wen-tsun's algebraic method (Wu's Method). Computes a triangular Characteristic Set (ascending chain) from geometric hypotheses and verifies whether successive pseudo-division remainder with respect to the conclusion polynomial vanishes (<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>R</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">R = 0</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0077em;">R</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">0</span></span></span></span>). Supports 3-tier non-degeneracy condition (NDG: Primary / Essential / Algebraic) generation and formal Lean 4 theorem transpilation</td>
 </tr>
 <tr>
@@ -2468,8 +2473,8 @@ M834 80h400000v40h-400000z"></path></svg></span></span></span><span class="vlist
 </tr>
 <tr>
 <td align="left"><code class="clickable-code" data-copy="for" title="Click to copy">for</code></td>
-<td align="left"><code class="clickable-code" data-copy="for(i, 1, 5, s = s + i)" title="Click to copy">for(i, 1, 5, s = s + i)</code></td>
-<td align="left">Procedural iteration loop with syntax <code class="clickable-code" data-copy="for(var, start, end, [step], body)" title="Click to copy">for(var, start, end, [step], body)</code>. Returns the evaluation result of the final iteration</td>
+<td align="left"><code class="clickable-code" data-copy="for(k, 1, 5, s = s + k)" title="Click to copy">for(k, 1, 5, s = s + k)</code></td>
+<td align="left">Procedural iteration loop with syntax <code class="clickable-code" data-copy="for(var, start, end, [step], body)" title="Click to copy">for(var, start, end, [step], body)</code>. Returns the evaluation result of the final iteration (use variable names other than imaginary unit <code class="clickable-code" data-copy="i" title="Click to copy">i</code>, e.g. <code class="clickable-code" data-copy="k" title="Click to copy">k</code>, <code class="clickable-code" data-copy="j" title="Click to copy">j</code>, <code class="clickable-code" data-copy="n" title="Click to copy">n</code>)</td>
 </tr>
 <tr>
 <td align="left"><code class="clickable-code" data-copy="to_base" title="Click to copy">to_base</code></td>
@@ -2478,8 +2483,8 @@ M834 80h400000v40h-400000z"></path></svg></span></span></span><span class="vlist
 </tr>
 <tr>
 <td align="left"><code class="clickable-code" data-copy="from_base" title="Click to copy">from_base</code></td>
-<td align="left"><code class="clickable-code" data-copy="from_base(&#x22;FF&#x22;, 16)" title="Click to copy">from_base("FF", 16)</code> / <code class="clickable-code" data-copy="from_base(&#x22;101.1&#x22;, 2)" title="Click to copy">from_base("101.1", 2)</code></td>
-<td align="left">Parses a base-<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi></mrow><annotation encoding="application/x-tex">N</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.109em;">N</span></span></span></span> string representation back into an exact arbitrary-precision rational or integer</td>
+<td align="left"><code class="clickable-code" data-copy="from_base(&#x22;FF&#x22;, 16)" title="Click to copy">from_base("FF", 16)</code> / <code class="clickable-code" data-copy="from_base(&#x22;1011&#x22;, 2)" title="Click to copy">from_base("1011", 2)</code></td>
+<td align="left">Parses a base-<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi></mrow><annotation encoding="application/x-tex">N</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.109em;">N</span></span></span></span> string representation back into an exact arbitrary-precision integer</td>
 </tr>
 <tr>
 <td align="left"><code class="clickable-code" data-copy="bin" title="Click to copy">bin</code>, <code class="clickable-code" data-copy="oct" title="Click to copy">oct</code>, <code class="clickable-code" data-copy="hex" title="Click to copy">hex</code></td>

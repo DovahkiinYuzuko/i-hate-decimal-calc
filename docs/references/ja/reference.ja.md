@@ -186,6 +186,7 @@
 | `sum` | `sum(expr, k, start, end)` | 離散和（有限整数範囲の合算、または Faulhaber 公式による $n$ に関する多項式閉形式） |
 | `gosper_sum` | `gosper_sum(t_k, k)` | 超幾何級数に対する Gosper 不定和法による閉形式原始関数 $z_k$ 導出（$z_{k+1}-z_k=t_k$） |
 | `wz_cert` | `wz_cert(F, n, k)` | Wilf-Zeilberger (WZ) 対による超幾何恒等式の有理関数証明書 $R(n, k)$ 生成 |
+| `delta` | `delta(x)` | ディラックのデルタ関数 $\delta(x)$（超関数。$x=0$ で形式的特異点、ラプラス変換・Z変換・微分積分演算におけるインパルス応答表現） |
 
 ---
 
@@ -218,7 +219,7 @@
 | `dot`, `cross` | `dot(u, v)`, `cross(u, v)` | ベクトル内積および3次元外積（クロス積） |
 | `norm` | `norm(v)` | ベクトルのユークリッドノルム（$\sqrt{\sum v_i^2}$、根号自動簡約） |
 | `grad` | `grad(f, [x, y, z])` | スカラー場の勾配ベクトル（$\nabla f$） |
-| `div`, `curl` | `div(F, [x, y, z])`, `curl(F, ...)` | ベクトル場の発散（$\nabla \cdot F$）・3次元ベクトル場の回転（$\nabla \times F$） |
+| `div`, `curl` | `div(F, [x, y, z])`, `curl(F, [x, y, z])` | ベクトル場の発散（$\nabla \cdot F$）・3次元ベクトル場の回転（$\nabla \times F$） |
 | 行列・ベクトル記法 | `[[1, 2], [3, 4]]`, `[1, 2, 3]` | 行列リテラルおよびベクトルリテラル |
 
 ---
@@ -231,7 +232,7 @@
 | `circle_intersect` | `circle_intersect(c1, r1, c2, r2)` | 2円の交点（中心座標と半径から根軸次数下げにより交点座標リストを算出） |
 | `triangle_area` | `triangle_area(p1, p2, p3)` | 3頂点座標からなる三角形の厳密面積（外積・Shoelace公式） |
 | `triangle_centers` | `triangle_centers(p1, p2, p3)` | 三角形の五心解析（重心・外心・垂心・内心をリストで一括算出） |
-| `geo_prove` | `geo_prove(hypotheses, conclusion [, var_order])` | 呉文俊（Wu Wen-tsun）の代数的幾何自動定理証明法（Wu's Method）。仮設多項式系から標数集合（Characteristic Set: 三角形式アセンダント列）を導出し、結論多項式に対する擬除算剰余（Pseudo-division remainder）が 0 となるかを判定。3段階NDG条件（Primary / Essential / Algebraic）導出および Lean 4 形式証明トランスパイル対応 |
+| `geo_prove` | `geo_prove(hypotheses, conclusion)` / `geo_prove(hypotheses, conclusion, [vars])` | 呉文俊（Wu Wen-tsun）の代数的幾何自動定理証明法（Wu's Method）。仮設多項式系から標数集合（Characteristic Set: 三角形式アセンダント列）を導出し、結論多項式に対する擬除算剰余（Pseudo-division remainder）が 0 となるかを判定。3段階NDG条件（Primary / Essential / Algebraic）導出および Lean 4 形式証明トランスパイル対応 |
 | `midpoint` | `midpoint(M, A, B)` | 点 $M$ が線分 $AB$ の中点（$2 M_x = A_x + B_x, 2 M_y = A_y + B_y$） |
 | `collinear` | `collinear(A, B, C)` | 3点 $A, B, C$ が同一直線上に存在（共線条件: 外積 $(B_x - A_x)(C_y - A_y) - (B_y - A_y)(C_x - A_x) = 0$） |
 | `parallel` | `parallel(A, B, C, D)` | 直線 $AB$ と $CD$ が平行（方向ベクトルの外積 $= 0$） |
@@ -378,9 +379,9 @@
 | :--- | :--- | :--- |
 | `table` | `table(x^2, x, 1, 5)` / `table(k, k, 1, 9, 2)` | リスト内包表記・反復リスト生成。引数 `table(expr, var, start, end, [step])` による動的スコープ反復（ネスト呼び出しによる多次元リスト生成も対応） |
 | `product` | `product(k, k, 1, 5)` / `product(2*k + 1, k, 0, 4)` | 離散総乗（乗乗計算 $\prod_{k=\text{start}}^{\text{end}} \text{expr}$）。動的スコープ保護およびゼロ短絡評価対応 |
-| `for` | `for(i, 1, 5, s = s + i)` | 手続き型反復ループ。引数 `for(var, start, end, [step], body)` による順次実行（返却値は最終式の評価結果） |
+| `for` | `for(k, 1, 5, s = s + k)` | 手続き型反復ループ。引数 `for(var, start, end, [step], body)` による順次実行（反復変数は虚数単位 `i` を避けて `k`, `j`, `n` 等を使用。返却値は最終式の評価結果） |
 | `to_base` | `to_base(255, 16)` / `to_base(1/3, 2)` | 任意基数（2〜64）への基底変換文字列生成。有理数の場合は循環小数表記を出力 |
-| `from_base` | `from_base("FF", 16)` / `from_base("101.1", 2)` | 任意基数（2〜64）の文字列から厳密有理数・整数への復元 |
+| `from_base` | `from_base("FF", 16)` / `from_base("1011", 2)` | 任意基数（2〜64）の文字列から厳密整数への復元 |
 | `bin`, `oct`, `hex` | `bin(42)`, `oct(42)`, `hex(255)` | 2進数、8進数、16進数への標準表記変換ショートカット |
 | 基数リテラル | `16^^FF`, `2^^1011`, `0x1A`, `0b101` | 入力字句解析器による任意進数リテラル記法（$2 \le \text{base} \le 64$） |
 

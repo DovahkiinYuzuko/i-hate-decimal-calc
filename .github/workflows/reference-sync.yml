@@ -39,3 +39,12 @@ jobs:
             exit 1
           fi
           echo "Reference HTML files are perfectly synchronized with Markdown sources."
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          check-latest: true
+
+      - name: Verify Reference Signature & AST Invariants via Go Doc Auditor
+        run: go run ./tools/doc-auditor

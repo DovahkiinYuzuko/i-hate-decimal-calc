@@ -186,6 +186,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `sum` | `sum(expr, k, start, end)` | Discrete summation (finite sum or exact polynomial closed form via Faulhaber formula) |
 | `gosper_sum` | `gosper_sum(t_k, k)` | Gosper's algorithm for hypergeometric summation: finds closed-form antiderivative $z_k$ such that $z_{k+1}-z_k=t_k$ |
 | `wz_cert` | `wz_cert(F, n, k)` | Generates rational function certificate $R(n, k)$ for hypergeometric identity verification via Wilf-Zeilberger (WZ) theory |
+| `delta` | `delta(x)` | Dirac delta function $\delta(x)$ (Generalized function / impulse response in calculus, Laplace, and Z-transforms) |
 
 ---
 
@@ -218,7 +219,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `dot`, `cross` | `dot(u, v)`, `cross(u, v)` | Vector dot product and 3D vector cross product |
 | `norm` | `norm(v)` | Euclidean vector norm ($\sqrt{\sum v_i^2}$, with radical simplification) |
 | `grad` | `grad(f, [x, y, z])` | Gradient vector field ($\nabla f$) |
-| `div`, `curl` | `div(F, [x, y, z])`, `curl(F, ...)` | Divergence ($\nabla \cdot F$) and 3D curl ($\nabla \times F$) |
+| `div`, `curl` | `div(F, [x, y, z])`, `curl(F, [x, y, z])` | Divergence ($\nabla \cdot F$) and 3D curl ($\nabla \times F$) |
 | Matrix / Vector Syntax | `[[1, 2], [3, 4]]`, `[1, 2, 3]` | Matrix and vector literal syntax |
 
 ---
@@ -231,7 +232,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `circle_intersect` | `circle_intersect(c1, r1, c2, r2)` | Exact intersection points of two circles via radical axis order reduction |
 | `triangle_area` | `triangle_area(p1, p2, p3)` | Exact area of a triangle given three vertices via Shoelace formula |
 | `triangle_centers` | `triangle_centers(p1, p2, p3)` | Triangle centers (centroid, circumcenter, orthocenter, incenter) |
-| `geo_prove` | `geo_prove(hypotheses, conclusion [, var_order])` | Automated geometric theorem proving via Wu Wen-tsun's algebraic method (Wu's Method). Computes a triangular Characteristic Set (ascending chain) from geometric hypotheses and verifies whether successive pseudo-division remainder with respect to the conclusion polynomial vanishes ($R = 0$). Supports 3-tier non-degeneracy condition (NDG: Primary / Essential / Algebraic) generation and formal Lean 4 theorem transpilation |
+| `geo_prove` | `geo_prove(hypotheses, conclusion)` / `geo_prove(hypotheses, conclusion, [vars])` | Automated geometric theorem proving via Wu Wen-tsun's algebraic method (Wu's Method). Computes a triangular Characteristic Set (ascending chain) from geometric hypotheses and verifies whether successive pseudo-division remainder with respect to the conclusion polynomial vanishes ($R = 0$). Supports 3-tier non-degeneracy condition (NDG: Primary / Essential / Algebraic) generation and formal Lean 4 theorem transpilation |
 | `midpoint` | `midpoint(M, A, B)` | Predicate asserting point $M$ is the midpoint of segment $AB$ ($2 M_x = A_x + B_x, 2 M_y = A_y + B_y$) |
 | `collinear` | `collinear(A, B, C)` | Predicate asserting points $A, B, C$ are collinear (cross product determinant $(B_x - A_x)(C_y - A_y) - (B_y - A_y)(C_x - A_x) = 0$) |
 | `parallel` | `parallel(A, B, C, D)` | Predicate asserting line $AB$ is parallel to line $CD$ (direction vector cross product $= 0$) |
@@ -378,9 +379,9 @@ Provides list comprehension, discrete products, procedural loops, and multi-radi
 | :--- | :--- | :--- |
 | `table` | `table(x^2, x, 1, 5)` / `table(k, k, 1, 9, 2)` | Mathematica-style list comprehension. Evaluates `table(expr, var, start, end, [step])` under automatic dynamic scope protection (supports nested multidimensional table generation) |
 | `product` | `product(k, k, 1, 5)` / `product(2*k + 1, k, 0, 4)` | Discrete product computation ($\prod_{k=\text{start}}^{\text{end}} \text{expr}$) with dynamic scope protection and zero-short-circuiting |
-| `for` | `for(i, 1, 5, s = s + i)` | Procedural iteration loop with syntax `for(var, start, end, [step], body)`. Returns the evaluation result of the final iteration |
+| `for` | `for(k, 1, 5, s = s + k)` | Procedural iteration loop with syntax `for(var, start, end, [step], body)`. Returns the evaluation result of the final iteration (use variable names other than imaginary unit `i`, e.g. `k`, `j`, `n`) |
 | `to_base` | `to_base(255, 16)` / `to_base(1/3, 2)` | Converts an integer or exact rational into a string representation in the specified base (2 to 64), outputting repeating fractional digits when periodic |
-| `from_base` | `from_base("FF", 16)` / `from_base("101.1", 2)` | Parses a base-$N$ string representation back into an exact arbitrary-precision rational or integer |
+| `from_base` | `from_base("FF", 16)` / `from_base("1011", 2)` | Parses a base-$N$ string representation back into an exact arbitrary-precision integer |
 | `bin`, `oct`, `hex` | `bin(42)`, `oct(42)`, `hex(255)` | Convenience aliases for standard binary, octal, and hexadecimal radix conversions |
 | Radix Literals | `16^^FF`, `2^^1011`, `0x1A`, `0b101` | Lexer support for arbitrary-radix literal constants ($2 \le \text{base} \le 64$) |
 
