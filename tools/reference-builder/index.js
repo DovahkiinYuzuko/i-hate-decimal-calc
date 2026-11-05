@@ -468,6 +468,57 @@ async function buildLanguageEdition(lang) {
   fs.writeFileSync(htmlFile, html, 'utf-8');
   const stats = fs.statSync(htmlFile);
   console.log(`[Build Success] Generated: ${htmlFile} (${(stats.size / 1024).toFixed(1)} KB)`);
+
+  // AST からテーブル仕様（関数名・構文例）を構造化抽出
+  const langSpecs = [];
+  const allContainers = [];
+  for (const sec of sections) {
+    if (sec.nodes && sec.nodes.length > 0) {
+      allContainers.push({ title: sec.title, nodes: sec.nodes });
+    }
+    for (const sub of sec.subSections) {
+      if (sub.nodes && sub.nodes.length > 0) {
+        allContainers.push({ title: sub.title, nodes: sub.nodes });
+      }
+    }
+  }
+
+  for (const container of allContainers) {
+    for (const node of container.nodes) {
+      if (node.type === 'table') {
+        if (!node.children || node.children.length < 2) continue;
+        const headerRow = node.children[0];
+        if (!headerRow.children || headerRow.children.length < 2) continue;
+        const h0 = toString(headerRow.children[0]).trim();
+        if (!/関数|Function|コマンド|Command|構文|Syntax|機能/i.test(h0)) continue;
+
+        for (let r = 1; r < node.children.length; r++) {
+          const row = node.children[r];
+          if (!row.children || row.children.length < 2) continue;
+          const names = [];
+          visit(row.children[0], 'inlineCode', (c) => {
+            if (c.value) names.push(c.value.trim());
+          });
+          const examples = [];
+          visit(row.children[1], 'inlineCode', (c) => {
+            if (c.value) examples.push(c.value.trim());
+          });
+          const desc = row.children[2] ? toString(row.children[2]).trim() : '';
+
+          if (names.length > 0) {
+            langSpecs.push({
+              category: container.title,
+              names,
+              examples,
+              description: desc
+            });
+          }
+        }
+      }
+    }
+  }
+
+  return langSpecs;
 }
 
 /**
@@ -482,16 +533,34 @@ async function buildAll() {
   }
 
   const entries = fs.readdirSync(REFERENCES_DIR, { withFileTypes: true });
-  const langDirs = entries.filter(e => e.isDirectory() && !e.name.startsWith('.')).map(e => e.name);
+  const langDirs = entries.filter(e => e.isDirectory() && !e.name.startsWith('.') && e.name !== 'dist' && e.name !== 'assets').map(e => e.name);
 
   if (langDirs.length === 0) {
     console.warn('[Build Warning] No language subdirectories found under docs/references/');
     return;
   }
 
+  const allDocSpecs = {
+    version: '1.0',
+    generated_at: new Date().toISOString(),
+    languages: {}
+  };
+
   for (const lang of langDirs) {
-    await buildLanguageEdition(lang);
+    const specs = await buildLanguageEdition(lang);
+    allDocSpecs.languages[lang] = {
+      functions: specs
+    };
   }
+
+  const distDir = path.join(REFERENCES_DIR, 'dist');
+  if (!fs.existsSync(distDir)) {
+    fs.mkdirSync(distDir, { recursive: true });
+  }
+  const specsPath = path.join(distDir, 'doc_specs.json');
+  fs.writeFileSync(specsPath, JSON.stringify(allDocSpecs, null, 2) + '\n', 'utf-8');
+  const specStats = fs.statSync(specsPath);
+  console.log(`[Doc Specs] Generated: ${specsPath} (${(specStats.size / 1024).toFixed(1)} KB)`);
 
   console.log('[Build Complete] Successfully built all reference editions.');
 }

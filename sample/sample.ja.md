@@ -78,7 +78,7 @@ ihd --explain --typst "factor(x^4 + 4)"
 
 == Derivation Steps
 
-=== Step 1: Factorization
+=== Step 1: 因数分解・素因数分解
 
 $ 4 + x^4 = (x^2 + -2 * x + 2) * (x^2 + 2 * x + 2) $
 
@@ -250,8 +250,8 @@ ihd --verify "convert_unit(100 [km/h], m/s)"
 ```bash
 ihd diff "x^2 - 1" "(x - 1)*(x + 1)"
 # 出力:
-# Semantic Diff: x^2 - 1 <-> (x - 1)*(x + 1)
-#   ~ [EQUIVALENT] L1: x^2 - 1 <=> (x - 1)*(x + 1)
+# 意味論的数式差分: x^2 - 1 <-> (x - 1)*(x + 1)
+#   ~ [意味論的等価] L1: x^2 - 1 <=> (x - 1)*(x + 1)
 ```
 
 ---

@@ -34,6 +34,8 @@
     - [20. コレクション・リスト操作言語拡張 \& 第一級ラムダ式](#20-コレクションリスト操作言語拡張--第一級ラムダ式)
     - [21. 物理単位計算 \& 次元解析 (SI基本単位・組立単位・単位換算)](#21-物理単位計算--次元解析-si基本単位組立単位単位換算)
       - [対応単位・接頭辞](#対応単位接頭辞)
+    - [22. 代数パターンマッチング & 項書き換え規則 (TRS)](#22-代数パターンマッチング--項書き換え規則-trs)
+    - [23. CLI コマンドラインオプション完全仕様](#23-cli-コマンドラインオプション完全仕様)
 
 ---
 
@@ -186,6 +188,7 @@
 | `sum` | `sum(expr, k, start, end)` | 離散和（有限整数範囲の合算、または Faulhaber 公式による $n$ に関する多項式閉形式） |
 | `gosper_sum` | `gosper_sum(t_k, k)` | 超幾何級数に対する Gosper 不定和法による閉形式原始関数 $z_k$ 導出（$z_{k+1}-z_k=t_k$） |
 | `wz_cert` | `wz_cert(F, n, k)` | Wilf-Zeilberger (WZ) 対による超幾何恒等式の有理関数証明書 $R(n, k)$ 生成 |
+| `delta` | `delta(x)` | ディラックのデルタ関数 $\delta(x)$（超関数。$x=0$ で形式的特異点、ラプラス変換・Z変換・微分積分演算におけるインパルス応答表現） |
 
 ---
 
@@ -218,7 +221,7 @@
 | `dot`, `cross` | `dot(u, v)`, `cross(u, v)` | ベクトル内積および3次元外積（クロス積） |
 | `norm` | `norm(v)` | ベクトルのユークリッドノルム（$\sqrt{\sum v_i^2}$、根号自動簡約） |
 | `grad` | `grad(f, [x, y, z])` | スカラー場の勾配ベクトル（$\nabla f$） |
-| `div`, `curl` | `div(F, [x, y, z])`, `curl(F, ...)` | ベクトル場の発散（$\nabla \cdot F$）・3次元ベクトル場の回転（$\nabla \times F$） |
+| `div`, `curl` | `div(F, [x, y, z])`, `curl(F, [x, y, z])` | ベクトル場の発散（$\nabla \cdot F$）・3次元ベクトル場の回転（$\nabla \times F$） |
 | 行列・ベクトル記法 | `[[1, 2], [3, 4]]`, `[1, 2, 3]` | 行列リテラルおよびベクトルリテラル |
 
 ---
@@ -231,7 +234,7 @@
 | `circle_intersect` | `circle_intersect(c1, r1, c2, r2)` | 2円の交点（中心座標と半径から根軸次数下げにより交点座標リストを算出） |
 | `triangle_area` | `triangle_area(p1, p2, p3)` | 3頂点座標からなる三角形の厳密面積（外積・Shoelace公式） |
 | `triangle_centers` | `triangle_centers(p1, p2, p3)` | 三角形の五心解析（重心・外心・垂心・内心をリストで一括算出） |
-| `geo_prove` | `geo_prove(hypotheses, conclusion [, var_order])` | 呉文俊（Wu Wen-tsun）の代数的幾何自動定理証明法（Wu's Method）。仮設多項式系から標数集合（Characteristic Set: 三角形式アセンダント列）を導出し、結論多項式に対する擬除算剰余（Pseudo-division remainder）が 0 となるかを判定。3段階NDG条件（Primary / Essential / Algebraic）導出および Lean 4 形式証明トランスパイル対応 |
+| `geo_prove` | `geo_prove(hypotheses, conclusion)` / `geo_prove(hypotheses, conclusion, [vars])` | 呉文俊（Wu Wen-tsun）の代数的幾何自動定理証明法（Wu's Method）。仮設多項式系から標数集合（Characteristic Set: 三角形式アセンダント列）を導出し、結論多項式に対する擬除算剰余（Pseudo-division remainder）が 0 となるかを判定。3段階NDG条件（Primary / Essential / Algebraic）導出および Lean 4 形式証明トランスパイル対応 |
 | `midpoint` | `midpoint(M, A, B)` | 点 $M$ が線分 $AB$ の中点（$2 M_x = A_x + B_x, 2 M_y = A_y + B_y$） |
 | `collinear` | `collinear(A, B, C)` | 3点 $A, B, C$ が同一直線上に存在（共線条件: 外積 $(B_x - A_x)(C_y - A_y) - (B_y - A_y)(C_x - A_x) = 0$） |
 | `parallel` | `parallel(A, B, C, D)` | 直線 $AB$ と $CD$ が平行（方向ベクトルの外積 $= 0$） |
@@ -378,9 +381,9 @@
 | :--- | :--- | :--- |
 | `table` | `table(x^2, x, 1, 5)` / `table(k, k, 1, 9, 2)` | リスト内包表記・反復リスト生成。引数 `table(expr, var, start, end, [step])` による動的スコープ反復（ネスト呼び出しによる多次元リスト生成も対応） |
 | `product` | `product(k, k, 1, 5)` / `product(2*k + 1, k, 0, 4)` | 離散総乗（乗乗計算 $\prod_{k=\text{start}}^{\text{end}} \text{expr}$）。動的スコープ保護およびゼロ短絡評価対応 |
-| `for` | `for(i, 1, 5, s = s + i)` | 手続き型反復ループ。引数 `for(var, start, end, [step], body)` による順次実行（返却値は最終式の評価結果） |
+| `for` | `for(k, 1, 5, s = s + k)` | 手続き型反復ループ。引数 `for(var, start, end, [step], body)` による順次実行（反復変数は虚数単位 `i` を避けて `k`, `j`, `n` 等を使用。返却値は最終式の評価結果） |
 | `to_base` | `to_base(255, 16)` / `to_base(1/3, 2)` | 任意基数（2〜64）への基底変換文字列生成。有理数の場合は循環小数表記を出力 |
-| `from_base` | `from_base("FF", 16)` / `from_base("101.1", 2)` | 任意基数（2〜64）の文字列から厳密有理数・整数への復元 |
+| `from_base` | `from_base("FF", 16)` / `from_base("1011", 2)` | 任意基数（2〜64）の文字列から厳密整数への復元 |
 | `bin`, `oct`, `hex` | `bin(42)`, `oct(42)`, `hex(255)` | 2進数、8進数、16進数への標準表記変換ショートカット |
 | 基数リテラル | `16^^FF`, `2^^1011`, `0x1A`, `0b101` | 入力字句解析器による任意進数リテラル記法（$2 \le \text{base} \le 64$） |
 
@@ -478,3 +481,74 @@
 | `rule` | `rule(sin(_x)^2, 1 - cos(_x)^2)` | パターン（左辺）と置換テンプレート（右辺）を保持する第一級ルールオブジェクトを作成 |
 | `replace` | `replace(sin(t)^2, rule(sin(_x)^2, 1 - cos(_x)^2))` | 式木をボトムアップ走査し、マッチした部分式を1回置換 |
 | `rewrite` | `rewrite(sin(sin(x)), rule(sin(_t), _t))` / `rewrite(expr, [r1, r2], [max_steps])` | 不動点（どのルールも適用できなくなる状態）に達するまで繰り返し書き換えを適用。循環検出および `~/.ihd/config.json`（`rewrite_max_steps`、既定値1000）による安全上限ガード付き |
+
+---
+
+### 23. CLI コマンドラインオプション完全仕様
+
+`ihd` は対話型 REPL だけでなく、シェルワンライナー、パイプライン処理、スクリプト実行、証明書検証に対応した豊富なコマンドラインオプションを提供します。
+
+#### サブコマンド
+
+| フラグ・オプション | 書式・例 | 説明 |
+| :--- | :--- | :--- |
+| `diff` | `ihd diff <expr1\|file1> <expr2\|file2>` | 2つの数式またはスクリプトの構文差分および展開・因数分解による代数的等価性を比較 |
+| `run` | `ihd run <file.ihd>` | 複数行の数式・変数定義スクリプトを一括実行 |
+| `completion` | `ihd completion <bash\|zsh\|fish\|powershell>` | 主要シェル向けの自動補完スクリプトを生成 |
+| `update` | `ihd update` / `ihd update -check` | 最新リリースへの自己アップデート（更新確認のみ、強制再インストール対応） |
+
+#### 出力フォーマット & 表示
+
+| フラグ・オプション | 書式・例 | 説明 |
+| :--- | :--- | :--- |
+| `--format` | `ihd --format typst "1/2 + sqrt(2)"` | 出力フォーマットを指定 (`typst`, `latex`, `ascii`, `pretty`) |
+| `--pretty` | `ihd --pretty "1/2 + sqrt(2)/2"` | 2D アスキーアートによる組版プリティプリント |
+| `--latex` | `ihd --latex "1/2 + sqrt(2)"` | LaTeX 数式モード (`$$ ... $$`) で出力 |
+| `--typst` | `ihd --typst "1/2 + sqrt(2)"` | Typst 数式モード (`$ ... $`) で出力 |
+| `--ascii` | `ihd --ascii "sqrt(2) + pi"` | 数学特殊記号を標準 ASCII 文字列にフォールバック |
+| `--no-color` | `ihd --no-color` | REPL および CLI 出力の ANSI カラーシーケンスを無効化 |
+| `--theme` | `ihd --theme light` | REPL シンタックスハイライトテーマを指定 (`dark`, `light`, `none`) |
+
+#### 近似計算 & 数値モード
+
+| フラグ・オプション | 書式・例 | 説明 |
+| :--- | :--- | :--- |
+| `-a`, `--approx` | `ihd -a "sqrt(2)"` | 厳密解の横に有理数区間演算に基づく任意精度小数の参考近似値を併記 |
+| `--approx-digits`, `--digits` | `ihd -a --digits 50 "sqrt(2)"` | 近似値の出力小数桁数を指定（デフォルト: 30） |
+| `-i`, `--interval` | `ihd -i "sin(1)"` | 真値を保証する有理数閉区間 `[L, R]` を出力 |
+| `--interval-eps` | `ihd -i --interval-eps 1/1000000 "sin(1)"` | 有理数区間細分化の許容誤差イプシロンを指定 |
+| `--deg` | `ihd --deg "sin(30)"` | 三角関数・逆三角関数を度数法 (Degree) として計算 |
+
+#### 導出・証明 & 検証
+
+| フラグ・オプション | 書式・例 | 説明 |
+| :--- | :--- | :--- |
+| `--explain` | `ihd --explain "1/(sqrt(2)+1)"` | 代数的な項書き換えの過程を途中式ツリーとして詳細表示 |
+| `--step` | `ihd --step "expand((x+1)^3)"` | 数式変形および証明ステップを標準出力に順次表示 |
+| `--trace` | `ihd --trace "factor(x^2 - 1)"` | グレブナー基底や CAD 等の内部探索過程を構造化 JSON で出力 |
+| `--verify` | `ihd --verify "factor(x^2 - 1)"` | 計算結果の代数的正当性を自律逆算検算し証明書を表示 |
+| `--certificate` | `ihd --certificate cert.json "factor(x^2 - 1)"` | 自己完結型代数証明書を JSON ファイルへ保存 |
+| `--replay` | `ihd --replay cert.json` | 証明書 JSON ファイルを読み込み残差 0 を独立再検証 |
+| `--lean` | `ihd --lean "factor(x^2 - 1)"` | Lean 4 (Mathlib4) 形式の形式証明コードを出力 |
+| `--lean-file` | `ihd --lean-file proof.lean "factor(x^2 - 1)"` | Lean 4 形式証明コードを指定パスの `.lean` ファイルへ保存 |
+
+#### 実行制御 & リソース制限
+
+| フラグ・オプション | 書式・例 | 説明 |
+| :--- | :--- | :--- |
+| `--timeout` | `ihd --timeout 2s "factor(x^100 - 1)"` | 壁時計時間タイムアウトを指定 (例: `2s`, `500ms`) |
+| `--budget-steps` | `ihd --budget-steps 5000 "expand((x+1)^20)"` | 単一簡約パスあたりの計算ステップ予算上限を指定 (0で無制限) |
+| `--max-nodes` | `ihd --max-nodes 10000 "expand((x+1)^10)"` | 生成 AST ノード総数上限を指定 (0で無制限) |
+| `--max-depth` | `ihd --max-depth 200 "diff(x^10, x)"` | AST 再帰深さ上限を指定 (0で無制限) |
+| `--warn-loop` | `ihd --warn-loop 100000 "table(k^2, [k, 1, 200000])"` | 反復ループの警告ステップ数を一時指定 (デフォルト: 1000) |
+| `--max-loop` | `ihd --max-loop 500000 "table(k^2, [k, 1, 200000])"` | 反復ループの最大安全上限ステップ数を一時指定 (デフォルト: 100000, -1で無制限) |
+| `--deterministic` | `ihd --deterministic "factor(x^4 - 5*x^2 + 4)"` | マップ反復や多項式順序を正規化し、バイト単位で決定論的再現性を保証 |
+
+#### 全般
+
+| フラグ・オプション | 書式・例 | 説明 |
+| :--- | :--- | :--- |
+| `-h`, `--help` | `ihd -h` / `ihd --help` | カテゴリ別に色分けされた詳細なヘルプメッセージを表示 |
+| `-v`, `--version` | `ihd -v` / `ihd --version` | バージョン情報を表示 |
+| `--lang` | `ihd --lang ja` / `ihd --lang en` | 言語ロケールを設定 |
+| `--no-update-check` | `ihd --no-update-check` | 新バージョンの自動リリースチェックを無効化 |

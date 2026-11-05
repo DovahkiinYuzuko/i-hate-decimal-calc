@@ -34,6 +34,8 @@ Complete language specification and built-in function reference for `ihd` (i-hat
     - [20. Collection Manipulation \& First-Class Lambda Expressions](#20-collection-manipulation--first-class-lambda-expressions)
     - [21. Physical Units \& Dimensional Analysis](#21-physical-units--dimensional-analysis)
       - [Supported Units \& Prefixes](#supported-units--prefixes)
+    - [22. Algebraic Pattern Matching & Term Rewriting Rules (TRS)](#22-algebraic-pattern-matching--term-rewriting-rules-trs)
+    - [23. Complete CLI Command-Line Options Specification](#23-complete-cli-command-line-options-specification)
 
 ---
 
@@ -186,6 +188,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `sum` | `sum(expr, k, start, end)` | Discrete summation (finite sum or exact polynomial closed form via Faulhaber formula) |
 | `gosper_sum` | `gosper_sum(t_k, k)` | Gosper's algorithm for hypergeometric summation: finds closed-form antiderivative $z_k$ such that $z_{k+1}-z_k=t_k$ |
 | `wz_cert` | `wz_cert(F, n, k)` | Generates rational function certificate $R(n, k)$ for hypergeometric identity verification via Wilf-Zeilberger (WZ) theory |
+| `delta` | `delta(x)` | Dirac delta function $\delta(x)$ (Generalized function / impulse response in calculus, Laplace, and Z-transforms) |
 
 ---
 
@@ -218,7 +221,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `dot`, `cross` | `dot(u, v)`, `cross(u, v)` | Vector dot product and 3D vector cross product |
 | `norm` | `norm(v)` | Euclidean vector norm ($\sqrt{\sum v_i^2}$, with radical simplification) |
 | `grad` | `grad(f, [x, y, z])` | Gradient vector field ($\nabla f$) |
-| `div`, `curl` | `div(F, [x, y, z])`, `curl(F, ...)` | Divergence ($\nabla \cdot F$) and 3D curl ($\nabla \times F$) |
+| `div`, `curl` | `div(F, [x, y, z])`, `curl(F, [x, y, z])` | Divergence ($\nabla \cdot F$) and 3D curl ($\nabla \times F$) |
 | Matrix / Vector Syntax | `[[1, 2], [3, 4]]`, `[1, 2, 3]` | Matrix and vector literal syntax |
 
 ---
@@ -231,7 +234,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `circle_intersect` | `circle_intersect(c1, r1, c2, r2)` | Exact intersection points of two circles via radical axis order reduction |
 | `triangle_area` | `triangle_area(p1, p2, p3)` | Exact area of a triangle given three vertices via Shoelace formula |
 | `triangle_centers` | `triangle_centers(p1, p2, p3)` | Triangle centers (centroid, circumcenter, orthocenter, incenter) |
-| `geo_prove` | `geo_prove(hypotheses, conclusion [, var_order])` | Automated geometric theorem proving via Wu Wen-tsun's algebraic method (Wu's Method). Computes a triangular Characteristic Set (ascending chain) from geometric hypotheses and verifies whether successive pseudo-division remainder with respect to the conclusion polynomial vanishes ($R = 0$). Supports 3-tier non-degeneracy condition (NDG: Primary / Essential / Algebraic) generation and formal Lean 4 theorem transpilation |
+| `geo_prove` | `geo_prove(hypotheses, conclusion)` / `geo_prove(hypotheses, conclusion, [vars])` | Automated geometric theorem proving via Wu Wen-tsun's algebraic method (Wu's Method). Computes a triangular Characteristic Set (ascending chain) from geometric hypotheses and verifies whether successive pseudo-division remainder with respect to the conclusion polynomial vanishes ($R = 0$). Supports 3-tier non-degeneracy condition (NDG: Primary / Essential / Algebraic) generation and formal Lean 4 theorem transpilation |
 | `midpoint` | `midpoint(M, A, B)` | Predicate asserting point $M$ is the midpoint of segment $AB$ ($2 M_x = A_x + B_x, 2 M_y = A_y + B_y$) |
 | `collinear` | `collinear(A, B, C)` | Predicate asserting points $A, B, C$ are collinear (cross product determinant $(B_x - A_x)(C_y - A_y) - (B_y - A_y)(C_x - A_x) = 0$) |
 | `parallel` | `parallel(A, B, C, D)` | Predicate asserting line $AB$ is parallel to line $CD$ (direction vector cross product $= 0$) |
@@ -378,9 +381,9 @@ Provides list comprehension, discrete products, procedural loops, and multi-radi
 | :--- | :--- | :--- |
 | `table` | `table(x^2, x, 1, 5)` / `table(k, k, 1, 9, 2)` | Mathematica-style list comprehension. Evaluates `table(expr, var, start, end, [step])` under automatic dynamic scope protection (supports nested multidimensional table generation) |
 | `product` | `product(k, k, 1, 5)` / `product(2*k + 1, k, 0, 4)` | Discrete product computation ($\prod_{k=\text{start}}^{\text{end}} \text{expr}$) with dynamic scope protection and zero-short-circuiting |
-| `for` | `for(i, 1, 5, s = s + i)` | Procedural iteration loop with syntax `for(var, start, end, [step], body)`. Returns the evaluation result of the final iteration |
+| `for` | `for(k, 1, 5, s = s + k)` | Procedural iteration loop with syntax `for(var, start, end, [step], body)`. Returns the evaluation result of the final iteration (use variable names other than imaginary unit `i`, e.g. `k`, `j`, `n`) |
 | `to_base` | `to_base(255, 16)` / `to_base(1/3, 2)` | Converts an integer or exact rational into a string representation in the specified base (2 to 64), outputting repeating fractional digits when periodic |
-| `from_base` | `from_base("FF", 16)` / `from_base("101.1", 2)` | Parses a base-$N$ string representation back into an exact arbitrary-precision rational or integer |
+| `from_base` | `from_base("FF", 16)` / `from_base("1011", 2)` | Parses a base-$N$ string representation back into an exact arbitrary-precision integer |
 | `bin`, `oct`, `hex` | `bin(42)`, `oct(42)`, `hex(255)` | Convenience aliases for standard binary, octal, and hexadecimal radix conversions |
 | Radix Literals | `16^^FF`, `2^^1011`, `0x1A`, `0b101` | Lexer support for arbitrary-radix literal constants ($2 \le \text{base} \le 64$) |
 
@@ -477,3 +480,74 @@ Provides term rewriting and pattern matching using underscore wildcard variables
 | `rule` | `rule(sin(_x)^2, 1 - cos(_x)^2)` | Creates a first-class rewrite rule object holding LHS pattern and RHS template |
 | `replace` | `replace(sin(t)^2, rule(sin(_x)^2, 1 - cos(_x)^2))` | Traverses expression bottom-up and replaces matched subterms once |
 | `rewrite` | `rewrite(sin(sin(x)), rule(sin(_t), _t))` / `rewrite(expr, [r1, r2], [max_steps])` | Iteratively applies rules until a fixed point is reached. Protected by cycle detection and configurable step limit in `~/.ihd/config.json` (`rewrite_max_steps`, default 1000) |
+
+---
+
+### 23. Complete CLI Command-Line Options Specification
+
+`ihd` provides rich command-line interfaces for one-liners, pipe workflows, batch scripts, and autonomous certificate verification.
+
+#### Subcommands
+
+| Option / Flag | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `diff` | `ihd diff <expr1\|file1> <expr2\|file2>` | Compares syntactic differences and algebraic equivalence via expansion/factoring |
+| `run` | `ihd run <file.ihd>` | Executes batch calculations from an ihd script file |
+| `completion` | `ihd completion <bash\|zsh\|fish\|powershell>` | Generates shell tab-completion script |
+| `update` | `ihd update` / `ihd update -check` | Self-updates ihd to latest release (supports check-only and forced reinstallation) |
+
+#### Output & Formatting
+
+| Option / Flag | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `--format` | `ihd --format typst "1/2 + sqrt(2)"` | Specifies output format (`typst`, `latex`, `ascii`, `pretty`) |
+| `--pretty` | `ihd --pretty "1/2 + sqrt(2)/2"` | 2D multi-line ASCII-art typesetting output |
+| `--latex` | `ihd --latex "1/2 + sqrt(2)"` | Outputs expression in LaTeX math mode (`$$ ... $$`) |
+| `--typst` | `ihd --typst "1/2 + sqrt(2)"` | Outputs expression in Typst math mode (`$ ... $`) |
+| `--ascii` | `ihd --ascii "sqrt(2) + pi"` | Falls back Unicode symbols to standard ASCII identifiers |
+| `--no-color` | `ihd --no-color` | Disables ANSI color escapes across REPL and CLI outputs |
+| `--theme` | `ihd --theme light` | Configures REPL syntax highlighting theme (`dark`, `light`, `none`) |
+
+#### Approximation & Numerics
+
+| Option / Flag | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `-a`, `--approx` | `ihd -a "sqrt(2)"` | Displays reference arbitrary-precision decimal value derived via rational interval enclosure |
+| `--approx-digits`, `--digits` | `ihd -a --digits 50 "sqrt(2)"` | Sets decimal precision digits for approximation (default: 30) |
+| `-i`, `--interval` | `ihd -i "sin(1)"` | Computes certified rational interval enclosure `[L, R]` guaranteeing true value |
+| `--interval-eps` | `ihd -i --interval-eps 1/1000000 "sin(1)"` | Sets tolerance epsilon for rational interval refinement |
+| `--deg` | `ihd --deg "sin(30)"` | Interprets trigonometric and inverse trigonometric functions in degrees |
+
+#### Derivation & Verification
+
+| Option / Flag | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `--explain` | `ihd --explain "1/(sqrt(2)+1)"` | Displays step-by-step algebraic derivation tree |
+| `--step` | `ihd --step "expand((x+1)^3)"` | Iteratively prints derivation and simplification steps |
+| `--trace` | `ihd --trace "factor(x^2 - 1)"` | Outputs internal search process events (Buchberger, CAD, Risch) as structured JSON |
+| `--verify` | `ihd --verify "factor(x^2 - 1)"` | Verifies algebraic correctness autonomously and prints certificate |
+| `--certificate` | `ihd --certificate cert.json "factor(x^2 - 1)"` | Saves standalone proof certificate to JSON file |
+| `--replay` | `ihd --replay cert.json` | Replays and verifies residual vanishing independently from JSON certificate |
+| `--lean` | `ihd --lean "factor(x^2 - 1)"` | Generates formal proof code in Lean 4 (Mathlib4) syntax |
+| `--lean-file` | `ihd --lean-file proof.lean "factor(x^2 - 1)"` | Saves generated Lean 4 formal proof code to `.lean` file |
+
+#### Execution & Limits
+
+| Option / Flag | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `--timeout` | `ihd --timeout 2s "factor(x^100 - 1)"` | Sets wall-clock execution timeout (e.g. `2s`, `500ms`) |
+| `--budget-steps` | `ihd --budget-steps 5000 "expand((x+1)^20)"` | Sets maximum rewrite budget steps per reduction pass (0 for unlimited) |
+| `--max-nodes` | `ihd --max-nodes 10000 "expand((x+1)^10)"` | Sets maximum allowed AST node count (0 for unlimited) |
+| `--max-depth` | `ihd --max-depth 200 "diff(x^10, x)"` | Sets maximum recursion depth (0 for unlimited) |
+| `--warn-loop` | `ihd --warn-loop 100000 "table(k^2, [k, 1, 200000])"` | Sets iteration warning step threshold (default: 1000) |
+| `--max-loop` | `ihd --max-loop 500000 "table(k^2, [k, 1, 200000])"` | Sets iteration hard abortion threshold (default: 100000, -1 for unlimited) |
+| `--deterministic` | `ihd --deterministic "factor(x^4 - 5*x^2 + 4)"` | Normalizes map iterations and polynomial ordering for deterministic outputs |
+
+#### General
+
+| Option / Flag | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `-h`, `--help` | `ihd -h` / `ihd --help` | Displays categorized, color-highlighted help message |
+| `-v`, `--version` | `ihd -v` / `ihd --version` | Displays version information |
+| `--lang` | `ihd --lang en` / `ihd --lang ja` | Sets display language locale |
+| `--no-update-check` | `ihd --no-update-check` | Disables automated newer release checks |
