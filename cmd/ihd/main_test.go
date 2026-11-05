@@ -168,13 +168,53 @@ func TestCLI_OneShot_Errors(t *testing.T) {
 func TestCLI_Help(t *testing.T) {
 	out := new(bytes.Buffer)
 	errOut := new(bytes.Buffer)
-	code := run([]string{"--help"}, strings.NewReader(""), out, errOut)
+	code := run([]string{"-lang", "en", "--help"}, strings.NewReader(""), out, errOut)
 
 	if code != 0 {
 		t.Fatalf("expected exit code 0, got %d", code)
 	}
 	if !strings.Contains(out.String(), "ihd - Exact Arithmetic Calculator") {
 		t.Errorf("expected help message, got %q", out.String())
+	}
+	expectedSections := []string{
+		"Usage:",
+		"Subcommands:",
+		"Output & Formatting:",
+		"Approximation & Numerics:",
+		"Derivation & Verification:",
+		"Execution & Limits:",
+		"General:",
+		"-a, --approx",
+		"--approx-digits, --digits <int>",
+	}
+	for _, sec := range expectedSections {
+		if !strings.Contains(out.String(), sec) {
+			t.Errorf("expected help output to contain %q, but got:\n%s", sec, out.String())
+		}
+	}
+	outJa := new(bytes.Buffer)
+	errOutJa := new(bytes.Buffer)
+	codeJa := run([]string{"-lang", "ja", "--help"}, strings.NewReader(""), outJa, errOutJa)
+	if codeJa != 0 {
+		t.Fatalf("expected exit code 0 for -lang ja --help, got %d", codeJa)
+	}
+	if !strings.Contains(outJa.String(), "ihd - 厳密数式処理計算機") {
+		t.Errorf("expected Japanese header, got %q", outJa.String())
+	}
+	expectedJaSections := []string{
+		"使用法:",
+		"サブコマンド:",
+		"出力フォーマット & 表示:",
+		"近似計算 & 数値モード:",
+		"導出・証明 & 検証:",
+		"実行制御 & リソース制限:",
+		"全般:",
+		"-a, --approx",
+	}
+	for _, sec := range expectedJaSections {
+		if !strings.Contains(outJa.String(), sec) {
+			t.Errorf("expected Japanese help output to contain %q, but got:\n%s", sec, outJa.String())
+		}
 	}
 }
 

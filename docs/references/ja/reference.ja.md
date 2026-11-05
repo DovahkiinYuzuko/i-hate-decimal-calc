@@ -34,6 +34,8 @@
     - [20. コレクション・リスト操作言語拡張 \& 第一級ラムダ式](#20-コレクションリスト操作言語拡張--第一級ラムダ式)
     - [21. 物理単位計算 \& 次元解析 (SI基本単位・組立単位・単位換算)](#21-物理単位計算--次元解析-si基本単位組立単位単位換算)
       - [対応単位・接頭辞](#対応単位接頭辞)
+    - [22. 代数パターンマッチング & 項書き換え規則 (TRS)](#22-代数パターンマッチング--項書き換え規則-trs)
+    - [23. CLI コマンドラインオプション完全仕様](#23-cli-コマンドラインオプション完全仕様)
 
 ---
 
@@ -479,3 +481,74 @@
 | `rule` | `rule(sin(_x)^2, 1 - cos(_x)^2)` | パターン（左辺）と置換テンプレート（右辺）を保持する第一級ルールオブジェクトを作成 |
 | `replace` | `replace(sin(t)^2, rule(sin(_x)^2, 1 - cos(_x)^2))` | 式木をボトムアップ走査し、マッチした部分式を1回置換 |
 | `rewrite` | `rewrite(sin(sin(x)), rule(sin(_t), _t))` / `rewrite(expr, [r1, r2], [max_steps])` | 不動点（どのルールも適用できなくなる状態）に達するまで繰り返し書き換えを適用。循環検出および `~/.ihd/config.json`（`rewrite_max_steps`、既定値1000）による安全上限ガード付き |
+
+---
+
+### 23. CLI コマンドラインオプション完全仕様
+
+`ihd` は対話型 REPL だけでなく、シェルワンライナー、パイプライン処理、スクリプト実行、証明書検証に対応した豊富なコマンドラインオプションを提供します。
+
+#### サブコマンド
+
+| フラグ・オプション | 書式・例 | 説明 |
+| :--- | :--- | :--- |
+| `diff` | `ihd diff <expr1\|file1> <expr2\|file2>` | 2つの数式またはスクリプトの構文差分および展開・因数分解による代数的等価性を比較 |
+| `run` | `ihd run <file.ihd>` | 複数行の数式・変数定義スクリプトを一括実行 |
+| `completion` | `ihd completion <bash\|zsh\|fish\|powershell>` | 主要シェル向けの自動補完スクリプトを生成 |
+| `update` | `ihd update` / `ihd update -check` | 最新リリースへの自己アップデート（更新確認のみ、強制再インストール対応） |
+
+#### 出力フォーマット & 表示
+
+| フラグ・オプション | 書式・例 | 説明 |
+| :--- | :--- | :--- |
+| `--format` | `ihd --format typst "1/2 + sqrt(2)"` | 出力フォーマットを指定 (`typst`, `latex`, `ascii`, `pretty`) |
+| `--pretty` | `ihd --pretty "1/2 + sqrt(2)/2"` | 2D アスキーアートによる組版プリティプリント |
+| `--latex` | `ihd --latex "1/2 + sqrt(2)"` | LaTeX 数式モード (`$$ ... $$`) で出力 |
+| `--typst` | `ihd --typst "1/2 + sqrt(2)"` | Typst 数式モード (`$ ... $`) で出力 |
+| `--ascii` | `ihd --ascii "sqrt(2) + pi"` | 数学特殊記号を標準 ASCII 文字列にフォールバック |
+| `--no-color` | `ihd --no-color` | REPL および CLI 出力の ANSI カラーシーケンスを無効化 |
+| `--theme` | `ihd --theme light` | REPL シンタックスハイライトテーマを指定 (`dark`, `light`, `none`) |
+
+#### 近似計算 & 数値モード
+
+| フラグ・オプション | 書式・例 | 説明 |
+| :--- | :--- | :--- |
+| `-a`, `--approx` | `ihd -a "sqrt(2)"` | 厳密解の横に有理数区間演算に基づく任意精度小数の参考近似値を併記 |
+| `--approx-digits`, `--digits` | `ihd -a --digits 50 "sqrt(2)"` | 近似値の出力小数桁数を指定（デフォルト: 30） |
+| `-i`, `--interval` | `ihd -i "sin(1)"` | 真値を保証する有理数閉区間 `[L, R]` を出力 |
+| `--interval-eps` | `ihd -i --interval-eps 1/1000000 "sin(1)"` | 有理数区間細分化の許容誤差イプシロンを指定 |
+| `--deg` | `ihd --deg "sin(30)"` | 三角関数・逆三角関数を度数法 (Degree) として計算 |
+
+#### 導出・証明 & 検証
+
+| フラグ・オプション | 書式・例 | 説明 |
+| :--- | :--- | :--- |
+| `--explain` | `ihd --explain "1/(sqrt(2)+1)"` | 代数的な項書き換えの過程を途中式ツリーとして詳細表示 |
+| `--step` | `ihd --step "expand((x+1)^3)"` | 数式変形および証明ステップを標準出力に順次表示 |
+| `--trace` | `ihd --trace "factor(x^2 - 1)"` | グレブナー基底や CAD 等の内部探索過程を構造化 JSON で出力 |
+| `--verify` | `ihd --verify "factor(x^2 - 1)"` | 計算結果の代数的正当性を自律逆算検算し証明書を表示 |
+| `--certificate` | `ihd --certificate cert.json "factor(x^2 - 1)"` | 自己完結型代数証明書を JSON ファイルへ保存 |
+| `--replay` | `ihd --replay cert.json` | 証明書 JSON ファイルを読み込み残差 0 を独立再検証 |
+| `--lean` | `ihd --lean "factor(x^2 - 1)"` | Lean 4 (Mathlib4) 形式の形式証明コードを出力 |
+| `--lean-file` | `ihd --lean-file proof.lean "factor(x^2 - 1)"` | Lean 4 形式証明コードを指定パスの `.lean` ファイルへ保存 |
+
+#### 実行制御 & リソース制限
+
+| フラグ・オプション | 書式・例 | 説明 |
+| :--- | :--- | :--- |
+| `--timeout` | `ihd --timeout 2s "factor(x^100 - 1)"` | 壁時計時間タイムアウトを指定 (例: `2s`, `500ms`) |
+| `--budget-steps` | `ihd --budget-steps 5000 "expand((x+1)^20)"` | 単一簡約パスあたりの計算ステップ予算上限を指定 (0で無制限) |
+| `--max-nodes` | `ihd --max-nodes 10000 "expand((x+1)^10)"` | 生成 AST ノード総数上限を指定 (0で無制限) |
+| `--max-depth` | `ihd --max-depth 200 "diff(x^10, x)"` | AST 再帰深さ上限を指定 (0で無制限) |
+| `--warn-loop` | `ihd --warn-loop 100000 "table(k^2, [k, 1, 200000])"` | 反復ループの警告ステップ数を一時指定 (デフォルト: 1000) |
+| `--max-loop` | `ihd --max-loop 500000 "table(k^2, [k, 1, 200000])"` | 反復ループの最大安全上限ステップ数を一時指定 (デフォルト: 100000, -1で無制限) |
+| `--deterministic` | `ihd --deterministic "factor(x^4 - 5*x^2 + 4)"` | マップ反復や多項式順序を正規化し、バイト単位で決定論的再現性を保証 |
+
+#### 全般
+
+| フラグ・オプション | 書式・例 | 説明 |
+| :--- | :--- | :--- |
+| `-h`, `--help` | `ihd -h` / `ihd --help` | カテゴリ別に色分けされた詳細なヘルプメッセージを表示 |
+| `-v`, `--version` | `ihd -v` / `ihd --version` | バージョン情報を表示 |
+| `--lang` | `ihd --lang ja` / `ihd --lang en` | 言語ロケールを設定 |
+| `--no-update-check` | `ihd --no-update-check` | 新バージョンの自動リリースチェックを無効化 |

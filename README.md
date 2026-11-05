@@ -199,38 +199,48 @@ ihd "１＋２×３"
 
 | オプション | 説明・使用例 |
 | :--- | :--- |
-| `--explain` | 計算過程（有理化・因数分解・微分則・極限等）を途中式ツリーとして表示。<br>`ihd --explain "1 / (sqrt(2) + 1)"` |
-| `--step` | 各簡約ステップの適用ルールと中間式を標準出力にテキストで順次表示。<br>`ihd --step "expand((x+1)^3)"` |
-| `--trace` | 式木の書き換え過程および内部ルール適用の詳細トレースログを出力。<br>`ihd --trace "factor(x^2 - 1)"` |
-| `--pretty` | 分数線や根号を複数行アスキーアートで組版表示する2Dプリティプリント。<br>`ihd --pretty "1/2 + sqrt(2)/2"` |
+| `-a`, `--approx` | 厳密解の横に有理数区間演算に基づく任意精度 `big.Float` 近似および外側丸めによる誤差上限 `±` を併記。<br>`ihd -a "sqrt(2)"` |
+| `--approx-digits <N>`, `--digits <N>` | 近似値の出力小数桁数を指定（デフォルト: 30）。<br>`ihd -a --digits 50 "sqrt(2)"` |
 | `--format <fmt>` | 出力フォーマットを指定（`typst`, `latex`, `ascii`, `pretty`）。<br>`ihd --format typst "1/2 + sqrt(2)"` |
+| `--pretty` | 分数線や根号を複数行アスキーアートで組版表示する2Dプリティプリント。<br>`ihd --pretty "1/2 + sqrt(2)/2"` |
 | `--typst` | 組版システム Typst の数式記法（`$ ... $`）で出力。<br>`ihd --typst "1/2 + sqrt(2)"` |
 | `--latex` | LaTeX 形式（`$$ ... $$`）で数式を出力。<br>`ihd --latex "1/2 + sqrt(2)"` |
 | `--ascii` | 数学記号（`√`, `π`）をASCII文字列（`sqrt`, `pi`）にフォールバック。<br>`ihd --ascii "sqrt(2) + pi"` |
-| `--approx` | 有理数区間演算に基づく任意精度 `big.Float` 近似（`--approx-digits`）および外側丸めによる厳密誤差上限 `±` 表示。<br>`ihd --approx "sqrt(2)"` |
-| `-a`, `--approx-digits <N>` | 近似計算・表示における最大有効桁数を指定（デフォルト: 10、エイリアス: `--digits`）。<br>`ihd --approx -a 20 "sqrt(2)"` |
+| `--explain` | 計算過程（有理化・因数分解・微分則・極限等）を途中式ツリーとして表示。<br>`ihd --explain "1 / (sqrt(2) + 1)"` |
 | `--verify` | 計算結果に対し、定義式や導関数に基づく逆算検算を実行。<br>`ihd --verify "integrate(1/(x^2 + 1), x)"` |
+| `-i`, `--interval` | 適応的区間細分化（Rational Interval Arithmetic）による包含区間を算出。<br>`ihd -i "sin(1)"` |
+| `--lean` | 定理証明支援系 **Lean 4（Mathlib4）** の形式証明コードを出力。<br>`ihd --lean "factor(x^2 - 1)"` |
+| `-h`, `--help` | カテゴリ別に色分けされた詳細なヘルプを表示。 |
+
+<details>
+<summary><strong>詳細・高度な実行制御オプション一覧を展開（クリック）</strong></summary>
+
+| オプション | 説明・使用例 |
+| :--- | :--- |
+| `--step` | 各簡約ステップの適用ルールと中間式を標準出力にテキストで順次表示。<br>`ihd --step "expand((x+1)^3)"` |
+| `--trace` | 式木の書き換え過程および内部ルール適用の詳細トレースログを出力。<br>`ihd --trace "factor(x^2 - 1)"` |
 | `--certificate <file>` | 計算結果と導出ステップ列を証明書 JSON（`ihd-proof-trace-v1`）として出力または保存。<br>`ihd --certificate cert.json "factor(x^2 - 1)"` |
 | `--replay <file>` | 保存された証明書 JSON ファイルを読み込み、各ステップの残差が0かを再検証。<br>`ihd --replay cert.json` |
-| `--lean` | 定理証明支援系 **Lean 4（Mathlib4）** の形式証明コードを出力。<br>`ihd --lean "factor(x^2 - 1)"` |
 | `--lean-file <path>` | 生成された Lean 4 証明コードをスタンドアロンな `.lean` ファイルとして保存。<br>`ihd --lean-file proof.lean "factor(x^2 - 1)"` |
-| `-i`, `--interval` | 適応的区間細分化（Rational Interval Arithmetic）による包含区間を算出。<br>`ihd -i "sin(1)"` |
 | `--interval-eps <eps>` | 区間演算における収束判定の許容誤差上限を指定（有理数または小数表記）。<br>`ihd -i --interval-eps 1/1000000 "sin(1)"` |
 | `--deg` | 三角関数および逆三角関数を度数法（Degree）として解釈・計算。<br>`ihd --deg "sin(30)"` |
 | `--theme <dark\|light\|none>` | REPLのカラーテーマを指定（`~/.ihd/config.json` に永続化）。<br>`ihd --theme light` |
 | `--lang <code/auto>` | 表示言語を指定（`ja`, `en`, `auto`）。<br>`ihd --lang en "1/2 + 1/3"` |
 | `--timeout <dur>` | 壁時計時間タイムアウトを指定（例: `2s`, `500ms`）。<br>`ihd --timeout 2s "factor(x^100 - 1)"` |
-| `--deterministic` | マップ反復や多項式順序を正規化し、バイト単位で決定論的な出力を保証。<br>`ihd --deterministic "factor(x^4 - 5*x^2 + 4)"` |
 | `--budget-steps <N>` | 単一簡約パスあたりの最大書き換えステップ数上限を指定。<br>`ihd --budget-steps 5000 "expand((x+1)^20)"` |
 | `--max-nodes <N>` | 式木展開における最大許容ASTノード数を制限。<br>`ihd --max-nodes 10000 "expand((x+1)^10)"` |
 | `--max-depth <N>` | 再帰的簡約処理の最大スタック深度を制限。<br>`ihd --max-depth 200 "diff(x^10, x)"` |
 | `--warn-loop <N>` | 反復構文（`table`, `for`, `product`）で警告を発出するループ回数閾値（デフォルト: 1000）。 |
 | `--max-loop <N>` | 反復構文で実行を強制遮断する最大ループ回数上限（デフォルト: 100000）。 |
+| `--deterministic` | マップ反復や多項式順序を正規化し、バイト単位で決定論的な出力を保証。<br>`ihd --deterministic "factor(x^4 - 5*x^2 + 4)"` |
 | `--no-color` | 端末出力時のANSIカラーシーケンス（色付け）を無効化。 |
-| `-h`, `--help` | 利用可能な全オプションと詳細なヘルプを表示。 |
+| `--no-update-check` | 新バージョンの自動チェックを無効化。 |
+| `-v`, `--version` | バージョン情報を表示。 |
+
+</details>
 
 > [!NOTE]
-> すべてのコマンドラインフラグ一覧と詳細仕様は `ihd --help` を実行して確認してください。
+> すべてのコマンドラインフラグ一覧と詳細仕様は [完全構文リファレンス](docs/references/ja/reference.ja.md) または `ihd --help` を実行して確認してください。
 
 ---
 

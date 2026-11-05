@@ -34,6 +34,8 @@ Complete language specification and built-in function reference for `ihd` (i-hat
     - [20. Collection Manipulation \& First-Class Lambda Expressions](#20-collection-manipulation--first-class-lambda-expressions)
     - [21. Physical Units \& Dimensional Analysis](#21-physical-units--dimensional-analysis)
       - [Supported Units \& Prefixes](#supported-units--prefixes)
+    - [22. Algebraic Pattern Matching & Term Rewriting Rules (TRS)](#22-algebraic-pattern-matching--term-rewriting-rules-trs)
+    - [23. Complete CLI Command-Line Options Specification](#23-complete-cli-command-line-options-specification)
 
 ---
 
@@ -478,3 +480,74 @@ Provides term rewriting and pattern matching using underscore wildcard variables
 | `rule` | `rule(sin(_x)^2, 1 - cos(_x)^2)` | Creates a first-class rewrite rule object holding LHS pattern and RHS template |
 | `replace` | `replace(sin(t)^2, rule(sin(_x)^2, 1 - cos(_x)^2))` | Traverses expression bottom-up and replaces matched subterms once |
 | `rewrite` | `rewrite(sin(sin(x)), rule(sin(_t), _t))` / `rewrite(expr, [r1, r2], [max_steps])` | Iteratively applies rules until a fixed point is reached. Protected by cycle detection and configurable step limit in `~/.ihd/config.json` (`rewrite_max_steps`, default 1000) |
+
+---
+
+### 23. Complete CLI Command-Line Options Specification
+
+`ihd` provides rich command-line interfaces for one-liners, pipe workflows, batch scripts, and autonomous certificate verification.
+
+#### Subcommands
+
+| Option / Flag | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `diff` | `ihd diff <expr1\|file1> <expr2\|file2>` | Compares syntactic differences and algebraic equivalence via expansion/factoring |
+| `run` | `ihd run <file.ihd>` | Executes batch calculations from an ihd script file |
+| `completion` | `ihd completion <bash\|zsh\|fish\|powershell>` | Generates shell tab-completion script |
+| `update` | `ihd update` / `ihd update -check` | Self-updates ihd to latest release (supports check-only and forced reinstallation) |
+
+#### Output & Formatting
+
+| Option / Flag | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `--format` | `ihd --format typst "1/2 + sqrt(2)"` | Specifies output format (`typst`, `latex`, `ascii`, `pretty`) |
+| `--pretty` | `ihd --pretty "1/2 + sqrt(2)/2"` | 2D multi-line ASCII-art typesetting output |
+| `--latex` | `ihd --latex "1/2 + sqrt(2)"` | Outputs expression in LaTeX math mode (`$$ ... $$`) |
+| `--typst` | `ihd --typst "1/2 + sqrt(2)"` | Outputs expression in Typst math mode (`$ ... $`) |
+| `--ascii` | `ihd --ascii "sqrt(2) + pi"` | Falls back Unicode symbols to standard ASCII identifiers |
+| `--no-color` | `ihd --no-color` | Disables ANSI color escapes across REPL and CLI outputs |
+| `--theme` | `ihd --theme light` | Configures REPL syntax highlighting theme (`dark`, `light`, `none`) |
+
+#### Approximation & Numerics
+
+| Option / Flag | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `-a`, `--approx` | `ihd -a "sqrt(2)"` | Displays reference arbitrary-precision decimal value derived via rational interval enclosure |
+| `--approx-digits`, `--digits` | `ihd -a --digits 50 "sqrt(2)"` | Sets decimal precision digits for approximation (default: 30) |
+| `-i`, `--interval` | `ihd -i "sin(1)"` | Computes certified rational interval enclosure `[L, R]` guaranteeing true value |
+| `--interval-eps` | `ihd -i --interval-eps 1/1000000 "sin(1)"` | Sets tolerance epsilon for rational interval refinement |
+| `--deg` | `ihd --deg "sin(30)"` | Interprets trigonometric and inverse trigonometric functions in degrees |
+
+#### Derivation & Verification
+
+| Option / Flag | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `--explain` | `ihd --explain "1/(sqrt(2)+1)"` | Displays step-by-step algebraic derivation tree |
+| `--step` | `ihd --step "expand((x+1)^3)"` | Iteratively prints derivation and simplification steps |
+| `--trace` | `ihd --trace "factor(x^2 - 1)"` | Outputs internal search process events (Buchberger, CAD, Risch) as structured JSON |
+| `--verify` | `ihd --verify "factor(x^2 - 1)"` | Verifies algebraic correctness autonomously and prints certificate |
+| `--certificate` | `ihd --certificate cert.json "factor(x^2 - 1)"` | Saves standalone proof certificate to JSON file |
+| `--replay` | `ihd --replay cert.json` | Replays and verifies residual vanishing independently from JSON certificate |
+| `--lean` | `ihd --lean "factor(x^2 - 1)"` | Generates formal proof code in Lean 4 (Mathlib4) syntax |
+| `--lean-file` | `ihd --lean-file proof.lean "factor(x^2 - 1)"` | Saves generated Lean 4 formal proof code to `.lean` file |
+
+#### Execution & Limits
+
+| Option / Flag | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `--timeout` | `ihd --timeout 2s "factor(x^100 - 1)"` | Sets wall-clock execution timeout (e.g. `2s`, `500ms`) |
+| `--budget-steps` | `ihd --budget-steps 5000 "expand((x+1)^20)"` | Sets maximum rewrite budget steps per reduction pass (0 for unlimited) |
+| `--max-nodes` | `ihd --max-nodes 10000 "expand((x+1)^10)"` | Sets maximum allowed AST node count (0 for unlimited) |
+| `--max-depth` | `ihd --max-depth 200 "diff(x^10, x)"` | Sets maximum recursion depth (0 for unlimited) |
+| `--warn-loop` | `ihd --warn-loop 100000 "table(k^2, [k, 1, 200000])"` | Sets iteration warning step threshold (default: 1000) |
+| `--max-loop` | `ihd --max-loop 500000 "table(k^2, [k, 1, 200000])"` | Sets iteration hard abortion threshold (default: 100000, -1 for unlimited) |
+| `--deterministic` | `ihd --deterministic "factor(x^4 - 5*x^2 + 4)"` | Normalizes map iterations and polynomial ordering for deterministic outputs |
+
+#### General
+
+| Option / Flag | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `-h`, `--help` | `ihd -h` / `ihd --help` | Displays categorized, color-highlighted help message |
+| `-v`, `--version` | `ihd -v` / `ihd --version` | Displays version information |
+| `--lang` | `ihd --lang en` / `ihd --lang ja` | Sets display language locale |
+| `--no-update-check` | `ihd --no-update-check` | Disables automated newer release checks |

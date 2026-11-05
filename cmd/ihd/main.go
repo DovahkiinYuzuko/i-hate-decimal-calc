@@ -10,7 +10,6 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 
@@ -176,7 +175,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 	}
 
 	if *helpFlag {
-		printHelp(fs, out)
+		printHelp(fs, out, *noColorFlag)
 		return 0
 	}
 
@@ -411,6 +410,24 @@ func isTerminal(r io.Reader) bool {
 		return (stat.Mode() & os.ModeCharDevice) != 0
 	}
 	return false
+}
+
+func isTerminalWriter(w io.Writer) bool {
+	if f, ok := w.(*os.File); ok {
+		stat, err := f.Stat()
+		if err != nil {
+			return false
+		}
+		return (stat.Mode() & os.ModeCharDevice) != 0
+	}
+	return false
+}
+
+func useColor(w io.Writer, noColorFlag bool) bool {
+	if noColorFlag || os.Getenv("NO_COLOR") != "" {
+		return false
+	}
+	return isTerminalWriter(w)
 }
 
 func formatOutput(node calc.Node, ro runOptions) string {
@@ -1015,29 +1032,124 @@ func runUpdate(args []string, out, errOut io.Writer) int {
 	return 0
 }
 
-func printHelp(fs *flag.FlagSet, out io.Writer) {
-	if i18n.CurrentLocale() == "ja" {
-		fmt.Fprintf(out, "ihd - 厳密数式処理計算機\n\n")
-	} else {
-		fmt.Fprintf(out, "ihd - Exact Arithmetic Calculator\n\n")
+func printHelp(fs *flag.FlagSet, out io.Writer, noColor bool) {
+	colorize := useColor(out, noColor)
+
+	bold := func(s string) string {
+		if !colorize {
+			return s
+		}
+		return "\x1B[1m" + s + "\x1B[0m"
 	}
-	fmt.Fprintf(out, "%s:\n", i18n.T("cli.help_usage_label"))
-	fmt.Fprintln(out, "  ihd [flags] [expression]")
-	fmt.Fprintln(out, "  ihd [flags]                (Starts interactive REPL)")
-	fmt.Fprintln(out, "  echo \"expr\" | ihd [flags]   (Evaluates piped input)")
-	fmt.Fprintln(out, "  ihd <command> [flags]")
+	cyanBold := func(s string) string {
+		if !colorize {
+			return s
+		}
+		return "\x1B[1;36m" + s + "\x1B[0m"
+	}
+	greenBold := func(s string) string {
+		if !colorize {
+			return s
+		}
+		return "\x1B[1;32m" + s + "\x1B[0m"
+	}
+	yellow := func(s string) string {
+		if !colorize {
+			return s
+		}
+		return "\x1B[33m" + s + "\x1B[0m"
+	}
+
+	if i18n.CurrentLocale() == "ja" {
+		fmt.Fprintf(out, "%s\n\n", bold("ihd - 厳密数式処理計算機"))
+	} else {
+		fmt.Fprintf(out, "%s\n\n", bold("ihd - Exact Arithmetic Calculator"))
+	}
+
+	fmt.Fprintf(out, "%s:\n", cyanBold(i18n.T("cli.help_usage_label")))
+	fmt.Fprintf(out, "  %s %s %s\n", bold("ihd"), yellow("[flags]"), yellow("[expression]"))
+	fmt.Fprintf(out, "  %s %s                (Starts interactive REPL)\n", bold("ihd"), yellow("[flags]"))
+	fmt.Fprintf(out, "  echo \"expr\" | %s %s   (Evaluates piped input)\n", bold("ihd"), yellow("[flags]"))
+	fmt.Fprintf(out, "  %s %s %s\n", bold("ihd"), yellow("<command>"), yellow("[flags]"))
 	fmt.Fprintln(out)
-	fmt.Fprintf(out, "%s:\n", i18n.T("cli.help_subcommands_label"))
-	fmt.Fprintf(out, "  diff <expr1|file1> <expr2|file2>  %s\n", i18n.T("cli.subcmd_diff"))
-	fmt.Fprintf(out, "  run <file.ihd>                    %s\n", i18n.T("cli.subcmd_run"))
-	fmt.Fprintf(out, "  completion <shell>                %s\n", i18n.T("cli.subcmd_completion"))
-	fmt.Fprintf(out, "  update                            %s\n", i18n.T("cli.cmd_update_desc"))
-	fmt.Fprintln(out)
-	fmt.Fprintf(out, "%s:\n", i18n.T("cli.help_flags_label"))
+
+	fmt.Fprintf(out, "%s:\n", cyanBold(i18n.T("cli.help_subcommands_label")))
+	type subcmdEntry struct {
+		syntaxPlain    string
+		syntaxColored  string
+		desc           string
+	}
+	subcmds := []subcmdEntry{
+		{
+			syntaxPlain:   "diff <expr1|file1> <expr2|file2>",
+			syntaxColored: fmt.Sprintf("%s %s %s", greenBold("diff"), yellow("<expr1|file1>"), yellow("<expr2|file2>")),
+			desc:          i18n.T("cli.subcmd_diff"),
+		},
+		{
+			syntaxPlain:   "run <file.ihd>",
+			syntaxColored: fmt.Sprintf("%s %s", greenBold("run"), yellow("<file.ihd>")),
+			desc:          i18n.T("cli.subcmd_run"),
+		},
+		{
+			syntaxPlain:   "completion <shell>",
+			syntaxColored: fmt.Sprintf("%s %s", greenBold("completion"), yellow("<shell>")),
+			desc:          i18n.T("cli.subcmd_completion"),
+		},
+		{
+			syntaxPlain:   "update",
+			syntaxColored: greenBold("update"),
+			desc:          i18n.T("cli.cmd_update_desc"),
+		},
+	}
+	subcmdMaxLen := 0
+	for _, sc := range subcmds {
+		if len(sc.syntaxPlain) > subcmdMaxLen {
+			subcmdMaxLen = len(sc.syntaxPlain)
+		}
+	}
+	for _, sc := range subcmds {
+		padding := strings.Repeat(" ", subcmdMaxLen-len(sc.syntaxPlain))
+		if colorize {
+			fmt.Fprintf(out, "  %s%s  %s\n", sc.syntaxColored, padding, sc.desc)
+		} else {
+			fmt.Fprintf(out, "  %s%s  %s\n", sc.syntaxPlain, padding, sc.desc)
+		}
+	}
 
 	type flagEntry struct {
-		syntax string
-		usage  string
+		flagPart       string
+		argPartPlain   string
+		argPartColored string
+		syntaxPlain    string
+		usage          string
+	}
+
+	type flagCategory struct {
+		titleKey string
+		flags    []string
+	}
+
+	categories := []flagCategory{
+		{
+			titleKey: "cli.help_group_formatting",
+			flags:    []string{"format", "pretty", "latex", "typst", "ascii", "no-color", "theme"},
+		},
+		{
+			titleKey: "cli.help_group_numerics",
+			flags:    []string{"approx", "approx-digits", "interval", "interval-eps", "deg"},
+		},
+		{
+			titleKey: "cli.help_group_verification",
+			flags:    []string{"explain", "step", "trace", "verify", "certificate", "replay", "lean", "lean-file"},
+		},
+		{
+			titleKey: "cli.help_group_limits",
+			flags:    []string{"timeout", "budget-steps", "max-nodes", "max-depth", "warn-loop", "max-loop", "deterministic"},
+		},
+		{
+			titleKey: "cli.help_group_general",
+			flags:    []string{"help", "version", "lang", "no-update-check"},
+		},
 	}
 
 	aliases := map[string]string{
@@ -1070,19 +1182,11 @@ func printHelp(fs *flag.FlagSet, out io.Writer) {
 		flagMap[f.Name] = f
 	})
 
-	var primaryNames []string
-	for name := range flagMap {
-		if _, isAlias := aliases[name]; !isAlias {
-			primaryNames = append(primaryNames, name)
-		}
-	}
-	sort.Strings(primaryNames)
-
-	var entries []flagEntry
-	maxLen := 0
-	for _, name := range primaryNames {
+	buildEntry := func(name string) flagEntry {
 		f := flagMap[name]
-		syntax := ""
+		if f == nil {
+			return flagEntry{}
+		}
 		shortName := ""
 		for s, p := range aliases {
 			if p == name && len(s) == 1 {
@@ -1091,32 +1195,65 @@ func printHelp(fs *flag.FlagSet, out io.Writer) {
 			}
 		}
 
+		flagPart := ""
 		if shortName != "" {
-			syntax = fmt.Sprintf("-%s, --%s", shortName, name)
+			flagPart = fmt.Sprintf("-%s, --%s", shortName, name)
 		} else {
-			syntax = fmt.Sprintf("    --%s", name)
+			flagPart = fmt.Sprintf("    --%s", name)
 		}
 
 		for s, p := range aliases {
 			if p == name && len(s) > 1 {
-				syntax += fmt.Sprintf(", --%s", s)
+				flagPart += fmt.Sprintf(", --%s", s)
 			}
 		}
 
+		argPlain := ""
+		argColored := ""
 		if arg, hasArg := argTypes[name]; hasArg {
-			syntax += " " + arg
+			argPlain = " " + arg
+			argColored = " " + yellow(arg)
 		}
 
-		if len(syntax) > maxLen {
-			maxLen = len(syntax)
+		return flagEntry{
+			flagPart:       flagPart,
+			argPartPlain:   argPlain,
+			argPartColored: argColored,
+			syntaxPlain:    flagPart + argPlain,
+			usage:          f.Usage,
 		}
-		entries = append(entries, flagEntry{
-			syntax: syntax,
-			usage:  f.Usage,
-		})
 	}
 
-	for _, e := range entries {
-		fmt.Fprintf(out, "  %-*s  %s\n", maxLen, e.syntax, e.usage)
+	maxLen := 0
+	catEntriesMap := make(map[string][]flagEntry)
+	for _, cat := range categories {
+		var entries []flagEntry
+		for _, name := range cat.flags {
+			e := buildEntry(name)
+			if e.syntaxPlain != "" {
+				if len(e.syntaxPlain) > maxLen {
+					maxLen = len(e.syntaxPlain)
+				}
+				entries = append(entries, e)
+			}
+		}
+		catEntriesMap[cat.titleKey] = entries
+	}
+
+	for _, cat := range categories {
+		entries := catEntriesMap[cat.titleKey]
+		if len(entries) == 0 {
+			continue
+		}
+		fmt.Fprintln(out)
+		fmt.Fprintf(out, "%s:\n", cyanBold(i18n.T(cat.titleKey)))
+		for _, e := range entries {
+			padding := strings.Repeat(" ", maxLen-len(e.syntaxPlain))
+			if colorize {
+				fmt.Fprintf(out, "  %s%s%s  %s\n", greenBold(e.flagPart), e.argPartColored, padding, e.usage)
+			} else {
+				fmt.Fprintf(out, "  %s%s  %s\n", e.syntaxPlain, padding, e.usage)
+			}
+		}
 	}
 }
