@@ -18,3 +18,10 @@ STURM-WIT-002,cat_88_metamorphic_roundtrip,"""root_count((x - 4)^2 + 1, x, -100,
 STURM-WIT-003,cat_88_metamorphic_roundtrip,"""root_count((x - 6)^2 + 1, x, -100, 100)""",,exact,0,,0,deductive,"自社証明: スツルム列による区間 [-100, 100] における実根非存在の決定論的証明 ((x-6)^2+1)"
 STURM-WIT-004,cat_88_metamorphic_roundtrip,"""root_count((x - 8)^2 + 1, x, -100, 100)""",,exact,0,,0,deductive,"自社証明: スツルム列による区間 [-100, 100] における実根非存在の決定論的証明 ((x-8)^2+1)"
 STURM-WIT-005,cat_88_metamorphic_roundtrip,"""root_count((x - 10)^2 + 1, x, -100, 100)""",,exact,0,,0,deductive,"自社証明: スツルム列による区間 [-100, 100] における実根非存在の決定論的証明 ((x-10)^2+1)"
+MET-FAC-001,cat_88_metamorphic_roundtrip,"""factor(x^2 + x + 1)""",,exact,1 + x + x^2,,0,deductive,メタモルフィック・健全性アンカー: 有理数体上既約多項式の不変性 (空実装factor検出)
+MET-FAC-002,cat_88_metamorphic_roundtrip,"""factor(x^2 - 1)""",,exact,(-1 + x)*(1 + x),,0,deductive,メタモルフィック・構造的分解: 可約多項式の因数分解分解確認 (空実装factor検出)
+STURM-WIT-006,cat_88_metamorphic_roundtrip,"""root_count((x - 1)^2, x, -10, 10)""",,exact,1,,0,deductive,自社証明: スツルム列による重根多項式 (x-1)^2 の平方因子除去実根数判定
+STURM-WIT-007,cat_88_metamorphic_roundtrip,"""root_count((x - 2)^2 * (x + 3), x, -10, 10)""",,exact,2,,0,deductive,"自社証明: スツルム列による重根・単根混在 (x-2)^2*(x+3) の実根数判定"
+MET-CAL-005,cat_88_metamorphic_roundtrip,"""diff(integrate(cos(x), x), x) - cos(x)""",,exact,0,,0,inductive,メタモルフィック: 三角関数 cos(x) の微積分往復写像・差分ゼロ恒等性
+MET-CAL-006,cat_88_metamorphic_roundtrip,"""diff(integrate(sin(2*x), x), x) - sin(2*x)""",,exact,0,,0,inductive,"メタモルフィック: 合成三角関数 sin(2*x) の微積分往復写像・差分ゼロ恒等性"
+

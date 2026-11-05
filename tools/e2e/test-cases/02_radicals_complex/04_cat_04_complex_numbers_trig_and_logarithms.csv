@@ -36,3 +36,9 @@ CAT04-034,cat_04_complex_numbers_trig_and_logarithms,cos(60*deg),,exact,1/2,,0,d
 CAT04-035,cat_04_complex_numbers_trig_and_logarithms,tan(45*deg),,exact,1,,0,deductive,DegConstant: tan(45*deg)
 CAT04-036,cat_04_complex_numbers_trig_and_logarithms,"""asin(1/2) / deg""",,exact,30,,0,deductive,DegConstant: asin(1/2) / deg
 CAT04-037,cat_04_complex_numbers_trig_and_logarithms,"""atan(1) / deg""",,exact,45,,0,deductive,DegConstant: atan(1) / deg
+DED-BRC-001,cat_04_complex_numbers_trig_and_logarithms,"""sqrt(1/4) - 1/sqrt(4)""",,exact,0,,0,deductive,演繹法: 正の実数における逆数の平方根恒等式 (Wester test_K9)
+CON-BRC-001,cat_04_complex_numbers_trig_and_logarithms,"""sqrt(1/(-4)) - 1/sqrt(-4)""",,exact,i,,0,contradiction,背理法・反例: 負の実数における差分非ゼロ (Wester test_K8)
+DED-BRC-002,cat_04_complex_numbers_trig_and_logarithms,"""sqrt(1/(-4)) + 1/sqrt(-4)""",,exact,0,,0,deductive,演繹法: 負の実数における分岐切断の符号反転和の恒等性 (Wester test_K10)
+CON-BRC-002,cat_04_complex_numbers_trig_and_logarithms,"""sqrt((-1)*(-4)) / (sqrt(-1) * sqrt(-4))""",,exact,-1,,0,contradiction,背理法・残差固定: 負の実数乗算における平方根分配則の破綻と残差-1
+CON-LOG-001,cat_04_complex_numbers_trig_and_logarithms,ln(-1),,error,,,1,contradiction,背理法・契約境界: 実数モードにおける自然対数の負数定義域外エラー捕捉
+

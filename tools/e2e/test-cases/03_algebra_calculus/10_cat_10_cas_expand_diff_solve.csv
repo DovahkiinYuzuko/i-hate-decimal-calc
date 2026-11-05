@@ -16,3 +16,8 @@ CAT10-014,cat_10_cas_expand_diff_solve,"""solve(x^2 - 5*x + 6, x)""",,exact,"[2,
 CAT10-015,cat_10_cas_expand_diff_solve,"""solve(x^2 - 4*x + 4, x)""",,exact,[2],,0,deductive,CAS: Quadratic equation repeated root
 CAT10-016,cat_10_cas_expand_diff_solve,"""solve(x^2 - 2, x)""",,exact,"[-√2, √2]",,0,deductive,CAS: Quadratic equation irrational radical roots
 CAT10-017,cat_10_cas_expand_diff_solve,"""solve(x^2 + 1, x)""",,exact,"[-i, i]",,0,deductive,CAS: Quadratic equation complex imaginary roots
+DED-ALG-001,cat_10_cas_expand_diff_solve,"""diff(integrate(x^3, x), x) - x^3""",,exact,0,,0,deductive,演繹法・差分ゼロ往復写像: べき乗 x^3 の微積分逆写像の恒等性
+DED-ALG-002,cat_10_cas_expand_diff_solve,"""expand((x + 1)^4) - (1 + 4*x + 6*x^2 + 4*x^3 + x^4)""",,exact,0,,0,deductive,演繹法・二項定理: 4乗展開の差分ゼロ完全等価性
+DED-VER-001,cat_10_cas_expand_diff_solve,"""verify((x + 2)*(x - 2), x^2 - 4)""",,exact,"[VERIFIED: -4 + x^2 == -4 + x^2]",,0,deductive,演繹法・証明書自己検証: 代数等価性証明書の自動生成と検証
+CON-SLV-001,cat_10_cas_expand_diff_solve,"""solve(1, x)""",,error,,,1,contradiction,背理法・不能方程式: 矛盾 (1 = 0) の不成立検出とエラー送出
+
