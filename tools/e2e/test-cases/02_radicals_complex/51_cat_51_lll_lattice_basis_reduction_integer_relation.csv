@@ -1,0 +1,4 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT51-001,cat_51_lll_lattice_basis_reduction_integer_relation,"""lll([[1, -1, 3], [1, 0, 5], [1, 2, 6]])""",,exact,"[[0, 1, -1], [1, -1, 0], [1, 1, 1]]",,0,deductive,LLL: 3D integer lattice basis reduction
+CAT51-002,cat_51_lll_lattice_basis_reduction_integer_relation,"""find_min_poly(sqrt(2), 2)""",,exact,-2 + x^2,,0,deductive,LLL: Minimal polynomial of sqrt(2)
+CAT51-003,cat_51_lll_lattice_basis_reduction_integer_relation,"""find_min_poly(sqrt(2) + sqrt(3), 4)""",,exact,1 - 10*x^2 + x^4,,0,deductive,LLL: Minimal polynomial of sqrt(2) + sqrt(3)

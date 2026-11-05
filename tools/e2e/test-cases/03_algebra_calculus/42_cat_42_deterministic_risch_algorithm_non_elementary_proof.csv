@@ -1,0 +1,8 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT42-001,cat_42_deterministic_risch_algorithm_non_elementary_proof,"""risch_integrate(1 / (x^2 - 1), x)""",,exact,-ln(1 + x)/2 + ln(-1 + x)/2,,0,deductive,Risch: Rational function simple poles 1/(x^2 - 1)
+CAT42-002,cat_42_deterministic_risch_algorithm_non_elementary_proof,"""risch_integrate(1 / (x^2 + 1), x)""",,exact,atan(x),,0,deductive,Risch: Rational function arctan quadratic pole 1/(x^2 + 1)
+CAT42-003,cat_42_deterministic_risch_algorithm_non_elementary_proof,"""risch_integrate(1 / ((x^2 + 1)^2), x)""",,exact,1/2*(1 + x^2)^-1*x + atan(x)/2,,0,deductive,Risch: Multiple pole Hermite reduction 1/(x^2 + 1)^2
+CAT42-004,cat_42_deterministic_risch_algorithm_non_elementary_proof,"""risch_integrate(ln(x), x)""",,exact,-x + x*ln(x),,0,deductive,Risch: Transcendental log extension ln(x)
+CAT42-005,cat_42_deterministic_risch_algorithm_non_elementary_proof,"""risch_integrate(x * exp(x^2), x)""",,exact,exp(x^2)/2,,0,deductive,Risch: Transcendental exp extension x * exp(x^2)
+CAT42-006,cat_42_deterministic_risch_algorithm_non_elementary_proof,"""risch_integrate(exp(-x^2), x)""",,error,,*nonelementary integral*,1,contradiction,Risch: Liouville non-elementary proof exp(-x^2)
+CAT42-007,cat_42_deterministic_risch_algorithm_non_elementary_proof,"""integrate(exp(-x^2), x)""",,exact,1/2*√(π)*erf(x),,0,deductive,Risch: Integration gaussian closed form via erf

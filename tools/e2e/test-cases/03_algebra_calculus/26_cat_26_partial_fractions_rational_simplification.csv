@@ -1,0 +1,6 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT26-001,cat_26_partial_fractions_rational_simplification,"""apart(1 / (x^2 - 1))""",,exact,-1/(2*(1 + x)) + 1/(2*(-1 + x)),,0,deductive,Rational: Partial fraction decomposition linear
+CAT26-002,cat_26_partial_fractions_rational_simplification,"""apart((x^2 + 1) / (x - 1))""",,exact,1 + x + 2*(-1 + x)^-1,,0,deductive,Rational: Partial fraction improper with polynomial
+CAT26-003,cat_26_partial_fractions_rational_simplification,"""together(1/x + 1/(x + 1))""",,exact,(1 + 2*x)*(x + x^2)^-1,,0,deductive,Rational: Together basic sum
+CAT26-004,cat_26_partial_fractions_rational_simplification,"""together(1/(x - 1) - 1/(x + 1))""",,exact,2*(-1 + x^2)^-1,,0,deductive,Rational: Together difference cancellation
+CAT26-005,cat_26_partial_fractions_rational_simplification,"""apart(together(1/(x - 1) - 1/(x + 1)))""",,exact,(-1 + x)^-1 - (1 + x)^-1,,0,deductive,Rational: Round-trip together and apart

@@ -1,0 +1,5 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT07-001,cat_07_zenkaku_ime_auto_normalization,１＋２×３,,exact,7,,0,deductive,Zenkaku: Full-width digits and operators
+CAT07-002,cat_07_zenkaku_ime_auto_normalization,（１２＋３４）×５,,exact,230,,0,deductive,Zenkaku: Full-width parentheses and multiplication
+CAT07-003,cat_07_zenkaku_ime_auto_normalization,ａｂｓ（－５）　＋　ｃｂｒｔ（２７）,,exact,8,,0,deductive,Zenkaku: Full-width function and parens
+CAT07-004,cat_07_zenkaku_ime_auto_normalization,ｇｃｄ（２４，　３６）,,exact,12,,0,deductive,Zenkaku: Full-width comma and identifiers

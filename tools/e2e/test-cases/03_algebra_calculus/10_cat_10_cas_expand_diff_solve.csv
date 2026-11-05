@@ -1,0 +1,18 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT10-001,cat_10_cas_expand_diff_solve,"""expand((x + 1) * (x - 2))""",,exact,-2 - x + x^2,,0,deductive,CAS: Polynomial expand binomial product
+CAT10-002,cat_10_cas_expand_diff_solve,"""expand((x + 1)^2)""",,exact,1 + 2*x + x^2,,0,deductive,CAS: Polynomial expand square
+CAT10-003,cat_10_cas_expand_diff_solve,"""expand((x + 1)^3)""",,exact,1 + 3*x + 3*x^2 + x^3,,0,deductive,CAS: Polynomial expand cube
+CAT10-004,cat_10_cas_expand_diff_solve,factor(360),,exact,2^3*3^2*5,,0,deductive,CAS: Integer prime factorization factor(360)
+CAT10-005,cat_10_cas_expand_diff_solve,"""factor(x^2 - 5*x + 6)""",,exact,(-2 + x)*(-3 + x),,0,deductive,CAS: Polynomial factorization factor quadratic
+CAT10-006,cat_10_cas_expand_diff_solve,"""factor(2*x^2 + 4*x)""",,exact,2*x*(2 + x),,0,deductive,CAS: Polynomial factorization common factors
+CAT10-007,cat_10_cas_expand_diff_solve,"""diff(x^3 - 3*x^2 + 2*x - 5, x)""",,exact,2 - 6*x + 3*x^2,,0,deductive,CAS: Symbolic differentiation polynomial
+CAT10-008,cat_10_cas_expand_diff_solve,"""diff(sin(2*x), x)""",,exact,2*cos(2*x),,0,deductive,CAS: Symbolic differentiation trig chain rule
+CAT10-009,cat_10_cas_expand_diff_solve,"""diff(ln(x), x)""",,exact,x^-1,,0,deductive,CAS: Symbolic differentiation natural log
+CAT10-010,cat_10_cas_expand_diff_solve,"""diff(e^x, x)""",,exact,e^x,,0,deductive,CAS: Symbolic differentiation exponential
+CAT10-011,cat_10_cas_expand_diff_solve,"""solve(2*x + 4, x)""",,exact,[-2],,0,deductive,CAS: Linear equation integer root
+CAT10-012,cat_10_cas_expand_diff_solve,"""solve(3*x - 1, x)""",,exact,[1/3],,0,deductive,CAS: Linear equation rational root
+CAT10-013,cat_10_cas_expand_diff_solve,"""solve(x^2 - 4, x)""",,exact,"[-2, 2]",,0,deductive,CAS: Quadratic equation two integer roots
+CAT10-014,cat_10_cas_expand_diff_solve,"""solve(x^2 - 5*x + 6, x)""",,exact,"[2, 3]",,0,deductive,CAS: Quadratic equation factored roots
+CAT10-015,cat_10_cas_expand_diff_solve,"""solve(x^2 - 4*x + 4, x)""",,exact,[2],,0,deductive,CAS: Quadratic equation repeated root
+CAT10-016,cat_10_cas_expand_diff_solve,"""solve(x^2 - 2, x)""",,exact,"[-√2, √2]",,0,deductive,CAS: Quadratic equation irrational radical roots
+CAT10-017,cat_10_cas_expand_diff_solve,"""solve(x^2 + 1, x)""",,exact,"[-i, i]",,0,deductive,CAS: Quadratic equation complex imaginary roots

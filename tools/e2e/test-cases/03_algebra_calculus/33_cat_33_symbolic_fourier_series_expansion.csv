@@ -1,0 +1,7 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT33-001,cat_33_symbolic_fourier_series_expansion,"""fourier_series(t, t, pi, 3)""",,exact,-sin(2*t) + 2*sin(t) + 2/3*sin(3*t),,0,deductive,Fourier: Sawtooth wave f(t)=t degree 3
+CAT33-002,cat_33_symbolic_fourier_series_expansion,"""fourier_series(t^2, t, pi, 2)""",,exact,-4*cos(t) + cos(2*t) + π^2/3,,0,deductive,Fourier: Parabolic wave f(t)=t^2 degree 2
+CAT33-003,cat_33_symbolic_fourier_series_expansion,fourier_series(cos(t)),,exact,cos(t),,0,deductive,Fourier: Pure harmonic cosine orthogonality
+CAT33-004,cat_33_symbolic_fourier_series_expansion,fourier_series(sin(2*t)),,exact,sin(2*t),,0,deductive,Fourier: Pure harmonic sine orthogonality
+CAT33-005,cat_33_symbolic_fourier_series_expansion,fourier_series(5),,exact,5,,0,deductive,Fourier: Constant function f(t)=5
+CAT33-006,cat_33_symbolic_fourier_series_expansion,fourier_series(t),,exact,-sin(2*t) + 2*sin(t) + 2/3*sin(3*t),,0,deductive,Fourier: Default arguments deduction

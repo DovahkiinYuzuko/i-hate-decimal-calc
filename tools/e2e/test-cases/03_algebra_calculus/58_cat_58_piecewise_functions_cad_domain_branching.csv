@@ -1,0 +1,11 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT58-001,cat_58_piecewise_functions_cad_domain_branching,"""piecewise([[-x, x < 0], [x, x >= 0]])""",,exact,"piecewise([[-x, x < 0], [x, x >= 0]])",,0,deductive,Piecewise: Basic definition format
+CAT58-002,cat_58_piecewise_functions_cad_domain_branching,"""2 * piecewise([[-x, x < 0], [x, x >= 0]])""",,exact,"piecewise([[-2*x, x < 0], [2*x, x >= 0]])",,0,deductive,Piecewise: Scalar multiplication fold
+CAT58-003,cat_58_piecewise_functions_cad_domain_branching,"""-piecewise([[-x, x < 0], [x, x >= 0]])""",,exact,"piecewise([[x, x < 0], [-x, x >= 0]])",,0,deductive,Piecewise: Unary negation fold
+CAT58-004,cat_58_piecewise_functions_cad_domain_branching,"""diff(piecewise([[-x^2, x < 0], [x^2, x >= 0]]), x)""",,exact,"piecewise([[-2*x, x < 0], [2*x, x >= 0]])",,0,deductive,Piecewise: Differentiation
+CAT58-005,cat_58_piecewise_functions_cad_domain_branching,"""integrate(piecewise([[-x, x < 0], [x, x >= 0]]), x, -1, 2)""",,exact,5/2,,0,deductive,Piecewise: Definite integral cross-boundary partition
+CAT58-006,cat_58_piecewise_functions_cad_domain_branching,"""integrate(piecewise([[-x, x < 0], [x, x >= 0]]), x, 1, 3)""",,exact,4,,0,deductive,Piecewise: Definite integral within single partition
+CAT58-007,cat_58_piecewise_functions_cad_domain_branching,"""solve(piecewise([[-x - 2, x < 0], [x - 2, x >= 0]]) == 0, x)""",,exact,"[-2, 2]",,0,deductive,Piecewise: Solve equation with condition validation
+CAT58-008,cat_58_piecewise_functions_cad_domain_branching,"""piecewise([[x, 0 == 1], [3*x, x > 0]])""",,exact,"piecewise([[3*x, x > 0]])",,0,deductive,Piecewise: Trivial contradiction pruning
+CAT58-009,cat_58_piecewise_functions_cad_domain_branching,"""piecewise([[x, x < 0]], x, x)""",,error,,function piecewise requires between 1 and 2 arguments,1,contradiction,Negative: Invalid argument count to piecewise
+CAT58-010,cat_58_piecewise_functions_cad_domain_branching,piecewise([[x]]),,error,,piecewise cases must be a list of,1,contradiction,Negative: Invalid case pair

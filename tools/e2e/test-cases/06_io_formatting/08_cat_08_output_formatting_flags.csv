@@ -1,0 +1,6 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT08-001,cat_08_output_formatting_flags,"--ascii ""cbrt(54) + sqrt(8)""",,exact,2*sqrt(2) + 3*cbrt(2),,0,deductive,Flag: --ascii for radicals and cube roots
+CAT08-002,cat_08_output_formatting_flags,--approx cbrt(2),,contains,³√2 (≈ 1.259921049894873164767210607278,,0,deductive,Flag: --approx alongside exact form
+CAT08-003,cat_08_output_formatting_flags,"--latex ""cbrt(x) / abs(y)""",,exact,$$ \sqrt[3]{x} \cdot \left|y\right|^{-1} $$,,0,deductive,Flag: --latex format for symbols
+CAT08-004,cat_08_output_formatting_flags,"--deg ""sin(30) + cos(60)""",,exact,1,,0,deductive,Flag: --deg for degree mode sin/cos
+CAT08-005,cat_08_output_formatting_flags,"--deg ""asin(1/2) + atan(1)""",,exact,75,,0,deductive,Flag: --deg for degree mode inverse trig

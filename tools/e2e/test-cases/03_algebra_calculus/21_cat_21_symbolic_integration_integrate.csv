@@ -1,0 +1,7 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT21-001,cat_21_symbolic_integration_integrate,"""integrate(3*x^2 + 2*x + 1, x)""",,exact,x + x^2 + x^3,,0,deductive,Integrate: Polynomial indefinite
+CAT21-002,cat_21_symbolic_integration_integrate,"""integrate(3*x^2, x, 0, 2)""",,exact,8,,0,deductive,Integrate: Polynomial definite
+CAT21-003,cat_21_symbolic_integration_integrate,"""integrate(cos(2*x), x)""",,exact,sin(2*x)/2,,0,deductive,Integrate: Trig indefinite
+CAT21-004,cat_21_symbolic_integration_integrate,"""integrate(sin(x), x, 0, pi)""",,exact,2,,0,deductive,Integrate: Trig definite
+CAT21-005,cat_21_symbolic_integration_integrate,"""integrate(x^(-1), x, 1, e)""",,exact,1,,0,deductive,Integrate: Rational log definite
+CAT21-006,cat_21_symbolic_integration_integrate,"""integrate(x * e^x, x, 0, 1)""",,exact,1,,0,deductive,Integrate: Integration by parts definite

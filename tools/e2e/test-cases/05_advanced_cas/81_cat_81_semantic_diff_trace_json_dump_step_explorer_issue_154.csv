@@ -1,0 +1,8 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT81-001,cat_81_semantic_diff_trace_json_dump_step_explorer_issue_154,"--trace ""groebner([x^2 - y, x^3 - z], [x, y, z])""",,contains,groebner.pair_selected,,0,deductive,Trace Easy: JSON dump for groebner algorithm
+CAT81-002,cat_81_semantic_diff_trace_json_dump_step_explorer_issue_154,,"prove expand((x + 1)^2)
+q
+exit
+",contains,Derivation Step,,0,deductive,Prove Medium: REPL prove interactive step walkthrough
+CAT81-003,cat_81_semantic_diff_trace_json_dump_step_explorer_issue_154,diff tools/e2e/test-cases/fixtures/diff_test_1.ihd tools/e2e/test-cases/fixtures/diff_test_2.ihd,,contains,EQUIVALENT,,0,deductive,Diff Hard: Semantic diff between equivalent and changed statements
+CAT81-004,cat_81_semantic_diff_trace_json_dump_step_explorer_issue_154,diff tools/e2e/test-cases/fixtures/diff_test_1.ihd tools/e2e/test-cases/fixtures/diff_test_3.ihd,,contains,ADDED,,0,deductive,Diff Oni: Detection of added statement in script diff

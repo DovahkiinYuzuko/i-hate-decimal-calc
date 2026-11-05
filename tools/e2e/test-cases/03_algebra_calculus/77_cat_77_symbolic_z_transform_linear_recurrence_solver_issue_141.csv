@@ -1,0 +1,18 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT77-001,cat_77_symbolic_z_transform_linear_recurrence_solver_issue_141,"""ztrans(2^n, n, z)""",,exact,z*(-2 + z)^-1,,0,deductive,Z-Trans Easy: Geometric sequence 2^n
+CAT77-002,cat_77_symbolic_z_transform_linear_recurrence_solver_issue_141,"""iztrans(z / (z - 2), z, n)""",,exact,2^n,,0,deductive,Inv Z-Trans Easy: Simple pole z/(z-2)
+CAT77-003,cat_77_symbolic_z_transform_linear_recurrence_solver_issue_141,"""rsolve(a(n+1) == 2*a(n), a(n), [a(0) == 3])""",,exact,3*2^n,,0,deductive,RSolve Easy: 1st-order geometric sequence
+CAT77-004,cat_77_symbolic_z_transform_linear_recurrence_solver_issue_141,"--verify ""rsolve(a(n+1) == 2*a(n), a(n), [a(0) == 3])""",,contains,[VERIFIED:,,0,deductive,RSolve Easy: Verified 1st-order solution
+CAT77-005,cat_77_symbolic_z_transform_linear_recurrence_solver_issue_141,"""rsolve(a(n+2) - 4*a(n+1) + 4*a(n) == 0, a(n), [a(0) == 1, a(1) == 4])""",,exact,2^n*n + 2^n,,0,deductive,RSolve Medium: 2nd-order repeated root (r-2)^2
+CAT77-006,cat_77_symbolic_z_transform_linear_recurrence_solver_issue_141,"""rsolve(a(n+3) - 6*a(n+2) + 11*a(n+1) - 6*a(n) == 0, a(n), [a(0) == 1, a(1) == 2, a(2) == 4])""",,exact,2^n,,0,deductive,RSolve Medium: 3rd-order distinct rational roots
+CAT77-007,cat_77_symbolic_z_transform_linear_recurrence_solver_issue_141,"""iztrans(1 / z, z, n)""",,contains,delta,,0,deductive,Inv Z-Trans Medium: Origin pole 1/z delay
+CAT77-008,cat_77_symbolic_z_transform_linear_recurrence_solver_issue_141,"--typst ""rsolve(a(n+1) == 2*a(n), a(n), [a(0) == 3])""",,contains,2^n,,0,deductive,RSolve Medium: Typst math output
+CAT77-009,cat_77_symbolic_z_transform_linear_recurrence_solver_issue_141,"""rsolve(a(n+1) - 2*a(n) == 2^n, a(n), [a(0) == 1])""",,exact,1/2*2^n*n + 2^n,,0,deductive,RSolve Hard: Resonant forcing a(n+1) - 2a(n) == 2^n
+CAT77-010,cat_77_symbolic_z_transform_linear_recurrence_solver_issue_141,"""iztrans(z / (z - 1)^2, z, n)""",,exact,n,,0,deductive,Inv Z-Trans Hard: Repeated pole z/(z-1)^2 ramp
+CAT77-011,cat_77_symbolic_z_transform_linear_recurrence_solver_issue_141,"--verify ""rsolve(a(n+2) - 5*a(n+1) + 6*a(n) == 0, a(n), [a(0) == 2, a(1) == 5])""",,contains,[VERIFIED:,,0,deductive,RSolve Hard: Dual verify (algebraic + numeric iteration)
+CAT77-012,cat_77_symbolic_z_transform_linear_recurrence_solver_issue_141,"""ztrans(cos(n), n, z)""",,contains,cos(1),,0,deductive,Z-Trans Hard: Damped cosine sequence
+CAT77-013,cat_77_symbolic_z_transform_linear_recurrence_solver_issue_141,"""rsolve(a(n+2) - 4*a(n+1) + 4*a(n) == 2^n, a(n), [a(0) == 1, a(1) == 2])""",,contains,2^n,,0,deductive,RSolve Oni: Double resonance a(n+2) - 4a(n+1) + 4a(n) == 2^n
+CAT77-014,cat_77_symbolic_z_transform_linear_recurrence_solver_issue_141,"""iztrans((z + 1) / z, z, n)""",,contains,delta,,0,deductive,Inv Z-Trans Oni: Improper rational polynomial division
+CAT77-015,cat_77_symbolic_z_transform_linear_recurrence_solver_issue_141,"""iztrans(z^2, z, n)""",,exact,,,1,contradiction,Inv Z-Trans Oni: Non-causal positive power rejection
+CAT77-016,cat_77_symbolic_z_transform_linear_recurrence_solver_issue_141,"""rsolve(a(n+1) == 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000*a(n), a(n), [a(0) == 1])""",,contains,10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000^n,,0,deductive,RSolve Oni: 100-digit large coefficient recurrence
+CAT77-017,cat_77_symbolic_z_transform_linear_recurrence_solver_issue_141,"--lean ""rsolve(a(n+2) + a(n) == 0, a(n), [a(0) == 1, a(1) == 0])""",,error,,Lean 4,0,contradiction,Lean 4 Oni: Rejection of complex root recurrence without sorry

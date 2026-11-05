@@ -1,0 +1,10 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT70-001,cat_70_physical_units_dimensional_analysis_issue_131,"""10 [m/s] * 5 [s]""",,exact,50 [m],,0,deductive,Units: Multiplication with cancellation
+CAT70-002,cat_70_physical_units_dimensional_analysis_issue_131,"""1 [km] - 200 [m]""",,exact,4/5 [km],,0,deductive,Units: Addition with different prefixes
+CAT70-003,cat_70_physical_units_dimensional_analysis_issue_131,"""convert_unit((1/4) [h], min)""",,exact,15 [min],,0,deductive,Units: Unit conversion with fractions
+CAT70-004,cat_70_physical_units_dimensional_analysis_issue_131,"""convert_unit(100 [km/h], m/s)""",,exact,250/9 [m/s],,0,deductive,Units: Compound unit conversion
+CAT70-005,cat_70_physical_units_dimensional_analysis_issue_131,"""10 [m] / 2 [m]""",,exact,5,,0,deductive,Units: Dimensionless reduction
+CAT70-006,cat_70_physical_units_dimensional_analysis_issue_131,"--verify ""convert_unit(100 [km/h], m/s)""",,contains,[VERIFIED:,,0,deductive,Units: Verification of unit conversion
+CAT70-007,cat_70_physical_units_dimensional_analysis_issue_131,"""10 [m] + 5 [kg]""",,error,,dimension mismatch,1,contradiction,Negative: Dimension mismatch error
+CAT70-008,cat_70_physical_units_dimensional_analysis_issue_131,"""sin(10 [m])""",,error,,transcendental function sin requires a dimensionless argument,1,contradiction,Negative: Transcendental function dimension error
+CAT70-009,cat_70_physical_units_dimensional_analysis_issue_131,"""convert_unit(10 [m], kg)""",,error,,incompatible unit conversion,1,contradiction,Negative: Incompatible unit conversion error

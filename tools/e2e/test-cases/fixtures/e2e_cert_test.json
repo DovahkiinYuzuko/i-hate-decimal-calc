@@ -1,0 +1,23 @@
+{
+  "version": "1.0",
+  "original": "-1 + x^2",
+  "result": "(-1 + x)*(1 + x)",
+  "is_verified": true,
+  "total_steps": 1,
+  "steps": [
+    {
+      "step_number": 1,
+      "before": "-1 + x^2",
+      "after": "(-1 + x)*(1 + x)",
+      "rule": "PolynomialFactorization",
+      "rule_description": "Factor expansion expand(factors) - P == 0 holds (Matches original polynomial)",
+      "residual": "0",
+      "is_self_verified": true
+    }
+  ],
+  "metadata": {
+    "domain": "factor",
+    "equation": "x^2 + -1 == (x + -1) * (x + 1)",
+    "kind": "factor"
+  }
+}

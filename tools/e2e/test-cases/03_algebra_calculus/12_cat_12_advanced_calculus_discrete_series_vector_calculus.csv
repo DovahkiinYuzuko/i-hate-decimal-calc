@@ -1,0 +1,15 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT12-001,cat_12_advanced_calculus_discrete_series_vector_calculus,"""taylor(sin(x), x, 0, 3)""",,exact,x - x^3/6,,0,deductive,Taylor: Maclaurin expansion of sin(x)
+CAT12-002,cat_12_advanced_calculus_discrete_series_vector_calculus,"""taylor(cos(x), x, 0, 4)""",,exact,1 - x^2/2 + x^4/24,,0,deductive,Taylor: Maclaurin expansion of cos(x)
+CAT12-003,cat_12_advanced_calculus_discrete_series_vector_calculus,"""taylor(1/(1 - x), x, 0, 3)""",,exact,1 + x + x^2 + x^3,,0,deductive,Taylor: Geometric series expansion 1/(1-x)
+CAT12-004,cat_12_advanced_calculus_discrete_series_vector_calculus,"""sum(k, k, 1, 10)""",,exact,55,,0,deductive,Sum: Finite concrete sum of integers
+CAT12-005,cat_12_advanced_calculus_discrete_series_vector_calculus,"""sum(k^2, k, 1, 5)""",,exact,55,,0,deductive,Sum: Finite concrete sum of squares
+CAT12-006,cat_12_advanced_calculus_discrete_series_vector_calculus,"""sum(2^k, k, 0, 4)""",,exact,31,,0,deductive,Sum: Geometric sum powers of 2
+CAT12-007,cat_12_advanced_calculus_discrete_series_vector_calculus,"""sum(k, k, 1, n)""",,exact,n/2 + n^2/2,,0,deductive,Sum: Faulhaber polynomial sum k=1..n
+CAT12-008,cat_12_advanced_calculus_discrete_series_vector_calculus,"""sum(k^2, k, 1, n)""",,exact,n/6 + n^2/2 + n^3/3,,0,deductive,Sum: Faulhaber polynomial sum of squares
+CAT12-009,cat_12_advanced_calculus_discrete_series_vector_calculus,"""dot([1, 2, 3], [4, 5, 6])""",,exact,32,,0,deductive,Vector: Dot product
+CAT12-010,cat_12_advanced_calculus_discrete_series_vector_calculus,"""cross([1, 0, 0], [0, 1, 0])""",,exact,"[0, 0, 1]",,0,deductive,Vector: Cross product basis
+CAT12-011,cat_12_advanced_calculus_discrete_series_vector_calculus,"""norm([1, 1, 1])""",,exact,√3,,0,deductive,Vector: Euclidean norm exact radical
+CAT12-012,cat_12_advanced_calculus_discrete_series_vector_calculus,"""grad(x^2 + y^2 + z^2, [x, y, z])""",,exact,"[2*x, 2*y, 2*z]",,0,deductive,Vector: Gradient vector field
+CAT12-013,cat_12_advanced_calculus_discrete_series_vector_calculus,"""div([x^2, y^2, z^2], [x, y, z])""",,exact,2*x + 2*y + 2*z,,0,deductive,Vector: Divergence scalar
+CAT12-014,cat_12_advanced_calculus_discrete_series_vector_calculus,"""curl([y, -x, 0], [x, y, z])""",,exact,"[0, 0, -2]",,0,deductive,Vector: Curl vector field

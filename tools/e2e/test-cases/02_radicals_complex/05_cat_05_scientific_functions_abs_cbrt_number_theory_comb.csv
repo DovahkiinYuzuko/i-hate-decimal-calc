@@ -1,0 +1,22 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT05-001,cat_05_scientific_functions_abs_cbrt_number_theory_comb,abs(-10/3),,exact,10/3,,0,deductive,Scientific: Absolute value of negative fraction
+CAT05-002,cat_05_scientific_functions_abs_cbrt_number_theory_comb,"""abs(3 + 4*i)""",,exact,5,,0,deductive,Scientific: Complex Pythagorean norm (3-4-5)
+CAT05-003,cat_05_scientific_functions_abs_cbrt_number_theory_comb,"""abs(5 - 12*i)""",,exact,13,,0,deductive,Scientific: Complex Pythagorean norm (5-12-13)
+CAT05-004,cat_05_scientific_functions_abs_cbrt_number_theory_comb,"""abs(1 + i)""",,exact,√2,,0,deductive,Scientific: Complex radical norm
+CAT05-005,cat_05_scientific_functions_abs_cbrt_number_theory_comb,abs(-sqrt(8)),,exact,2*√2,,0,deductive,Scientific: Absolute value of negative radical
+CAT05-006,cat_05_scientific_functions_abs_cbrt_number_theory_comb,cbrt(27),,exact,3,,0,deductive,Scientific: Cube root of integer
+CAT05-007,cat_05_scientific_functions_abs_cbrt_number_theory_comb,cbrt(125/8),,exact,5/2,,0,deductive,Scientific: Cube root of fraction
+CAT05-008,cat_05_scientific_functions_abs_cbrt_number_theory_comb,cbrt(-64),,exact,-4,,0,deductive,Scientific: Cube root real negative extraction
+CAT05-009,cat_05_scientific_functions_abs_cbrt_number_theory_comb,cbrt(54),,exact,3*³√2,,0,deductive,Scientific: Cube root factor extraction
+CAT05-010,cat_05_scientific_functions_abs_cbrt_number_theory_comb,"""gcd(120, 45)""",,exact,15,,0,deductive,Scientific: Number theory gcd
+CAT05-011,cat_05_scientific_functions_abs_cbrt_number_theory_comb,"""lcm(12, 18)""",,exact,36,,0,deductive,Scientific: Number theory lcm
+CAT05-012,cat_05_scientific_functions_abs_cbrt_number_theory_comb,"""gcd(18, 24) * lcm(18, 24) - 18 * 24""",,exact,0,,0,deductive,Scientific: gcd * lcm identity
+CAT05-013,cat_05_scientific_functions_abs_cbrt_number_theory_comb,"""mod(100, 7)""",,exact,2,,0,deductive,Scientific: Number theory mod basic
+CAT05-014,cat_05_scientific_functions_abs_cbrt_number_theory_comb,"""mod(12345, 100)""",,exact,45,,0,deductive,Scientific: Number theory mod large integer
+CAT05-015,cat_05_scientific_functions_abs_cbrt_number_theory_comb,"""perm(5, 3)""",,exact,60,,0,deductive,"Scientific: Combinatorics perm(5, 3)"
+CAT05-016,cat_05_scientific_functions_abs_cbrt_number_theory_comb,"""perm(5, 0) + perm(5, 5)""",,exact,121,,0,deductive,Scientific: Combinatorics perm edge cases
+CAT05-017,cat_05_scientific_functions_abs_cbrt_number_theory_comb,"""perm(6, 3) - 6! / 3!""",,exact,0,,0,deductive,Scientific: Combinatorics perm factorial identity
+CAT05-018,cat_05_scientific_functions_abs_cbrt_number_theory_comb,"""comb(52, 5)""",,exact,2598960,,0,deductive,"Scientific: Combinatorics comb(52, 5) poker hands"
+CAT05-019,cat_05_scientific_functions_abs_cbrt_number_theory_comb,"""comb(5, 2) + comb(5, 3)""",,exact,20,,0,deductive,Scientific: Combinatorics Pascal addition identity
+CAT05-020,cat_05_scientific_functions_abs_cbrt_number_theory_comb,"""comb(10, 3) - comb(10, 7)""",,exact,0,,0,deductive,Scientific: Combinatorics comb symmetry cancellation
+CAT05-021,cat_05_scientific_functions_abs_cbrt_number_theory_comb,"""rand(42, 1, 6)""",,exact,2,,0,deductive,Scientific: Deterministic rand with seed

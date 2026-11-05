@@ -1,0 +1,8 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT22-001,cat_22_trigonometric_expansion_reduction,"""trig_expand(sin(x + y))""",,exact,cos(x)*sin(y) + sin(x)*cos(y),,0,deductive,Trig: Addition angle expansion
+CAT22-002,cat_22_trigonometric_expansion_reduction,trig_expand(cos(2*x)),,exact,-sin(x)^2 + cos(x)^2,,0,deductive,Trig: Double angle cos expansion
+CAT22-003,cat_22_trigonometric_expansion_reduction,trig_expand(sin(3*x)),,exact,3*cos(x)^2*sin(x) - sin(x)^3,,0,deductive,Trig: Triple angle sin expansion
+CAT22-004,cat_22_trigonometric_expansion_reduction,trig_reduce(sin(x)^2),,exact,1/2 - cos(2*x)/2,,0,deductive,Trig: Power reduction sin^2
+CAT22-005,cat_22_trigonometric_expansion_reduction,"""trig_reduce(sin(x) * cos(x))""",,exact,sin(2*x)/2,,0,deductive,Trig: Product to sum sin*cos
+CAT22-006,cat_22_trigonometric_expansion_reduction,"""trig_reduce(sqrt(3)*sin(x) + cos(x))""",,exact,2*sin(x + π/6),,0,deductive,Trig: Harmonic addition sqrt(3)*sin + cos
+CAT22-007,cat_22_trigonometric_expansion_reduction,"""trig_reduce(sin(x) + cos(x))""",,exact,√2*sin(x + π/4),,0,deductive,Trig: Harmonic addition sin + cos

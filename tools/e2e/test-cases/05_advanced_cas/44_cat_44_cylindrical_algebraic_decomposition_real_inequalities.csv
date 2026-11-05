@@ -1,0 +1,8 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT44-001,cat_44_cylindrical_algebraic_decomposition_real_inequalities,"""solve(x - 3 > 0)""",,exact,"[[3, inf]]",,0,deductive,CAD: Linear inequality x - 3 > 0
+CAT44-002,cat_44_cylindrical_algebraic_decomposition_real_inequalities,"""solve(x^2 - 4 < 0)""",,exact,"[[-2, 2]]",,0,deductive,CAD: Quadratic strict inequality x^2 - 4 < 0
+CAT44-003,cat_44_cylindrical_algebraic_decomposition_real_inequalities,"--ascii ""solve(x^2 - 2 <= 0)""",,exact,"[[-sqrt(2), sqrt(2)]]",,0,deductive,CAD: Quadratic non-strict radical interval x^2 - 2 <= 0
+CAT44-004,cat_44_cylindrical_algebraic_decomposition_real_inequalities,"""solve((x - 1)^2 <= 0)""",,exact,"[[1, 1]]",,0,deductive,CAD: Repeated root singleton condition (x - 1)^2 <= 0
+CAT44-005,cat_44_cylindrical_algebraic_decomposition_real_inequalities,"""solve(x^2 + 1 > 0)""",,exact,true,,0,deductive,CAD: Real algebraic tautology x^2 + 1 > 0
+CAT44-006,cat_44_cylindrical_algebraic_decomposition_real_inequalities,"""solve(x^2 + 1 < 0)""",,exact,false,,0,deductive,CAD: Real algebraic unsatisfiable x^2 + 1 < 0
+CAT44-007,cat_44_cylindrical_algebraic_decomposition_real_inequalities,"""cad([x^2 - 1], [x])""",,exact,"[[-2], [-1], [0], [1], [2]]",,0,deductive,"CAD: Builtin CAD decomposition cad([x^2 - 1], [x])"

@@ -1,0 +1,16 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT69-001,cat_69_collection_manipulation_slicing_lambda_expressions_issue_130,"""[10, 20, 30][1]""",,exact,20,,0,deductive,Collection: Single 0-indexed element
+CAT69-002,cat_69_collection_manipulation_slicing_lambda_expressions_issue_130,"""[10, 20, 30][-1]""",,exact,30,,0,deductive,Collection: Single negative index element
+CAT69-003,cat_69_collection_manipulation_slicing_lambda_expressions_issue_130,"""[10, 20, 30, 40, 50][1:4]""",,exact,"[20, 30, 40]",,0,deductive,Collection: Slice start to stop
+CAT69-004,cat_69_collection_manipulation_slicing_lambda_expressions_issue_130,"""[1, 2, 3, 4, 5][::-1]""",,exact,"[5, 4, 3, 2, 1]",,0,deductive,Collection: Slice step and reversal
+CAT69-005,cat_69_collection_manipulation_slicing_lambda_expressions_issue_130,"""[0, 1, 2, 3, 4, 5][::2]""",,exact,"[0, 2, 4]",,0,deductive,Collection: Slice every second element
+CAT69-006,cat_69_collection_manipulation_slicing_lambda_expressions_issue_130,"""range(1, 5)""",,exact,"[1, 2, 3, 4]",,0,deductive,Collection: Range integer sequence
+CAT69-007,cat_69_collection_manipulation_slicing_lambda_expressions_issue_130,"""range(0, 1, 1/4)""",,exact,"[0, 1/4, 1/2, 3/4]",,0,deductive,Collection: Range rational step
+CAT69-008,cat_69_collection_manipulation_slicing_lambda_expressions_issue_130,"""range(5, 0, -1)""",,exact,"[5, 4, 3, 2, 1]",,0,deductive,Collection: Range descending negative step
+CAT69-009,cat_69_collection_manipulation_slicing_lambda_expressions_issue_130,"""lambda([x, y], x + y)(2, 3)""",,exact,5,,0,deductive,Collection: Lambda multi-argument IIFE
+CAT69-010,cat_69_collection_manipulation_slicing_lambda_expressions_issue_130,"""map(lambda(x, x^2), [1, 2, 3, 4])""",,exact,"[1, 4, 9, 16]",,0,deductive,Collection: Map with lambda
+CAT69-011,cat_69_collection_manipulation_slicing_lambda_expressions_issue_130,"""filter(lambda(x, x > 2), [1, 2, 3, 4, 5])""",,exact,"[3, 4, 5]",,0,deductive,Collection: Filter with lambda condition
+CAT69-012,cat_69_collection_manipulation_slicing_lambda_expressions_issue_130,"""map(lambda(x, x^2), range(1, 5))""",,exact,"[1, 4, 9, 16]",,0,deductive,Collection: Higher-order composition with range
+CAT69-013,cat_69_collection_manipulation_slicing_lambda_expressions_issue_130,"--explain ""map(lambda(x, x + 1), [1, 2])""",,contains,lambda,,0,deductive,Collection: Explain map trace
+CAT69-014,cat_69_collection_manipulation_slicing_lambda_expressions_issue_130,"""range(1, 5, 0)""",,error,,step size cannot be zero,1,contradiction,Negative: Range step zero rejected
+CAT69-015,cat_69_collection_manipulation_slicing_lambda_expressions_issue_130,"""map(123, [1, 2])""",,error,,first argument must be a function or lambda,1,contradiction,Negative: Map non-callable first arg rejected

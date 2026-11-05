@@ -1,0 +1,2 @@
+import "tools/e2e/test-cases/fixtures/lib_test.ihd";
+helper(5)

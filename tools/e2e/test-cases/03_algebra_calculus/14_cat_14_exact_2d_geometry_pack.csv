@@ -1,0 +1,6 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT14-001,cat_14_exact_2d_geometry_pack,"""line_intersect([1, 1, -2], [1, -1, 0])""",,exact,"[1, 1]",,0,deductive,Geometry: Line intersection
+CAT14-002,cat_14_exact_2d_geometry_pack,"""circle_intersect([0, 0], 1, [2, 0], 1)""",,exact,"[[1, 0]]",,0,deductive,Geometry: Circle intersection single tangent point
+CAT14-003,cat_14_exact_2d_geometry_pack,"""circle_intersect([0, 0], 2, [2, 0], 2)""",,exact,"[[1, √3], [1, -√3]]",,0,deductive,Geometry: Circle intersection two points exact radical
+CAT14-004,cat_14_exact_2d_geometry_pack,"""triangle_area([0, 0], [4, 0], [0, 3])""",,exact,6,,0,deductive,Geometry: Triangle Shoelace area
+CAT14-005,cat_14_exact_2d_geometry_pack,"""triangle_centers([0, 0], [4, 0], [0, 3])""",,exact,"[[4/3, 1], [2, 3/2], [0, 0], [1, 1]]",,0,deductive,Geometry: Triangle centers 4-vector

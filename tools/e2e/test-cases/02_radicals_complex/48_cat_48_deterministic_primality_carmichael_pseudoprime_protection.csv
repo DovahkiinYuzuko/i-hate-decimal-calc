@@ -1,0 +1,7 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT48-001,cat_48_deterministic_primality_carmichael_pseudoprime_protection,is_prime(561),,exact,0,,0,deductive,Prime: Carmichael number 561 rejected
+CAT48-002,cat_48_deterministic_primality_carmichael_pseudoprime_protection,is_prime(1729),,exact,0,,0,deductive,Prime: Carmichael number 1729 rejected
+CAT48-003,cat_48_deterministic_primality_carmichael_pseudoprime_protection,is_prime(2305843009213693951),,exact,1,,0,deductive,Prime: Large 64-bit Mersenne prime 2^61 - 1
+CAT48-004,cat_48_deterministic_primality_carmichael_pseudoprime_protection,is_prime(2),,exact,1,,0,deductive,Prime: Small edge cases 1 and 2
+CAT48-005,cat_48_deterministic_primality_carmichael_pseudoprime_protection,is_prime(1),,exact,0,,0,deductive,Prime: Non-prime edge case 1
+CAT48-006,cat_48_deterministic_primality_carmichael_pseudoprime_protection,factor(561),,exact,3*11*17,,0,deductive,Factor: Integer prime factorization using deterministic engine

@@ -1,0 +1,13 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT01-001,cat_01_simple_arithmetic_basic_precedence,"""1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10""",,exact,55,,0,deductive,Simple: Addition chain
+CAT01-002,cat_01_simple_arithmetic_basic_precedence,"""100 - (-50)""",,exact,150,,0,deductive,Simple: Subtraction with negative numbers
+CAT01-003,cat_01_simple_arithmetic_basic_precedence,"""100 / 4 - 5 * 3""",,exact,10,,0,deductive,Simple: Integer multiplication and division
+CAT01-004,cat_01_simple_arithmetic_basic_precedence,"""((2 + 3) * 4 - 5) * 2""",,exact,30,,0,deductive,Simple: Multi-level nested parentheses
+CAT01-005,cat_01_simple_arithmetic_basic_precedence,"""0 * 999 + 0 / 7""",,exact,0,,0,deductive,Simple: Zero multiplication and division
+CAT01-006,cat_01_simple_arithmetic_basic_precedence,999^0,,exact,1,,0,deductive,Simple: Zero exponent power
+CAT01-007,cat_01_simple_arithmetic_basic_precedence,-3^2,,exact,-9,,0,deductive,Simple: Unary minus lower than power
+CAT01-008,cat_01_simple_arithmetic_basic_precedence,(-3)^2,,exact,9,,0,deductive,Simple: Parenthesized negative power
+CAT01-009,cat_01_simple_arithmetic_basic_precedence,2^3^2,,exact,512,,0,deductive,Simple: Right associative power
+CAT01-010,cat_01_simple_arithmetic_basic_precedence,5!,,exact,120,,0,deductive,Simple: Basic factorial
+CAT01-011,cat_01_simple_arithmetic_basic_precedence,0!,,exact,1,,0,deductive,Simple: Zero factorial
+CAT01-012,cat_01_simple_arithmetic_basic_precedence,"""6! / 4!""",,exact,30,,0,deductive,Simple: Factorial division simplification

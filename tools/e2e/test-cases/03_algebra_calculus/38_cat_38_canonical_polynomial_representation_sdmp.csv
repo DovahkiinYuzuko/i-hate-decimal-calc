@@ -1,0 +1,7 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT38-001,cat_38_canonical_polynomial_representation_sdmp,"""to_poly((x + y)^3, [x, y])""",,exact,x^3 + 3*x^2*y + 3*x*y^2 + y^3,,0,deductive,Poly: Multivariate expansion and canonical sorting
+CAT38-002,cat_38_canonical_polynomial_representation_sdmp,"""to_poly((x + y)*(x - y))""",,exact,x^2 - y^2,,0,deductive,Poly: Difference of squares expansion
+CAT38-003,cat_38_canonical_polynomial_representation_sdmp,"""to_poly(x^2*y + 2*y*x^2 + 5, [x, y])""",,exact,3*x^2*y + 5,,0,deductive,Poly: Combining like terms and non-zero invariants
+CAT38-004,cat_38_canonical_polynomial_representation_sdmp,"""to_poly(3*x^2 - 3*x^2 + 0)""",,exact,0,,0,deductive,Poly: Zero cancellation to zero polynomial
+CAT38-005,cat_38_canonical_polynomial_representation_sdmp,"""to_poly(x + y^2, [x, y], grevlex)""",,exact,y^2 + x,,0,deductive,Poly: GrevLex order specification
+CAT38-006,cat_38_canonical_polynomial_representation_sdmp,"""to_poly((a + b)^2)""",,exact,a^2 + 2*a*b + b^2,,0,deductive,Poly: Auto-extraction of free variables

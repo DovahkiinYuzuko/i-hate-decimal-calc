@@ -1,0 +1,43 @@
+name: E2E Test Suite
+
+on:
+  push:
+    branches: [ main, 'issue-*' ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, 'issue-*' ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e-test:
+    name: Run Go-Native E2E Test Suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          check-latest: true
+
+      - name: Run Go-Native E2E Test Suite
+        env:
+          IHD_NO_UPDATE_CHECK: "1"
+          LANG: "en_US.UTF-8"
+        run: |
+          go run ./tools/e2e
+
+      - name: Upload Failure Logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-failure-logs
+          path: tools/e2e/logs/*.log
+          retention-days: 14

@@ -1,0 +1,12 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT53-001,cat_53_mathematical_consistency_boundary_negative_tests,1/0,,error,,division by zero,1,contradiction,Negative: Division by zero 1/0
+CAT53-002,cat_53_mathematical_consistency_boundary_negative_tests,0^(-1),,error,,division by zero,1,contradiction,Negative: Division by zero 0^(-1)
+CAT53-003,cat_53_mathematical_consistency_boundary_negative_tests,"""solve(x^5 - 1, x)""",,error,,"only linear, quadratic, cubic, and quartic equations",1,contradiction,Negative: Solve degree 5 unsupported message
+CAT53-004,cat_53_mathematical_consistency_boundary_negative_tests,"""lll([[1, 2], [2, 4]])""",,error,,basis vectors must be linearly independent,1,contradiction,Negative: LLL linearly dependent basis rejection
+CAT53-005,cat_53_mathematical_consistency_boundary_negative_tests,"""padic_val(0, 5)""",,exact,infinity,,0,deductive,Boundary: Padic valuation of zero is infinity
+CAT53-006,cat_53_mathematical_consistency_boundary_negative_tests,"""padic_norm(0, 5)""",,exact,0,,0,deductive,Boundary: Padic norm of zero is 0
+CAT53-007,cat_53_mathematical_consistency_boundary_negative_tests,"""padic_val(5, 1)""",,error,,prime must be greater than or equal to 2,1,contradiction,Negative: Padic base less than 2 rejection (p=1)
+CAT53-008,cat_53_mathematical_consistency_boundary_negative_tests,"""padic_val(5, 0)""",,error,,prime must be greater than or equal to 2,1,contradiction,Negative: Padic base less than 2 rejection (p=0)
+CAT53-009,cat_53_mathematical_consistency_boundary_negative_tests,sqrt(-1),,exact,i,,0,deductive,Principal Value: sqrt(-1) evaluates to i
+CAT53-010,cat_53_mathematical_consistency_boundary_negative_tests,sqrt(x^2),,exact,|x|,,0,deductive,Principal Value: sqrt(x^2) preserves absolute value |x|
+CAT53-011,cat_53_mathematical_consistency_boundary_negative_tests,"""solve(2 == 0, x)""",,error,,equation has no solution,1,contradiction,Negative: Contradiction equation 2 == 0 has no solution

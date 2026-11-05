@@ -1,0 +1,8 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT19-001,cat_19_continued_fractions,cfrac(355/113),,exact,"[3, 7, 16]",,0,deductive,CFrac: Rational pi approx 355/113
+CAT19-002,cat_19_continued_fractions,cfrac(43/19),,exact,"[2, 3, 1, 4]",,0,deductive,CFrac: Rational 43/19
+CAT19-003,cat_19_continued_fractions,cfrac(-7/5),,exact,"[-2, 1, 1, 2]",,0,deductive,CFrac: Negative rational -7/5
+CAT19-004,cat_19_continued_fractions,cfrac(sqrt(2)),,exact,"[1, [2]]",,0,deductive,CFrac: Periodic sqrt(2)
+CAT19-005,cat_19_continued_fractions,cfrac(sqrt(7)),,exact,"[2, [1, 1, 1, 4]]",,0,deductive,CFrac: Periodic sqrt(7)
+CAT19-006,cat_19_continued_fractions,"""from_cfrac([3, 7, 16])""",,exact,355/113,,0,deductive,CFrac: Rational reconstruction from_cfrac
+CAT19-007,cat_19_continued_fractions,"""cfrac(x + 1)""",,error,,continued fraction expansion is only supported,1,contradiction,CFrac: Error on unsupported variable expression

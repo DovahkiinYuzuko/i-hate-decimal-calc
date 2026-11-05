@@ -1,0 +1,7 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT18-001,cat_18_linear_algebra_linear_systems,"""rref([[1, 2], [3, 4]])""",,exact,"[[1, 0], [0, 1]]",,0,deductive,Linear: 2x2 RREF
+CAT18-002,cat_18_linear_algebra_linear_systems,"""rref([[1, 2, 3], [4, 5, 6], [7, 8, 9]])""",,exact,"[[1, 0, -1], [0, 1, 2], [0, 0, 0]]",,0,deductive,Linear: 3x3 Singular RREF
+CAT18-003,cat_18_linear_algebra_linear_systems,"""rank([[1, 2, 3], [4, 5, 6], [7, 8, 9]])""",,exact,2,,0,deductive,Linear: Matrix rank
+CAT18-004,cat_18_linear_algebra_linear_systems,"""solve_linear([[2, 1], [1, -1]], [5, 1])""",,exact,"[2, 1]",,0,deductive,Linear: 2x2 Unique solve_linear
+CAT18-005,cat_18_linear_algebra_linear_systems,"""linsolve([[1, 1, 1], [0, 2, 5], [2, 5, -1]], [6, -4, 27])""",,exact,"[5, 3, -2]",,0,deductive,Linear: 3x3 Unique linsolve alias
+CAT18-006,cat_18_linear_algebra_linear_systems,"""solve_linear([[1, 1], [1, 1]], [1, 2])""",,error,,inconsistent,1,contradiction,Linear: Inconsistent system error

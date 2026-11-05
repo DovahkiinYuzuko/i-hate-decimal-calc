@@ -1,0 +1,4 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT16-001,cat_16_terminal_function_plotter,"""plot(x^2 - 2, [-2, 2])""",,contains,,,0,deductive,Plotter: Parabola roots and extrema detection
+CAT16-002,cat_16_terminal_function_plotter,"""plot(1/x, [-2, 2], [-5, 5])""",,contains,,,0,deductive,Plotter: Rational function asymptote Tupper guard
+CAT16-003,cat_16_terminal_function_plotter,"""plot(x, [2, -2])""",,error,,invalid plot domain,1,contradiction,Plotter: Error on inverted domain

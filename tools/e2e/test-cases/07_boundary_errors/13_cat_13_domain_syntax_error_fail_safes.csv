@@ -1,0 +1,16 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT13-001,cat_13_domain_syntax_error_fail_safes,1/0,,error,,division by zero,1,contradiction,Error: Division by zero
+CAT13-002,cat_13_domain_syntax_error_fail_safes,tan(pi/2),,error,,undefined,1,contradiction,Error: Undefined tan(pi/2)
+CAT13-003,cat_13_domain_syntax_error_fail_safes,log(-5),,error,,domain error,1,contradiction,Error: Negative logarithm
+CAT13-004,cat_13_domain_syntax_error_fail_safes,"""gcd(1/2, 3)""",,error,,domain error,1,contradiction,Error: Fractional gcd
+CAT13-005,cat_13_domain_syntax_error_fail_safes,2pi,,error,,implicit multiplication is not allowed,1,contradiction,Error: Implicit multiplication prohibited
+CAT13-006,cat_13_domain_syntax_error_fail_safes,asin(2),,error,,domain error,1,contradiction,Error: asin domain out of range
+CAT13-007,cat_13_domain_syntax_error_fail_safes,"""inv([[1, 2], [2, 4]])""",,error,,singular matrix,1,contradiction,Error: Singular matrix inverse
+CAT13-008,cat_13_domain_syntax_error_fail_safes,"""det([[1, 2, 3], [4, 5, 6]])""",,error,,square matrix,1,contradiction,Error: Non-square matrix determinant
+CAT13-009,cat_13_domain_syntax_error_fail_safes,"""taylor(sin(x), x, 0, -1)""",,error,,order must be non-negative,1,contradiction,Error: Taylor negative order
+CAT13-010,cat_13_domain_syntax_error_fail_safes,"""dot([1, 2], [1, 2, 3])""",,error,,dimension mismatch,1,contradiction,Error: Vector dimension mismatch in dot
+CAT13-011,cat_13_domain_syntax_error_fail_safes,"""cross([1, 2], [3, 4])""",,error,,cross product requires 3-dimensional vectors,1,contradiction,Error: Non 3D vector in cross product
+CAT13-012,cat_13_domain_syntax_error_fail_safes,"""line_intersect([1, 1, 0], [1, 1, 1])""",,error,,parallel,1,contradiction,Error: Parallel lines intersection
+CAT13-013,cat_13_domain_syntax_error_fail_safes,"""circle_intersect([0, 0], 1, [0, 0], 1)""",,error,,coincident,1,contradiction,Error: Coincident circles intersection
+CAT13-014,cat_13_domain_syntax_error_fail_safes,"""triangle_centers([0, 0], [1, 1], [2, 2])""",,error,,collinear,1,contradiction,Error: Degenerate triangle centers
+CAT13-015,cat_13_domain_syntax_error_fail_safes,arg(0),,error,,argument of zero is undefined,1,contradiction,Error: Argument of zero is undefined

@@ -1,0 +1,11 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT79-001,cat_79_hash_consed_ast_canonical_dag_interning_issue_142,"""(x + 1)^2 - (1 + x)^2""",,exact,0,,0,deductive,DAG Easy: Commutative 2-term sum cancellation (x+1)^2 - (1+x)^2
+CAT79-002,cat_79_hash_consed_ast_canonical_dag_interning_issue_142,"""(a + b + c) - (c + b + a)""",,exact,0,,0,deductive,DAG Easy: Commutative 3-term sum cancellation (a+b+c) - (c+b+a)
+CAT79-003,cat_79_hash_consed_ast_canonical_dag_interning_issue_142,"""(x * y) - (y * x)""",,exact,0,,0,deductive,DAG Easy: Commutative variable multiplication base matching
+CAT79-004,cat_79_hash_consed_ast_canonical_dag_interning_issue_142,"""(x + y)^3 * (y + x)^(-2)""",,exact,(x + y)^3*(x + y)^-2,,0,deductive,DAG Medium: Power product canonical base alignment (x+y)^3*(y+x)^-2
+CAT79-005,cat_79_hash_consed_ast_canonical_dag_interning_issue_142,"""factor(x^2 + 2*x + 1) / (x + 1)""",,exact,(1 + x)^2*(1 + x)^-1,,0,deductive,DAG Medium: Factored polynomial fraction base matching
+CAT79-006,cat_79_hash_consed_ast_canonical_dag_interning_issue_142,"""((x + 2)^2 - (2 + x)^2) * (x + 3)""",,exact,0,,0,deductive,DAG Medium: Nested commutative sum cancellation ((x+2)^2 - (2+x)^2)
+CAT79-007,cat_79_hash_consed_ast_canonical_dag_interning_issue_142,"""(x^10 + y^10) - (y^10 + x^10)""",,exact,0,,0,deductive,DAG Hard: 10th-degree polynomial commutative difference
+CAT79-008,cat_79_hash_consed_ast_canonical_dag_interning_issue_142,"""expand((x + y + z)^3) - expand((z + y + x)^3)""",,exact,0,,0,deductive,DAG Hard: Commutative 3-variable cubic expansion difference
+CAT79-009,cat_79_hash_consed_ast_canonical_dag_interning_issue_142,"--verify ""(x + y + z)^4 == (z + y + x)^4""",,contains,[VERIFIED:,,0,deductive,DAG Oni: Formal verification of 4th-degree 3-variable symmetry
+CAT79-010,cat_79_hash_consed_ast_canonical_dag_interning_issue_142,"--explain ""(x + 1)^2 - (1 + x)^2""",,contains,Direct Evaluation,,0,deductive,DAG Oni: Provenance trace under commutative cancellation

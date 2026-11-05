@@ -1,0 +1,7 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT39-001,cat_39_algebraic_number_fields_minimal_polynomials,"""to_alg(x + 1, x^2 - 2)""",,exact,AlgNum(x + 1 mod x^2 - 2=0),,0,deductive,AlgNum: Canonical algebraic number creation in Q(sqrt(2))
+CAT39-002,cat_39_algebraic_number_fields_minimal_polynomials,"""alg_inv(to_alg(x + 1, x^2 - 2))""",,exact,AlgNum(x - 1 mod x^2 - 2=0),,0,deductive,AlgNum: Inversion and rationalization of 1 + sqrt(2)
+CAT39-003,cat_39_algebraic_number_fields_minimal_polynomials,"""alg_inv(to_alg(x, x^2 - 2))""",,exact,AlgNum((1/2)*x mod x^2 - 2=0),,0,deductive,AlgNum: Inversion of generator 1/sqrt(2)
+CAT39-004,cat_39_algebraic_number_fields_minimal_polynomials,"""to_alg(x^2, x^2 - 2)""",,exact,AlgNum(2 mod x^2 - 2=0),,0,deductive,AlgNum: Degree reduction modulo minimal polynomial
+CAT39-005,cat_39_algebraic_number_fields_minimal_polynomials,"""min_poly(x^2 - 2, x^2 - 3, y)""",,exact,y^4 - 10*y^2 + 1,,0,deductive,AlgNum: Minimal polynomial of sqrt(2) + sqrt(3)
+CAT39-006,cat_39_algebraic_number_fields_minimal_polynomials,"""alg_inv(to_alg(0, x^2 - 2))""",,error,,*zero*,1,contradiction,AlgNum: Inversion zero division rejection

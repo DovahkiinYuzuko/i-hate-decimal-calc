@@ -1,0 +1,6 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT73-001,cat_73_shell_completion_generation_issue_138,completion powershell,,contains,Register-ArgumentCompleter,,0,deductive,Completion: PowerShell completion script
+CAT73-002,cat_73_shell_completion_generation_issue_138,completion bash,,contains,complete -F _ihd_completion ihd,,0,deductive,Completion: Bash completion script
+CAT73-003,cat_73_shell_completion_generation_issue_138,completion zsh,,contains,#compdef ihd,,0,deductive,Completion: Zsh completion script
+CAT73-004,cat_73_shell_completion_generation_issue_138,completion fish,,contains,complete -c ihd,,0,deductive,Completion: Fish completion script
+CAT73-005,cat_73_shell_completion_generation_issue_138,completion unknown_shell,,exact,,,1,contradiction,Negative: Unsupported shell completion

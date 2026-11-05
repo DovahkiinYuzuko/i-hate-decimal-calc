@@ -1,0 +1,8 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT25-001,cat_25_script_file_batch_execution,run tools/e2e/test-cases/fixtures/sample_e2e.ihd,,exact,"3/2
+6*√2",,0,deductive,Script: Run subcommand (ihd run sample.ihd)
+CAT25-002,cat_25_script_file_batch_execution,tools/e2e/test-cases/fixtures/sample_e2e.ihd,,exact,"3/2
+6*√2",,0,deductive,Script: Direct argument (ihd sample.ihd)
+CAT25-003,cat_25_script_file_batch_execution,--ascii run tools/e2e/test-cases/fixtures/sample_e2e.ihd,,exact,"3/2
+6*sqrt(2)",,0,deductive,Script: Flag pass-through --ascii
+CAT25-004,cat_25_script_file_batch_execution,run tools/e2e/test-cases/fixtures/error_e2e.ihd,,error,,*error_e2e.ihd:3:*division by zero*,1,contradiction,Script: Line number error reporting

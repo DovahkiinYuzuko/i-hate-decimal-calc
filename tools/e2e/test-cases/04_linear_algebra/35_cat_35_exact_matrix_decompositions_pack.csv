@@ -1,0 +1,9 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT35-001,cat_35_exact_matrix_decompositions_pack,"""lu([[0, 2], [3, 1]])""",,exact,"[[[0, 1], [1, 0]], [[1, 0], [0, 1]], [[3, 1], [0, 2]]]",,0,deductive,Matrix: LU decomposition with row pivoting
+CAT35-002,cat_35_exact_matrix_decompositions_pack,"""qr([[3, 1], [4, 2]])""",,exact,"[[[3/5, -4/5], [4/5, 3/5]], [[5, 11/5], [0, 2/5]]]",,0,deductive,Matrix: QR decomposition exact rational Pythagorean
+CAT35-003,cat_35_exact_matrix_decompositions_pack,"""cholesky([[4, 2], [2, 3]])""",,exact,"[[2, 0], [1, √2]]",,0,deductive,Matrix: Cholesky decomposition with exact radical
+CAT35-004,cat_35_exact_matrix_decompositions_pack,"""ldlt([[4, 2], [2, 3]])""",,exact,"[[[1, 0], [1/2, 1]], [[4, 0], [0, 2]]]",,0,deductive,Matrix: LDLT decomposition square-root-free
+CAT35-005,cat_35_exact_matrix_decompositions_pack,"""pinv([[1, 0], [0, 1], [1, 1]])""",,exact,"[[2/3, -1/3, 1/3], [-1/3, 2/3, 1/3]]",,0,deductive,Matrix: Moore-Penrose pseudoinverse full column rank
+CAT35-006,cat_35_exact_matrix_decompositions_pack,"""pinv([[1, 2], [2, 4]])""",,exact,"[[1/25, 2/25], [2/25, 4/25]]",,0,deductive,Matrix: Moore-Penrose pseudoinverse rank deficient
+CAT35-007,cat_35_exact_matrix_decompositions_pack,"""cholesky([[1, 2], [3, 4]])""",,error,,*must be symmetric*,1,contradiction,Matrix: Cholesky non-symmetric rejection
+CAT35-008,cat_35_exact_matrix_decompositions_pack,"""qr([[1, 2], [2, 4]])""",,error,,*full column rank*,1,contradiction,Matrix: QR linearly dependent columns rejection

@@ -1,0 +1,32 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT23-001,cat_23_symbolic_limit_computation_limit,"""limit(x^2 + 3*x - 1, x, 2)""",,exact,9,,0,deductive,Limit: Polynomial direct substitution
+CAT23-002,cat_23_symbolic_limit_computation_limit,"""limit((x^2 - 1)/(x - 1), x, 1)""",,exact,2,,0,deductive,Limit: Rational factor cancellation 0/0
+CAT23-003,cat_23_symbolic_limit_computation_limit,"""limit((x^3 - 8)/(x - 2), x, 2)""",,exact,12,,0,deductive,Limit: Rational factor cubic cancellation
+CAT23-004,cat_23_symbolic_limit_computation_limit,"""limit(sin(x)/x, x, 0)""",,exact,1,,0,deductive,Limit: L'Hopital sin(x)/x at 0
+CAT23-005,cat_23_symbolic_limit_computation_limit,"""limit((1 - cos(x))/(x^2), x, 0)""",,exact,1/2,,0,deductive,Limit: L'Hopital (1-cos(x))/x^2 at 0
+CAT23-006,cat_23_symbolic_limit_computation_limit,"""limit((x - sin(x))/(x^3), x, 0)""",,exact,1/6,,0,deductive,Limit: L'Hopital triple order (x-sin(x))/x^3
+CAT23-007,cat_23_symbolic_limit_computation_limit,"""limit((2*x^2 + 3)/(5*x^2 - 1), x, inf)""",,exact,2/5,,0,deductive,Limit: Rational degree comparison at inf
+CAT23-008,cat_23_symbolic_limit_computation_limit,"""limit(x/e^x, x, inf)""",,exact,0,,0,deductive,Limit: Transcendental scale x/e^x at inf
+CAT23-009,cat_23_symbolic_limit_computation_limit,"""limit(1/x, x, 0, 1)""",,exact,inf,,0,deductive,Limit: One-sided right limit 1/x at 0+
+CAT23-010,cat_23_symbolic_limit_computation_limit,"""limit(1/x, x, 0, -1)""",,exact,-inf,,0,deductive,Limit: One-sided left limit 1/x at 0-
+CAT23-011,cat_23_symbolic_limit_computation_limit,"""limit(1/x^2, x, 0)""",,exact,inf,,0,deductive,Limit: Even singularity 1/x^2 at 0
+CAT23-012,cat_23_symbolic_limit_computation_limit,"--explain ""limit((x^2 - 1)/(x - 1), x, 1)""",,exact,"Expression: limit((x^2 - 1)/(x - 1), x, 1)
+├── [Step 1: Limit Computation & Indeterminate Form Resolution]
+│   Factor cancellation of singularity (x - 1)
+│   -(-1 + x)^-1 + x^2*(-1 + x)^-1  ──>  1 + x
+│
+├── [Step 2: Limit Computation & Indeterminate Form Resolution]
+│   Limit computation: lim_{x->1} -1 * (-1 + x)^-1 + x^2 * (-1 + x)^-1 = 2
+│   -(-1 + x)^-1 + x^2*(-1 + x)^-1  ──>  2
+└── [Result]
+    = 2",,0,deductive,Limit: Explain trace output (en)
+CAT23-013,cat_23_symbolic_limit_computation_limit,"--lang ja --explain ""limit((x^2 - 1)/(x - 1), x, 1)""",,exact,"式: limit((x^2 - 1)/(x - 1), x, 1)
+├── [Step 1: 極限値計算・不定形の代数解消]
+│   因数分解による特異点 (x - 1) の約分消去
+│   -(-1 + x)^-1 + x^2*(-1 + x)^-1  ──>  1 + x
+│
+├── [Step 2: 極限値計算・不定形の代数解消]
+│   極限値計算: lim_{x->1} -1 * (-1 + x)^-1 + x^2 * (-1 + x)^-1 = 2
+│   -(-1 + x)^-1 + x^2*(-1 + x)^-1  ──>  2
+└── [Result]
+    = 2",,0,deductive,Limit: Explain trace output (ja)

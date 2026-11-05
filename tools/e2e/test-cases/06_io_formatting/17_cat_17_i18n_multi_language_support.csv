@@ -1,0 +1,5 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT17-001,cat_17_i18n_multi_language_support,--lang ja --help,,contains,,,0,deductive,i18n: Japanese help output
+CAT17-002,cat_17_i18n_multi_language_support,--lang en --help,,contains,,,0,deductive,i18n: English help output
+CAT17-003,cat_17_i18n_multi_language_support,"--lang ja ""plot(x^2 - 2, [-2, 2])""",,contains,,,0,deductive,i18n: Japanese plot zero label
+CAT17-004,cat_17_i18n_multi_language_support,"--lang en ""plot(x^2 - 2, [-2, 2])""",,contains,,,0,deductive,i18n: English plot zero label

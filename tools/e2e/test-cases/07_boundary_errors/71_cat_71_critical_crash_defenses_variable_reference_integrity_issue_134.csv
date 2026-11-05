@@ -1,0 +1,24 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT71-001,cat_71_critical_crash_defenses_variable_reference_integrity_issue_134,,"x = x
+x
+",error,,circular variable reference detected,1,contradiction,Crash Defense: Self reference variable assignment and evaluation
+CAT71-002,cat_71_critical_crash_defenses_variable_reference_integrity_issue_134,,"x = x + 1
+x
+",error,,circular variable reference detected,1,contradiction,Crash Defense: Self reference in expression assignment
+CAT71-003,cat_71_critical_crash_defenses_variable_reference_integrity_issue_134,,"a = b
+b = a
+a
+",error,,circular variable reference detected,1,contradiction,Crash Defense: Mutual circular reference
+CAT71-004,cat_71_critical_crash_defenses_variable_reference_integrity_issue_134,,"a = b
+b = c
+c = a
+a
+",error,,circular variable reference detected,1,contradiction,Crash Defense: 3-step circular reference chain
+CAT71-005,cat_71_critical_crash_defenses_variable_reference_integrity_issue_134,,"a = 42
+b = a
+c = b
+c
+",exact,"42
+42
+42
+42",,0,deductive,Crash Defense: Valid reference chain resolution without cycle

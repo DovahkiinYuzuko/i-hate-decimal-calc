@@ -1,0 +1,6 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT06-001,cat_06_advanced_cross_domain_fused_calculations,"""0.(3) * cbrt(27)""",,exact,1,,0,deductive,Fused: Repeating decimal and cube root
+CAT06-002,cat_06_advanced_cross_domain_fused_calculations,"""sqrt(4) + cbrt(8) + 2^3""",,exact,12,,0,deductive,"Fused: sqrt, cbrt, and power"
+CAT06-003,cat_06_advanced_cross_domain_fused_calculations,"""comb(5, 2) + perm(4, 2)""",,exact,22,,0,deductive,Fused: comb and perm arithmetic
+CAT06-004,cat_06_advanced_cross_domain_fused_calculations,"""gcd(24, 36) * lcm(4, 6)""",,exact,144,,0,deductive,Fused: gcd and lcm product
+CAT06-005,cat_06_advanced_cross_domain_fused_calculations,"""sqrt(5 + 2*sqrt(6)) - cbrt(8)""",,exact,-2 + √2 + √3,,0,deductive,Fused: Denested radical minus cube root

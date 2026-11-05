@@ -1,0 +1,4 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT62-001,cat_62_primitive_element_theorem_simple_extension_isomorphism,"""to_primitive_element([sqrt(2), sqrt(3)])""",,exact,"[theta, 1 - 10*theta^2 + theta^4, [-9/2*theta + theta^3/2, 11/2*theta - theta^3/2]]",,0,deductive,"Primitive Element: Q(sqrt(2), sqrt(3))"
+CAT62-002,cat_62_primitive_element_theorem_simple_extension_isomorphism,"""to_primitive_element(x^2 - 2, x^2 - 3)""",,exact,"[theta, 1 - 10*theta^2 + theta^4, [-9/2*theta + theta^3/2, 11/2*theta - theta^3/2]]",,0,deductive,Primitive Element: Polynomial arguments
+CAT62-003,cat_62_primitive_element_theorem_simple_extension_isomorphism,to_primitive_element(),,error,,requires arguments,1,contradiction,Negative: Invalid argument count to primitive element

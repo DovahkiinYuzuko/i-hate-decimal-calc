@@ -1,0 +1,7 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT47-001,cat_47_rational_interval_arithmetic_transcendental_inequalities,"""pi < 22/7""",,exact,true,,0,deductive,Interval: Archimedes inequality pi < 22/7
+CAT47-002,cat_47_rational_interval_arithmetic_transcendental_inequalities,"""1 < 2""",,exact,true,,0,deductive,Interval: Constant integer inequality 1 < 2
+CAT47-003,cat_47_rational_interval_arithmetic_transcendental_inequalities,"""sin(1) > 1/2""",,exact,true,,0,deductive,Interval: Transcendental inequality sin(1) > 1/2
+CAT47-004,cat_47_rational_interval_arithmetic_transcendental_inequalities,"""exp(2) > 7""",,exact,true,,0,deductive,Interval: Exponential inequality exp(2) > 7
+CAT47-005,cat_47_rational_interval_arithmetic_transcendental_inequalities,"""exp(pi) > pi^e""",,exact,true,,0,deductive,Interval: Gelfond constant inequality exp(pi) > pi^e
+CAT47-006,cat_47_rational_interval_arithmetic_transcendental_inequalities,"""solve(pi < 22/7)""",,exact,true,,0,deductive,Interval: CAD solve on transcendental inequality

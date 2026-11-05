@@ -1,0 +1,13 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT03-001,cat_03_square_roots_conjugate_rationalization,"""sqrt(8) + sqrt(18)""",,exact,5*√2,,0,deductive,Radical: Square root extraction and sum
+CAT03-002,cat_03_square_roots_conjugate_rationalization,"""sqrt(8) * sqrt(2)""",,exact,4,,0,deductive,Radical: Square root multiplication to integer
+CAT03-003,cat_03_square_roots_conjugate_rationalization,"""sqrt(3^2 + 4^2)""",,exact,5,,0,deductive,"Radical: Pythagorean triplet (3, 4, 5)"
+CAT03-004,cat_03_square_roots_conjugate_rationalization,"""sqrt(5^2 + 12^2)""",,exact,13,,0,deductive,"Radical: Pythagorean triplet (5, 12, 13)"
+CAT03-005,cat_03_square_roots_conjugate_rationalization,"""(1 + sqrt(2)) * (1 - sqrt(2))""",,exact,-1,,0,deductive,Radical: Conjugate multiplication expansion
+CAT03-006,cat_03_square_roots_conjugate_rationalization,"""1 / sqrt(2)""",,exact,√2/2,,0,deductive,Radical: Monomial denominator rationalization
+CAT03-007,cat_03_square_roots_conjugate_rationalization,"""1 / (2 + sqrt(3))""",,exact,2 - √3,,0,deductive,Radical: Binomial radical rationalization
+CAT03-008,cat_03_square_roots_conjugate_rationalization,"""1 / (sqrt(3) - sqrt(2))""",,exact,√2 + √3,,0,deductive,Radical: Binomial difference rationalization
+CAT03-009,cat_03_square_roots_conjugate_rationalization,"""(1 + sqrt(3)) / (2 + sqrt(5))""",,exact,-2 - 2*√3 + √15 + √5,,0,deductive,Radical: Complex binomial radical rationalization
+CAT03-010,cat_03_square_roots_conjugate_rationalization,"""sqrt(5 + 2*sqrt(6))""",,exact,√2 + √3,,0,deductive,Radical: Denesting (Borodin algorithm 1)
+CAT03-011,cat_03_square_roots_conjugate_rationalization,"""sqrt(7 + 4*sqrt(3))""",,exact,2 + √3,,0,deductive,Radical: Denesting (Borodin algorithm 2)
+CAT03-012,cat_03_square_roots_conjugate_rationalization,"""sqrt(3 + 2*sqrt(2)) - sqrt(2)""",,exact,1,,0,deductive,Radical: Denesting difference cancels to integer
