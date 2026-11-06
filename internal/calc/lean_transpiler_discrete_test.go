@@ -25,8 +25,25 @@ func TestTranspileCertificateIRToLean_Kirchhoff(t *testing.T) {
 	if !strings.Contains(code, "Matrix.det") || !strings.Contains(code, "= 3") {
 		t.Errorf("unexpected theorem code: %s", code)
 	}
-	if !strings.Contains(code, "by norm_num") {
-		t.Errorf("expected norm_num tactic, got %s", code)
+	if !strings.Contains(code, "by simp [Matrix.det_fin_two]; norm_num") {
+		t.Errorf("expected det_fin_two tactic, got %s", code)
+	}
+
+	// K4 graph Laplacian minor (3x3):
+	l00_k4 := &MatrixNode{
+		Data: [][]Node{
+			{mustRational(3, 1), mustRational(-1, 1), mustRational(-1, 1)},
+			{mustRational(-1, 1), mustRational(3, 1), mustRational(-1, 1)},
+			{mustRational(-1, 1), mustRational(-1, 1), mustRational(3, 1)},
+		},
+	}
+	certK4 := NewKirchhoffCertificate(nil, l00_k4, mustRational(16, 1), mustRational(0, 1), true, "Kirchhoff K4")
+	codeK4, errK4 := TranspileCertificateIRToLean(certK4)
+	if errK4 != nil {
+		t.Fatalf("unexpected error: %v", errK4)
+	}
+	if !strings.Contains(codeK4, "by simp [Matrix.det_fin_three]; norm_num") {
+		t.Errorf("expected det_fin_three tactic, got %s", codeK4)
 	}
 
 	imports := DetermineRequiredImports(cert)
@@ -82,7 +99,7 @@ func TestTranspileCertificateIRToLean_Markov(t *testing.T) {
 	if !strings.Contains(code, "Matrix.vecMul") {
 		t.Errorf("unexpected markov theorem code: %s", code)
 	}
-	if !strings.Contains(code, "by ext i <;> fin_cases i <;> norm_num") {
+	if !strings.Contains(code, "by ext i; fin_cases i <;> norm_num") {
 		t.Errorf("expected ext/fin_cases/norm_num tactic, got %s", code)
 	}
 }

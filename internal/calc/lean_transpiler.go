@@ -885,7 +885,13 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 		}
 		if dim > 0 {
 			equalityStr = fmt.Sprintf("Matrix.det (%s : Matrix (Fin %d) (Fin %d) ℚ) = %s", minorStr, dim, dim, treeStr)
-			tactic = "by norm_num"
+			if dim == 2 {
+				tactic = "by simp [Matrix.det_fin_two]; norm_num"
+			} else if dim == 3 {
+				tactic = "by simp [Matrix.det_fin_three]; norm_num"
+			} else {
+				tactic = "by norm_num"
+			}
 		} else {
 			equalityStr = fmt.Sprintf("Matrix.det %s = %s", minorStr, treeStr)
 			tactic = "by norm_num"
@@ -905,7 +911,7 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 			equalityStr = fmt.Sprintf("((∀ j, (Matrix.vecMul (%s : Fin %d → ℚ) (%s : Matrix (Fin %d) (Fin %d) ℚ)) j ≥ %s) ∧ (∀ i, (Matrix.mulVec (%s : Matrix (Fin %d) (Fin %d) ℚ) (%s : Fin %d → ℚ)) i ≤ %s))",
 				xStr, m, aStr, m, n, vStr,
 				aStr, m, n, yStr, n, vStr)
-			tactic = "by constructor <;> (intro k <;> fin_cases k <;> norm_num)"
+			tactic = "by constructor <;> (intro k; fin_cases k <;> norm_num)"
 		} else {
 			equalityStr = fmt.Sprintf("((Matrix.vecMul %s %s ≥ %s) ∧ (Matrix.mulVec %s %s ≤ %s))", xStr, aStr, vStr, aStr, yStr, vStr)
 			tactic = "by constructor <;> norm_num"
@@ -921,7 +927,7 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 		if dim > 0 {
 			equalityStr = fmt.Sprintf("(Matrix.vecMul (%s : Fin %d → ℚ) (%s : Matrix (Fin %d) (Fin %d) ℚ) = (%s : Fin %d → ℚ))",
 				piStr, dim, pStr, dim, dim, piStr, dim)
-			tactic = "by ext i <;> fin_cases i <;> norm_num"
+			tactic = "by ext i; fin_cases i <;> norm_num"
 		} else {
 			equalityStr = fmt.Sprintf("Matrix.vecMul %s %s = %s", piStr, pStr, piStr)
 			tactic = "by ext <;> norm_num"
