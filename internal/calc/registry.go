@@ -1541,6 +1541,52 @@ func init() {
 		LazyArgs: true,
 		Handler:  EvalRewrite,
 	})
+
+	// Graph Theory & Combinatorics
+	RegisterFunction(FunctionSpec{
+		Name:    "graph_laplacian",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "spanning_trees",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "chromatic_poly",
+		MinArgs: 1,
+		MaxArgs: 2,
+	})
+
+	// Discrete Probability
+	RegisterFunction(FunctionSpec{
+		Name:    "dice_prob",
+		MinArgs: 2,
+		MaxArgs: 3,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "markov_stationary",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+
+	// Game Theory
+	RegisterFunction(FunctionSpec{
+		Name:    "mex",
+		MinArgs: 0,
+		MaxArgs: -1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "nim_sum",
+		MinArgs: 0,
+		MaxArgs: -1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "nash_zero_sum",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
 }
 
 

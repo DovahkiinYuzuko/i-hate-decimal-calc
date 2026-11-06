@@ -212,6 +212,10 @@
 | `solve_linear` / `linsolve` | `solve_linear(A, b)` | 厳密連立一次方程式系ソルバー $Ax=b$（唯一解、不能、不定パラメータ解の厳密判別） |
 | `lp_maximize` | `lp_maximize(obj, constraints)` | 厳密有理数2段階改訂シンプレックス法による線形計画最大化問題ソルバー（Blandの最小添字規則、双対変数・Farkas証明書・後退方向 ray 返却） |
 | `lp_minimize` | `lp_minimize(obj, constraints)` | 厳密有理数2段階改訂シンプレックス法による線形計画最小化問題ソルバー |
+| `graph_laplacian` | `graph_laplacian(A)` | グラフの厳密グラフラプラシアン行列 $L = D - A$（$D$ は次数対角行列、$A$ は隣接行列） |
+| `spanning_trees` | `spanning_trees(A)` | 行列木定理（Kirchhoff's Matrix Tree Theorem）による無向グラフの全域木総数（$L$ の任意余因子） |
+| `chromatic_poly` | `chromatic_poly(A)` / `chromatic_poly(A, k)` | グラフの彩色多項式 $P(G, k)$（縮約・除去アルゴリズムおよび単体的頂点簡約による厳密記号多項式導出） |
+| `nash_zero_sum` | `nash_zero_sum(A)` | 2人零和ゲームの利得行列 $A$ に対するナッシュ均衡解 $[v, x, y]$（有理線形計画法・ミニマックス定理） |
 | `hnf` | `hnf(A)` | 整数行列のエルミート標準形（Hermite Normal Form: HNF）。小数を一切使わない整数初等行変形と剰余簡約により行階段形（上三角型）$H$ を導出 |
 | `hnf_transform` | `hnf_transform(A)` | エルミート標準形と単模変換行列 $[H, U]$ を同時返却（$U \in \text{GL}_m(\mathbb{Z}), U A = H$） |
 | `snf` | `snf(A)` | 整数行列のスミス標準形（Smith Normal Form: SNF）。整数初等行・列変形により主対角成分が整除鎖 $d_1 \mid d_2 \mid \dots \mid d_r$ を満たす対角行列 $D$ を導出 |
@@ -255,6 +259,10 @@
 | `expect` | `expect(binom, n, p)` / `expect([[x1, p1], ...])` | 離散確率変数の期待値 $E[X]$ |
 | `variance` | `variance(...)` | 離散確率変数の分散 $V[X] = E[X^2] - (E[X])^2$ |
 | `stddev` | `stddev(...)` | 離散確率変数の標準偏差 $\sigma = \sqrt{V[X]}$（根号形式代数簡約） |
+| `dice_prob` | `dice_prob(n, sides)` / `dice_prob(n, sides, target)` | 確率母関数（PGF）多項式畳み込みによるダイス出目和の厳密確率分布、期待値・分散・特定目標値の厳密確率 |
+| `markov_stationary` | `markov_stationary(P)` | マルコフ連鎖遷移行列 $P$ に対する厳密定常分布ベクトル $\pi$（$\pi P = \pi, \sum \pi_i = 1$ の有理ガウス消去） |
+| `mex` | `mex([0, 1, 2, 4])` / `mex(0, 1, 3)` | 最小除外数（Minimum EXcluded value: スプラーグ・グランディ理論・組合せゲーム） |
+| `nim_sum` | `nim_sum(1, 2, 3)` / `nim_sum([3, 4, 5])` | ニム和（排他的論理和 XOR による不偏ゲームの必勝状態判定） |
 
 ---
 

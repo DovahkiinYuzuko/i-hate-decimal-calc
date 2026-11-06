@@ -240,3 +240,47 @@ func TestStdDev(t *testing.T) {
 		})
 	}
 }
+
+
+func TestDiceProb(t *testing.T) {
+	tests := []struct {
+		expr     string
+		expected string
+	}{
+		{"dice_prob(2, 6, 7)", "1/6"},
+		{"dice_prob(1, 6, 6)", "1/6"},
+		{"dice_prob(3, 6, 18)", "1/216"},
+		{"dice_prob(0, 6, 0)", "1"},
+		{"dice_prob(2, 6)", "[7, 35/6]"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.expr, func(t *testing.T) {
+			res, err := EvalString(tt.expr)
+			if err != nil {
+				t.Fatalf("unexpected error for %s: %v", tt.expr, err)
+			}
+			if Format(res) != tt.expected {
+				t.Errorf("for %s, expected %s, got %s", tt.expr, tt.expected, Format(res))
+			}
+		})
+	}
+}
+
+func TestMarkovStationary(t *testing.T) {
+	// 2-state chain: [[1/2, 1/2], [1/3, 2/3]] -> [2/5, 3/5]
+	res, err := EvalString("markov_stationary([[1/2, 1/2], [1/3, 2/3]])")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	expected := "[2/5, 3/5]"
+	if Format(res) != expected {
+		t.Errorf("markov_stationary: got %s, want %s", Format(res), expected)
+	}
+
+	// Reducible chain with 2 absorbing states: [[1, 0], [0, 1]] -> should error
+	_, err = EvalString("markov_stationary([[1, 0], [0, 1]])")
+	if err == nil {
+		t.Errorf("expected error for non-unique stationary distribution, got nil")
+	}
+}

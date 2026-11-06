@@ -1,0 +1,16 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT87-001,cat_87_graph_probability_game_theory_issue_149,"""spanning_trees([[0, 1, 1], [1, 0, 1], [1, 1, 0]])""",,exact,3,,0,deductive,Kirchhoff: K3 spanning trees count Cayley formula
+CAT87-002,cat_87_graph_probability_game_theory_issue_149,"""spanning_trees([[0, 1, 1, 1], [1, 0, 1, 1], [1, 1, 0, 1], [1, 1, 1, 0]])""",,exact,16,,0,deductive,Kirchhoff: K4 spanning trees count Cayley formula
+CAT87-003,cat_87_graph_probability_game_theory_issue_149,"""chromatic_poly([[0, 0], [0, 0]])""",,exact,k^2,,0,deductive,Chromatic: Empty graph chromatic polynomial
+CAT87-004,cat_87_graph_probability_game_theory_issue_149,"""dice_prob(2, 6, 7)""",,exact,1/6,,0,deductive,DiscreteProb: 2d6 sum 7 exact probability
+CAT87-005,cat_87_graph_probability_game_theory_issue_149,"""dice_prob(2, 6)""",,exact,"[7, 35/6]",,0,deductive,DiscreteProb: 2d6 expectation and variance pair
+CAT87-006,cat_87_graph_probability_game_theory_issue_149,"""markov_stationary([[1/2, 1/2], [1/3, 2/3]])""",,exact,"[2/5, 3/5]",,0,deductive,Markov: 2-state ergodic stationary distribution
+CAT87-007,cat_87_graph_probability_game_theory_issue_149,"""mex([0, 1, 2, 4])""",,exact,3,,0,deductive,GameTheory: Minimum excluded value mex
+CAT87-008,cat_87_graph_probability_game_theory_issue_149,"""nim_sum(1, 2, 3)""",,exact,0,,0,deductive,GameTheory: 3-heap Nim-sum balanced zero
+CAT87-009,cat_87_graph_probability_game_theory_issue_149,"""nash_zero_sum([[0, -1, 1], [1, 0, -1], [-1, 1, 0]])""",,contains,"[1/3, 1/3, 1/3]",,0,deductive,GameTheory: Rock-Paper-Scissors minimax equilibrium
+CAT87-010,cat_87_graph_probability_game_theory_issue_149,"""chromatic_poly([[1, 0], [0, 0]])""",,exact,0,,0,contradiction,Chromatic: Self-loop non-colorable contradiction
+CAT87-011,cat_87_graph_probability_game_theory_issue_149,"""graph_laplacian([[0, 1], [0, 0]])""",,error,,symmetric,1,contradiction,Graph: Asymmetric adjacency matrix rejected
+CAT87-012,cat_87_graph_probability_game_theory_issue_149,"""markov_stationary([[1, 0], [0, 1]])""",,error,,stationary,1,contradiction,Markov: Reducible multiple closed classes rejected
+CAT87-013,cat_87_graph_probability_game_theory_issue_149,"""spanning_trees([[0, 1, 0], [1, 0, 0], [0, 0, 0]])""",,exact,0,,0,contrapositive,Kirchhoff: Disconnected graph spanning trees degenerate to 0
+CAT87-014,cat_87_graph_probability_game_theory_issue_149,"""spanning_trees([[0]])""",,exact,1,,0,contrapositive,Kirchhoff: Single vertex boundary spanning tree equals 1
+CAT87-015,cat_87_graph_probability_game_theory_issue_149,"""dice_prob(1, 6, 1) + dice_prob(1, 6, 2) + dice_prob(1, 6, 3) + dice_prob(1, 6, 4) + dice_prob(1, 6, 5) + dice_prob(1, 6, 6)""",,exact,1,,0,metamorphic,DiscreteProb: Metamorphic total probability sum conservation

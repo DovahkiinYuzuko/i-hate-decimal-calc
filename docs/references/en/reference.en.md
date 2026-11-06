@@ -212,6 +212,10 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `solve_linear` / `linsolve` | `solve_linear(A, b)` | Exact linear system solver $Ax=b$ (unique, inconsistent, or parametric solutions) |
 | `lp_maximize` | `lp_maximize(obj, constraints)` | Exact rational two-phase revised simplex linear programming maximization (Bland's rule, dual multipliers, Farkas certificates, and recession rays) |
 | `lp_minimize` | `lp_minimize(obj, constraints)` | Exact rational two-phase revised simplex linear programming minimization |
+| `graph_laplacian` | `graph_laplacian(A)` | Exact graph Laplacian matrix $L = D - A$ ($D$ degree diagonal matrix, $A$ adjacency matrix) |
+| `spanning_trees` | `spanning_trees(A)` | Exact number of spanning trees via Kirchhoff's Matrix Tree Theorem (cofactor of $L$) |
+| `chromatic_poly` | `chromatic_poly(A)` / `chromatic_poly(A, k)` | Chromatic polynomial $P(G, k)$ via Deletion-Contraction and simplicial vertex reduction |
+| `nash_zero_sum` | `nash_zero_sum(A)` | Nash equilibrium $[v, x, y]$ of two-player zero-sum game with payoff matrix $A$ via rational LP |
 | `hnf` | `hnf(A)` | Hermite Normal Form (HNF) of integer matrices via fraction-free elementary row operations and modulo reduction to row echelon upper triangular form $H$ |
 | `hnf_transform` | `hnf_transform(A)` | Hermite Normal Form with unimodular transform $[H, U]$ ($U \in \text{GL}_m(\mathbb{Z}), U A = H$) |
 | `snf` | `snf(A)` | Smith Normal Form (SNF) of integer matrices via elementary row/column operations with invariant factor divisibility chain $d_1 \mid d_2 \mid \dots \mid d_r$ |
@@ -255,6 +259,10 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `expect` | `expect(binom, n, p)` / `expect([[x1, p1], ...])` | Expected value $E[X]$ of discrete distributions |
 | `variance` | `variance(...)` | Variance $V[X] = E[X^2] - (E[X])^2$ |
 | `stddev` | `stddev(...)` | Standard deviation $\sigma = \sqrt{V[X]}$ (in exact radical form) |
+| `dice_prob` | `dice_prob(n, sides)` / `dice_prob(n, sides, target)` | Exact dice probability distribution, expectation, variance, and target probability via PGF polynomial convolution |
+| `markov_stationary` | `markov_stationary(P)` | Exact stationary distribution $\pi$ for Markov transition matrix $P$ ($\pi P = \pi, \sum \pi_i = 1$) via rational Gaussian elimination |
+| `mex` | `mex([0, 1, 2, 4])` / `mex(0, 1, 3)` | Minimum EXcluded value (mex) of a set of non-negative integers (Sprague-Grundy theory) |
+| `nim_sum` | `nim_sum(1, 2, 3)` / `nim_sum([3, 4, 5])` | Nim-sum (bitwise XOR fold) for impartial combinatorial games |
 
 ---
 

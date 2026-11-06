@@ -534,6 +534,14 @@
     "err_fourier_series_requires_between_1": "fourier_series: requires between 1 and 4 arguments: f(t), [var, L, n]"
   },
   "func_args_between": "function %s requires between %d and %d arguments, got %d",
+  "game": {
+    "err_mex_non_negative_int": "mex: expected non-negative integer, got %s",
+    "err_nash_empty_matrix": "nash_zero_sum: payoff matrix is empty",
+    "err_nash_matrix_required": "nash_zero_sum: payoff MatrixNode required, got %s",
+    "err_nash_rational_required": "nash_zero_sum: entry (%d, %d) must be rational",
+    "err_nash_solve_failed": "nash_zero_sum: LP solver failed to find Nash equilibrium: %v",
+    "err_nim_sum_non_negative_int": "nim_sum: expected non-negative integer, got %s"
+  },
   "galois": {
     "err_degree_out_of_range": "Galois group computation supports irreducible polynomials of degree 1 to 5 (got degree %d)",
     "err_galois_args": "%s requires 1 or 2 arguments: (poly [, x])",
@@ -568,6 +576,15 @@
     "err_triangle_centers_error_in_vertex": "triangle_centers error in vertex 1: %v",
     "err_triangle_centers_error_in_vertex_1": "triangle_centers error in vertex 2: %v",
     "err_triangle_centers_error_in_vertex_2": "triangle_centers error in vertex 3: %v"
+  },
+  "graph": {
+    "err_asymmetric_matrix": "adjacency matrix must be symmetric: (%d, %d)",
+    "err_chromatic_poly_node_budget_exceeded": "chromatic_poly: recursion node budget (%d) exceeded",
+    "err_matrix_not_symmetric": "adjacency matrix must be symmetric: A[%d][%d]=%d != A[%d][%d]=%d",
+    "err_matrix_required": "%s: adjacency MatrixNode required, got %s",
+    "err_must_be_square": "adjacency matrix must be square, got %dx%d",
+    "err_negative_entry": "adjacency matrix entries must be non-negative: A[%d][%d]=%d",
+    "err_non_integer_entry": "adjacency matrix entries must be integers: (%d, %d)"
   },
   "gosper": {
     "err_cannot_mark_notsummable_once_solved": "cannot mark NotSummable once solved or certified (state: %s)",
@@ -840,6 +857,9 @@
   "prob": {
     "err_bayes_requires_3_arguments_prior": "bayes requires 3 arguments (prior, likelihood, marginal), got %d",
     "err_binom_requires_3_arguments_n": "binom requires 3 arguments (n, k, p), got %d",
+    "err_dice_n_too_large": "dice_prob: dice count n too large (max 10000)",
+    "err_dice_prob_arg_count": "dice_prob requires 2 or 3 arguments, got %d",
+    "err_dice_sides_too_large": "dice_prob: sides too large (max 1000)",
     "err_discrete_distribution_cannot_be_empty": "discrete distribution cannot be empty",
     "err_discrete_distribution_matrix_must_have": "discrete distribution matrix must have exactly 2 columns [value, prob], got %d cols",
     "err_each_element_of_discrete_distribution": "each element of discrete distribution must be a [value, prob] pair, got %s",
@@ -852,6 +872,13 @@
     "err_geom_p_cannot_be_zero": "geom: p cannot be zero",
     "err_geom_requires_2_arguments_p": "geom requires 2 arguments (p, k), got %d",
     "err_hyper_requires_4_arguments_n": "hyper requires 4 arguments (N, K, n, k), got %d",
+    "err_markov_arg_count": "markov_stationary requires exactly 1 argument, got %d",
+    "err_markov_matrix_required": "markov_stationary: transition MatrixNode required",
+    "err_markov_negative_prob": "markov_stationary: transition probability must be non-negative (%d, %d): %s",
+    "err_markov_non_unique_stationary": "markov_stationary: stationary distribution is not unique (reducible Markov chain or multiple closed classes)",
+    "err_markov_rational_required": "markov_stationary: entry (%d, %d) must be rational",
+    "err_markov_row_sum_not_one": "markov_stationary: row %d probabilities do not sum to 1 (sum: %s)",
+    "err_markov_square_required": "markov_stationary: transition matrix must be square, got %dx%d",
     "err_variance_binom_requires_3_arguments": "variance(binom) requires 3 arguments (binom, n, p), got %d",
     "err_variance_geom_requires_2_arguments": "variance(geom) requires 2 arguments (geom, p), got %d",
     "err_variance_hyper_requires_4_arguments": "variance(hyper) requires 4 arguments (hyper, N, K, n), got %d",

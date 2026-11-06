@@ -59,6 +59,20 @@ func init() {
 
 	// Visualization
 	RegisterHandler("plot", handlePlot)
+
+	// Graph theory
+	RegisterHandler("graph_laplacian", handleGraphLaplacian)
+	RegisterHandler("spanning_trees", handleSpanningTrees)
+	RegisterHandler("chromatic_poly", handleChromaticPoly)
+
+	// Discrete probability
+	RegisterHandler("dice_prob", handleDiceProb)
+	RegisterHandler("markov_stationary", handleMarkovStationary)
+
+	// Game theory
+	RegisterHandler("mex", handleMex)
+	RegisterHandler("nim_sum", handleNimSum)
+	RegisterHandler("nash_zero_sum", handleNashZeroSum)
 }
 
 func handleGCD(args []Node, env *Env) (Node, error) {
@@ -332,4 +346,36 @@ func handleOct(args []Node, env *Env) (Node, error) {
 
 func handleHex(args []Node, env *Env) (Node, error) {
 	return EvalHex(args[0])
+}
+
+func handleGraphLaplacian(args []Node, env *Env) (Node, error) {
+	return EvalGraphLaplacian(args)
+}
+
+func handleSpanningTrees(args []Node, env *Env) (Node, error) {
+	return EvalSpanningTrees(args)
+}
+
+func handleChromaticPoly(args []Node, env *Env) (Node, error) {
+	return EvalChromaticPolynomial(args)
+}
+
+func handleDiceProb(args []Node, env *Env) (Node, error) {
+	return EvalDiceProb(args)
+}
+
+func handleMarkovStationary(args []Node, env *Env) (Node, error) {
+	return EvalMarkovStationary(args)
+}
+
+func handleMex(args []Node, env *Env) (Node, error) {
+	return EvalMex(args)
+}
+
+func handleNimSum(args []Node, env *Env) (Node, error) {
+	return EvalNimSum(args)
+}
+
+func handleNashZeroSum(args []Node, env *Env) (Node, error) {
+	return EvalNashZeroSum(args)
 }

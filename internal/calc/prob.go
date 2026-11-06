@@ -557,3 +557,259 @@ func evalPairsVariance(pairs []probPair) (Node, error) {
 	}
 	return Eval(diff)
 }
+
+
+// EvalDiceProb calculates exact discrete probability distributions for dice rolls using PGF.
+// Supported calls:
+// - dice_prob(n, sides): returns [E, V] as a ListNode containing [expected_value, variance]
+// - dice_prob(n, sides, target): returns exact rational probability P(sum == target)
+func EvalDiceProb(args []Node) (Node, error) {
+	if len(args) != 2 && len(args) != 3 {
+		return nil, fmt.Errorf("%s", i18n.T("prob.err_dice_prob_arg_count", len(args)))
+	}
+
+	nBig, err := extractNonNegativeInt(args[0], "dice_prob: n")
+	if err != nil {
+		return nil, err
+	}
+	sidesBig, err := extractPositiveInt(args[1], "dice_prob: sides")
+	if err != nil {
+		return nil, err
+	}
+
+	if !nBig.IsInt64() || nBig.Int64() > 10000 {
+		return nil, fmt.Errorf("%s", i18n.T("prob.err_dice_n_too_large"))
+	}
+	if !sidesBig.IsInt64() || sidesBig.Int64() > 1000 {
+		return nil, fmt.Errorf("%s", i18n.T("prob.err_dice_sides_too_large"))
+	}
+
+	n := int(nBig.Int64())
+	sides := int(sidesBig.Int64())
+
+	if len(args) == 2 {
+		// Expectation: E = n * (sides + 1) / 2
+		// Variance: V = n * (sides^2 - 1) / 12
+		if n == 0 {
+			return &ListNode{Elements: []Node{mustRational(0, 1), mustRational(0, 1)}}, nil
+		}
+		eNum := new(big.Int).Mul(nBig, big.NewInt(int64(sides+1)))
+		eRat := new(big.Rat).SetFrac(eNum, big.NewInt(2))
+
+		sidesSqMinus1 := int64(sides)*int64(sides) - 1
+		vNum := new(big.Int).Mul(nBig, big.NewInt(sidesSqMinus1))
+		vRat := new(big.Rat).SetFrac(vNum, big.NewInt(12))
+
+		return &ListNode{
+			Elements: []Node{
+				NewRationalFromBigRat(eRat),
+				NewRationalFromBigRat(vRat),
+			},
+		}, nil
+	}
+
+	// 3 arguments: dice_prob(n, sides, target)
+	targetRat, ok := args[2].(*RationalNode)
+	if !ok || !targetRat.Val.IsInt() {
+		return mustRational(0, 1), nil
+	}
+	targetInt := targetRat.Val.Num()
+
+	if n == 0 {
+		if targetInt.Sign() == 0 {
+			return mustRational(1, 1), nil
+		}
+		return mustRational(0, 1), nil
+	}
+
+	minSum := int64(n)
+	maxSum := int64(n) * int64(sides)
+	if targetInt.Cmp(big.NewInt(minSum)) < 0 || targetInt.Cmp(big.NewInt(maxSum)) > 0 {
+		return mustRational(0, 1), nil
+	}
+
+	// Polynomial multiplication via binary exponentiation:
+	// P(x) = sum_{k=1}^sides x^k
+	polyBase := make([]*big.Int, sides+1)
+	for i := range polyBase {
+		polyBase[i] = big.NewInt(0)
+	}
+	for i := 1; i <= sides; i++ {
+		polyBase[i] = big.NewInt(1)
+	}
+
+	polyPow := func(base []*big.Int, exp int) []*big.Int {
+		res := []*big.Int{big.NewInt(1)}
+		cur := make([]*big.Int, len(base))
+		copy(cur, base)
+		e := exp
+		for e > 0 {
+			if e%2 == 1 {
+				nextRes := make([]*big.Int, len(res)+len(cur)-1)
+				for i := range nextRes {
+					nextRes[i] = big.NewInt(0)
+				}
+				for i := range res {
+					if res[i].Sign() == 0 {
+						continue
+					}
+					for j := range cur {
+						if cur[j].Sign() == 0 {
+							continue
+						}
+						prod := new(big.Int).Mul(res[i], cur[j])
+						nextRes[i+j].Add(nextRes[i+j], prod)
+					}
+				}
+				res = nextRes
+			}
+			e /= 2
+			if e > 0 {
+				nextCur := make([]*big.Int, len(cur)+len(cur)-1)
+				for i := range nextCur {
+					nextCur[i] = big.NewInt(0)
+				}
+				for i := range cur {
+					if cur[i].Sign() == 0 {
+						continue
+					}
+					for j := range cur {
+						if cur[j].Sign() == 0 {
+							continue
+						}
+						prod := new(big.Int).Mul(cur[i], cur[j])
+						nextCur[i+j].Add(nextCur[i+j], prod)
+					}
+				}
+				cur = nextCur
+			}
+		}
+		return res
+	}
+
+	resPoly := polyPow(polyBase, n)
+	targetIdx := int(targetInt.Int64())
+	var ways *big.Int
+	if targetIdx >= 0 && targetIdx < len(resPoly) {
+		ways = resPoly[targetIdx]
+	} else {
+		ways = big.NewInt(0)
+	}
+
+	// Total outcomes = sides^n
+	totalOutcomes := new(big.Int).Exp(big.NewInt(int64(sides)), big.NewInt(int64(n)), nil)
+	probRat := new(big.Rat).SetFrac(ways, totalOutcomes)
+	return NewRationalFromBigRat(probRat), nil
+}
+
+// EvalMarkovStationary calculates the exact stationary distribution pi for a Markov transition matrix P,
+// such that pi * P = pi and sum(pi) = 1.
+// If the Markov chain is reducible or has multiple stationary distributions, an error is returned.
+func EvalMarkovStationary(args []Node) (Node, error) {
+	if len(args) != 1 {
+		return nil, fmt.Errorf("%s", i18n.T("prob.err_markov_arg_count", len(args)))
+	}
+
+	var mat *MatrixNode
+	switch v := args[0].(type) {
+	case *MatrixNode:
+		mat = v
+	default:
+		return nil, fmt.Errorf("%s", i18n.T("prob.err_markov_matrix_required"))
+	}
+
+	if mat.Rows != mat.Cols || mat.Rows == 0 {
+		return nil, fmt.Errorf("%s", i18n.T("prob.err_markov_square_required", mat.Rows, mat.Cols))
+	}
+	n := mat.Rows
+
+	// Check row stochasticity: each element >= 0, row sum == 1
+	zeroRat := big.NewRat(0, 1)
+	oneRat := big.NewRat(1, 1)
+
+	P := make([][]*big.Rat, n)
+	for r := 0; r < n; r++ {
+		P[r] = make([]*big.Rat, n)
+		rowSum := big.NewRat(0, 1)
+		for c := 0; c < n; c++ {
+			ratNode, err := Eval(mat.Data[r][c])
+			if err != nil {
+				return nil, err
+			}
+			rNode, ok := ratNode.(*RationalNode)
+			if !ok {
+				return nil, fmt.Errorf("%s", i18n.T("prob.err_markov_rational_required", r, c))
+			}
+			val := new(big.Rat).Set(rNode.Val)
+			if val.Cmp(zeroRat) < 0 {
+				return nil, fmt.Errorf("%s", i18n.T("prob.err_markov_negative_prob", r, c, val.RatString()))
+			}
+			rowSum.Add(rowSum, val)
+			P[r][c] = val
+		}
+		if rowSum.Cmp(oneRat) != 0 {
+			return nil, fmt.Errorf("%s", i18n.T("prob.err_markov_row_sum_not_one", r, rowSum.RatString()))
+		}
+	}
+
+	// We solve:
+	// sum_{i=0}^{n-1} pi_i (P[i][j] - delta_{ij}) = 0   for j = 0..n-1
+	// and sum_{i=0}^{n-1} pi_i = 1
+	//
+	// Augmented matrix of size (n + 1) x (n + 1):
+	// Row 0..n-1: column j of (P^T - I) with RHS 0
+	// Row n: [1, 1, ..., 1 | 1]
+	augData := make([][]Node, n+1)
+	for j := 0; j < n; j++ {
+		augData[j] = make([]Node, n+1)
+		for i := 0; i < n; i++ {
+			coef := new(big.Rat).Set(P[i][j])
+			if i == j {
+				coef.Sub(coef, oneRat)
+			}
+			augData[j][i] = NewRationalFromBigRat(coef)
+		}
+		augData[j][n] = mustRational(0, 1) // RHS
+	}
+
+	augData[n] = make([]Node, n+1)
+	for i := 0; i < n; i++ {
+		augData[n][i] = mustRational(1, 1)
+	}
+	augData[n][n] = mustRational(1, 1) // RHS
+
+	augMat, err := NewMatrix(n+1, n+1, augData)
+	if err != nil {
+		return nil, err
+	}
+
+	rrefMat, pivotCols, err := computeRREF(augMat)
+	if err != nil {
+		return nil, err
+	}
+
+	// For a unique solution, the system must have rank n in the n unknowns,
+	// meaning pivot columns must be exactly 0, 1, ..., n-1, and row n must be 0...0|0 (consistent).
+	// If pivot column includes column n (RHS), it's inconsistent (0 = 1).
+	// If rank < n, multiple solutions exist (reducible).
+	hasInconsistency := false
+	rank := len(pivotCols)
+	for _, pCol := range pivotCols {
+		if pCol == n {
+			hasInconsistency = true
+			break
+		}
+	}
+
+	if hasInconsistency || rank != n {
+		return nil, fmt.Errorf("%s", i18n.T("prob.err_markov_non_unique_stationary"))
+	}
+
+	// Extract solution pi_0, ..., pi_{n-1}
+	sol := make([]Node, n)
+	for r := 0; r < n; r++ {
+		sol[r] = rrefMat.Data[r][n]
+	}
+
+	return &ListNode{Elements: sol}, nil
+}

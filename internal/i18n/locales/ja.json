@@ -534,6 +534,14 @@
     "err_fourier_series_requires_between_1": "fourier_series: 1〜4個の引数が必要です: f(t), [var, L, n]"
   },
   "func_args_between": "関数 %s は %d〜%d 個の引数が必要ですが、%d 個渡されました",
+  "game": {
+    "err_mex_non_negative_int": "mex: 非負整数が期待されました (指定値: %s)",
+    "err_nash_empty_matrix": "nash_zero_sum: 利得行列が空です",
+    "err_nash_matrix_required": "nash_zero_sum: 利得行列 MatrixNode が必要です (指定値: %s)",
+    "err_nash_rational_required": "nash_zero_sum: 要素 (%d, %d) は有理数である必要があります",
+    "err_nash_solve_failed": "nash_zero_sum: 線形計画ソルバーによるナッシュ均衡の求解に失敗しました: %v",
+    "err_nim_sum_non_negative_int": "nim_sum: 非負整数が期待されました (指定値: %s)"
+  },
   "galois": {
     "err_degree_out_of_range": "未対応の操作: ガロア群算定は次数1〜5の既約多項式に対応しています (指定次数: %d)",
     "err_galois_args": "引数エラー: %s は1つまたは2つの引数 (poly [, x]) が必要です",
@@ -568,6 +576,15 @@
     "err_triangle_centers_error_in_vertex": "triangle_centers 頂点1のエラー: %v",
     "err_triangle_centers_error_in_vertex_1": "triangle_centers 頂点2のエラー: %v",
     "err_triangle_centers_error_in_vertex_2": "triangle_centers 頂点3のエラー: %v"
+  },
+  "graph": {
+    "err_asymmetric_matrix": "隣接行列は対称行列である必要があります: (%d, %d)",
+    "err_chromatic_poly_node_budget_exceeded": "chromatic_poly: 探索ノード数の上限 (%d) を超過しました",
+    "err_matrix_not_symmetric": "隣接行列は対称行列である必要があります: A[%d][%d]=%d != A[%d][%d]=%d",
+    "err_matrix_required": "%s: 隣接行列 MatrixNode が必要です (指定値: %s)",
+    "err_must_be_square": "隣接行列は正方行列である必要があります (指定値: %dx%d)",
+    "err_negative_entry": "隣接行列の要素は非負である必要があります: A[%d][%d]=%d",
+    "err_non_integer_entry": "隣接行列の要素は整数である必要があります: (%d, %d)"
   },
   "gosper": {
     "err_cannot_mark_notsummable_once_solved": "解決または証明完了後は NotSummable としてマークできません (状態: %s)",
@@ -840,6 +857,9 @@
   "prob": {
     "err_bayes_requires_3_arguments_prior": "bayes には3つの引数 (prior, likelihood, marginal) が必要です (指定値: %d個)",
     "err_binom_requires_3_arguments_n": "binom には3つの引数 (n, k, p) が必要です (指定値: %d個)",
+    "err_dice_n_too_large": "dice_prob: ダイスの個数 n が大きすぎます (最大 10000)",
+    "err_dice_prob_arg_count": "dice_prob には 2 または 3 個の引数が必要です (指定値: %d個)",
+    "err_dice_sides_too_large": "dice_prob: ダイスの面数 sides が大きすぎます (最大 1000)",
     "err_discrete_distribution_cannot_be_empty": "離散分布を空にすることはできません",
     "err_discrete_distribution_matrix_must_have": "離散分布行列はちょうど2列 [値, 確率] である必要があります (指定値: %d列)",
     "err_each_element_of_discrete_distribution": "離散分布の各要素は [値, 確率] のペアである必要があります (指定値: %s)",
@@ -852,6 +872,13 @@
     "err_geom_p_cannot_be_zero": "geom: 確率 p をゼロにすることはできません",
     "err_geom_requires_2_arguments_p": "geom には2つの引数 (p, k) が必要です (指定値: %d個)",
     "err_hyper_requires_4_arguments_n": "hyper には4つの引数 (N, K, n, k) が必要です (指定値: %d個)",
+    "err_markov_arg_count": "markov_stationary にはちょうど 1 個の引数が必要です (指定値: %d個)",
+    "err_markov_matrix_required": "markov_stationary: 遷移行列 MatrixNode が必要です",
+    "err_markov_negative_prob": "markov_stationary: 遷移確率は非負である必要があります (%d, %d): %s",
+    "err_markov_non_unique_stationary": "markov_stationary: 定常分布が一意に存在しません (可約マルコフ連鎖または複数の閉クラス)",
+    "err_markov_rational_required": "markov_stationary: 要素 (%d, %d) は有理数である必要があります",
+    "err_markov_row_sum_not_one": "markov_stationary: 行 %d の確率の総和が 1 ではありません (合計: %s)",
+    "err_markov_square_required": "markov_stationary: 遷移行列は正方行列である必要があります (指定値: %dx%d)",
     "err_variance_binom_requires_3_arguments": "variance(binom) には3つの引数 (binom, n, p) が必要です (指定値: %d個)",
     "err_variance_geom_requires_2_arguments": "variance(geom) には2つの引数 (geom, p) が必要です (指定値: %d個)",
     "err_variance_hyper_requires_4_arguments": "variance(hyper) には4つの引数 (hyper, N, K, n) が必要です (指定値: %d個)",
