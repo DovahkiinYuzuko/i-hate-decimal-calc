@@ -584,7 +584,9 @@
     "err_matrix_required": "%s: adjacency MatrixNode required, got %s",
     "err_must_be_square": "adjacency matrix must be square, got %dx%d",
     "err_negative_entry": "adjacency matrix entries must be non-negative: A[%d][%d]=%d",
-    "err_non_integer_entry": "adjacency matrix entries must be integers: (%d, %d)"
+    "err_negative_weight": "adjacency matrix entries must be non-negative: (%d, %d)",
+    "err_non_integer_entry": "adjacency matrix entries must be integers: (%d, %d)",
+    "err_weight_too_large": "adjacency matrix entry is too large (exceeds int64 range): (%d, %d)"
   },
   "gosper": {
     "err_cannot_mark_notsummable_once_solved": "cannot mark NotSummable once solved or certified (state: %s)",

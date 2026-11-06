@@ -14,3 +14,6 @@ CAT87-012,cat_87_graph_probability_game_theory_issue_149,"""markov_stationary([[
 CAT87-013,cat_87_graph_probability_game_theory_issue_149,"""spanning_trees([[0, 1, 0], [1, 0, 0], [0, 0, 0]])""",,exact,0,,0,contrapositive,Kirchhoff: Disconnected graph spanning trees degenerate to 0
 CAT87-014,cat_87_graph_probability_game_theory_issue_149,"""spanning_trees([[0]])""",,exact,1,,0,contrapositive,Kirchhoff: Single vertex boundary spanning tree equals 1
 CAT87-015,cat_87_graph_probability_game_theory_issue_149,"""dice_prob(1, 6, 1) + dice_prob(1, 6, 2) + dice_prob(1, 6, 3) + dice_prob(1, 6, 4) + dice_prob(1, 6, 5) + dice_prob(1, 6, 6)""",,exact,1,,0,metamorphic,DiscreteProb: Metamorphic total probability sum conservation
+CAT87-016,cat_87_graph_probability_game_theory_issue_149,"""mex([0, 1, 18446744073709551616, 2])""",,exact,3,,0,contrapositive,GameTheory: Mex ignores elements strictly greater than N
+CAT87-017,cat_87_graph_probability_game_theory_issue_149,"""nash_zero_sum([[2, 1, 3], [3, 2, 1], [1, 3, 2]])""",,contains,"[1/3, 1/3, 1/3]",,0,metamorphic,GameTheory: Payoff constant shift invariant preserves mixed strategy
+CAT87-018,cat_87_graph_probability_game_theory_issue_149,"""graph_laplacian([[0, 18446744073709551616], [18446744073709551616, 0]])""",,error,,large,1,contradiction,Graph: Oversized edge weight rejected

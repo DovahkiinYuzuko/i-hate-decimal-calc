@@ -38,9 +38,13 @@ func TestGraphLaplacian(t *testing.T) {
 	}
 
 	// Asymmetric matrix should error
-	_, err := evalTestExprErr("graph_laplacian([[0, 1], [0, 0]])")
-	if err == nil {
+	if _, err := evalTestExprErr("graph_laplacian([[0, 1], [0, 0]])"); err == nil {
 		t.Errorf("expected error for asymmetric adjacency matrix, got nil")
+	}
+
+	// Oversized weight (> int64) should error
+	if _, err := evalTestExprErr("graph_laplacian([[0, 18446744073709551616], [18446744073709551616, 0]])"); err == nil {
+		t.Errorf("expected error for oversized edge weight, got nil")
 	}
 }
 

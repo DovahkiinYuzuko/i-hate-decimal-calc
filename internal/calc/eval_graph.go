@@ -35,6 +35,15 @@ func parseUndirectedGraph(mat *MatrixNode) (*internalGraph, error) {
 		return nil, fmt.Errorf("%s", i18n.T("graph.err_must_be_square", mat.Rows, mat.Cols))
 	}
 	n := mat.Rows
+	if len(mat.Data) != n {
+		return nil, fmt.Errorf("%s", i18n.T("graph.err_must_be_square", mat.Rows, mat.Cols))
+	}
+	for r := 0; r < n; r++ {
+		if len(mat.Data[r]) != n {
+			return nil, fmt.Errorf("%s", i18n.T("graph.err_must_be_square", mat.Rows, mat.Cols))
+		}
+	}
+
 	g := &internalGraph{
 		N:     n,
 		Edges: make(map[[2]int]int),
@@ -47,10 +56,14 @@ func parseUndirectedGraph(mat *MatrixNode) (*internalGraph, error) {
 			if !ok || !rat.Val.IsInt() {
 				return nil, fmt.Errorf("%s", i18n.T("graph.err_non_integer_entry", r, c))
 			}
-			weight := int(rat.Val.Num().Int64())
-			if weight < 0 {
+			num := rat.Val.Num()
+			if num.Sign() < 0 {
 				return nil, fmt.Errorf("%s", i18n.T("graph.err_negative_weight", r, c))
 			}
+			if !num.IsInt64() {
+				return nil, fmt.Errorf("%s", i18n.T("graph.err_weight_too_large", r, c))
+			}
+			weight := int(num.Int64())
 
 			if r == c {
 				if weight > 0 {
@@ -59,10 +72,10 @@ func parseUndirectedGraph(mat *MatrixNode) (*internalGraph, error) {
 				continue
 			}
 
-			// Symmetry check
+			// Symmetry check via exact big.Int comparison
 			symNode := mat.Data[c][r]
 			symRat, ok := symNode.(*RationalNode)
-			if !ok || !symRat.Val.IsInt() || symRat.Val.Num().Int64() != int64(weight) {
+			if !ok || !symRat.Val.IsInt() || symRat.Val.Num().Cmp(num) != 0 {
 				return nil, fmt.Errorf("%s", i18n.T("graph.err_asymmetric_matrix", r, c))
 			}
 
