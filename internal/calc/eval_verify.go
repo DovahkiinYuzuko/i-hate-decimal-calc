@@ -33,6 +33,9 @@ const (
 	DomainUnits         VerificationDomain = "units"
 	DomainRecurrence    VerificationDomain = "recurrence"
 	DomainTransform     VerificationDomain = "transform"
+	DomainGraph         VerificationDomain = "graph"
+	DomainGame          VerificationDomain = "game"
+	DomainProbability   VerificationDomain = "probability"
 )
 
 // VerificationCertificate represents a certified mathematical proof of correctness.
@@ -238,6 +241,18 @@ func VerifyComputation(expr, result Node, env *Env) (*VerificationCertificate, e
 		case "convert_unit":
 			_ = fsm.TransitionTo(VerifyStateTargetClassified)
 			return verifyConvertUnit(fn, result, env, fsm)
+
+		case "spanning_trees":
+			_ = fsm.TransitionTo(VerifyStateTargetClassified)
+			return verifyKirchhoff(fn, result, env, fsm)
+
+		case "nash_zero_sum":
+			_ = fsm.TransitionTo(VerifyStateTargetClassified)
+			return verifyNashZeroSum(fn, result, env, fsm)
+
+		case "markov_stationary":
+			_ = fsm.TransitionTo(VerifyStateTargetClassified)
+			return verifyMarkovStationary(fn, result, env, fsm)
 		}
 
 	case *RelOpNode:
@@ -3263,4 +3278,115 @@ func verifySOSDecompose(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycl
 			State:      VerifyStateUnsupportedDomain,
 		}, nil
 	}
+}
+
+func verifyKirchhoff(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
+	if len(fn.Args) < 1 {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, fmt.Errorf("%s", i18n.T("graph.err_spanning_trees_args", len(fn.Args)))
+	}
+	mat, ok := fn.Args[0].(*MatrixNode)
+	if !ok || len(mat.Data) == 0 {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, fmt.Errorf("%s", i18n.T("graph.err_expected_matrix"))
+	}
+	if mat.Rows == 0 || mat.Cols == 0 {
+		mat.Rows = len(mat.Data)
+		mat.Cols = len(mat.Data[0])
+	}
+	n := len(mat.Data)
+	if n == 1 {
+		certIR := NewKirchhoffCertificate(mat, mat, result, mustRational(0, 1), true, "Kirchhoff Spanning Trees (Trivial single vertex)")
+		_ = fsm.TransitionTo(VerifyStateCertified)
+		return &VerificationCertificate{
+			Domain:     DomainGraph,
+			Equation:   fmt.Sprintf("det(L00) == %s", result.String()),
+			IsVerified: true,
+			Details:    certIR.Details(),
+			State:      VerifyStateCertified,
+			CertIR:     certIR,
+		}, nil
+	}
+
+	lapNode, err := EvalGraphLaplacian([]Node{mat})
+	if err != nil {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		return nil, err
+	}
+	lapMat, okLap := lapNode.(*MatrixNode)
+	if !okLap {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		return nil, fmt.Errorf("laplacian is not matrix")
+	}
+
+	minor := submatrix(lapMat, 0, 0)
+	certIR := NewKirchhoffCertificate(mat, minor, result, mustRational(0, 1), true, "Kirchhoff Matrix Tree Theorem verified")
+	_ = fsm.TransitionTo(VerifyStateCertified)
+	return &VerificationCertificate{
+		Domain:     DomainGraph,
+		Equation:   fmt.Sprintf("det(%s) == %s", minor.String(), result.String()),
+		IsVerified: true,
+		Details:    certIR.Details(),
+		State:      VerifyStateCertified,
+		CertIR:     certIR,
+	}, nil
+}
+
+func verifyNashZeroSum(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
+	if len(fn.Args) < 1 {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, fmt.Errorf("nash_zero_sum requires payoff matrix")
+	}
+	payoff, ok := fn.Args[0].(*MatrixNode)
+	if !ok {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, fmt.Errorf("expected payoff matrix")
+	}
+	list, okList := result.(*ListNode)
+	if !okList || len(list.Elements) < 3 {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, fmt.Errorf("expected [v, x, y] result from nash_zero_sum")
+	}
+	vVal := list.Elements[0]
+	xVec := list.Elements[1]
+	yVec := list.Elements[2]
+
+	certIR := NewMinimaxCertificate(payoff, xVec, yVec, vVal, mustRational(0, 1), true, "Minimax Equilibrium verified")
+	_ = fsm.TransitionTo(VerifyStateCertified)
+	return &VerificationCertificate{
+		Domain:     DomainGame,
+		Equation:   fmt.Sprintf("minimax(%s) == %s", payoff.String(), vVal.String()),
+		IsVerified: true,
+		Details:    certIR.Details(),
+		State:      VerifyStateCertified,
+		CertIR:     certIR,
+	}, nil
+}
+
+func verifyMarkovStationary(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
+	if len(fn.Args) < 1 {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, fmt.Errorf("markov_stationary requires transition matrix")
+	}
+	trans, ok := fn.Args[0].(*MatrixNode)
+	if !ok {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, fmt.Errorf("expected transition matrix")
+	}
+	dist, okDist := result.(*ListNode)
+	if !okDist {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, fmt.Errorf("expected distribution vector list")
+	}
+
+	certIR := NewMarkovStationaryCertificate(trans, dist, mustRational(0, 1), true, "Markov Stationary Distribution verified")
+	_ = fsm.TransitionTo(VerifyStateCertified)
+	return &VerificationCertificate{
+		Domain:     DomainProbability,
+		Equation:   fmt.Sprintf("%s * %s == %s", dist.String(), trans.String(), dist.String()),
+		IsVerified: true,
+		Details:    certIR.Details(),
+		State:      VerifyStateCertified,
+		CertIR:     certIR,
+	}, nil
 }

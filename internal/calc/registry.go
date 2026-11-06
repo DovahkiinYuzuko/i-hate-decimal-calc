@@ -393,6 +393,16 @@ var defaultFunctionArgs = map[string][]string{
 	"rule":    {"lhs", "rhs"},
 	"replace": {"expr", "rules"},
 	"rewrite": {"expr", "rules", "max_steps"},
+
+	// Algebraic Graph Theory, Discrete Probability, & Game Theory
+	"graph_laplacian":   {"adj"},
+	"spanning_trees":    {"adj"},
+	"chromatic_poly":    {"adj", "k"},
+	"dice_prob":         {"n", "sides", "target"},
+	"markov_stationary": {"P"},
+	"mex":               {"list"},
+	"nim_sum":           {"a", "b"},
+	"nash_zero_sum":     {"payoff"},
 }
 
 // AllFunctionNames returns a sorted list of all registered built-in function names.

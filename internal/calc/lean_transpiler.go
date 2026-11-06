@@ -270,6 +270,17 @@ func ToLeanSyntax(node Node) (string, error) {
 		}
 		return fmt.Sprintf("!![%s]", strings.Join(rowStrs, "; ")), nil
 
+	case *ListNode:
+		var elemStrs []string
+		for _, elem := range n.Elements {
+			es, err := ToLeanSyntax(elem)
+			if err != nil {
+				return "", err
+			}
+			elemStrs = append(elemStrs, es)
+		}
+		return fmt.Sprintf("![%s]", strings.Join(elemStrs, ", ")), nil
+
 	case *RuleNode:
 		lhsStr, err := ToLeanSyntax(n.LHS)
 		if err != nil {
@@ -865,6 +876,57 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 	case *SOSCertificate:
 		return transpileSOSCertificate(c, "ihd_verified_proof")
 
+	case *KirchhoffCertificate:
+		minorStr, _ := ToLeanSyntax(c.LaplacianMinor)
+		treeStr, _ := ToLeanSyntax(c.SpanningTrees)
+		dim := 0
+		if mat, ok := c.LaplacianMinor.(*MatrixNode); ok && len(mat.Data) > 0 {
+			dim = len(mat.Data)
+		}
+		if dim > 0 {
+			equalityStr = fmt.Sprintf("Matrix.det (%s : Matrix (Fin %d) (Fin %d) ℚ) = %s", minorStr, dim, dim, treeStr)
+			tactic = "by norm_num"
+		} else {
+			equalityStr = fmt.Sprintf("Matrix.det %s = %s", minorStr, treeStr)
+			tactic = "by norm_num"
+		}
+
+	case *MinimaxCertificate:
+		aStr, _ := ToLeanSyntax(c.PayoffMatrix)
+		xStr, _ := ToLeanSyntax(c.StrategyP1)
+		yStr, _ := ToLeanSyntax(c.StrategyP2)
+		vStr, _ := ToLeanSyntax(c.GameValue)
+		m, n := 0, 0
+		if mat, ok := c.PayoffMatrix.(*MatrixNode); ok && len(mat.Data) > 0 {
+			m = len(mat.Data)
+			n = len(mat.Data[0])
+		}
+		if m > 0 && n > 0 {
+			equalityStr = fmt.Sprintf("((∀ j, (Matrix.vecMul (%s : Fin %d → ℚ) (%s : Matrix (Fin %d) (Fin %d) ℚ)) j ≥ %s) ∧ (∀ i, (Matrix.mulVec (%s : Matrix (Fin %d) (Fin %d) ℚ) (%s : Fin %d → ℚ)) i ≤ %s))",
+				xStr, m, aStr, m, n, vStr,
+				aStr, m, n, yStr, n, vStr)
+			tactic = "by constructor <;> (intro k <;> fin_cases k <;> norm_num)"
+		} else {
+			equalityStr = fmt.Sprintf("((Matrix.vecMul %s %s ≥ %s) ∧ (Matrix.mulVec %s %s ≤ %s))", xStr, aStr, vStr, aStr, yStr, vStr)
+			tactic = "by constructor <;> norm_num"
+		}
+
+	case *MarkovStationaryCertificate:
+		pStr, _ := ToLeanSyntax(c.TransitionMatrix)
+		piStr, _ := ToLeanSyntax(c.StationaryDist)
+		dim := 0
+		if mat, ok := c.TransitionMatrix.(*MatrixNode); ok && len(mat.Data) > 0 {
+			dim = len(mat.Data)
+		}
+		if dim > 0 {
+			equalityStr = fmt.Sprintf("(Matrix.vecMul (%s : Fin %d → ℚ) (%s : Matrix (Fin %d) (Fin %d) ℚ) = (%s : Fin %d → ℚ))",
+				piStr, dim, pStr, dim, dim, piStr, dim)
+			tactic = "by ext i <;> fin_cases i <;> norm_num"
+		} else {
+			equalityStr = fmt.Sprintf("Matrix.vecMul %s %s = %s", piStr, pStr, piStr)
+			tactic = "by ext <;> norm_num"
+		}
+
 	default:
 		eq := cert.EquationString()
 		if eq != "" && (cert.Domain() == CertificateDomain(DomainFactor) || cert.Domain() == CertificateDomain(DomainGeneral) || cert.Domain() == CertificateDomain(DomainRationalApart)) {
@@ -900,7 +962,8 @@ func TranspileCertificateToLean(cert *VerificationCertificate, inputExpr, result
 			*DecompositionCertificate, *ODECertificate, *WZCertificate, *GeometricCertificate,
 			*LinearSolveCertificate, *PellCertificate, *PolynomialRootCertificate,
 			*IntegerRelationCertificate, *EllipticPointCertificate, *ImpossibilityCertificate,
-			*SmithNormalFormCertificate, *HermiteNormalFormCertificate, *IdealDecompositionCertificate:
+			*SmithNormalFormCertificate, *HermiteNormalFormCertificate, *IdealDecompositionCertificate,
+			*KirchhoffCertificate, *MinimaxCertificate, *MarkovStationaryCertificate:
 			return TranspileCertificateIRToLean(certIR)
 		}
 	}
@@ -1076,7 +1139,33 @@ func GenerateLeanSourceWithConditions(theoremName string, cert *VerificationCert
 					allNodes = append(allNodes, c.Target)
 				}
 				allNodes = append(allNodes, c.Generators...)
-				allNodes = append(allNodes, c.Cofactors...)
+			case *KirchhoffCertificate:
+				if c.LaplacianMinor != nil {
+					allNodes = append(allNodes, c.LaplacianMinor)
+				}
+				if c.SpanningTrees != nil {
+					allNodes = append(allNodes, c.SpanningTrees)
+				}
+			case *MinimaxCertificate:
+				if c.PayoffMatrix != nil {
+					allNodes = append(allNodes, c.PayoffMatrix)
+				}
+				if c.StrategyP1 != nil {
+					allNodes = append(allNodes, c.StrategyP1)
+				}
+				if c.StrategyP2 != nil {
+					allNodes = append(allNodes, c.StrategyP2)
+				}
+				if c.GameValue != nil {
+					allNodes = append(allNodes, c.GameValue)
+				}
+			case *MarkovStationaryCertificate:
+				if c.TransitionMatrix != nil {
+					allNodes = append(allNodes, c.TransitionMatrix)
+				}
+				if c.StationaryDist != nil {
+					allNodes = append(allNodes, c.StationaryDist)
+				}
 			case *SOSCertificate:
 				if c.Target != nil {
 					allNodes = append(allNodes, c.Target)
@@ -1249,6 +1338,18 @@ func DetermineRequiredImports(cert Certificate, nodes ...Node) []string {
 				importsMap["Mathlib.Tactic.NormNum"] = true
 			}
 		case *SmithNormalFormCertificate, *HermiteNormalFormCertificate:
+			importsMap["Mathlib.Data.Matrix.Basic"] = true
+			importsMap["Mathlib.Data.Fin.VecNotation"] = true
+			importsMap["Mathlib.LinearAlgebra.Matrix.Notation"] = true
+			importsMap["Mathlib.Tactic.FinCases"] = true
+			importsMap["Mathlib.Tactic.NormNum"] = true
+		case *KirchhoffCertificate:
+			importsMap["Mathlib.Data.Matrix.Basic"] = true
+			importsMap["Mathlib.Data.Fin.VecNotation"] = true
+			importsMap["Mathlib.LinearAlgebra.Matrix.Notation"] = true
+			importsMap["Mathlib.LinearAlgebra.Matrix.Determinant.Basic"] = true
+			importsMap["Mathlib.Tactic.NormNum"] = true
+		case *MinimaxCertificate, *MarkovStationaryCertificate:
 			importsMap["Mathlib.Data.Matrix.Basic"] = true
 			importsMap["Mathlib.Data.Fin.VecNotation"] = true
 			importsMap["Mathlib.LinearAlgebra.Matrix.Notation"] = true

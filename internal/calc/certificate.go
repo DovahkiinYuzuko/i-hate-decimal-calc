@@ -27,6 +27,9 @@ const (
 	CertDomainIdeal              CertificateDomain = "ideal"
 	CertDomainSOS                CertificateDomain = "sos"
 	CertDomainUnits              CertificateDomain = "units"
+	CertDomainGraph              CertificateDomain = "graph"
+	CertDomainGame               CertificateDomain = "game"
+	CertDomainProbability        CertificateDomain = "probability"
 	CertDomainGeneral            CertificateDomain = "general"
 )
 
