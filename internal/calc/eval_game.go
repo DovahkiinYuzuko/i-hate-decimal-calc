@@ -9,6 +9,9 @@ import (
 )
 
 // EvalMex computes the Minimum EXcluded value (mex) of a set of non-negative integers.
+// By the Pigeonhole Principle, for any collection of N elements, mex <= N.
+// Any element > N cannot affect the mex and can be safely ignored.
+// Time Complexity: O(N), Space Complexity: O(N).
 // Supported calls:
 // - mex([0, 1, 2, 4]) -> 3
 // - mex(0, 1, 3) -> 2
@@ -25,24 +28,28 @@ func EvalMex(args []Node) (Node, error) {
 		elements = args
 	}
 
-	seen := make(map[int64]bool, len(elements))
+	n := len(elements)
+	seen := make([]bool, n+1)
 	for _, elem := range elements {
 		val, err := extractNonNegativeInt(elem, "mex")
 		if err != nil {
 			return nil, fmt.Errorf("%s", i18n.T("game.err_mex_non_negative_int", elem.String()))
 		}
 		if val.IsInt64() {
-			seen[val.Int64()] = true
+			v := val.Int64()
+			if v >= 0 && v <= int64(n) {
+				seen[v] = true
+			}
 		}
 	}
 
-	var m int64 = 0
-	for {
+	for m := 0; m <= n; m++ {
 		if !seen[m] {
-			return mustRational(m, 1), nil
+			return mustRational(int64(m), 1), nil
 		}
-		m++
 	}
+
+	return mustRational(int64(n+1), 1), nil
 }
 
 // EvalNimSum computes the bitwise XOR sum (Nim-sum) of non-negative integers.
@@ -93,8 +100,13 @@ func EvalNashZeroSum(args []Node) (Node, error) {
 
 	m := mat.Rows
 	n := mat.Cols
-	if m == 0 || n == 0 {
+	if m == 0 || n == 0 || len(mat.Data) != m {
 		return nil, fmt.Errorf("%s", i18n.T("game.err_nash_empty_matrix"))
+	}
+	for r := 0; r < m; r++ {
+		if len(mat.Data[r]) != n {
+			return nil, fmt.Errorf("%s", i18n.T("game.err_nash_empty_matrix"))
+		}
 	}
 
 	// Extract rational entries and find minimum entry to determine shift constant c
@@ -168,15 +180,12 @@ func EvalNashZeroSum(args []Node) (Node, error) {
 	}
 
 	p1Res, err := lp.Solve(p1Prob)
-	if err != nil || p1Res.Status != lp.StatusOptimal {
+	if err != nil || p1Res == nil || p1Res.Status != lp.StatusOptimal || p1Res.OptimalValue == nil || p1Res.OptimalValue.Sign() <= 0 || p1Res.PrimalSolution == nil {
 		return nil, fmt.Errorf("%s", i18n.T("game.err_nash_solve_failed", err))
 	}
 
 	// Optimal value sum(u_r) = 1 / v'
 	sumU := p1Res.OptimalValue
-	if sumU.Sign() <= 0 {
-		return nil, fmt.Errorf("nash_zero_sum: non-positive optimal LP value")
-	}
 
 	vPrime := new(big.Rat).Inv(sumU)
 	vGame := new(big.Rat).Sub(vPrime, cShift)
@@ -225,7 +234,7 @@ func EvalNashZeroSum(args []Node) (Node, error) {
 	}
 
 	p2Res, err := lp.Solve(p2Prob)
-	if err != nil || p2Res.Status != lp.StatusOptimal {
+	if err != nil || p2Res == nil || p2Res.Status != lp.StatusOptimal || p2Res.OptimalValue == nil || p2Res.OptimalValue.Sign() <= 0 || p2Res.PrimalSolution == nil {
 		return nil, fmt.Errorf("%s", i18n.T("game.err_nash_solve_failed", err))
 	}
 

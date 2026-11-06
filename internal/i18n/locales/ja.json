@@ -584,7 +584,9 @@
     "err_matrix_required": "%s: 隣接行列 MatrixNode が必要です (指定値: %s)",
     "err_must_be_square": "隣接行列は正方行列である必要があります (指定値: %dx%d)",
     "err_negative_entry": "隣接行列の要素は非負である必要があります: A[%d][%d]=%d",
-    "err_non_integer_entry": "隣接行列の要素は整数である必要があります: (%d, %d)"
+    "err_negative_weight": "隣接行列の要素は非負である必要があります: (%d, %d)",
+    "err_non_integer_entry": "隣接行列の要素は整数である必要があります: (%d, %d)",
+    "err_weight_too_large": "隣接行列の要素が大きすぎます (int64 範囲外): (%d, %d)"
   },
   "gosper": {
     "err_cannot_mark_notsummable_once_solved": "解決または証明完了後は NotSummable としてマークできません (状態: %s)",
