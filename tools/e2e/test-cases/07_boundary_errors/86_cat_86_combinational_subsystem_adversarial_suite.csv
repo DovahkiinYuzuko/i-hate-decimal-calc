@@ -1,0 +1,17 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT86-001,cat_86_combinational_subsystem_adversarial_suite,"-2^3!",,exact,-64,,0,deductive,Combinational: Operator precedence factorial over power over unary minus (-2^3! = -(2^6) = -64)
+CAT86-002,cat_86_combinational_subsystem_adversarial_suite,"-3^2^2",,exact,-81,,0,deductive,Combinational: Power right-associativity with unary minus (-3^2^2 = -(3^4) = -81)
+CAT86-003,cat_86_combinational_subsystem_adversarial_suite,"1!=2",,exact,true,,0,deductive,Combinational: Tokenizer disambiguation 1!=2 as 1 != 2 relation
+CAT86-004,cat_86_combinational_subsystem_adversarial_suite,"(5!) != 120",,exact,false,,0,deductive,Combinational: Tokenizer and precedence (5!) != 120 relation
+CAT86-005,cat_86_combinational_subsystem_adversarial_suite,"sqrt(-2)*sqrt(-3) == -sqrt(6)",,exact,true,,0,contradiction,Combinational: Branch cut product of negative square roots to negative real root
+CAT86-006,cat_86_combinational_subsystem_adversarial_suite,"sqrt(-2)*sqrt(-3) == sqrt(6)",,exact,false,,0,contradiction,Combinational: Reject unsafe product rule sqrt(a)*sqrt(b) -> sqrt(ab) for negative reals
+CAT86-007,cat_86_combinational_subsystem_adversarial_suite,"diff(x^2^3, x) - 8*x^7 == 0",,exact,true,,0,deductive,Combinational: Right-associative exponentiation under symbolic differentiation (x^2^3 = x^8 -> 8*x^7)
+CAT86-008,cat_86_combinational_subsystem_adversarial_suite,"det([[sin(pi/6), 1/2], [1/2, sin(pi/6)]]) == 0",,exact,true,,0,deductive,Combinational: Exact special-angle trig evaluation inside matrix determinant (det = 0)
+CAT86-009,cat_86_combinational_subsystem_adversarial_suite,"inv([[sin(pi/6), 1/2], [1/2, sin(pi/6)]])",,error,,,1,contrapositive,Combinational: Singular matrix error contract for special-angle zero-pivot matrix
+CAT86-010,cat_86_combinational_subsystem_adversarial_suite,"det([[x, 1], [1, x]]) - expand(factor(x^2 - 1)) == 0",,exact,true,,0,metamorphic,Combinational: Matrix determinant of symbolic entries commutes with factor and expand
+CAT86-011,cat_86_combinational_subsystem_adversarial_suite,"ln(-1)",,error,,,1,contrapositive,Combinational: Domain contract rejection of negative real argument directly into natural logarithm ln
+CAT86-012,cat_86_combinational_subsystem_adversarial_suite,"diff(sin(10 [m]), m)",,error,,,1,contrapositive,Combinational: Dimension guard enforcement against transcendental functions inside differentiation
+CAT86-013,cat_86_combinational_subsystem_adversarial_suite,,"assume(k < 0)
+map(lambda(k, sqrt(k^2)), [1, 2, 3])
+unassume(k)
+",contains,"[1, 2, 3]",,0,contrapositive,Combinational: Lexical scope isolation protecting lambda parameter from global domain assumptions
