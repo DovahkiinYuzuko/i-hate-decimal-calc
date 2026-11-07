@@ -263,6 +263,18 @@
 | `markov_stationary` | `markov_stationary(P)` | マルコフ連鎖遷移行列 $P$ に対する厳密定常分布ベクトル $\pi$（$\pi P = \pi, \sum \pi_i = 1$ の有理ガウス消去） |
 | `mex` | `mex([0, 1, 2, 4])` / `mex(0, 1, 3)` | 最小除外数（Minimum EXcluded value: スプラーグ・グランディ理論・組合せゲーム） |
 | `nim_sum` | `nim_sum(1, 2, 3)` / `nim_sum([3, 4, 5])` | ニム和（排他的論理和 XOR による不偏ゲームの必勝状態判定） |
+| `fps_inv` | `fps_inv(1 - x, 5)` | 形式的べき級数（FPS）の逆元 $1/f \pmod{x^N}$（ODE微分漸化式展開） |
+| `fps_exp` | `fps_exp(x, 5)` | 形式的べき級数の指数写像 $\exp(f) \pmod{x^N}$（$f(0)=0$） |
+| `fps_log` | `fps_log(1 + x, 5)` | 形式的べき級数の対数写像 $\log(f) \pmod{x^N}$（$f(0)=1$） |
+| `fps_sqrt` | `fps_sqrt(1 - 4*x, 5)` | 形式的べき級数の平方根 $\sqrt{f} \pmod{x^N}$（定数項平方根存在時） |
+| `partitions` | `partitions(5)` | オイラーの五角数定理による整数分割数 $p(n)$ の厳密計算 |
+| `bell` | `bell(5)` | アイケン配列（ベル三角形）による集合分割数（ベル数）$B_n$ の厳密計算 |
+| `catalan` | `catalan(5)` | カタラン数 $C_n = \frac{1}{n+1}\binom{2n}{n}$ の厳密計算 |
+| `stirling1` | `stirling1(4, 2)` | 符号なし第1種スターリング数 $\left[{n \atop k}\right]$（巡回置換数）の厳密計算 |
+| `stirling2` | `stirling2(4, 2)` | 第2種スターリング数 $\left\{{n \atop k}\right\}$（非空部分集合分割数）の厳密計算 |
+| `hamming_dist` | `hamming_dist([1, 0, 1], [1, 1, 0])` | 同一長さのベクトル間のハミング距離（異なる成分の個数） |
+| `rs_encode` | `rs_encode([1, 2], [1, 2, 3, 4], 5)` | 有限体 $\mathbb{F}_p$ 上の多項式評価によるリード・ソロモン符号化 |
+| `rs_decode` | `rs_decode([3, 4, 2, 4], [1, 2, 3, 4], 2, 5)` | Berlekamp-Welch アルゴリズムによるリード・ソロモン符号の厳密誤り訂正復号 |
 
 ---
 
