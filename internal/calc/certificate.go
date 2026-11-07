@@ -2,6 +2,7 @@ package calc
 
 import (
 	"fmt"
+	"math/big"
 	"strings"
 )
 
@@ -30,6 +31,8 @@ const (
 	CertDomainGraph              CertificateDomain = "graph"
 	CertDomainGame               CertificateDomain = "game"
 	CertDomainProbability        CertificateDomain = "probability"
+	CertDomainFPS                CertificateDomain = "fps"
+	CertDomainCoding             CertificateDomain = "coding"
 	CertDomainGeneral            CertificateDomain = "general"
 )
 
@@ -332,3 +335,76 @@ func NewPrimitiveElementCertificate(minPolyTheta Node, symbolTheta string, c int
 }
 
 
+
+
+// FPSCertificate represents a certified Formal Power Series congruence identity:
+// F(x) * G(x) == 1 + x^N * R(x) or similar mod x^N identity.
+type FPSCertificate struct {
+	BaseCertificate
+	F         Node
+	G         Node
+	Precision int
+	QuotientR Node
+	VarName   string
+}
+
+// NewFPSCertificate creates a new verified FPSCertificate.
+func NewFPSCertificate(f, g, quoR Node, prec int, varName string, residual Node, isVerified bool, details string) *FPSCertificate {
+	eqStr := ""
+	if f != nil && g != nil {
+		eqStr = fmt.Sprintf("(%s) * (%s) == 1 (mod %s^%d)", f.String(), g.String(), varName, prec)
+	}
+	return &FPSCertificate{
+		BaseCertificate: BaseCertificate{
+			DomainVal:    CertDomainFPS,
+			Verified:     isVerified,
+			ResidualNode: residual,
+			DetailsMsg:   details,
+			EquationStr:  eqStr,
+		},
+		F:         f,
+		G:         g,
+		Precision: prec,
+		QuotientR: quoR,
+		VarName:   varName,
+	}
+}
+
+// CodingCertificate represents a certified Berlekamp-Welch error correction:
+// Q(x) = P(x) * E(x) and Q(alpha_i) = y_i * E(alpha_i).
+type CodingCertificate struct {
+	BaseCertificate
+	Prime     *big.Int
+	PolyP     Node
+	PolyE     Node
+	PolyQ     Node
+	Codeword  []*big.Int
+	Points    []*big.Int
+	Message   []*big.Int
+	ErrorsNum int
+}
+
+// NewCodingCertificate creates a new verified CodingCertificate.
+func NewCodingCertificate(prime *big.Int, polyP, polyE, polyQ Node, codeword, points, message []*big.Int, errorsNum int, residual Node, isVerified bool, details string) *CodingCertificate {
+	eqStr := ""
+	if polyP != nil && polyE != nil && polyQ != nil {
+		eqStr = fmt.Sprintf("%s == (%s) * (%s)", polyQ.String(), polyP.String(), polyE.String())
+	}
+	return &CodingCertificate{
+		BaseCertificate: BaseCertificate{
+			DomainVal:    CertDomainCoding,
+			Verified:     isVerified,
+			ResidualNode: residual,
+			DetailsMsg:   details,
+			EquationStr:  eqStr,
+		},
+		Prime:     prime,
+		PolyP:     polyP,
+		PolyE:     polyE,
+		PolyQ:     polyQ,
+		Codeword:  codeword,
+		Points:    points,
+		Message:   message,
+		ErrorsNum: errorsNum,
+	}
+}

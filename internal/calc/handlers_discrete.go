@@ -73,6 +73,22 @@ func init() {
 	RegisterHandler("mex", handleMex)
 	RegisterHandler("nim_sum", handleNimSum)
 	RegisterHandler("nash_zero_sum", handleNashZeroSum)
+
+	// Formal Power Series & Combinatorics
+	RegisterHandler("fps_inv", handleFPSInv)
+	RegisterHandler("fps_exp", handleFPSExp)
+	RegisterHandler("fps_log", handleFPSLog)
+	RegisterHandler("fps_sqrt", handleFPSSqrt)
+	RegisterHandler("partitions", handlePartitions)
+	RegisterHandler("bell", handleBell)
+	RegisterHandler("catalan", handleCatalan)
+	RegisterHandler("stirling1", handleStirling1)
+	RegisterHandler("stirling2", handleStirling2)
+
+	// Coding Theory
+	RegisterHandler("hamming_dist", handleHammingDistance)
+	RegisterHandler("rs_encode", handleRSEncode)
+	RegisterHandler("rs_decode", handleRSDecode)
 }
 
 func handleGCD(args []Node, env *Env) (Node, error) {

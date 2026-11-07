@@ -126,9 +126,19 @@ def build_ast(node):
         args = [build_ast(a) for a in node.get("args", [])]
         return sp.Add(*args) if args else sp.Integer(0)
 
+    elif op == "Sub":
+        left = build_ast(node.get("left"))
+        right = build_ast(node.get("right"))
+        return left - right
+
     elif op == "Mul":
         args = [build_ast(a) for a in node.get("args", [])]
         return sp.Mul(*args) if args else sp.Integer(1)
+
+    elif op == "Div":
+        left = build_ast(node.get("left"))
+        right = build_ast(node.get("right"))
+        return left / right
 
     elif op == "Pow":
         base = build_ast(node.get("base"))
@@ -497,6 +507,46 @@ def handle_request(req):
             "is_constant_nonzero": bool(is_constant_nonzero),
             "simplified": simplified_str,
         })
+        return base_res
+
+    elif action == "fps_expand":
+        expr_ast = req.get("expr")
+        var_name = req.get("var", "x")
+        order = int(req.get("order", 5))
+        try:
+            expr = build_ast(expr_ast)
+            var_sym = sp.Symbol(var_name)
+            s = sp.series(expr, var_sym, 0, order).removeO()
+            poly = sp.Poly(s, var_sym)
+            coeffs = []
+            for i in range(order):
+                coeff = poly.coeff_monomial(var_sym**i)
+                coeffs.append(str(coeff))
+            base_res.update({"status": "ok", "coeffs": coeffs})
+        except Exception as e:
+            base_res.update({"status": "error", "error": f"fps_expand error: {e}"})
+        return base_res
+
+    elif action == "combinatorics":
+        kind = req.get("kind")
+        n = int(req.get("n", 0))
+        k = int(req.get("k", 0))
+        try:
+            if kind == "partitions":
+                val = sp.partition(n)
+            elif kind == "bell":
+                val = sp.bell(n)
+            elif kind == "catalan":
+                val = sp.catalan(n)
+            elif kind == "stirling1":
+                val = sp.functions.combinatorial.numbers.stirling(n, k, kind=1)
+            elif kind == "stirling2":
+                val = sp.functions.combinatorial.numbers.stirling(n, k, kind=2)
+            else:
+                raise ValueError(f"Unknown combinatorics kind: {kind}")
+            base_res.update({"status": "ok", "value": str(val)})
+        except Exception as e:
+            base_res.update({"status": "error", "error": f"combinatorics error: {e}"})
         return base_res
 
     elif action == "canonical_str":

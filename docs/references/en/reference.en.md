@@ -263,6 +263,18 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `markov_stationary` | `markov_stationary(P)` | Exact stationary distribution $\pi$ for Markov transition matrix $P$ ($\pi P = \pi, \sum \pi_i = 1$) via rational Gaussian elimination |
 | `mex` | `mex([0, 1, 2, 4])` / `mex(0, 1, 3)` | Minimum EXcluded value (mex) of a set of non-negative integers (Sprague-Grundy theory) |
 | `nim_sum` | `nim_sum(1, 2, 3)` / `nim_sum([3, 4, 5])` | Nim-sum (bitwise XOR fold) for impartial combinatorial games |
+| `fps_inv` | `fps_inv(1 - x, 5)` | Truncated Formal Power Series (FPS) inverse $1/f \pmod{x^N}$ via differential recurrence |
+| `fps_exp` | `fps_exp(x, 5)` | Truncated Formal Power Series exponential $\exp(f) \pmod{x^N}$ ($f(0)=0$) |
+| `fps_log` | `fps_log(1 + x, 5)` | Truncated Formal Power Series logarithm $\log(f) \pmod{x^N}$ ($f(0)=1$) |
+| `fps_sqrt` | `fps_sqrt(1 - 4*x, 5)` | Truncated Formal Power Series square root $\sqrt{f} \pmod{x^N}$ (when $f(0)$ is a quadratic residue) |
+| `partitions` | `partitions(5)` | Exact integer partition function $p(n)$ via Euler's pentagonal number theorem |
+| `bell` | `bell(5)` | Exact Bell number $B_n$ via Aitken's array (Bell triangle) |
+| `catalan` | `catalan(5)` | Exact Catalan number $C_n = \frac{1}{n+1}\binom{2n}{n}$ |
+| `stirling1` | `stirling1(4, 2)` | Exact unsigned Stirling numbers of the first kind $\left[{n \atop k}\right]$ |
+| `stirling2` | `stirling2(4, 2)` | Exact Stirling numbers of the second kind $\left\{{n \atop k}\right\}$ |
+| `hamming_dist` | `hamming_dist([1, 0, 1], [1, 1, 0])` | Exact Hamming distance between vectors of equal length |
+| `rs_encode` | `rs_encode([1, 2], [1, 2, 3, 4], 5)` | Reed-Solomon polynomial evaluation encoding over $\mathbb{F}_p$ |
+| `rs_decode` | `rs_decode([3, 4, 2, 4], [1, 2, 3, 4], 2, 5)` | Exact Reed-Solomon error correction decoding via Berlekamp-Welch over $\mathbb{F}_p$ |
 
 ---
 

@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc"
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc/ast"
 )
 
@@ -863,5 +864,94 @@ func TestSymPyClient_Handshake(t *testing.T) {
 	expected := big.NewRat(16, 1)
 	if gRat.re.Cmp(expected) != 0 || gRat.im.Sign() != 0 {
 		t.Fatalf("Expected 16, got %v + %vi", gRat.re, gRat.im)
+	}
+}
+
+// EvalCombinatorics queries SymPy for combinatorics values (partitions, bell, catalan, stirling1, stirling2).
+func (c *SymPyClient) EvalCombinatorics(ctx context.Context, kind string, n, k int) (string, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	req := map[string]any{
+		"action": "combinatorics",
+		"kind":   kind,
+		"n":      n,
+		"k":      k,
+	}
+
+	timeout := 5 * time.Second
+	if dl, ok := ctx.Deadline(); ok {
+		timeout = time.Until(dl)
+	}
+
+	resBytes, err := c.sendRequestLocked(req, timeout)
+	if err != nil {
+		return "", err
+	}
+
+	var res struct {
+		Status string `json:"status"`
+		Value  string `json:"value"`
+		Error  string `json:"error"`
+	}
+	if err := json.Unmarshal(resBytes, &res); err != nil {
+		return "", err
+	}
+	if res.Status != "ok" {
+		return "", fmt.Errorf("sympy combinatorics error: %s", res.Error)
+	}
+	return res.Value, nil
+}
+
+// TestSymPyClient_Combinatorics_Differential validates cross-verification of combinatorics between Go and SymPy.
+func TestSymPyClient_Combinatorics_Differential(t *testing.T) {
+	client := GetGlobalSymPyClient()
+	if !client.Available() {
+		t.Skipf("SymPy not available: %s", client.ReasonUnavailable())
+	}
+
+	// 1. Catalan numbers: n=0..7
+	for n := 0; n <= 7; n++ {
+		goVal, err := calc.EvalCatalan(int64(n))
+		if err != nil {
+			t.Fatalf("EvalCatalan(%d) failed: %v", n, err)
+		}
+		symValStr, err := client.EvalCombinatorics(context.Background(), "catalan", n, 0)
+		if err != nil {
+			t.Fatalf("SymPy Catalan(%d) failed: %v", n, err)
+		}
+		if goVal.String() != symValStr {
+			t.Errorf("Catalan(%d) mismatch: go=%s, sympy=%s", n, goVal.String(), symValStr)
+		}
+	}
+
+	// 2. Partitions: n=0..10
+	for n := 0; n <= 10; n++ {
+		goVal, err := calc.EvalPartitions(int64(n))
+		if err != nil {
+			t.Fatalf("EvalPartitions(%d) failed: %v", n, err)
+		}
+		symValStr, err := client.EvalCombinatorics(context.Background(), "partitions", n, 0)
+		if err != nil {
+			t.Fatalf("SymPy Partitions(%d) failed: %v", n, err)
+		}
+		if goVal.String() != symValStr {
+			t.Errorf("Partitions(%d) mismatch: go=%s, sympy=%s", n, goVal.String(), symValStr)
+		}
+	}
+
+	// 3. Bell numbers: n=0..6
+	for n := 0; n <= 6; n++ {
+		goVal, err := calc.EvalBell(int64(n))
+		if err != nil {
+			t.Fatalf("EvalBell(%d) failed: %v", n, err)
+		}
+		symValStr, err := client.EvalCombinatorics(context.Background(), "bell", n, 0)
+		if err != nil {
+			t.Fatalf("SymPy Bell(%d) failed: %v", n, err)
+		}
+		if goVal.String() != symValStr {
+			t.Errorf("Bell(%d) mismatch: go=%s, sympy=%s", n, goVal.String(), symValStr)
+		}
 	}
 }

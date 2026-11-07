@@ -1,0 +1,24 @@
+id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected_exit_code,deduction_method,description
+CAT88-001,cat_88_fps_generating_functions_coding_theory_issue_150,"""fps_inv(1 - x, 5)""",,exact,1 + x + x^2 + x^3 + x^4,,0,deductive,FPS: Geometric series inverse truncated at order 5
+CAT88-002,cat_88_fps_generating_functions_coding_theory_issue_150,"""fps_exp(x, 5)""",,exact,1 + x + x^2/2 + x^3/6 + x^4/24,,0,deductive,FPS: Truncated exponential series
+CAT88-003,cat_88_fps_generating_functions_coding_theory_issue_150,"""fps_log(1 + x, 5)""",,exact,x - x^2/2 - x^4/4 + x^3/3,,0,deductive,FPS: Mercator logarithm series
+CAT88-004,cat_88_fps_generating_functions_coding_theory_issue_150,"""fps_sqrt(1 - 4*x, 5)""",,exact,1 - 2*x - 10*x^4 - 2*x^2 - 4*x^3,,0,deductive,FPS: Catalan generating function square root
+CAT88-005,cat_88_fps_generating_functions_coding_theory_issue_150,"""partitions(5)""",,exact,7,,0,deductive,Combinatorics: Euler partition function p(5)
+CAT88-006,cat_88_fps_generating_functions_coding_theory_issue_150,"""bell(5)""",,exact,52,,0,deductive,Combinatorics: Bell number B(5)
+CAT88-007,cat_88_fps_generating_functions_coding_theory_issue_150,"""catalan(5)""",,exact,42,,0,deductive,Combinatorics: Catalan number C(5)
+CAT88-008,cat_88_fps_generating_functions_coding_theory_issue_150,"""stirling1(4, 2)""",,exact,11,,0,deductive,Combinatorics: Stirling number of the first kind s(4 2)
+CAT88-009,cat_88_fps_generating_functions_coding_theory_issue_150,"""stirling2(4, 2)""",,exact,7,,0,deductive,Combinatorics: Stirling number of the second kind S(4 2)
+CAT88-010,cat_88_fps_generating_functions_coding_theory_issue_150,"""hamming_dist([1, 0, 1, 1], [1, 1, 0, 1])""",,exact,2,,0,deductive,Coding: Exact Hamming distance between vectors
+CAT88-011,cat_88_fps_generating_functions_coding_theory_issue_150,"""rs_encode([1, 2], [1, 2, 3, 4], 5)""",,exact,"[3, 0, 2, 4]",,0,deductive,Coding: Reed-Solomon polynomial evaluation encoding over F5
+CAT88-012,cat_88_fps_generating_functions_coding_theory_issue_150,"""rs_decode([3, 4, 2, 4], [1, 2, 3, 4], 2, 5)""",,exact,"[1, 2]",,0,deductive,Coding: Berlekamp-Welch single-error correction over F5
+CAT88-013,cat_88_fps_generating_functions_coding_theory_issue_150,"""fps_inv(x, 5)""",,error,,constant,1,contradiction,FPS: Non-invertible zero constant term rejected
+CAT88-014,cat_88_fps_generating_functions_coding_theory_issue_150,"""fps_log(1, 5)""",,exact,0,,0,contradiction,FPS: Logarithm of constant 1 evaluates to 0
+CAT88-015,cat_88_fps_generating_functions_coding_theory_issue_150,"""fps_sqrt(x, 5)""",,error,,square,1,contradiction,FPS: Non-square constant term zero rejected
+CAT88-016,cat_88_fps_generating_functions_coding_theory_issue_150,"""partitions(-1)""",,error,,negative,1,contradiction,Combinatorics: Negative partition argument rejected
+CAT88-017,cat_88_fps_generating_functions_coding_theory_issue_150,"""rs_decode([3, 4, 1, 4], [1, 2, 3, 4], 2, 5)""",,error,,capacity,1,contradiction,Coding: Uncorrectable double error exceeding capacity rejected
+CAT88-018,cat_88_fps_generating_functions_coding_theory_issue_150,"""hamming_dist([1, 0], [1, 0, 1])""",,error,,length,1,contrapositive,Coding: Vector length mismatch rejected
+CAT88-019,cat_88_fps_generating_functions_coding_theory_issue_150,"""catalan(0)""",,exact,1,,0,contrapositive,Combinatorics: Boundary condition C(0) = 1
+CAT88-020,cat_88_fps_generating_functions_coding_theory_issue_150,"""partitions(0)""",,exact,1,,0,contrapositive,Combinatorics: Boundary condition p(0) = 1
+CAT88-021,cat_88_fps_generating_functions_coding_theory_issue_150,"""bell(0)""",,exact,1,,0,contrapositive,Combinatorics: Boundary condition B(0) = 1
+CAT88-022,cat_88_fps_generating_functions_coding_theory_issue_150,"""fps_exp(fps_log(1 + x, 4), 4)""",,exact,1 + x,,0,metamorphic,FPS: Roundtrip exp(log(1+x)) isomorphism
+CAT88-023,cat_88_fps_generating_functions_coding_theory_issue_150,"""fps_inv(fps_inv(1 - x, 4), 4)""",,exact,1 - x,,0,metamorphic,FPS: Involution inv(inv(1-x)) identity

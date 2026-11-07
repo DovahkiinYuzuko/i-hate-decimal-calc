@@ -403,6 +403,22 @@ var defaultFunctionArgs = map[string][]string{
 	"mex":               {"list"},
 	"nim_sum":           {"a", "b"},
 	"nash_zero_sum":     {"payoff"},
+
+	// Formal Power Series & Combinatorics
+	"fps_inv":     {"fps", "prec"},
+	"fps_exp":     {"fps", "prec"},
+	"fps_log":     {"fps", "prec"},
+	"fps_sqrt":    {"fps", "prec"},
+	"partitions":  {"n"},
+	"bell":        {"n"},
+	"catalan":     {"n"},
+	"stirling1":   {"n", "k"},
+	"stirling2":   {"n", "k"},
+
+	// Coding Theory
+	"hamming_dist": {"u", "v"},
+	"rs_encode":    {"msg", "points", "p"},
+	"rs_decode":    {"received", "points", "k", "p"},
 }
 
 // AllFunctionNames returns a sorted list of all registered built-in function names.
@@ -1596,6 +1612,70 @@ func init() {
 		Name:    "nash_zero_sum",
 		MinArgs: 1,
 		MaxArgs: 1,
+	})
+
+	// Formal Power Series & Combinatorics
+	RegisterFunction(FunctionSpec{
+		Name:    "fps_inv",
+		MinArgs: 2,
+		MaxArgs: 3,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "fps_exp",
+		MinArgs: 2,
+		MaxArgs: 3,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "fps_log",
+		MinArgs: 2,
+		MaxArgs: 3,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "fps_sqrt",
+		MinArgs: 2,
+		MaxArgs: 3,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "partitions",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "bell",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "catalan",
+		MinArgs: 1,
+		MaxArgs: 1,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "stirling1",
+		MinArgs: 2,
+		MaxArgs: 2,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "stirling2",
+		MinArgs: 2,
+		MaxArgs: 2,
+	})
+
+	// Coding Theory
+	RegisterFunction(FunctionSpec{
+		Name:    "hamming_dist",
+		MinArgs: 2,
+		MaxArgs: 2,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "rs_encode",
+		MinArgs: 3,
+		MaxArgs: 3,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "rs_decode",
+		MinArgs: 4,
+		MaxArgs: 4,
 	})
 }
 

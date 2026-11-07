@@ -933,6 +933,47 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 			tactic = "by ext <;> norm_num"
 		}
 
+	case *FPSCertificate:
+		fStr, err := ToLeanSyntax(c.F)
+		if err != nil {
+			return "", fmt.Errorf("transpile FPS F: %w", err)
+		}
+		gStr, err := ToLeanSyntax(c.G)
+		if err != nil {
+			return "", fmt.Errorf("transpile FPS G: %w", err)
+		}
+		varName := c.VarName
+		if varName == "" {
+			varName = "x"
+		}
+		if c.QuotientR != nil {
+			rStr, err := ToLeanSyntax(c.QuotientR)
+			if err != nil {
+				return "", fmt.Errorf("transpile FPS R: %w", err)
+			}
+			equalityStr = fmt.Sprintf("∀ (%s : ℚ), (%s) * (%s) = 1 + %s^%d * (%s)", varName, fStr, gStr, varName, c.Precision, rStr)
+			tactic = "by intro; ring"
+		} else {
+			equalityStr = fmt.Sprintf("∀ (%s : ℚ), (%s) * (%s) = 1", varName, fStr, gStr)
+			tactic = "by intro; ring"
+		}
+
+	case *CodingCertificate:
+		pStr, err := ToLeanSyntax(c.PolyP)
+		if err != nil {
+			return "", fmt.Errorf("transpile coding PolyP: %w", err)
+		}
+		eStr, err := ToLeanSyntax(c.PolyE)
+		if err != nil {
+			return "", fmt.Errorf("transpile coding PolyE: %w", err)
+		}
+		qStr, err := ToLeanSyntax(c.PolyQ)
+		if err != nil {
+			return "", fmt.Errorf("transpile coding PolyQ: %w", err)
+		}
+		equalityStr = fmt.Sprintf("∀ (x : ℚ), %s = (%s) * (%s)", qStr, pStr, eStr)
+		tactic = "by intro; ring"
+
 	default:
 		eq := cert.EquationString()
 		if eq != "" && (cert.Domain() == CertificateDomain(DomainFactor) || cert.Domain() == CertificateDomain(DomainGeneral) || cert.Domain() == CertificateDomain(DomainRationalApart)) {
@@ -969,7 +1010,8 @@ func TranspileCertificateToLean(cert *VerificationCertificate, inputExpr, result
 			*LinearSolveCertificate, *PellCertificate, *PolynomialRootCertificate,
 			*IntegerRelationCertificate, *EllipticPointCertificate, *ImpossibilityCertificate,
 			*SmithNormalFormCertificate, *HermiteNormalFormCertificate, *IdealDecompositionCertificate,
-			*KirchhoffCertificate, *MinimaxCertificate, *MarkovStationaryCertificate:
+			*KirchhoffCertificate, *MinimaxCertificate, *MarkovStationaryCertificate,
+			*FPSCertificate, *CodingCertificate:
 			return TranspileCertificateIRToLean(certIR)
 		}
 	}

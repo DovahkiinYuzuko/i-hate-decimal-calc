@@ -1348,3 +1348,39 @@ func TestGeneratePremiseWitnessTheorem(t *testing.T) {
 	}
 }
 
+
+func TestTranspileCertificateIRToLean_FPS_and_Coding(t *testing.T) {
+	// 1. FPS Certificate test: (1 - x) * (1 + x + x^2) = 1 - x^3 => mod x^3 = 1
+	x := NewVar("x")
+	fNode := &AddNode{Terms: []Node{&RationalNode{Val: big.NewRat(1, 1)}, &MulNode{Factors: []Node{&RationalNode{Val: big.NewRat(-1, 1)}, x}}}}
+	x2 := &PowNode{Base: x, Exp: &RationalNode{Val: big.NewRat(2, 1)}}
+	gNode := &AddNode{Terms: []Node{&RationalNode{Val: big.NewRat(1, 1)}, x, x2}}
+	quoR := &RationalNode{Val: big.NewRat(-1, 1)}
+	fpsCert := NewFPSCertificate(fNode, gNode, quoR, 3, "x", nil, true, "FPS geometric inverse test")
+
+	leanCode, err := TranspileCertificateIRToLean(fpsCert)
+	if err != nil {
+		t.Fatalf("Transpile FPS certificate failed: %v", err)
+	}
+	if !strings.Contains(leanCode, "∀ (x : ℚ),") || !strings.Contains(leanCode, "by intro; ring") {
+		t.Errorf("unexpected Lean 4 code for FPS cert:\n%s", leanCode)
+	}
+
+	// 2. Coding Certificate test: Q(x) = P(x) * E(x)
+	polyP := &AddNode{Terms: []Node{&RationalNode{Val: big.NewRat(1, 1)}, &MulNode{Factors: []Node{&RationalNode{Val: big.NewRat(2, 1)}, x}}}}
+	polyE := &AddNode{Terms: []Node{&RationalNode{Val: big.NewRat(3, 1)}, x}}
+	polyQ := &AddNode{Terms: []Node{
+		&RationalNode{Val: big.NewRat(3, 1)},
+		&MulNode{Factors: []Node{&RationalNode{Val: big.NewRat(7, 1)}, x}},
+		&MulNode{Factors: []Node{&RationalNode{Val: big.NewRat(2, 1)}, x2}},
+	}}
+	codingCert := NewCodingCertificate(big.NewInt(5), polyP, polyE, polyQ, []*big.Int{big.NewInt(3), big.NewInt(4)}, []*big.Int{big.NewInt(1), big.NewInt(2)}, []*big.Int{big.NewInt(1), big.NewInt(2)}, 1, nil, true, "Berlekamp-Welch cert")
+
+	codingLean, err := TranspileCertificateIRToLean(codingCert)
+	if err != nil {
+		t.Fatalf("Transpile coding certificate failed: %v", err)
+	}
+	if !strings.Contains(codingLean, "∀ (x : ℚ),") || !strings.Contains(codingLean, "by intro; ring") {
+		t.Errorf("unexpected Lean 4 code for coding cert:\n%s", codingLean)
+	}
+}
