@@ -130,3 +130,77 @@ func TestConfig_SaveAndLoad(t *testing.T) {
 		t.Errorf("expected saved locale 'ja', got %q", cfgAfter.Locale)
 	}
 }
+
+func collectAllKeys(m map[string]any, prefix string) []string {
+	var keys []string
+	for k, v := range m {
+		fullKey := k
+		if prefix != "" {
+			fullKey = prefix + "." + k
+		}
+		if childMap, ok := v.(map[string]any); ok {
+			keys = append(keys, collectAllKeys(childMap, fullKey)...)
+		} else {
+			keys = append(keys, fullKey)
+		}
+	}
+	return keys
+}
+
+func TestI18n_LocaleParityAndResolution(t *testing.T) {
+	if err := Init("en"); err != nil {
+		t.Fatalf("Init('en') failed: %v", err)
+	}
+
+	enMap := globalEngine.locales["en"]
+	jaMap := globalEngine.locales["ja"]
+
+	enKeys := collectAllKeys(enMap, "")
+	jaKeys := collectAllKeys(jaMap, "")
+
+	enSet := make(map[string]bool)
+	for _, k := range enKeys {
+		enSet[k] = true
+	}
+	jaSet := make(map[string]bool)
+	for _, k := range jaKeys {
+		jaSet[k] = true
+	}
+
+	for _, k := range enKeys {
+		if !jaSet[k] {
+			t.Errorf("key %q exists in en.json but missing in ja.json", k)
+		}
+	}
+	for _, k := range jaKeys {
+		if !enSet[k] {
+			t.Errorf("key %q exists in ja.json but missing in en.json", k)
+		}
+	}
+
+	testKeys := []string{
+		"coding.err_vector_length_mismatch",
+		"coding.err_vector_element_nil",
+		"fps.err_cannot_convert_node_to_fps",
+		"fps.err_prec_must_be_positive_int",
+		"rewrite.err_expected_rule_or_list",
+		"graph.err_requires_1_matrix_arg",
+		"graph.err_expected_matrix",
+		"game.err_nash_args",
+		"verify.err_laplacian_not_matrix",
+		"prob.err_hyper_params_bounds",
+		"cli.title_banner",
+	}
+
+	for _, loc := range []string{"en", "ja"} {
+		if err := SetLocale(loc); err != nil {
+			t.Fatalf("SetLocale(%q) failed: %v", loc, err)
+		}
+		for _, k := range testKeys {
+			res := T(k)
+			if res == k || res == "" {
+				t.Errorf("[%s] key %q failed to resolve (got fallback %q)", loc, k, res)
+			}
+		}
+	}
+}

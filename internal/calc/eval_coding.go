@@ -21,7 +21,7 @@ func HammingDistance(u, v []*big.Int) (int, error) {
 	dist := 0
 	for i := range u {
 		if u[i] == nil || v[i] == nil {
-			return 0, fmt.Errorf("vector elements cannot be nil")
+			return 0, fmt.Errorf("%s", i18n.T("coding.err_vector_element_nil"))
 		}
 		if u[i].Cmp(v[i]) != 0 {
 			dist++
@@ -41,7 +41,7 @@ func RSEncode(msg, points []*big.Int, prime *big.Int) ([]*big.Int, error) {
 	}
 	for _, m := range msg {
 		if m == nil {
-			return nil, fmt.Errorf("message coefficients cannot be nil")
+			return nil, fmt.Errorf("%s", i18n.T("coding.err_message_coeff_nil"))
 		}
 	}
 	if len(points) < len(msg) {
@@ -52,7 +52,7 @@ func RSEncode(msg, points []*big.Int, prime *big.Int) ([]*big.Int, error) {
 	pointSet := make(map[string]bool)
 	for _, pt := range points {
 		if pt == nil {
-			return nil, fmt.Errorf("evaluation points cannot be nil")
+			return nil, fmt.Errorf("%s", i18n.T("coding.err_eval_point_nil"))
 		}
 		val := new(big.Int).Mod(pt, prime)
 		k := val.String()
@@ -101,7 +101,7 @@ func RSDecode(received, points []*big.Int, k int, prime *big.Int) ([]*big.Int, e
 	pointSet := make(map[string]bool)
 	for _, pt := range points {
 		if pt == nil {
-			return nil, fmt.Errorf("evaluation points cannot be nil")
+			return nil, fmt.Errorf("%s", i18n.T("coding.err_eval_point_nil"))
 		}
 		val := new(big.Int).Mod(pt, prime)
 		kStr := val.String()
@@ -112,7 +112,7 @@ func RSDecode(received, points []*big.Int, k int, prime *big.Int) ([]*big.Int, e
 	}
 	for _, r := range received {
 		if r == nil {
-			return nil, fmt.Errorf("received codeword elements cannot be nil")
+			return nil, fmt.Errorf("%s", i18n.T("coding.err_received_codeword_nil"))
 		}
 	}
 
@@ -146,7 +146,7 @@ func tryBerlekampWelch(y, alpha []*big.Int, k, e int, prime *big.Int) ([]*big.In
 	numVars := numQ + numE
 
 	if n < numVars {
-		return nil, fmt.Errorf("system underdetermined")
+		return nil, fmt.Errorf("%s", i18n.T("coding.err_system_underdetermined"))
 	}
 
 	// Matrix size: n rows, numVars columns, plus RHS
@@ -218,7 +218,7 @@ func tryBerlekampWelch(y, alpha []*big.Int, k, e int, prime *big.Int) ([]*big.In
 	// Remainder must be identically 0
 	for _, r := range rem {
 		if r.Sign() != 0 {
-			return nil, fmt.Errorf("non-zero remainder in Q/E")
+			return nil, fmt.Errorf("%s", i18n.T("coding.err_non_zero_remainder"))
 		}
 	}
 
@@ -233,7 +233,7 @@ func tryBerlekampWelch(y, alpha []*big.Int, k, e int, prime *big.Int) ([]*big.In
 	}
 	for j := k; j < len(quot); j++ {
 		if quot[j].Sign() != 0 {
-			return nil, fmt.Errorf("quotient degree exceeds k-1")
+			return nil, fmt.Errorf("%s", i18n.T("coding.err_quotient_degree_exceeds"))
 		}
 	}
 
@@ -271,7 +271,7 @@ func solveLinearSystemFp(A [][]*big.Int, b []*big.Int, numVars int, prime *big.I
 		// Normalize pivot row
 		inv := new(big.Int).ModInverse(M[row][col], prime)
 		if inv == nil {
-			return nil, fmt.Errorf("modular inverse does not exist")
+			return nil, fmt.Errorf("%s", i18n.T("coding.err_modular_inv_not_exist"))
 		}
 		for c := col; c <= numVars; c++ {
 			M[row][c].Mul(M[row][c], inv)
@@ -298,7 +298,7 @@ func solveLinearSystemFp(A [][]*big.Int, b []*big.Int, numVars int, prime *big.I
 	// Check consistency for rows row..n-1
 	for r := row; r < n; r++ {
 		if M[r][numVars].Sign() != 0 {
-			return nil, fmt.Errorf("inconsistent linear system")
+			return nil, fmt.Errorf("%s", i18n.T("coding.err_inconsistent_linear_system"))
 		}
 	}
 
@@ -335,7 +335,7 @@ func polyDivModFp(a, b []*big.Int, prime *big.Int) (quot, rem []*big.Int, err er
 		degB--
 	}
 	if degB < 0 {
-		return nil, nil, fmt.Errorf("division by zero polynomial")
+		return nil, nil, fmt.Errorf("%s", i18n.T("coding.err_div_zero_poly"))
 	}
 
 	if degA < degB {
@@ -359,7 +359,7 @@ func polyDivModFp(a, b []*big.Int, prime *big.Int) (quot, rem []*big.Int, err er
 
 	leadInv := new(big.Int).ModInverse(b[degB], prime)
 	if leadInv == nil {
-		return nil, nil, fmt.Errorf("leading coeff not invertible mod prime")
+		return nil, nil, fmt.Errorf("%s", i18n.T("coding.err_leading_coeff_not_invertible"))
 	}
 
 	term := new(big.Int)

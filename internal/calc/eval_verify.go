@@ -3316,7 +3316,7 @@ func verifyKirchhoff(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFS
 	lapMat, okLap := lapNode.(*MatrixNode)
 	if !okLap {
 		_ = fsm.TransitionTo(VerifyStateRefuted)
-		return nil, fmt.Errorf("laplacian is not matrix")
+		return nil, fmt.Errorf("%s", i18n.T("verify.err_laplacian_not_matrix"))
 	}
 
 	minor := submatrix(lapMat, 0, 0)
@@ -3335,17 +3335,17 @@ func verifyKirchhoff(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFS
 func verifyNashZeroSum(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
 	if len(fn.Args) < 1 {
 		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
-		return nil, fmt.Errorf("nash_zero_sum requires payoff matrix")
+		return nil, fmt.Errorf("%s", i18n.T("verify.err_nash_requires_payoff"))
 	}
 	payoff, ok := fn.Args[0].(*MatrixNode)
 	if !ok {
 		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
-		return nil, fmt.Errorf("expected payoff matrix")
+		return nil, fmt.Errorf("%s", i18n.T("verify.err_expected_payoff_matrix"))
 	}
 	list, okList := result.(*ListNode)
 	if !okList || len(list.Elements) < 3 {
 		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
-		return nil, fmt.Errorf("expected [v, x, y] result from nash_zero_sum")
+		return nil, fmt.Errorf("%s", i18n.T("verify.err_expected_nash_result"))
 	}
 	vVal := list.Elements[0]
 	xVec := list.Elements[1]
@@ -3366,17 +3366,17 @@ func verifyNashZeroSum(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycle
 func verifyMarkovStationary(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
 	if len(fn.Args) < 1 {
 		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
-		return nil, fmt.Errorf("markov_stationary requires transition matrix")
+		return nil, fmt.Errorf("%s", i18n.T("verify.err_markov_requires_trans"))
 	}
 	trans, ok := fn.Args[0].(*MatrixNode)
 	if !ok {
 		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
-		return nil, fmt.Errorf("expected transition matrix")
+		return nil, fmt.Errorf("%s", i18n.T("verify.err_expected_trans_matrix"))
 	}
 	dist, okDist := result.(*ListNode)
 	if !okDist {
 		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
-		return nil, fmt.Errorf("expected distribution vector list")
+		return nil, fmt.Errorf("%s", i18n.T("verify.err_expected_dist_vector"))
 	}
 
 	certIR := NewMarkovStationaryCertificate(trans, dist, mustRational(0, 1), true, "Markov Stationary Distribution verified")

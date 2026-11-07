@@ -1,7 +1,6 @@
 package calc
 
 import (
-	"errors"
 	"fmt"
 	"math/big"
 	"sort"
@@ -227,7 +226,7 @@ func EvalChromaticPolynomial(args []Node) (Node, error) {
 // computeChromaticRec recursively calculates the chromatic polynomial.
 func computeChromaticRec(g *internalGraph, budget *int) (Node, error) {
 	if *budget <= 0 {
-		return nil, errors.New("chromatic polynomial step limit exceeded")
+		return nil, fmt.Errorf("%s", i18n.T("graph.err_chromatic_poly_node_budget_exceeded", 5000))
 	}
 	*budget--
 

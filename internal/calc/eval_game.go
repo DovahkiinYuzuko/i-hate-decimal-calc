@@ -87,7 +87,7 @@ func EvalNimSum(args []Node) (Node, error) {
 // Output: [value, x_strategy, y_strategy] where x in Q^m, y in Q^n are mixed strategies.
 func EvalNashZeroSum(args []Node) (Node, error) {
 	if len(args) != 1 {
-		return nil, fmt.Errorf("nash_zero_sum requires 1 argument, got %d", len(args))
+		return nil, fmt.Errorf("%s", i18n.T("game.err_nash_args", len(args)))
 	}
 
 	var mat *MatrixNode

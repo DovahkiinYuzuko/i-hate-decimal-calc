@@ -180,7 +180,7 @@ func EvalHyperPMF(args []Node) (Node, error) {
 	}
 
 	if K.Cmp(N) > 0 || n.Cmp(N) > 0 {
-		return nil, fmt.Errorf("%s: K and n cannot exceed N (got N=%s, K=%s, n=%s)", i18n.T("errors.hyper_params"), N.String(), K.String(), n.String())
+		return nil, fmt.Errorf("%s", i18n.T("prob.err_hyper_params_bounds", N.String(), K.String(), n.String()))
 	}
 	if k.Cmp(K) > 0 || k.Cmp(n) > 0 {
 		return mustRational(0, 1), nil
@@ -197,7 +197,7 @@ func EvalHyperPMF(args []Node) (Node, error) {
 	num := new(big.Int).Mul(combKk, nMinusK_nMinusK)
 	denom := combBig(N, n)
 	if denom.Sign() == 0 {
-		return nil, fmt.Errorf("%s: division by zero in hypergeometric denominator", i18n.T("errors.hyper_params"))
+		return nil, fmt.Errorf("%s", i18n.T("prob.err_hyper_denom_zero"))
 	}
 
 	ans := new(big.Rat).SetFrac(num, denom)
@@ -261,7 +261,7 @@ func EvalBayes(args []Node) (Node, error) {
 
 	one := big.NewRat(1, 1)
 	if ans.Cmp(one) > 0 {
-		return nil, fmt.Errorf("%s: posterior exceeds 1 (got %s)", i18n.T("errors.prob_out_of_range"), ans.RatString())
+		return nil, fmt.Errorf("%s", i18n.T("prob.err_bayes_posterior_exceeds_one", ans.RatString()))
 	}
 
 	return NewRationalFromBigRat(ans), nil

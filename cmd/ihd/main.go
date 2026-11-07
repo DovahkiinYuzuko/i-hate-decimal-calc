@@ -1013,7 +1013,7 @@ func runUpdate(args []string, out, errOut io.Writer) int {
 
 	if *helpFlag {
 		fmt.Fprintf(out, "%s\n\n", i18n.T("cli.cmd_update_desc"))
-		fmt.Fprintf(out, "Usage: ihd update [flags]\n\nFlags:\n")
+		fmt.Fprintf(out, "%s: ihd update [flags]\n\n%s:\n", i18n.T("cli.help_usage_label"), i18n.T("cli.help_flags_label"))
 		fs.PrintDefaults()
 		return 0
 	}
@@ -1060,16 +1060,12 @@ func printHelp(fs *flag.FlagSet, out io.Writer, noColor bool) {
 		return "\x1B[33m" + s + "\x1B[0m"
 	}
 
-	if i18n.CurrentLocale() == "ja" {
-		fmt.Fprintf(out, "%s\n\n", bold("ihd - 厳密数式処理計算機"))
-	} else {
-		fmt.Fprintf(out, "%s\n\n", bold("ihd - Exact Arithmetic Calculator"))
-	}
+	fmt.Fprintf(out, "%s\n\n", bold(i18n.T("cli.title_banner")))
 
 	fmt.Fprintf(out, "%s:\n", cyanBold(i18n.T("cli.help_usage_label")))
 	fmt.Fprintf(out, "  %s %s %s\n", bold("ihd"), yellow("[flags]"), yellow("[expression]"))
-	fmt.Fprintf(out, "  %s %s                (Starts interactive REPL)\n", bold("ihd"), yellow("[flags]"))
-	fmt.Fprintf(out, "  echo \"expr\" | %s %s   (Evaluates piped input)\n", bold("ihd"), yellow("[flags]"))
+	fmt.Fprintf(out, "  %s %s                %s\n", bold("ihd"), yellow("[flags]"), i18n.T("cli.help_desc_repl"))
+	fmt.Fprintf(out, "  echo \"expr\" | %s %s   %s\n", bold("ihd"), yellow("[flags]"), i18n.T("cli.help_desc_pipe"))
 	fmt.Fprintf(out, "  %s %s %s\n", bold("ihd"), yellow("<command>"), yellow("[flags]"))
 	fmt.Fprintln(out)
 
