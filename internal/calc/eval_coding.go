@@ -2,6 +2,7 @@ package calc
 
 import (
 	"fmt"
+	"math"
 	"math/big"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc/ast"
@@ -19,6 +20,9 @@ func HammingDistance(u, v []*big.Int) (int, error) {
 	}
 	dist := 0
 	for i := range u {
+		if u[i] == nil || v[i] == nil {
+			return 0, fmt.Errorf("vector elements cannot be nil")
+		}
 		if u[i].Cmp(v[i]) != 0 {
 			dist++
 		}
@@ -35,6 +39,11 @@ func RSEncode(msg, points []*big.Int, prime *big.Int) ([]*big.Int, error) {
 	if len(msg) == 0 {
 		return nil, fmt.Errorf("%s", i18n.T("coding.err_empty_message"))
 	}
+	for _, m := range msg {
+		if m == nil {
+			return nil, fmt.Errorf("message coefficients cannot be nil")
+		}
+	}
 	if len(points) < len(msg) {
 		return nil, fmt.Errorf("%s", i18n.T("coding.err_points_less_than_message_length"))
 	}
@@ -42,6 +51,9 @@ func RSEncode(msg, points []*big.Int, prime *big.Int) ([]*big.Int, error) {
 	// Verify points are distinct mod p
 	pointSet := make(map[string]bool)
 	for _, pt := range points {
+		if pt == nil {
+			return nil, fmt.Errorf("evaluation points cannot be nil")
+		}
 		val := new(big.Int).Mod(pt, prime)
 		k := val.String()
 		if pointSet[k] {
@@ -83,6 +95,25 @@ func RSDecode(received, points []*big.Int, k int, prime *big.Int) ([]*big.Int, e
 	}
 	if k <= 0 || k > n {
 		return nil, fmt.Errorf("%s", i18n.T("coding.err_invalid_message_length_k", k, n))
+	}
+
+	// Verify points are distinct mod p and non-nil
+	pointSet := make(map[string]bool)
+	for _, pt := range points {
+		if pt == nil {
+			return nil, fmt.Errorf("evaluation points cannot be nil")
+		}
+		val := new(big.Int).Mod(pt, prime)
+		kStr := val.String()
+		if pointSet[kStr] {
+			return nil, fmt.Errorf("%s", i18n.T("coding.err_duplicate_evaluation_point", kStr))
+		}
+		pointSet[kStr] = true
+	}
+	for _, r := range received {
+		if r == nil {
+			return nil, fmt.Errorf("received codeword elements cannot be nil")
+		}
 	}
 
 	eMax := (n - k) / 2
@@ -470,10 +501,14 @@ func handleRSDecode(args []Node, env *Env) (Node, error) {
 		return nil, err
 	}
 	kNode, ok := args[2].(*ast.RationalNode)
-	if !ok || !kNode.Val.IsInt() {
+	if !ok || !kNode.Val.IsInt() || !kNode.Val.Num().IsInt64() {
 		return nil, fmt.Errorf("%s", i18n.T("coding.err_k_must_be_integer"))
 	}
-	k := int(kNode.Val.Num().Int64())
+	kVal64 := kNode.Val.Num().Int64()
+	if kVal64 <= 0 || kVal64 > int64(math.MaxInt) {
+		return nil, fmt.Errorf("%s", i18n.T("coding.err_k_must_be_integer"))
+	}
+	k := int(kVal64)
 
 	primeNode, ok := args[3].(*ast.RationalNode)
 	if !ok || !primeNode.Val.IsInt() {

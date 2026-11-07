@@ -258,3 +258,24 @@ func TestCombinatorics(t *testing.T) {
 		t.Errorf("stirling2(4, 2) = %v, want 7, err=%v", s2, err)
 	}
 }
+
+func TestDenseFPS_MinPrecisionRule(t *testing.T) {
+	// FLINT / SageMath standard: prec(f + g) = min(prec(f), prec(g))
+	f := NewDenseFPS("x", 5)
+	f.Coeffs[0].SetInt64(1)
+	f.Coeffs[1].SetInt64(2)
+
+	g := NewDenseFPS("x", 3)
+	g.Coeffs[0].SetInt64(3)
+	g.Coeffs[1].SetInt64(4)
+
+	sum := f.Add(g)
+	if sum.Precision != 3 {
+		t.Errorf("expected sum precision to be min(5, 3)=3, got %d", sum.Precision)
+	}
+
+	diff := f.Sub(g)
+	if diff.Precision != 3 {
+		t.Errorf("expected diff precision to be min(5, 3)=3, got %d", diff.Precision)
+	}
+}

@@ -2,6 +2,7 @@ package calc
 
 import (
 	"fmt"
+	"math"
 	"math/big"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc/ast"
@@ -46,10 +47,10 @@ func (f *DenseFPS) Clone() *DenseFPS {
 	return cp
 }
 
-// Add computes f + g mod x^prec.
+// Add computes f + g mod x^prec, where prec = min(f.Precision, g.Precision) following FLINT/SageMath standard.
 func (f *DenseFPS) Add(g *DenseFPS) *DenseFPS {
 	prec := f.Precision
-	if g.Precision > prec {
+	if g.Precision < prec {
 		prec = g.Precision
 	}
 	res := NewDenseFPS(f.Var, prec)
@@ -64,10 +65,10 @@ func (f *DenseFPS) Add(g *DenseFPS) *DenseFPS {
 	return res
 }
 
-// Sub computes f - g mod x^prec.
+// Sub computes f - g mod x^prec, where prec = min(f.Precision, g.Precision) following FLINT/SageMath standard.
 func (f *DenseFPS) Sub(g *DenseFPS) *DenseFPS {
 	prec := f.Precision
-	if g.Precision > prec {
+	if g.Precision < prec {
 		prec = g.Precision
 	}
 	res := NewDenseFPS(f.Var, prec)
@@ -405,15 +406,32 @@ func EvalPartitions(n int64) (*big.Int, error) {
 	p := make([]*big.Int, n+1)
 	p[0] = big.NewInt(1)
 
+	big3 := big.NewInt(3)
+	big1 := big.NewInt(1)
+	bigK := new(big.Int)
+	threeK := new(big.Int)
+	bigG1 := new(big.Int)
+	bigG2 := new(big.Int)
+	bigI := new(big.Int)
+
 	for i := int64(1); i <= n; i++ {
+		bigI.SetInt64(i)
 		sum := big.NewInt(0)
 		for k := int64(1); ; k++ {
-			// g1 = k(3k - 1) / 2
-			g1 := (k * (3*k - 1)) / 2
-			// g2 = k(3k + 1) / 2
-			g2 := (k * (3*k + 1)) / 2
+			bigK.SetInt64(k)
+			threeK.Mul(bigK, big3)
 
-			if g1 > i && g2 > i {
+			// g1 = k(3k - 1) / 2
+			bigG1.Sub(threeK, big1)
+			bigG1.Mul(bigG1, bigK)
+			bigG1.Rsh(bigG1, 1)
+
+			// g2 = k(3k + 1) / 2
+			bigG2.Add(threeK, big1)
+			bigG2.Mul(bigG2, bigK)
+			bigG2.Rsh(bigG2, 1)
+
+			if bigG1.Cmp(bigI) > 0 && bigG2.Cmp(bigI) > 0 {
 				break
 			}
 
@@ -422,14 +440,16 @@ func EvalPartitions(n int64) (*big.Int, error) {
 				sign = -1
 			}
 
-			if g1 <= i {
+			if bigG1.Cmp(bigI) <= 0 {
+				g1 := bigG1.Int64()
 				if sign > 0 {
 					sum.Add(sum, p[i-g1])
 				} else {
 					sum.Sub(sum, p[i-g1])
 				}
 			}
-			if g2 <= i {
+			if bigG2.Cmp(bigI) <= 0 {
+				g2 := bigG2.Int64()
 				if sign > 0 {
 					sum.Add(sum, p[i-g2])
 				} else {
@@ -720,14 +740,43 @@ func init() {
 	})
 }
 
+func toSafePositiveInt(r *big.Rat) (int, bool) {
+	if r == nil || !r.IsInt() || r.Sign() <= 0 {
+		return 0, false
+	}
+	num := r.Num()
+	if !num.IsInt64() {
+		return 0, false
+	}
+	val64 := num.Int64()
+	if val64 > int64(math.MaxInt) {
+		return 0, false
+	}
+	return int(val64), true
+}
+
+func toSafeNonNegativeInt64(r *big.Rat) (int64, bool) {
+	if r == nil || !r.IsInt() || r.Sign() < 0 {
+		return 0, false
+	}
+	num := r.Num()
+	if !num.IsInt64() {
+		return 0, false
+	}
+	return num.Int64(), true
+}
+
 func parseFPSArgs(args []Node) (ast.Node, string, int, error) {
 	if len(args) == 2 {
 		expr := args[0]
 		r, ok := args[1].(*ast.RationalNode)
-		if !ok || !r.Val.IsInt() || r.Val.Sign() <= 0 {
+		if !ok {
 			return nil, "", 0, fmt.Errorf("%s", i18n.T("fps.err_prec_must_be_positive_int", args[1].String()))
 		}
-		prec := int(r.Val.Num().Int64())
+		prec, safe := toSafePositiveInt(r.Val)
+		if !safe {
+			return nil, "", 0, fmt.Errorf("%s", i18n.T("fps.err_prec_must_be_positive_int", args[1].String()))
+		}
 		varName := "x"
 		vars := CollectFreeVariables(expr)
 		if len(vars) > 0 {
@@ -741,10 +790,13 @@ func parseFPSArgs(args []Node) (ast.Node, string, int, error) {
 			return nil, "", 0, fmt.Errorf("%s", i18n.T("fps.err_second_arg_must_be_var", args[1].String()))
 		}
 		r, ok := args[2].(*ast.RationalNode)
-		if !ok || !r.Val.IsInt() || r.Val.Sign() <= 0 {
+		if !ok {
 			return nil, "", 0, fmt.Errorf("%s", i18n.T("fps.err_third_arg_must_be_positive_int", args[2].String()))
 		}
-		prec := int(r.Val.Num().Int64())
+		prec, safe := toSafePositiveInt(r.Val)
+		if !safe {
+			return nil, "", 0, fmt.Errorf("%s", i18n.T("fps.err_third_arg_must_be_positive_int", args[2].String()))
+		}
 		return expr, v.Name, prec, nil
 	}
 	return nil, "", 0, fmt.Errorf("%s", i18n.T("fps.err_invalid_arg_count"))
@@ -819,10 +871,14 @@ func handlePartitions(args []Node, env *Env) (Node, error) {
 		return nil, fmt.Errorf("%s", i18n.T("fps.err_partitions_arg_count"))
 	}
 	r, ok := args[0].(*ast.RationalNode)
-	if !ok || !r.Val.IsInt() || r.Val.Sign() < 0 {
+	if !ok {
 		return nil, fmt.Errorf("%s", i18n.T("fps.err_partitions_arg_must_be_non_negative", args[0].String()))
 	}
-	p, err := EvalPartitions(r.Val.Num().Int64())
+	n, safe := toSafeNonNegativeInt64(r.Val)
+	if !safe {
+		return nil, fmt.Errorf("%s", i18n.T("fps.err_partitions_arg_must_be_non_negative", args[0].String()))
+	}
+	p, err := EvalPartitions(n)
 	if err != nil {
 		return nil, err
 	}
@@ -834,10 +890,14 @@ func handleBell(args []Node, env *Env) (Node, error) {
 		return nil, fmt.Errorf("%s", i18n.T("fps.err_bell_arg_count"))
 	}
 	r, ok := args[0].(*ast.RationalNode)
-	if !ok || !r.Val.IsInt() || r.Val.Sign() < 0 {
+	if !ok {
 		return nil, fmt.Errorf("%s", i18n.T("fps.err_bell_arg_must_be_non_negative", args[0].String()))
 	}
-	b, err := EvalBell(r.Val.Num().Int64())
+	n, safe := toSafeNonNegativeInt64(r.Val)
+	if !safe {
+		return nil, fmt.Errorf("%s", i18n.T("fps.err_bell_arg_must_be_non_negative", args[0].String()))
+	}
+	b, err := EvalBell(n)
 	if err != nil {
 		return nil, err
 	}
@@ -849,10 +909,14 @@ func handleCatalan(args []Node, env *Env) (Node, error) {
 		return nil, fmt.Errorf("%s", i18n.T("fps.err_catalan_arg_count"))
 	}
 	r, ok := args[0].(*ast.RationalNode)
-	if !ok || !r.Val.IsInt() || r.Val.Sign() < 0 {
+	if !ok {
 		return nil, fmt.Errorf("%s", i18n.T("fps.err_catalan_arg_must_be_non_negative", args[0].String()))
 	}
-	c, err := EvalCatalan(r.Val.Num().Int64())
+	n, safe := toSafeNonNegativeInt64(r.Val)
+	if !safe {
+		return nil, fmt.Errorf("%s", i18n.T("fps.err_catalan_arg_must_be_non_negative", args[0].String()))
+	}
+	c, err := EvalCatalan(n)
 	if err != nil {
 		return nil, err
 	}
@@ -865,10 +929,15 @@ func handleStirling1(args []Node, env *Env) (Node, error) {
 	}
 	r1, ok1 := args[0].(*ast.RationalNode)
 	r2, ok2 := args[1].(*ast.RationalNode)
-	if !ok1 || !ok2 || !r1.Val.IsInt() || !r2.Val.IsInt() || r1.Val.Sign() < 0 || r2.Val.Sign() < 0 {
+	if !ok1 || !ok2 {
 		return nil, fmt.Errorf("%s", i18n.T("fps.err_stirling_args_must_be_non_negative"))
 	}
-	s, err := EvalStirling1(r1.Val.Num().Int64(), r2.Val.Num().Int64())
+	n, safe1 := toSafeNonNegativeInt64(r1.Val)
+	k, safe2 := toSafeNonNegativeInt64(r2.Val)
+	if !safe1 || !safe2 {
+		return nil, fmt.Errorf("%s", i18n.T("fps.err_stirling_args_must_be_non_negative"))
+	}
+	s, err := EvalStirling1(n, k)
 	if err != nil {
 		return nil, err
 	}
@@ -881,10 +950,15 @@ func handleStirling2(args []Node, env *Env) (Node, error) {
 	}
 	r1, ok1 := args[0].(*ast.RationalNode)
 	r2, ok2 := args[1].(*ast.RationalNode)
-	if !ok1 || !ok2 || !r1.Val.IsInt() || !r2.Val.IsInt() || r1.Val.Sign() < 0 || r2.Val.Sign() < 0 {
+	if !ok1 || !ok2 {
 		return nil, fmt.Errorf("%s", i18n.T("fps.err_stirling_args_must_be_non_negative"))
 	}
-	s, err := EvalStirling2(r1.Val.Num().Int64(), r2.Val.Num().Int64())
+	n, safe1 := toSafeNonNegativeInt64(r1.Val)
+	k, safe2 := toSafeNonNegativeInt64(r2.Val)
+	if !safe1 || !safe2 {
+		return nil, fmt.Errorf("%s", i18n.T("fps.err_stirling_args_must_be_non_negative"))
+	}
+	s, err := EvalStirling2(n, k)
 	if err != nil {
 		return nil, err
 	}
