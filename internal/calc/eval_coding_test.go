@@ -74,3 +74,24 @@ func TestReedSolomon_Encode_Decode_Roundtrip(t *testing.T) {
 		t.Errorf("expected decoding error for uncorrectable corrupted word, got nil")
 	}
 }
+
+func TestCoding_Hardening_EdgeCases(t *testing.T) {
+	prime := big.NewInt(5)
+
+	// 1. Duplicate evaluation points in RSDecode
+	corrupted := []*big.Int{big.NewInt(3), big.NewInt(4), big.NewInt(2), big.NewInt(4)}
+	dupPoints := []*big.Int{big.NewInt(1), big.NewInt(2), big.NewInt(1), big.NewInt(4)} // duplicate 1
+	if _, err := RSDecode(corrupted, dupPoints, 2, prime); err == nil {
+		t.Errorf("expected error for duplicate evaluation points in RSDecode, got nil")
+	}
+
+	// 2. Nil element in HammingDistance
+	if _, err := HammingDistance([]*big.Int{nil}, []*big.Int{big.NewInt(1)}); err == nil {
+		t.Errorf("expected error for nil element in HammingDistance, got nil")
+	}
+
+	// 3. Nil element in RSEncode
+	if _, err := RSEncode([]*big.Int{nil}, []*big.Int{big.NewInt(1)}, prime); err == nil {
+		t.Errorf("expected error for nil message coefficient, got nil")
+	}
+}
