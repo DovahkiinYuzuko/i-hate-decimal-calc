@@ -119,6 +119,9 @@
 | `sturm` | `sturm(p)` / `sturm(p, var)` | 厳密スツルム列（Sturm chain）の生成（$\mathbb{Q}[x]$ 上のPrimitive PRSによる係数爆発防止型スツルム多項式剰余列） |
 | `root_count` | `root_count(p)` / `root_count(p, var, [a, b])` | スツルムの定理による実根の厳密な個数算定（区間 $[a, b]$ または $(-\infty, \infty)$ 内の相異なる実根数を符号変化数から決定） |
 | `isolate_roots` | `isolate_roots(p)` / `isolate_roots(p, var, [a, b])` | 厳密代数的実根分離（無平方分解と有理二分法探索により、各実根をちょうど1個含む互いに素な有理数区間を確定） |
+| `isolate_roots_vas` | `isolate_roots_vas(p)` / `isolate_roots_vas(p, var)` | Vincent-Akritas-Strzeboński (VAS) 法による高速代数的実根分離（連分数展開・メビウス変換・デカルトの符号則に基づく無平方実根分離） |
+| `alg_real` | `alg_real([c0, c1, ...], [low, high], root_index)` | 厳密代数的実数ノード（有理数係数多項式、分離区間、実根インデックス）を直接構築し第一級四則演算・順序決定・Gosper連分数変換を提供 |
+| `is_constructible` | `is_constructible(p)` / `is_constructible(p, var)` | 定規とコンパスによる作図可能性判定（Wantzelの定理・Galois 2-群条件に基づく次数 $2^k$ 多項式の可作図性厳密判定） |
 | `inv_mod` | `inv_mod(a, m)` | 拡張ユークリッド互除法によるモジュラ逆数（$a x \equiv 1 \pmod m$） |
 | `crt` | `crt([r1, r2], [m1, m2])` | 中国剰余定理（Garner法および非互いに素な合同式を解く一般化CRT拡張） |
 | `totient` | `totient(n)` | オイラーのトーシェント関数 $\phi(n) = n \prod_{p \mid n} (1 - 1/p)$ |

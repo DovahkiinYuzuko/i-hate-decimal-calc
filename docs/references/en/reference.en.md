@@ -119,6 +119,9 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `sturm` | `sturm(p)` / `sturm(p, var)` | Exact Sturm sequence (chain) via Primitive PRS over $\mathbb{Q}[x]$ |
 | `root_count` | `root_count(p)` / `root_count(p, var, [a, b])` | Exact number of distinct real roots in interval $[a, b]$ or $(-\infty, \infty)$ via Sturm's Theorem |
 | `isolate_roots` | `isolate_roots(p)` / `isolate_roots(p, var, [a, b])` | Exact real root isolation into disjoint rational intervals via square-free bisection |
+| `isolate_roots_vas` | `isolate_roots_vas(p)` / `isolate_roots_vas(p, var)` | Fast real root isolation via Vincent-Akritas-Strzeboński (VAS) continued-fraction method and Descartes' Rule of Signs |
+| `alg_real` | `alg_real([c0, c1, ...], [low, high], root_index)` | Constructs a first-class real algebraic number node from rational polynomial coefficients, isolating interval, and root index |
+| `is_constructible` | `is_constructible(p)` / `is_constructible(p, var)` | Compass and straightedge constructibility decision via Wantzel's theorem and Galois 2-group conditions |
 | `inv_mod` | `inv_mod(a, m)` | Modular inverse via Extended Euclidean Algorithm ($a x \equiv 1 \pmod m$) |
 | `crt` | `crt([r1, r2], [m1, m2])` | Chinese Remainder Theorem (Garner's algorithm & generalized non-coprime CRT) |
 | `totient` | `totient(n)` | Euler's totient function $\phi(n) = n \prod_{p \mid n} (1 - 1/p)$ |

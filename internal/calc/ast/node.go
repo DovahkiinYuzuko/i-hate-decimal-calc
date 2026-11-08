@@ -88,6 +88,8 @@ const (
 	NodeQuantity
 	NodeWildcard
 	NodeRule
+	NodeAlgebraicReal
+	NodeCF
 )
 
 // Node represents any node in the mathematical expression tree.

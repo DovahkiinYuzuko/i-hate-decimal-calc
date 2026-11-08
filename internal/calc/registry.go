@@ -315,6 +315,9 @@ var defaultFunctionArgs = map[string][]string{
 	"sturm":         {"poly", "var"},
 	"root_count":    {"poly", "var", "a", "b"},
 	"isolate_roots": {"poly", "var", "a", "b"},
+	"isolate_roots_vas": {"poly", "var"},
+	"alg_real":          {"poly", "interval", "root_index"},
+	"is_constructible":  {"poly", "var"},
 
 	// Elliptic Curves
 	"ec_torsion":    {"a", "b"},
@@ -1218,6 +1221,21 @@ func init() {
 		Name:    "isolate_roots",
 		MinArgs: 1,
 		MaxArgs: 4,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "isolate_roots_vas",
+		MinArgs: 1,
+		MaxArgs: 2,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "alg_real",
+		MinArgs: 3,
+		MaxArgs: 3,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "is_constructible",
+		MinArgs: 1,
+		MaxArgs: 2,
 	})
 
 	// Complex Analysis & Symbolic Residue Calculus Pack (issue-60)

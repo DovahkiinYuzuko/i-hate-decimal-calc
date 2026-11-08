@@ -2,6 +2,7 @@ package calc
 
 import (
 	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc/ast"
@@ -16,6 +17,9 @@ func init() {
 	RegisterHandler("sturm", handleSturm)
 	RegisterHandler("root_count", handleRootCount)
 	RegisterHandler("isolate_roots", handleIsolateRoots)
+	RegisterHandler("isolate_roots_vas", handleIsolateRootsVAS)
+	RegisterHandler("alg_real", handleAlgReal)
+	RegisterHandler("is_constructible", handleIsConstructible)
 	RegisterHandler("to_poly", handleToPoly)
 	RegisterHandler("to_alg", handleToAlg)
 	RegisterHandler("alg_inv", handleAlgInv)
@@ -383,4 +387,93 @@ func handleSOSDecompose(args []Node, env *Env) (Node, error) {
 		varsOpt = args[1]
 	}
 	return EvalSOSDecompose(args[0], varsOpt, env)
+}
+
+func handleIsolateRootsVAS(args []Node, env *Env) (Node, error) {
+	if len(args) == 0 {
+		return nil, fmt.Errorf("%s", i18n.T("errors.func_args_between", "isolate_roots_vas", 1, 2, len(args)))
+	}
+	varName := ""
+	if len(args) >= 2 {
+		if v, ok := args[1].(*VarNode); ok {
+			varName = v.Name
+		} else {
+			return nil, fmt.Errorf("%s", i18n.T("errors.sturm_invalid_variable", "isolate_roots_vas", args[1].String()))
+		}
+	}
+	return EvalIsolateRootsVAS(args[0], varName, env)
+}
+
+func handleAlgReal(args []Node, env *Env) (Node, error) {
+	if len(args) != 3 {
+		return nil, fmt.Errorf("%s", i18n.T("errors.func_args_between", "alg_real", 3, 3, len(args)))
+	}
+	var polyCoeffs []*big.Int
+	if l, ok := args[0].(*ListNode); ok {
+		rats := make([]*big.Rat, len(l.Elements))
+		lcmDenom := big.NewInt(1)
+		for i, el := range l.Elements {
+			evalEl, err := Eval(el)
+			if err != nil {
+				evalEl = el
+			}
+			if r, ok := evalEl.(*RationalNode); ok && r.Val != nil {
+				rats[i] = r.Val
+				g := new(big.Int).GCD(nil, nil, lcmDenom, r.Val.Denom())
+				lcmDenom.Mul(lcmDenom, r.Val.Denom())
+				lcmDenom.Div(lcmDenom, g)
+				if i == len(l.Elements)-1 {
+					polyCoeffs = make([]*big.Int, len(rats))
+					for j, r := range rats {
+						scale := new(big.Int).Div(lcmDenom, r.Denom())
+						polyCoeffs[j] = new(big.Int).Mul(r.Num(), scale)
+					}
+				}
+			} else {
+				return nil, fmt.Errorf("%s", i18n.T("errors.alg_real_poly_required", "alg_real"))
+			}
+		}
+	} else {
+		return nil, fmt.Errorf("%s", i18n.T("errors.alg_real_poly_required", "alg_real"))
+	}
+
+	var lowRat, highRat *big.Rat
+	if l, ok := args[1].(*ListNode); ok && len(l.Elements) == 2 {
+		eLow, _ := Eval(l.Elements[0])
+		eHigh, _ := Eval(l.Elements[1])
+		rLow, okLow := eLow.(*RationalNode)
+		rHigh, okHigh := eHigh.(*RationalNode)
+		if okLow && okHigh && rLow.Val != nil && rHigh.Val != nil {
+			lowRat = rLow.Val
+			highRat = rHigh.Val
+		} else {
+			return nil, fmt.Errorf("%s", i18n.T("errors.alg_real_interval_required", "alg_real"))
+		}
+	} else {
+		return nil, fmt.Errorf("%s", i18n.T("errors.alg_real_interval_required", "alg_real"))
+	}
+
+	eIdx, _ := Eval(args[2])
+	rIdx, okIdx := eIdx.(*RationalNode)
+	if !okIdx || rIdx.Val == nil {
+		return nil, fmt.Errorf("%s", i18n.T("errors.alg_real_root_index_int", "alg_real", args[2].String()))
+	}
+	idx := int(rIdx.Val.Num().Int64())
+
+	return ast.NewAlgebraicRealNode(polyCoeffs, lowRat, highRat, idx), nil
+}
+
+func handleIsConstructible(args []Node, env *Env) (Node, error) {
+	if len(args) == 0 {
+		return nil, fmt.Errorf("%s", i18n.T("errors.func_args_between", "is_constructible", 1, 2, len(args)))
+	}
+	varName := ""
+	if len(args) >= 2 {
+		if v, ok := args[1].(*VarNode); ok {
+			varName = v.Name
+		} else {
+			return nil, fmt.Errorf("%s", i18n.T("errors.sturm_invalid_variable", "is_constructible", args[1].String()))
+		}
+	}
+	return EvalIsConstructible(args[0], varName, env)
 }

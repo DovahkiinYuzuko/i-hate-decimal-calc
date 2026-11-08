@@ -1285,6 +1285,21 @@
 <td align="left">厳密代数的実根分離（無平方分解と有理二分法探索により、各実根をちょうど1個含む互いに素な有理数区間を確定）</td>
 </tr>
 <tr>
+<td align="left"><code class="clickable-code" data-copy="isolate_roots_vas" title="クリックしてコピー">isolate_roots_vas</code></td>
+<td align="left"><code class="clickable-code" data-copy="isolate_roots_vas(p)" title="クリックしてコピー">isolate_roots_vas(p)</code> / <code class="clickable-code" data-copy="isolate_roots_vas(p, var)" title="クリックしてコピー">isolate_roots_vas(p, var)</code></td>
+<td align="left">Vincent-Akritas-Strzeboński (VAS) 法による高速代数的実根分離（連分数展開・メビウス変換・デカルトの符号則に基づく無平方実根分離）</td>
+</tr>
+<tr>
+<td align="left"><code class="clickable-code" data-copy="alg_real" title="クリックしてコピー">alg_real</code></td>
+<td align="left"><code class="clickable-code" data-copy="alg_real([c0, c1, ...], [low, high], root_index)" title="クリックしてコピー">alg_real([c0, c1, ...], [low, high], root_index)</code></td>
+<td align="left">厳密代数的実数ノード（有理数係数多項式、分離区間、実根インデックス）を直接構築し第一級四則演算・順序決定・Gosper連分数変換を提供</td>
+</tr>
+<tr>
+<td align="left"><code class="clickable-code" data-copy="is_constructible" title="クリックしてコピー">is_constructible</code></td>
+<td align="left"><code class="clickable-code" data-copy="is_constructible(p)" title="クリックしてコピー">is_constructible(p)</code> / <code class="clickable-code" data-copy="is_constructible(p, var)" title="クリックしてコピー">is_constructible(p, var)</code></td>
+<td align="left">定規とコンパスによる作図可能性判定（Wantzelの定理・Galois 2-群条件に基づく次数 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>2</mn><mi>k</mi></msup></mrow><annotation encoding="application/x-tex">2^k</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8491em;"></span><span class="mord"><span class="mord">2</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8491em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.0315em;">k</span></span></span></span></span></span></span></span></span></span></span> 多項式の可作図性厳密判定）</td>
+</tr>
+<tr>
 <td align="left"><code class="clickable-code" data-copy="inv_mod" title="クリックしてコピー">inv_mod</code></td>
 <td align="left"><code class="clickable-code" data-copy="inv_mod(a, m)" title="クリックしてコピー">inv_mod(a, m)</code></td>
 <td align="left">拡張ユークリッド互除法によるモジュラ逆数（<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mi>x</mi><mo>≡</mo><mn>1</mn><mspace></mspace><mspace width="0.4444em"></mspace><mo stretchy="false">(</mo><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">d</mi></mrow><mspace width="0.3333em"></mspace><mi>m</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">a x \equiv 1 \pmod m</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4637em;"></span><span class="mord mathnormal">a</span><span class="mord mathnormal">x</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">≡</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">1</span><span class="mspace allowbreak"></span><span class="mspace" style="margin-right:0.4444em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord"><span class="mord"><span class="mord mathrm">mod</span></span></span><span class="mspace" style="margin-right:0.3333em;"></span><span class="mord mathnormal">m</span><span class="mclose">)</span></span></span></span>）</td>

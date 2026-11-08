@@ -284,6 +284,25 @@ def handle_request(req):
         base_res.update({"status": "ok", "cleared": True})
         return base_res
 
+    elif action == "isolate_roots":
+        coeffs = req.get("poly", [])
+        try:
+            x = sp.Symbol('x')
+            poly_expr = sum(sp.Integer(int(c)) * (x**i) for i, c in enumerate(coeffs))
+            p = sp.Poly(poly_expr, x)
+            roots = p.real_roots()
+            res_roots = []
+            for r in roots:
+                if getattr(r, "is_Rational", False):
+                    res_roots.append({"is_exact": True, "num": str(r.p), "den": str(r.q)})
+                else:
+                    res_roots.append({"is_exact": False, "val_approx": float(r.evalf(10))})
+            base_res.update({"status": "ok", "roots": res_roots, "count": len(res_roots)})
+            return base_res
+        except Exception as e:
+            base_res.update({"status": "error", "error": str(e)})
+            return base_res
+
     elif action == "eval_points":
         expr_ast = req.get("expr")
         points = req.get("points", [])  # list of dict: {var: {re_num, re_den, im_num, im_den}}
