@@ -77,6 +77,12 @@ func NewSymPyClient() *SymPyClient {
 	}
 	c.pythonPath = pyPath
 
+	out, err := exec.Command(pyPath, "-c", "import sympy; print('SYMPY_OK')").Output()
+	if err != nil || !strings.Contains(string(out), "SYMPY_OK") {
+		c.unavailableR = fmt.Sprintf("sympy module not importable: %v", err)
+		return c
+	}
+
 	script, err := resolveScriptPath()
 	if err != nil {
 		c.unavailableR = fmt.Sprintf("sympy_oracle.py not found: %v", err)
