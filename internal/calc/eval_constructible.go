@@ -30,10 +30,45 @@ func (s ConstructibilityStatus) String() string {
 // ConstructibilityCertificate holds algebraic proof details for constructibility.
 type ConstructibilityCertificate struct {
 	Status        ConstructibilityStatus
+	Poly          []*big.Int
 	Degree        int
 	ResolventPoly []*big.Int
 	RationalRoot  *big.Rat
 	Reason        string
+}
+
+func (c *ConstructibilityCertificate) Domain() CertificateDomain {
+	return CertificateDomain("constructibility")
+}
+
+func (c *ConstructibilityCertificate) IsVerified() bool {
+	return c != nil && c.Status != ConstructibleUndetermined
+}
+
+func (c *ConstructibilityCertificate) Residual() Node {
+	return nil
+}
+
+func (c *ConstructibilityCertificate) NonDegeneracyConditions() []Node {
+	return nil
+}
+
+func (c *ConstructibilityCertificate) Details() string {
+	if c == nil {
+		return ""
+	}
+	return c.Reason
+}
+
+func (c *ConstructibilityCertificate) EquationString() string {
+	if c == nil {
+		return ""
+	}
+	return fmt.Sprintf("Constructibility Certificate (status=%s, deg=%d)", c.Status.String(), c.Degree)
+}
+
+func (c *ConstructibilityCertificate) String() string {
+	return c.EquationString()
 }
 
 func isPowerOfTwo(n int) bool {
@@ -138,6 +173,7 @@ func CheckConstructibility(poly []*big.Int) *ConstructibilityCertificate {
 	if deg <= 0 {
 		return &ConstructibilityCertificate{
 			Status: ConstructibleTrue,
+			Poly:   poly,
 			Degree: 0,
 			Reason: "constructible.degree_le_2",
 		}
@@ -147,6 +183,7 @@ func CheckConstructibility(poly []*big.Int) *ConstructibilityCertificate {
 	if !isPowerOfTwo(deg) {
 		return &ConstructibilityCertificate{
 			Status: ConstructibleFalse,
+			Poly:   poly,
 			Degree: deg,
 			Reason: "constructible.degree_not_power_of_two",
 		}
@@ -156,6 +193,7 @@ func CheckConstructibility(poly []*big.Int) *ConstructibilityCertificate {
 	if deg <= 2 {
 		return &ConstructibilityCertificate{
 			Status: ConstructibleTrue,
+			Poly:   poly,
 			Degree: deg,
 			Reason: "constructible.degree_le_2",
 		}
@@ -167,6 +205,7 @@ func CheckConstructibility(poly []*big.Int) *ConstructibilityCertificate {
 		if len(roots) > 0 {
 			return &ConstructibilityCertificate{
 				Status:        ConstructibleTrue,
+				Poly:          poly,
 				Degree:        4,
 				ResolventPoly: resolventPoly,
 				RationalRoot:  roots[0],
@@ -175,6 +214,7 @@ func CheckConstructibility(poly []*big.Int) *ConstructibilityCertificate {
 		}
 		return &ConstructibilityCertificate{
 			Status:        ConstructibleFalse,
+			Poly:          poly,
 			Degree:        4,
 			ResolventPoly: resolventPoly,
 			Reason:        "constructible.quartic_resolvent_no_rational_root",
@@ -184,6 +224,7 @@ func CheckConstructibility(poly []*big.Int) *ConstructibilityCertificate {
 	// 4. Degrees 8, 16, ... are undetermined without full Galois solver
 	return &ConstructibilityCertificate{
 		Status: ConstructibleUndetermined,
+		Poly:   poly,
 		Degree: deg,
 		Reason: "constructible.degree_high_undetermined",
 	}

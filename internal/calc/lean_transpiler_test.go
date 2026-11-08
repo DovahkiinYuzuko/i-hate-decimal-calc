@@ -4,6 +4,7 @@ import (
 	"math/big"
 	"strings"
 	"testing"
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc/ast"
 )
 
 func TestToLeanSyntax_Rational(t *testing.T) {
@@ -1382,5 +1383,87 @@ func TestTranspileCertificateIRToLean_FPS_and_Coding(t *testing.T) {
 	}
 	if !strings.Contains(codingLean, "∀ (x : ℚ),") || !strings.Contains(codingLean, "by intro; ring") {
 		t.Errorf("unexpected Lean 4 code for coding cert:\n%s", codingLean)
+	}
+}
+
+func TestToLeanSyntax_AlgebraicReal_and_CF(t *testing.T) {
+	// 1. AlgebraicRealNode: x^2 - 2 in [1, 2]
+	poly := []*big.Int{big.NewInt(-2), big.NewInt(0), big.NewInt(1)}
+	algNode := ast.NewAlgebraicRealNode(poly, big.NewRat(1, 1), big.NewRat(2, 1), 1)
+
+	leanSyntax, err := ToLeanSyntax(algNode)
+	if err != nil {
+		t.Fatalf("ToLeanSyntax failed for AlgebraicRealNode: %v", err)
+	}
+	if !strings.Contains(leanSyntax, "alg_real") {
+		t.Errorf("unexpected Lean syntax for AlgebraicRealNode: %s", leanSyntax)
+	}
+
+	// 2. CFNode
+	cfNode := ast.NewCFNode([]*big.Int{big.NewInt(1), big.NewInt(2), big.NewInt(2)}, nil, false)
+	cfLean, err := ToLeanSyntax(cfNode)
+	if err != nil {
+		t.Fatalf("ToLeanSyntax failed for CFNode: %v", err)
+	}
+	if !strings.Contains(cfLean, "cfrac") || !strings.Contains(cfLean, "1, 2, 2") {
+		t.Errorf("unexpected Lean syntax for CFNode: %s", cfLean)
+	}
+}
+
+func TestTranspileConstructibilityCertificateToLean(t *testing.T) {
+	// 立方倍積: x^3 - 2 = 0
+	cubePoly := []*big.Int{big.NewInt(-2), big.NewInt(0), big.NewInt(0), big.NewInt(1)}
+	cert := CheckConstructibility(cubePoly)
+	if cert.Status != ConstructibleFalse {
+		t.Fatalf("expected ConstructibleFalse for cube doubling, got %v", cert.Status)
+	}
+
+	leanCode, err := TranspileConstructibilityCertificateToLean(cert, "not_constructible_doubling_cube")
+	if err != nil {
+		t.Fatalf("TranspileConstructibilityCertificateToLean failed: %v", err)
+	}
+
+	if !strings.Contains(leanCode, "theorem not_constructible_doubling_cube") {
+		t.Errorf("theorem name missing in generated Lean code:\n%s", leanCode)
+	}
+	if !strings.Contains(leanCode, "isPowerOfTwo") || !strings.Contains(leanCode, "decide") {
+		t.Errorf("Wantzel isPowerOfTwo or decide tactic missing in Lean code:\n%s", leanCode)
+	}
+
+	// 角三等分: 8x^3 - 6x - 1 = 0
+	trisectPoly := []*big.Int{big.NewInt(-1), big.NewInt(-6), big.NewInt(0), big.NewInt(8)}
+	cert2 := CheckConstructibility(trisectPoly)
+	leanCode2, err := TranspileConstructibilityCertificateToLean(cert2, "not_constructible_angle_trisection")
+	if err != nil {
+		t.Fatalf("TranspileConstructibilityCertificateToLean failed for trisect: %v", err)
+	}
+	if !strings.Contains(leanCode2, "theorem not_constructible_angle_trisection") {
+		t.Errorf("theorem name missing in trisect Lean code:\n%s", leanCode2)
+	}
+}
+
+func TestTranspileAlgebraicRealRelationToLean(t *testing.T) {
+	// a: x^2 - 2 = 0 in [1, 2]
+	polyA := []*big.Int{big.NewInt(-2), big.NewInt(0), big.NewInt(1)}
+	nodeA := ast.NewAlgebraicRealNode(polyA, big.NewRat(1, 1), big.NewRat(2, 1), 1)
+
+	// b: x^2 - 3 = 0 in [1, 2]
+	polyB := []*big.Int{big.NewInt(-3), big.NewInt(0), big.NewInt(1)}
+	nodeB := ast.NewAlgebraicRealNode(polyB, big.NewRat(1, 1), big.NewRat(2, 1), 1)
+
+	// a + b => R(x) = x^4 - 10x^2 + 1
+	polyRes := []*big.Int{big.NewInt(1), big.NewInt(0), big.NewInt(-10), big.NewInt(0), big.NewInt(1)}
+	res := ast.NewAlgebraicRealNode(polyRes, big.NewRat(3, 1), big.NewRat(4, 1), 1)
+
+	leanCode, err := TranspileAlgebraicRealRelationToLean(res, "+", nodeA, nodeB, "alg_real_add_sqrt2_sqrt3")
+	if err != nil {
+		t.Fatalf("TranspileAlgebraicRealRelationToLean failed: %v", err)
+	}
+
+	if !strings.Contains(leanCode, "theorem alg_real_add_sqrt2_sqrt3") {
+		t.Errorf("theorem name missing:\n%s", leanCode)
+	}
+	if !strings.Contains(leanCode, "linear_combination") && !strings.Contains(leanCode, "ring") {
+		t.Errorf("expected linear_combination or ring tactic in proof:\n%s", leanCode)
 	}
 }
