@@ -66,6 +66,7 @@
 !internal/lp/*.go
 # .gitignores/root.gitignore
 !README.md
+!README.en.md
 !LICENSE.*
 !go.mod
 !go.sum

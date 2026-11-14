@@ -11,10 +11,11 @@ Complete language specification and built-in function reference for `ihd` (i-hat
     - [Distinguishing Relational Operators and Variable Assignment](#distinguishing-relational-operators-and-variable-assignment)
   - [Number Literal Syntax (Multi-Radix \& Repeating Decimals)](#number-literal-syntax-multi-radix--repeating-decimals)
   - [Reserved Constants](#reserved-constants)
+  - [First-Class Closed Domains & Design Trade-offs](#first-class-closed-domains--design-trade-offs)
   - [Built-in Functions by Category](#built-in-functions-by-category)
     - [1. Basic Algebra, Number Theory \& Equations](#1-basic-algebra-number-theory--equations)
     - [2. Trigonometric, Logarithmic \& Complex Functions](#2-trigonometric-logarithmic--complex-functions)
-    - [3. Calculus, Differential Equations \& Discrete Summation](#3-calculus-differential-equations--discrete-summation)
+    - [3. Calculus, Differential Equations, Special Functions \& Discrete Summation](#3-calculus-differential-equations-special-functions--discrete-summation)
     - [4. Linear Algebra \& 3D Vector Calculus](#4-linear-algebra--3d-vector-calculus)
     - [5. Computational Geometry](#5-computational-geometry)
     - [6. Exact Discrete Probability \& Statistics](#6-exact-discrete-probability--statistics)
@@ -41,12 +42,12 @@ Complete language specification and built-in function reference for `ihd` (i-hat
 
 ## Operators & Precedence
 
-Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to prevent syntactic ambiguity. Explicit `*` is required.
+Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) causes a syntax ambiguity with function application and raises a parse error; multiplication uses an explicit `*` operator.
 
 | Rank | Operator | Associativity | Description & Examples |
 | :---: | :---: | :---: | :--- |
 | 1 | `()` | - | Grouping parentheses |
-| 2 | `!` | Postfix Unary | Factorial of non-negative integers (e.g., `5! = 120`. Giant factorials accelerated via Legendre's formula, binary splitting tree, and NTT) |
+| 2 | `!` | Postfix Unary | Factorial of non-negative integers (e.g., `5! = 120`. Large factorials are computed via Legendre's formula, binary splitting tree, and NTT) |
 | 3 | `^` | **Right-associative** | Exponentiation (e.g., `2^3^2 = 2^(3^2) = 512`) |
 | 4 | `-` | Prefix Unary | Unary negation (Lower precedence than `^`: `-3^2 = -(3^2) = -9`) |
 | 5 | `*`, `/` | Left-associative | Multiplication and division (Explicit `*` required) |
@@ -93,6 +94,19 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 
 ---
 
+## First-Class Closed Domains & Design Trade-offs
+
+`ihd` preserves local series expansions and rational enclosures as first-class AST nodes rather than flattening them to strings, enforcing domain closure and explicit boundary checks.
+
+| Domain | AST Node | Closed Operations & Promotion | Boundary & Mixed-Domain Behavior (Trade-offs & Workarounds) |
+| :--- | :--- | :--- | :--- |
+| **Truncated $p$-adic Series** | `PadicNode` | `+`, `-`, `*`, `/`, integer power `^k` (normalized modulo $p^{\min(r_1, r_2)}$), automatic rational promotion | Operations across different primes $p_1 \neq p_2$ remain symbolic instead of coercing across incompatible fields. Division by zero or negative powers of a zero $p$-adic value raises a domain error. |
+| **Puiseux Series** | `PuiseuxNode` | `+`, `-`, `*`, `/`, integer power `^k` (truncated at $\min(N_1, N_2)$), symbolic `diff`, rational promotion | Coefficients of arithmetic-closed `PuiseuxNode` values are constrained to exact rationals (`*big.Rat`); expansions with symbolic coefficients stay unevaluated as symbolic expressions. Mixed expansion variables remain symbolic, and zero-series division raises a domain error. |
+| **Rational Intervals** | `IntervalNode` | `+`, `-`, `*`, `/`, integer power `^k` (outward-rounded exact bounds), rational promotion $[q, q]$, relational operators (`==`, `!=`, `<`, `<=`, `>`, `>=`) | Division by an interval containing zero (`0 ∈ [a, b]`) raises a domain error. Ordering comparisons (`<`, `>`, etc.) across overlapping intervals evaluate conservatively (returning `false` where order is not universally guaranteed). |
+| **Integer Factorization (`factor`)** | Product AST | Small-prime trial division $\to$ perfect-power check $\to$ Pollard-Brent rho $\to$ deterministic Lenstra ECM (Stage 1 / Stage 2) | When a deterministic work budget is exhausted on large composites (such as hard semiprimes), `factor` halts search and returns a **partial factorization** retaining all discovered prime factors and the unfactored composite remainder. |
+
+---
+
 ## Built-in Functions by Category
 
 ### 1. Basic Algebra, Number Theory & Equations
@@ -109,7 +123,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `cfrac` | `cfrac(expr)` | Regular continued fraction expansion (finite list for rationals, periodic for roots) |
 | `from_cfrac` | `from_cfrac([3, 7, 16])` | Reconstruct exact rational fraction from continued fraction list (`355/113`) |
 | `expand` | `expand((x+1)^3)` | Polynomial expansion using distributive law and binomial expansion |
-| `factor` | `factor(expr)` / `factor(expr, var)` | Integer prime factorization and univariate polynomial factorization |
+| `factor` | `factor(expr)` / `factor(expr, var)` | Integer prime factorization (trial division, perfect-power check, Pollard-Brent rho, deterministic Lenstra ECM Stage 1/2; returns a partial factorization on budget exhaustion) and univariate polynomial factorization over $\mathbb{Q}[x]$ |
 | `apart` | `apart(expr)` / `apart(expr, var)` | Partial fraction decomposition via Kung-Tong and Henrici algorithms |
 | `together` | `together(expr)` | Rational fraction common denominator consolidation |
 | `poly_gcd` | `poly_gcd(p, q)` / `poly_gcd(p, q, var)` | Multivariate polynomial exact GCD via Collins/Brown Subresultant PRS algorithm |
@@ -119,7 +133,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `sturm` | `sturm(p)` / `sturm(p, var)` | Exact Sturm sequence (chain) via Primitive PRS over $\mathbb{Q}[x]$ |
 | `root_count` | `root_count(p)` / `root_count(p, var, [a, b])` | Exact number of distinct real roots in interval $[a, b]$ or $(-\infty, \infty)$ via Sturm's Theorem |
 | `isolate_roots` | `isolate_roots(p)` / `isolate_roots(p, var, [a, b])` | Exact real root isolation into disjoint rational intervals via square-free bisection |
-| `isolate_roots_vas` | `isolate_roots_vas(p)` / `isolate_roots_vas(p, var)` | Fast real root isolation via Vincent-Akritas-Strzeboński (VAS) continued-fraction method and Descartes' Rule of Signs |
+| `isolate_roots_vas` | `isolate_roots_vas(p)` / `isolate_roots_vas(p, var)` | Real root isolation via the Vincent-Akritas-Strzeboński (VAS) continued-fraction method and Descartes' Rule of Signs |
 | `alg_real` | `alg_real([c0, c1, ...], [low, high], root_index)` | Constructs a first-class real algebraic number node from rational polynomial coefficients, isolating interval, and root index |
 | `is_constructible` | `is_constructible(p)` / `is_constructible(p, var)` | Compass and straightedge constructibility decision via Wantzel's theorem and Galois 2-group conditions |
 | `inv_mod` | `inv_mod(a, m)` | Modular inverse via Extended Euclidean Algorithm ($a x \equiv 1 \pmod m$) |
@@ -128,7 +142,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `is_prime` | `is_prime(n)` | Primality test (unconditionally deterministic for 64-bit integers via minimal bases; deterministic Baillie-PSW probable prime test for big integers with no known counterexamples) |
 | `solve` | `solve(expr, var)` | Exact algebraic and elementary transcendental equation solver for linear, quadratic, cubic, and quartic polynomials (exact radical solutions via Cardano's formula, Ferrari's method, Tschirnhaus transformation, and resolvent cubics), as well as closed-form solutions for elementary transcendental equations via the Lambert W function `lambert_w` ($f(x)e^{f(x)}=c$, $ax+b\ln x=c$, $x^x=c$, $a^x=bx$); supports multiple and complex roots |
 | `sos_decompose` | `sos_decompose(x^4 + 2*x^2 + 1, [x])` | Decomposes a positive semidefinite polynomial into a sum of squares (SOS) via Gram matrix method / SDP formulation |
-| `interval` | `interval(lower, upper)` | Constructs an exact verified interval $[a, b]$ with rational bounds for guaranteed rigorous arithmetic |
+| `interval` | `interval([1, 3])` / `interval(sin(1), 1/1000)` | Constructs a first-class rational `IntervalNode` from explicit `[low, high]` bounds or by adaptive refinement of `expr` within tolerance `eps`; supports closed arithmetic, integer powers, and comparisons |
 | `to_poly` | `to_poly(expr, [x, y], "lex")` | Explicitly converts an expression to a canonical `PolyNode` under specified variables and monomial order (`lex`, `grevlex`) |
 | `to_alg` | `to_alg(rep, min_poly, [var])` | Constructs an algebraic number node `AlgNode` in field extension $\mathbb{Q}(\alpha) \cong \mathbb{Q}[x]/\langle m(x) \rangle$ |
 | `alg_inv` | `alg_inv(rep)` | Computes multiplicative inverse $\beta^{-1} \in \mathbb{Q}(\alpha)$ via Extended Euclidean Algorithm |
@@ -164,7 +178,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 
 ---
 
-### 3. Calculus, Differential Equations & Discrete Summation
+### 3. Calculus, Differential Equations, Special Functions & Discrete Summation
 
 | Function | Syntax & Example | Description |
 | :--- | :--- | :--- |
@@ -246,7 +260,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | `collinear` | `collinear(A, B, C)` | Predicate asserting points $A, B, C$ are collinear (cross product determinant $(B_x - A_x)(C_y - A_y) - (B_y - A_y)(C_x - A_x) = 0$) |
 | `parallel` | `parallel(A, B, C, D)` | Predicate asserting line $AB$ is parallel to line $CD$ (direction vector cross product $= 0$) |
 | `perpendicular` | `perpendicular(A, B, C, D)` | Predicate asserting line $AB$ is perpendicular to line $CD$ (direction vector dot product $= 0$) |
-| `equal_length_sq` / `equal_length` | `equal_length_sq(A, B, C, D)` | Predicate asserting equality of squared segment lengths ($AB^2 = CD^2$) |
+| `equal_length` / `equal_length_sq` | `equal_length(A, B, C, D)`, `equal_length_sq(A, B, C, D)` | Predicates asserting equal segment lengths ($AB = CD$) and equal squared segment lengths ($AB^2 = CD^2$) |
 | `circle_concyclic` | `circle_concyclic(A, B, C, D)` | Predicate asserting points $A, B, C, D$ lie on a common circle (concyclic condition) |
 
 ---
@@ -343,7 +357,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 | :--- | :--- | :--- |
 | `padic_val` | `padic_val(50, 5)` | Exact p-adic valuation $v_p(x) \in \mathbb{Z}$ for rational $x$ and prime base $p$ ($x=0$ yields infinity) |
 | `padic_norm` | `padic_norm(3/20, 2)` | Exact ultrametric norm $|x|_p = p^{-v_p(x)}$ as an exact rational (`big.Rat`) |
-| `padic_expand` | `padic_expand(2/3, 5, 4)` | Truncated p-adic power series expansion string $a_0 + a_1 p + a_2 p^2 + \dots + O(p^k)$ |
+| `padic_expand` | `padic_expand(2/3, 5, 4)` | Returns the truncated p-adic power series expansion `+ O(p^k)` as a first-class `PadicNode`; supports closed arithmetic (`+`, `-`, `*`, `/`, integer powers) and rational promotion for matching prime $p$ (preserves symbolic form when primes differ) |
 
 ---
 
@@ -351,7 +365,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) is strictly prohibited to 
 
 | Function | Syntax & Example | Description |
 | :--- | :--- | :--- |
-| `puiseux` | `puiseux(y^2 - x^3, y, x, 3)` | Deterministically solves for local fractional power Puiseux series branches $y(x) = \sum c_k x^{p_k/q_k}$ around singularities/branch points of $F(x, y) = 0$ via the Newton polygon algorithm (default order 3) |
+| `puiseux` | `puiseux(y^2 - x^3, y, x, 3)` | Deterministically derives local fractional-power Puiseux series branches $y(x) = \sum c_k x^{p_k/q_k} + O(x^N)$ around singularities/branch points of $F(x, y) = 0$ via the Newton polygon algorithm (default order 3) as first-class `PuiseuxNode` values supporting closed arithmetic, integer powers, and symbolic differentiation `diff` |
 
 ---
 
