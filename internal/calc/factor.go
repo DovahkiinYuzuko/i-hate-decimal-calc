@@ -85,84 +85,8 @@ func factorInteger(n *big.Int) (Node, error) {
 		return mustRational(1, 1), nil
 	}
 
-	var factors []primeFactor
-	two := big.NewInt(2)
-	three := big.NewInt(3)
-	rem := new(big.Int)
-
-	// Factor 2
-	count2 := 0
-	for {
-		rem.Mod(val, two)
-		if rem.Sign() == 0 {
-			count2++
-			val.Div(val, two)
-		} else {
-			break
-		}
-	}
-	if count2 > 0 {
-		factors = append(factors, primeFactor{prime: big.NewInt(2), exp: count2})
-	}
-
-	// Factor 3
-	count3 := 0
-	for {
-		rem.Mod(val, three)
-		if rem.Sign() == 0 {
-			count3++
-			val.Div(val, three)
-		} else {
-			break
-		}
-	}
-	if count3 > 0 {
-		factors = append(factors, primeFactor{prime: big.NewInt(3), exp: count3})
-	}
-
-	// If val is already prime, stop trial division early!
-	if val.Cmp(big.NewInt(1)) > 0 && IsDeterministicPrime(val) {
-		factors = append(factors, primeFactor{prime: new(big.Int).Set(val), exp: 1})
-		val.SetInt64(1)
-	}
-
-	// Wheel 6k +/- 1: d = 5, 7, 11, 13, 17, 19, 23, 25...
-	d := big.NewInt(5)
-	step := big.NewInt(2)
-	d2 := new(big.Int).Mul(d, d)
-
-	for d2.Cmp(val) <= 0 {
-		if IsDeterministicPrime(val) {
-			break
-		}
-
-		count := 0
-		for {
-			rem.Mod(val, d)
-			if rem.Sign() == 0 {
-				count++
-				val.Div(val, d)
-			} else {
-				break
-			}
-		}
-		if count > 0 {
-			factors = append(factors, primeFactor{prime: new(big.Int).Set(d), exp: count})
-			d2.Mul(d, d)
-		}
-
-		d.Add(d, step)
-		if step.Cmp(two) == 0 {
-			step.SetInt64(4)
-		} else {
-			step.SetInt64(2)
-		}
-		d2.Mul(d, d)
-	}
-
-	if val.Cmp(big.NewInt(1)) > 0 {
-		factors = append(factors, primeFactor{prime: new(big.Int).Set(val), exp: 1})
-	}
+	factors, unfactored := factorBigIntWithConfig(val, defaultECMConfig())
+	factors = append(factors, unfactored...)
 
 	// Build AST
 	var factorNodes []Node

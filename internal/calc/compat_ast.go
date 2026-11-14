@@ -2,6 +2,7 @@ package calc
 
 import (
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc/ast"
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc/padic"
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc/parser"
 )
 
@@ -14,6 +15,18 @@ func init() {
 		return NewDomainError(msgKey, fallback, args...)
 	}
 	ast.FuncValidator = ValidateFuncArgs
+	ast.PadicFormatter = func(n *ast.PadicNode) string {
+		if n == nil {
+			return ""
+		}
+		return padic.ExpansionString(&padic.PadicNumber{
+			Prime:     n.Prime,
+			Valuation: n.Valuation,
+			Unit:      n.Unit,
+			Precision: n.Precision,
+			IsZero:    n.IsZero,
+		})
+	}
 
 	// Inject calc-level dependencies into parser package hooks
 	parser.SyntaxErrorFactory = func(msg string, args ...any) error {
@@ -63,6 +76,10 @@ const (
 	NodeQuantity        = ast.NodeQuantity
 	NodeWildcard        = ast.NodeWildcard
 	NodeRule            = ast.NodeRule
+	NodeAlgebraicReal   = ast.NodeAlgebraicReal
+	NodeCF              = ast.NodeCF
+	NodePadic           = ast.NodePadic
+	NodePuiseux         = ast.NodePuiseux
 )
 
 type QuantifierKind = ast.QuantifierKind
@@ -106,6 +123,11 @@ type (
 	DimensionVector     = ast.DimensionVector
 	WildcardNode        = ast.WildcardNode
 	RuleNode            = ast.RuleNode
+	AlgebraicRealNode   = ast.AlgebraicRealNode
+	CFNode              = ast.CFNode
+	PadicNode           = ast.PadicNode
+	PuiseuxNode         = ast.PuiseuxNode
+	PuiseuxTermAST      = ast.PuiseuxTermAST
 )
 
 var (
@@ -135,6 +157,8 @@ var (
 	NewQuantityNode         = ast.NewQuantityNode
 	NewWildcardNode         = ast.NewWildcardNode
 	NewRuleNode             = ast.NewRuleNode
+	NewPadicNode            = ast.NewPadicNode
+	NewPuiseuxNode          = ast.NewPuiseuxNode
 	Walk                    = ast.Walk
 	Inspect                 = ast.Inspect
 	Transform               = ast.Transform

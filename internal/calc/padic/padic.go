@@ -2,6 +2,7 @@ package padic
 
 import (
 	"fmt"
+	"math"
 	"math/big"
 	"strings"
 
@@ -188,21 +189,70 @@ func (a *PadicNumber) Clone() *PadicNumber {
 	}
 }
 
-// Add computes a + b in Q_p.
+func absPrec(a *PadicNumber) int {
+	if a.IsZero {
+		return a.Precision
+	}
+	return a.Valuation + a.Precision
+}
+
+func newPadicZero(p *big.Int, absN int) *PadicNumber {
+	return &PadicNumber{
+		Prime:     new(big.Int).Set(p),
+		Valuation: 0,
+		Unit:      big.NewInt(0),
+		Precision: absN,
+		IsZero:    true,
+	}
+}
+
+func truncatePadicToAbs(a *PadicNumber, absN int) *PadicNumber {
+	if a.IsZero {
+		if a.Precision < absN {
+			return a.Clone()
+		}
+		return newPadicZero(a.Prime, absN)
+	}
+	if absN <= a.Valuation {
+		return newPadicZero(a.Prime, absN)
+	}
+	rel := absN - a.Valuation
+	if rel >= a.Precision {
+		return a.Clone()
+	}
+	pk := new(big.Int).Exp(a.Prime, big.NewInt(int64(rel)), nil)
+	u := new(big.Int).Mod(a.Unit, pk)
+	if u.Sign() == 0 {
+		return newPadicZero(a.Prime, absN)
+	}
+	return &PadicNumber{
+		Prime:     new(big.Int).Set(a.Prime),
+		Valuation: a.Valuation,
+		Unit:      u,
+		Precision: rel,
+		IsZero:    false,
+	}
+}
+
+// Add computes a + b in Q_p with strict absolute precision tracking (N = v + r).
 func Add(a, b *PadicNumber) (*PadicNumber, error) {
 	if a.Prime.Cmp(b.Prime) != 0 {
 		return nil, fmt.Errorf("%s", i18n.T("padic.err_prime_mismatch", a.Prime.String(), b.Prime.String()))
 	}
-	if a.IsZero {
-		return b.Clone(), nil
-	}
-	if b.IsZero {
-		return a.Clone(), nil
+
+	absRes := absPrec(a)
+	if bAbs := absPrec(b); bAbs < absRes {
+		absRes = bAbs
 	}
 
-	minPrec := a.Precision
-	if b.Precision < minPrec {
-		minPrec = b.Precision
+	if a.IsZero && b.IsZero {
+		return newPadicZero(a.Prime, absRes), nil
+	}
+	if a.IsZero {
+		return truncatePadicToAbs(b, absRes), nil
+	}
+	if b.IsZero {
+		return truncatePadicToAbs(a, absRes), nil
 	}
 
 	vMin := a.Valuation
@@ -210,33 +260,33 @@ func Add(a, b *PadicNumber) (*PadicNumber, error) {
 		vMin = b.Valuation
 	}
 
+	relWork := absRes - vMin
+	if relWork <= 0 {
+		return newPadicZero(a.Prime, absRes), nil
+	}
+
 	p := a.Prime
-	pk := new(big.Int).Exp(p, big.NewInt(int64(minPrec)), nil)
+	pk := new(big.Int).Exp(p, big.NewInt(int64(relWork)), nil)
 
-	// Shift unitA by (a.Valuation - vMin)
-	shiftA := a.Valuation - vMin
-	powA := new(big.Int).Exp(p, big.NewInt(int64(shiftA)), nil)
-	termA := new(big.Int).Mul(a.Unit, powA)
+	shiftTerm := func(x *PadicNumber) *big.Int {
+		shift := x.Valuation - vMin
+		if shift >= relWork {
+			return big.NewInt(0)
+		}
+		powShift := new(big.Int).Exp(p, big.NewInt(int64(shift)), nil)
+		term := new(big.Int).Mul(x.Unit, powShift)
+		term.Mod(term, pk)
+		return term
+	}
 
-	// Shift unitB by (b.Valuation - vMin)
-	shiftB := b.Valuation - vMin
-	powB := new(big.Int).Exp(p, big.NewInt(int64(shiftB)), nil)
-	termB := new(big.Int).Mul(b.Unit, powB)
-
-	sum := new(big.Int).Add(termA, termB)
+	sum := new(big.Int).Add(shiftTerm(a), shiftTerm(b))
 	sum.Mod(sum, pk)
 
 	if sum.Sign() == 0 {
-		return &PadicNumber{
-			Prime:     new(big.Int).Set(p),
-			Valuation: 0,
-			Unit:      big.NewInt(0),
-			Precision: minPrec,
-			IsZero:    true,
-		}, nil
+		return newPadicZero(p, absRes), nil
 	}
 
-	// Extract additional valuation if sum is divisible by p
+	// Factor out powers of p from sum and update relative precision rNew = absRes - vNew.
 	rem := new(big.Int)
 	extraV := 0
 	for {
@@ -249,11 +299,17 @@ func Add(a, b *PadicNumber) (*PadicNumber, error) {
 		}
 	}
 
+	vNew := vMin + extraV
+	rNew := absRes - vNew
+	if rNew <= 0 {
+		return newPadicZero(p, absRes), nil
+	}
+
 	return &PadicNumber{
 		Prime:     new(big.Int).Set(p),
-		Valuation: vMin + extraV,
+		Valuation: vNew,
 		Unit:      sum,
-		Precision: minPrec,
+		Precision: rNew,
 		IsZero:    false,
 	}, nil
 }
@@ -264,11 +320,11 @@ func Sub(a, b *PadicNumber) (*PadicNumber, error) {
 		return nil, fmt.Errorf("%s", i18n.T("padic.err_prime_mismatch", a.Prime.String(), b.Prime.String()))
 	}
 	if b.IsZero {
-		return a.Clone(), nil
+		return Add(a, b)
 	}
 
 	pk := new(big.Int).Exp(b.Prime, big.NewInt(int64(b.Precision)), nil)
-	negUnit := new(big.Int).Sub(pk, b.Unit)
+	negUnit := new(big.Int).Sub(pk, new(big.Int).Mod(b.Unit, pk))
 	negUnit.Mod(negUnit, pk)
 
 	negB := &PadicNumber{
@@ -282,23 +338,19 @@ func Sub(a, b *PadicNumber) (*PadicNumber, error) {
 	return Add(a, negB)
 }
 
-// Mul computes a * b in Q_p.
+// Mul computes a * b in Q_p with graded precision tracking.
 func Mul(a, b *PadicNumber) (*PadicNumber, error) {
 	if a.Prime.Cmp(b.Prime) != 0 {
 		return nil, fmt.Errorf("%s", i18n.T("padic.err_prime_mismatch", a.Prime.String(), b.Prime.String()))
 	}
-	if a.IsZero || b.IsZero {
-		minPrec := a.Precision
-		if b.Precision < minPrec {
-			minPrec = b.Precision
-		}
-		return &PadicNumber{
-			Prime:     new(big.Int).Set(a.Prime),
-			Valuation: 0,
-			Unit:      big.NewInt(0),
-			Precision: minPrec,
-			IsZero:    true,
-		}, nil
+	if a.IsZero && b.IsZero {
+		return newPadicZero(a.Prime, a.Precision+b.Precision), nil
+	}
+	if a.IsZero {
+		return newPadicZero(a.Prime, a.Precision+b.Valuation), nil
+	}
+	if b.IsZero {
+		return newPadicZero(a.Prime, a.Valuation+b.Precision), nil
 	}
 
 	minPrec := a.Precision
@@ -309,6 +361,9 @@ func Mul(a, b *PadicNumber) (*PadicNumber, error) {
 	pk := new(big.Int).Exp(a.Prime, big.NewInt(int64(minPrec)), nil)
 	u := new(big.Int).Mul(a.Unit, b.Unit)
 	u.Mod(u, pk)
+	if u.Sign() == 0 {
+		return newPadicZero(a.Prime, a.Valuation+b.Valuation+minPrec), nil
+	}
 
 	return &PadicNumber{
 		Prime:     new(big.Int).Set(a.Prime),
@@ -317,6 +372,81 @@ func Mul(a, b *PadicNumber) (*PadicNumber, error) {
 		Precision: minPrec,
 		IsZero:    false,
 	}, nil
+}
+
+// PowInt computes a^k in Q_p for any integer exponent k.
+func PowInt(a *PadicNumber, k *big.Int) (*PadicNumber, error) {
+	if k == nil {
+		return nil, fmt.Errorf("%s", i18n.T("padic.err_arg_must_be_integer", "PowInt", "<nil>"))
+	}
+	if k.Sign() == 0 {
+		prec := a.Precision
+		if prec <= 0 {
+			prec = 1
+		}
+		return &PadicNumber{
+			Prime:     new(big.Int).Set(a.Prime),
+			Valuation: 0,
+			Unit:      big.NewInt(1),
+			Precision: prec,
+			IsZero:    false,
+		}, nil
+	}
+	if k.Sign() < 0 {
+		invA, err := Inv(a)
+		if err != nil {
+			return nil, err
+		}
+		posK := new(big.Int).Neg(k)
+		return PowInt(invA, posK)
+	}
+	if a.IsZero {
+		if !k.IsInt64() {
+			return nil, fmt.Errorf("%s", i18n.T("padic.err_arg_must_be_integer", "PowInt", k.String()))
+		}
+		kVal := k.Int64()
+		if a.Precision != 0 {
+			absPrec := int64(a.Precision)
+			if absPrec < 0 {
+				absPrec = -absPrec
+			}
+			if kVal > int64(math.MaxInt)/absPrec {
+				return nil, fmt.Errorf("%s", i18n.T("padic.err_arg_must_be_integer", "PowInt", k.String()))
+			}
+		}
+		return newPadicZero(a.Prime, a.Precision*int(kVal)), nil
+	}
+	if !k.IsInt64() {
+		return nil, fmt.Errorf("%s", i18n.T("padic.err_arg_must_be_integer", "PowInt", k.String()))
+	}
+
+	res := &PadicNumber{
+		Prime:     new(big.Int).Set(a.Prime),
+		Valuation: 0,
+		Unit:      big.NewInt(1),
+		Precision: a.Precision,
+		IsZero:    false,
+	}
+	base := a.Clone()
+	exp := k.Int64()
+	for exp > 0 {
+		if exp&1 == 1 {
+			var err error
+			res, err = Mul(res, base)
+			if err != nil {
+				return nil, err
+			}
+		}
+		exp >>= 1
+		if exp > 0 {
+			var err error
+			base, err = Mul(base, base)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	return res, nil
 }
 
 // Inv computes the multiplicative inverse 1 / a in Q_p.
@@ -377,6 +507,9 @@ func (a *PadicNumber) ExpansionDigits() []*big.Int {
 // Example: "1 + 2*5 + 3*5^2 + O(5^3)" or "5^(-1) * (1 + 2*5 + O(5^2))".
 func ExpansionString(a *PadicNumber) string {
 	if a.IsZero {
+		if a.Precision < 0 {
+			return fmt.Sprintf("0 + O(%s^(%d))", a.Prime.String(), a.Precision)
+		}
 		return fmt.Sprintf("0 + O(%s^%d)", a.Prime.String(), a.Precision)
 	}
 

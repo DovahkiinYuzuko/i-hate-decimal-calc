@@ -347,7 +347,7 @@ func EvalWithEnv(n Node, env *Env) (Node, error) {
 		}
 		return NewQuantityNode(val, v.Scale, v.Dimensions, v.DisplayUnit), nil
 
-	case *StringNode, *PlotNode, *IntervalNode, *PolyNode, *AlgebraicNumberNode, *WildcardNode, *RuleNode:
+	case *StringNode, *PlotNode, *IntervalNode, *PolyNode, *AlgebraicNumberNode, *WildcardNode, *RuleNode, *PadicNode, *PuiseuxNode, *AlgebraicRealNode, *CFNode:
 		return v, nil
 
 	default:

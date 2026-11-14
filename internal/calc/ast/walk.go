@@ -76,7 +76,7 @@ func Walk(node Node, visitor func(Node) bool) {
 		if v.RHS != nil {
 			Walk(v.RHS, visitor)
 		}
-	case *RationalNode, *ConstNode, *VarNode, *PlotNode, *PolyNode, *AlgebraicNumberNode, *StringNode, *WildcardNode:
+	case *RationalNode, *ConstNode, *VarNode, *PlotNode, *PolyNode, *AlgebraicNumberNode, *StringNode, *WildcardNode, *IntervalNode, *AlgebraicRealNode, *CFNode, *PadicNode, *PuiseuxNode:
 		// Leaf nodes: no children
 	}
 }
@@ -214,7 +214,7 @@ func Transform(node Node, transformer func(Node) Node) Node {
 			LHS: newLHS,
 			RHS: newRHS,
 		}
-	case *RationalNode, *ConstNode, *VarNode, *PlotNode, *PolyNode, *AlgebraicNumberNode, *StringNode, *WildcardNode:
+	case *RationalNode, *ConstNode, *VarNode, *PlotNode, *PolyNode, *AlgebraicNumberNode, *StringNode, *WildcardNode, *IntervalNode, *AlgebraicRealNode, *CFNode, *PadicNode, *PuiseuxNode:
 		transformedChild = node
 	default:
 		transformedChild = node
@@ -250,6 +250,12 @@ func ContainsVar(node Node, varName string) bool {
 					found = true
 					return false
 				}
+			}
+		}
+		if p, ok := curr.(*PuiseuxNode); ok {
+			if p.Var == varName {
+				found = true
+				return false
 			}
 		}
 		if a, ok := curr.(*AlgebraicNumberNode); ok {
@@ -314,6 +320,12 @@ func ExtractFreeVariables(node Node) []string {
 				if boundVars[v] == 0 {
 					varMap[v] = true
 				}
+			}
+			return
+		}
+		if p, ok := n.(*PuiseuxNode); ok {
+			if p.Var != "" && boundVars[p.Var] == 0 {
+				varMap[p.Var] = true
 			}
 			return
 		}

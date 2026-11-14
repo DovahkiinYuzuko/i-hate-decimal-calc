@@ -20,6 +20,10 @@ type termEntry struct {
 }
 
 func simplifyAdd(terms []Node) (Node, error) {
+	return simplifyAddWithGuard(terms, true)
+}
+
+func simplifyAddWithGuard(terms []Node, allowClosedDomain bool) (Node, error) {
 	// 1. Flatten nested AddNodes
 	flatTerms := make([]Node, 0, len(terms))
 	for _, t := range terms {
@@ -82,6 +86,11 @@ func simplifyAdd(terms []Node) (Node, error) {
 			}
 		}
 		return NewMatrix(firstMatrix.Rows, firstMatrix.Cols, resData)
+	}
+
+	// Closed-domain objects (IntervalNode, PadicNode, PuiseuxNode): bypass symbolic term merging
+	if allowClosedDomain && containsClosedDomainDeep(flatTerms) {
+		return simplifyClosedDomainAdd(flatTerms)
 	}
 
 	// 2. Separate into Coeff × Base

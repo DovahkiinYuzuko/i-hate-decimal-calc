@@ -83,7 +83,7 @@ func EvalPuiseux(args []Node) (Node, error) {
 	order := 3 // default truncation order
 	if len(args) == 4 {
 		orderRat, okOrd := args[3].(*RationalNode)
-		if !okOrd || !orderRat.Val.IsInt() || orderRat.Val.Sign() < 0 {
+		if !okOrd || !orderRat.Val.IsInt() || orderRat.Val.Sign() < 0 || !orderRat.Val.Num().IsInt64() {
 			_ = fsm.TransitionTo(PuiseuxStateFailed)
 			return nil, fmt.Errorf("%s", i18n.T("puiseux.err_order_must_be_positive_int", args[3].String()))
 		}
@@ -169,7 +169,7 @@ func EvalPuiseux(args []Node) (Node, error) {
 			expandedTerms := expandHigherTerms(simplifiedExpr, yVar, xVar, branchTerms, order, 1)
 			_ = fsm.TransitionTo(PuiseuxStateRecursiveExpanded)
 
-			branchNode := constructSeriesNode(expandedTerms, xVar)
+			branchNode := buildPuiseuxBranchNode(expandedTerms, xVar, order)
 			str := Format(branchNode)
 			if !seenBranches[str] {
 				seenBranches[str] = true
@@ -521,6 +521,42 @@ func expandHigherTerms(expr Node, yVar, xVar string, currentTerms []PuiseuxTerm,
 	}
 
 	return currentTerms
+}
+
+// buildPuiseuxBranchNode upgrades a rational-coefficient Puiseux expansion into a first-class *PuiseuxNode,
+// falling back to a symbolic expression tree when symbolic coefficients are present.
+func buildPuiseuxBranchNode(terms []PuiseuxTerm, xVar string, order int) Node {
+	astTerms := make([]PuiseuxTermAST, 0, len(terms))
+	var maxExp *big.Rat
+
+	for _, term := range terms {
+		if isZero(term.Coeff) {
+			continue
+		}
+		rat, ok := term.Coeff.(*RationalNode)
+		if !ok {
+			return constructSeriesNode(terms, xVar)
+		}
+		expRat := big.NewRat(int64(term.ExpNum), int64(term.ExpDen))
+		astTerms = append(astTerms, PuiseuxTermAST{
+			Coeff: rat.Val,
+			Exp:   expRat,
+		})
+		if maxExp == nil || expRat.Cmp(maxExp) > 0 {
+			maxExp = expRat
+		}
+	}
+
+	truncOrder := big.NewRat(int64(order), 1)
+	if maxExp != nil && maxExp.Cmp(truncOrder) >= 0 {
+		truncOrder = new(big.Rat).Add(maxExp, big.NewRat(1, 1))
+	}
+
+	node, err := NewPuiseuxNode(xVar, astTerms, truncOrder)
+	if err != nil {
+		return constructSeriesNode(terms, xVar)
+	}
+	return node
 }
 
 // constructSeriesNode turns a slice of PuiseuxTerms into a readable AddNode or single Node.

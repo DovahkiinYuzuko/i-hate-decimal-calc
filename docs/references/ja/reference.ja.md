@@ -11,6 +11,7 @@
     - [関係演算子と代入・等式の区別](#関係演算子と代入等式の区別)
   - [数値リテラル構文（複数進数・循環小数）](#数値リテラル構文複数進数循環小数)
   - [予約定数](#予約定数)
+  - [閉領域第一級ノードと設計上の境界・トレードオフ](#閉領域第一級ノードと設計上の境界トレードオフ)
   - [カテゴリ別 組み込み関数一覧](#カテゴリ別-組み込み関数一覧)
     - [1. 基本代数・数論・方程式](#1-基本代数数論方程式)
     - [2. 三角関数・対数・複素数](#2-三角関数対数複素数)
@@ -41,12 +42,12 @@
 
 ## 演算子と優先順位
 
-乗算記号 `*` の省略（例: `2pi` や `(1+2)(3+4)`）は誤認識防止のため禁止されています。必ず明示的に `*` を記述してください。
+乗算記号 `*` の省略（例: `2pi` や `(1+2)(3+4)`）は、関数呼び出しや暗黙の結合との誤認識により構文解析エラーになるため、乗算には明示的に `*` を使用します。
 
 | 順位 | 演算子 | 結合性 | 説明・使用例 |
 | :---: | :---: | :---: | :--- |
 | 1 | `()` | - | グループ化括弧 |
-| 2 | `!` | 後置単項 | 非負整数の階乗（例: `5! = 120`。巨大階乗はルジャンドル素因数分解、二分木乗算、数論変換NTTにより高速計算） |
+| 2 | `!` | 後置単項 | 非負整数の階乗（例: `5! = 120`。巨大階乗はルジャンドル素因数分解、二分木乗算、数論変換 NTT により評価） |
 | 3 | `^` | **右結合** | べき乗（例: `2^3^2 = 2^(3^2) = 512`） |
 | 4 | `-` | 前置単項 | 単項マイナス（`^` より低優先: `-3^2 = -(3^2) = -9`） |
 | 5 | `*`, `/` | 左結合 | 乗算・除算（乗算記号 `*` 必須） |
@@ -93,6 +94,19 @@
 
 ---
 
+## 閉領域第一級ノードと設計上の境界・トレードオフ
+
+`ihd` では局所級数や有理閉区間を文字列へ退化させず、第一級 AST ノードとして保持し、閉じた演算および定義域境界の検査を行います。
+
+| ドメイン | 第一級ノード | 閉じた演算・自動昇格 | 境界・混在時の挙動（トレードオフと回避） |
+| :--- | :--- | :--- | :--- |
+| **$p$ 進切断級数** | `PadicNode` | `+`, `-`, `*`, `/`, 整数乗 `^k`（最小精度 $\min(r_1, r_2)$ で $\pmod{p^r}$ 正規化）、有理数の自動 $p$ 進昇格 | 異なる素数 $p_1 \neq p_2$ 同士の演算は、共通表現へ丸めず記号式のまま保持します。ゼロ $p$ 進数での除算および負べき乗は定義域エラーになります。 |
+| **ピュイズー級数** | `PuiseuxNode` | `+`, `-`, `*`, `/`, 整数乗 `^k`（最小打切り次数 $\min(N_1, N_2)$）、`diff` 記号微分、有理数の自動昇格 | 係数型を有理数（`*big.Rat`）に限定しているため、記号係数を含む展開式では級数演算へ強制簡約せず記号式として保持します。異なる展開変数の混在時も記号式を保持し、ゼロ級数除算はエラーになります。 |
+| **有理閉区間** | `IntervalNode` | `+`, `-`, `*`, `/`, 整数乗 `^k`（端点依存・符号に応じた外向き厳密包含）、有理数の退化区間 $[q, q]$ 昇格、`==`, `!=`, `<`, `<=`, `>`, `>=` | $0$ を含む区間による除算（`0 ∈ [a, b]`）は定義域エラーになります。交差する2区間に対する順序比較（`<`, `>` 等）は、真偽が一意に定まらないため偽側（保守的判定）として扱われます。 |
+| **整数素因数分解 (`factor`)** | 乗積 AST | 小素数の試し割り $\to$ 完全べき乗判定 $\to$ Pollard-Brent rho $\to$ 決定論的 Lenstra ECM (Stage 1 / Stage 2) | 巨大な半素数などで決定論的作業予算を超過した場合、探索を打ち切って発見済みの素因数と未分解の合成数因子を残した**部分分解**を返却します。 |
+
+---
+
 ## カテゴリ別 組み込み関数一覧
 
 ### 1. 基本代数・数論・方程式
@@ -109,17 +123,17 @@
 | `cfrac` | `cfrac(expr)` | 連分数展開（有理数は有限リスト `[a0, a1, ...]`, 平方根は周期リスト `[a0, [a1, ...]]`） |
 | `from_cfrac` | `from_cfrac([3, 7, 16])` | 連分数リストから厳密有理数への復元（例: `355/113`） |
 | `expand` | `expand((x+1)^3)` | 多項式展開（分配法則・二項定理） |
-| `factor` | `factor(expr)` / `factor(expr, var)` | 整数素因数分解（ホイール法）および有理数係数多項式因数分解（無平方分解・有理根定理） |
+| `factor` | `factor(expr)` / `factor(expr, var)` | 整数素因数分解（試し割り・完全べき乗判定・Pollard-Brent rho・決定論的 Lenstra ECM Stage 1/2。予算超過時は未分解因子を残した部分分解を返却）および有理数係数多項式因数分解（無平方分解・有理根定理） |
 | `apart` | `apart(expr)` / `apart(expr, var)` | 部分分数分解（Kung-TongおよびHenriciアルゴリズムによる有理式の単項有理式分解） |
 | `together` | `together(expr)` | 有理式の通分・統合（最小公倍多項式による共通分母化と単一有理式への統合） |
 | `poly_gcd` | `poly_gcd(p, q)` / `poly_gcd(p, q, var)` | 多変数多項式の厳密最大公約因子（Collins/BrownのSubresultant PRSアルゴリズムによる除算フリー・係数爆発防止型GCD） |
 | `poly_lcm` | `poly_lcm(p, q)` / `poly_lcm(p, q, var)` | 多変数多項式の厳密最小公倍多項式（$\frac{p \cdot q}{\mathrm{GCD}(p, q)}$ による厳密多項式除算） |
 | `resultant` | `resultant(p, q)` / `resultant(p, q, var)` | シルベスター終結式（Sylvester (1840) の Dialytic Method による行列式評価と多変数代数方程式消去法） |
-| `groebner` | `groebner([p1, p2, ...], [x, y, ...])` / `groebner(..., [order])` | 多変数多項式イデアルの既約グレブナー基底（Buchberger (1965/1979/1985)、Gebauer-Möller (1988) 基準、Giovini (1991) Sugar 戦略による高速算出。順序 `lex`/`grevlex`） |
+| `groebner` | `groebner([p1, p2, ...], [x, y, ...])` / `groebner(..., [order])` | 多変数多項式イデアルの既約グレブナー基底（Buchberger (1965/1979/1985)、Gebauer-Möller (1988) 基準、Giovini (1991) Sugar 戦略。順序 `lex`/`grevlex`） |
 | `sturm` | `sturm(p)` / `sturm(p, var)` | 厳密スツルム列（Sturm chain）の生成（$\mathbb{Q}[x]$ 上のPrimitive PRSによる係数爆発防止型スツルム多項式剰余列） |
 | `root_count` | `root_count(p)` / `root_count(p, var, [a, b])` | スツルムの定理による実根の厳密な個数算定（区間 $[a, b]$ または $(-\infty, \infty)$ 内の相異なる実根数を符号変化数から決定） |
 | `isolate_roots` | `isolate_roots(p)` / `isolate_roots(p, var, [a, b])` | 厳密代数的実根分離（無平方分解と有理二分法探索により、各実根をちょうど1個含む互いに素な有理数区間を確定） |
-| `isolate_roots_vas` | `isolate_roots_vas(p)` / `isolate_roots_vas(p, var)` | Vincent-Akritas-Strzeboński (VAS) 法による高速代数的実根分離（連分数展開・メビウス変換・デカルトの符号則に基づく無平方実根分離） |
+| `isolate_roots_vas` | `isolate_roots_vas(p)` / `isolate_roots_vas(p, var)` | Vincent-Akritas-Strzeboński (VAS) 法による代数的実根分離（連分数展開・メビウス変換・デカルトの符号則に基づく無平方実根分離） |
 | `alg_real` | `alg_real([c0, c1, ...], [low, high], root_index)` | 厳密代数的実数ノード（有理数係数多項式、分離区間、実根インデックス）を直接構築し第一級四則演算・順序決定・Gosper連分数変換を提供 |
 | `is_constructible` | `is_constructible(p)` / `is_constructible(p, var)` | 定規とコンパスによる作図可能性判定（Wantzelの定理・Galois 2-群条件に基づく次数 $2^k$ 多項式の可作図性厳密判定） |
 | `inv_mod` | `inv_mod(a, m)` | 拡張ユークリッド互除法によるモジュラ逆数（$a x \equiv 1 \pmod m$） |
@@ -128,7 +142,7 @@
 | `is_prime` | `is_prime(n)` | 素数判定（64bit範囲はSinclair/Sorenson-Webster基底による完全決定論的判定、巨大数はBaillie-PSWによる素数候補判定（反例未発見）） |
 | `solve` | `solve(expr, var)` | 厳密代数・初等超越方程式ソルバー（1次・2次・3次・4次代数方程式の代数的根号求解に加え、ランバートW関数 `lambert_w` による初等超越方程式 $f(x)e^{f(x)}=c$, $ax+b\ln x=c$, $x^x=c$, $a^x=bx$ の完全閉形式解に対応。カルダノ公式・フェラーリ法・チルンハウス変換・分解3次方程式レゾルベントによる厳密解、重解・複素数解対応） |
 | `sos_decompose` | `sos_decompose(poly)` / `sos_decompose(poly, [vars])` | 多項式の二乗和分解（Sum of Squares Decomposition）。Gram行列の半正定値分解により多項式を二乗和形式 $\sum_i c_i q_i^2$ へ分解 |
-| `interval` | `interval(low, high)` | 厳密有理数区間ノード `IntervalNode` の直接構築（下限 `low`、上限 `high`） |
+| `interval` | `interval([1, 3])` / `interval(sin(1), 1/1000)` | 厳密有理数区間ノード `IntervalNode` の構築（`[low, high]` リストからの直接生成、または式に対する許容誤差 `eps` での適応的区間精密化）。第一級ノードとして閉じた四則・整数乗・関係比較を実行 |
 | `to_poly` | `to_poly(expr, [x, y], "lex")` | 式を指定変数・単項式順序（`lex`, `grevlex`）の正規形多項式ノード `PolyNode` へ明示変換 |
 | `to_alg` | `to_alg(rep, min_poly, [var])` | 代数拡大体 $\mathbb{Q}(\alpha) \cong \mathbb{Q}[x]/\langle m(x) \rangle$ の代数数ノード `AlgNode` を構築 |
 | `alg_inv` | `alg_inv(alg_node)` | 拡大ユークリッド互除法による代数数ノード $\beta \in \mathbb{Q}(\alpha)$ の乗法逆元 $\beta^{-1}$ 算出 |
@@ -136,7 +150,7 @@
 | `solve_diophantine` | `solve_diophantine(3*x + 5*y == 7, [x, y])` | 不定整数方程式（ディオファントス方程式）の完全厳密ソルバー。1次線形不定方程式（拡張ユークリッド互除法およびベズーの等式に基づく整数パラメータ $t$ による一般解系）およびピタゴラス方程式（$x^2+y^2=z^2$ 等の代数曲線有理点媒介変数表示）を判定・求解。`--verify` 時には代数的残差ゼロ証明書、`--lean` 時には Lean 4 形式証明を出力 |
 | `pell_solve` / `solve_pell` / `pell` | `pell_solve(D)` / `pell_solve(D, 1)` / `pell_solve(D, -1)` | ペル方程式 $x^2 - D y^2 = 1$（および負のペル方程式 $x^2 - D y^2 = -1$）の最小整数解（基本解 $(x_1, y_1)$）の完全厳密導出。非平方正整数 $D$ に対する連分数展開周期アルゴリズム（Continued Fraction Expansion）により巨大桁整数でも決定論的に求解。`--verify` および `--lean`（Mathlib4 `by decide` 定理コード生成）に対応 |
 | `to_primitive_element` / `primitive_element` | `to_primitive_element([sqrt(2), sqrt(3)])` / `to_primitive_element([x^2 - 2, x^2 - 3])` | 原始元定理（Primitive Element Theorem）に基づき、多重代数拡大体 $\mathbb{Q}(\alpha_1, \dots, \alpha_k)$ を単一の代数的数 $\theta$ による単拡大 $\mathbb{Q}(\theta)$ へ同型変換し、原始元シンボル、合成最小多項式 $m_\theta(x)$、および各生成元の表現多項式リスト $[P_{\alpha_1}(\theta), \dots, P_{\alpha_k}(\theta)]$ を導出。シルベスター終結式と拡大体上多項式GCDにより決定論的に求解。`--verify` および `--lean` による代数関係式検証に対応 |
-| `fib` / `fibonacci` | `fib(n)` / `fibonacci(n)` | フィボナッチ数 $F_n$。Fast Doubling アルゴリズム（$O(\log n)$ 準線形時間ステップ）により数万〜十万番台の巨大フィボナッチ数を高速算出。負の整数引数に対するネガフィボナッチ数 $F_{-n} = (-1)^{n+1} F_n$ にも完全対応 |
+| `fib` / `fibonacci` | `fib(n)` / `fibonacci(n)` | フィボナッチ数 $F_n$。Fast Doubling アルゴリズム（$O(\log n)$ ステップ）により大規模インデックスを算出し、負の整数引数に対するネガフィボナッチ数 $F_{-n} = (-1)^{n+1} F_n$ にも対応 |
 | `digit_count` | `digit_count(n)` | 巨大整数の厳密桁数算定（例: `digit_count(fib(10000))` $\to$ `2090`） |
 | `to_base` | `to_base(n, base)` | 任意基数進数変換（$2 \le \text{base} \le 64$）。整数の位取り記数法表現および有理数 $p/q$ の長除法余り追跡による循環小数展開（例: `to_base(255, 16)` $\to$ `ff`、`to_base(1/3, 2)` $\to$ `0.(01)_2`、`to_base(1/3, 16)` $\to$ `0.(5)_16`、`to_base(4031, 64)` $\to$ `@_`） |
 | `from_base` | `from_base(str, base)` | 任意基数進数表現（$2 \le \text{base} \le 64$）から多倍長整数への復元。`0x`, `0b`, `0o` 接頭辞の自動処理、および Base 64 の `@`/`_` または `+`/`/` 表記に対応（例: `from_base("ff", 16)` $\to$ `255`、`from_base("@_", 64)` $\to$ `4031`） |
@@ -241,7 +255,7 @@
 | `circle_intersect` | `circle_intersect(c1, r1, c2, r2)` | 2円の交点（中心座標と半径から根軸次数下げにより交点座標リストを算出） |
 | `triangle_area` | `triangle_area(p1, p2, p3)` | 3頂点座標からなる三角形の厳密面積（外積・Shoelace公式） |
 | `triangle_centers` | `triangle_centers(p1, p2, p3)` | 三角形の五心解析（重心・外心・垂心・内心をリストで一括算出） |
-| `geo_prove` | `geo_prove(hypotheses, conclusion)` / `geo_prove(hypotheses, conclusion, [vars])` | 呉文俊（Wu Wen-tsun）の代数的幾何自動定理証明法（Wu's Method）。仮設多項式系から標数集合（Characteristic Set: 三角形式アセンダント列）を導出し、結論多項式に対する擬除算剰余（Pseudo-division remainder）が 0 となるかを判定。3段階NDG条件（Primary / Essential / Algebraic）導出および Lean 4 形式証明トランスパイル対応 |
+| `geo_prove` | `geo_prove(hypotheses, conclusion)` / `geo_prove(hypotheses, conclusion, [vars])` | 呉文俊（Wu Wen-tsun）の代数的幾何自動定理証明法（Wu's Method）。仮説多項式系から標数集合（Characteristic Set: 三角形式アセンダント列）を導出し、結論多項式に対する擬除算剰余（Pseudo-division remainder）が 0 となるかを判定。3段階NDG条件（Primary / Essential / Algebraic）導出および Lean 4 形式証明トランスパイル対応 |
 | `midpoint` | `midpoint(M, A, B)` | 点 $M$ が線分 $AB$ の中点（$2 M_x = A_x + B_x, 2 M_y = A_y + B_y$） |
 | `collinear` | `collinear(A, B, C)` | 3点 $A, B, C$ が同一直線上に存在（共線条件: 外積 $(B_x - A_x)(C_y - A_y) - (B_y - A_y)(C_x - A_x) = 0$） |
 | `parallel` | `parallel(A, B, C, D)` | 直線 $AB$ と $CD$ が平行（方向ベクトルの外積 $= 0$） |
@@ -313,7 +327,7 @@
 | `ec_p_order` | `ec_p_order([A, B], p)` | 素有限体 $\mathbb{F}_p$ 上の非特異楕円曲線 $y^2 \equiv x^3 + Ax + B \pmod p$ の群位数 $\#E(\mathbb{F}_p)$ を決定論的 Schoof アルゴリズム（分割多項式・フロベニウス写像・CRT合成）により多項式時間で算定 |
 | `ec_p_trace` | `ec_p_trace([A, B], p)` | 素有限体 $\mathbb{F}_p$ 上の楕円曲線のフロベニウストレース $a = p + 1 - \#E(\mathbb{F}_p)$ を決定論的に算出（Hasseの定理 $|a| \le 2\sqrt{p}$ を満たす整数） |
 | `ec_p_add` | `ec_p_add([A, B], P, Q, p)` | 素有限体 $\mathbb{F}_p$ 上の楕円曲線群における点加算 $P + Q$（$\pmod p$ の有理逆元とChord and Tangent幾何演算、単位元・無限遠点 `O` 対応） |
-| `ec_p_mul` | `ec_p_mul([A, B], n, P, p)` | 素有限体 $\mathbb{F}_p$ 上の楕円曲線群における点のスカラー倍算 $n P$（$\pmod p$ 上のDouble-and-Add高速累乗算） |
+| `ec_p_mul` | `ec_p_mul([A, B], n, P, p)` | 素有限体 $\mathbb{F}_p$ 上の楕円曲線群における点のスカラー倍算 $n P$（$\pmod p$ 上の Double-and-Add 法） |
 | `ec_rank_bound` | `ec_rank_bound(A, B)` | 有理数体上の楕円曲線 $y^2 = x^3 + Ax + B$ に対し、有理2等分点を用いた2降下法（2-isogeny descent）によりセルマー群次元を算定し、モーデル・ヴェイユ階数の保証区間 $[r_{\text{lower}}, r_{\text{upper}}]$ を決定論的に算出 |
 | `ec_generators` | `ec_generators(A, B)` | 2降下法の等質空間有理点探索により得られた無限位数の独立有理点集合（階数下限を成す自由部分群の生成元）を抽出 |
 
@@ -343,7 +357,7 @@
 | :--- | :--- | :--- |
 | `padic_val` | `padic_val(50, 5)` | 有理数 $x$ に対する素数 $p$ を底とする $p$進付値 $v_p(x) \in \mathbb{Z}$ の完全厳密計算（$x=0$ は無限大） |
 | `padic_norm` | `padic_norm(3/20, 2)` | 有理数 $x$ に対する超距離ノルム $|x|_p = p^{-v_p(x)}$ の完全厳密有理数（`big.Rat`）計算 |
-| `padic_expand` | `padic_expand(2/3, 5, 4)` | 有理数 $x$ の指定精度 $k$ における $p$進切断級数展開 $a_0 + a_1 p + a_2 p^2 + \dots + O(p^k)$ の文字列生成 |
+| `padic_expand` | `padic_expand(2/3, 5, 4)` | 有理数 $x$ の指定精度 $k$ における $p$ 進切断級数表現 `+ O(p^k)` を第一級 AST ノード `PadicNode` として返却。同一素数 $p$ 間および有理数との閉じた四則・整数べき乗演算に対応（異なる素数混在時は記号式を保持） |
 
 ---
 
@@ -351,7 +365,7 @@
 
 | 関数 | 書式・例 | 説明 |
 | :--- | :--- | :--- |
-| `puiseux` | `puiseux(y^2 - x^3, y, x, 3)` | 代数方程式 $F(x, y) = 0$ または多項式に対し、ニュートン多角形アルゴリズム（Newton Polygon）を用いて特異点・分岐点周りのピュイズー代数的分数冪級数解 $y(x) = \sum c_k x^{p_k/q_k}$ の局所分枝を完全決定論的導出（デフォルト次数3） |
+| `puiseux` | `puiseux(y^2 - x^3, y, x, 3)` | 代数方程式 $F(x, y) = 0$ または多項式に対し、ニュートン多角形（Newton Polygon）アルゴリズムを用いて特異点・分岐点周りのピュイズー級数解 $y(x) = \sum c_k x^{p_k/q_k} + O(x^N)$ を第一級 `PuiseuxNode` として決定論的導出（デフォルト次数 3）。有理数係数ノード同士の閉じた四則・整数乗・`diff` 微分に対応 |
 
 ---
 
@@ -388,7 +402,7 @@
 | 関数 | 書式・例 | 説明 |
 | :--- | :--- | :--- |
 | `clifford` | `clifford(e0 * e1 + e1 * e0, 3, 0)` / `clifford(e0 * e0, 3, 0)` | 計量 $(p, q, [r])$ におけるクリフォード幾何積およびマルチベクトルの代数展開・正準簡約（基底自乗簡約・反交換関係整理）。基底記号は `e0`, `e1`, `e2` ... を使用 |
-| `clifford_wedge` | `clifford_wedge(e0, e1, 3, 0)` | グラスマン外積（ウェッジ積） $A \wedge B$。計量 $(p, q, [r])$ 上で完全反对称化された次数ブレードを算出 |
+| `clifford_wedge` | `clifford_wedge(e0, e1, 3, 0)` | グラスマン外積（ウェッジ積） $A \wedge B$。計量 $(p, q, [r])$ 上で反対称化された次数ブレードを算出 |
 | `clifford_contract` | `clifford_contract(e0, e0, "left", 3, 0)` | 左右縮約（内積拡張）。第3引数で方向（`"left"`: 左縮約 $\lrcorner$、`"right"`: 右縮約 $\llcorner$）を指定 |
 | `clifford_dual` | `clifford_dual(e3, 3, 0, 1)` | ポアンカレ補集合双対（Poincaré Complement Dual）。擬スカラー単位ブレード $I$ の縮約による双対マルチベクトルの導出（退化計量 $r > 0$ にも完全対応） |
 | `quantum_equiv` | `quantum_equiv(c1, c2)` / `quantum_equiv(c1, c2, strict)` | 二進円分環 $\mathbb{Z}[1/\sqrt{2}, i]$ を用いた小数ゼロの Clifford+T 量子回路厳密等価性判定。Clifford+T 量子回路 $c1, c2$ が大域位相を除いて等価であるかを判定。不等価時は反例基底状態（Witness State）を出力 |
@@ -403,7 +417,7 @@
 | 関数・構文 | 書式・例 | 説明 |
 | :--- | :--- | :--- |
 | `table` | `table(x^2, x, 1, 5)` / `table(k, k, 1, 9, 2)` | リスト内包表記・反復リスト生成。引数 `table(expr, var, start, end, [step])` による動的スコープ反復（ネスト呼び出しによる多次元リスト生成も対応） |
-| `product` | `product(k, k, 1, 5)` / `product(2*k + 1, k, 0, 4)` | 離散総乗（乗乗計算 $\prod_{k=\text{start}}^{\text{end}} \text{expr}$）。動的スコープ保護およびゼロ短絡評価対応 |
+| `product` | `product(k, k, 1, 5)` / `product(2*k + 1, k, 0, 4)` | 離散総乗（乗積計算 $\prod_{k=\text{start}}^{\text{end}} \text{expr}$）。動的スコープ保護およびゼロ短絡評価対応 |
 | `for` | `for(k, 1, 5, s = s + k)` | 手続き型反復ループ。引数 `for(var, start, end, [step], body)` による順次実行（反復変数は虚数単位 `i` を避けて `k`, `j`, `n` 等を使用。返却値は最終式の評価結果） |
 | `to_base` | `to_base(255, 16)` / `to_base(1/3, 2)` | 任意基数（2〜64）への基底変換文字列生成。有理数の場合は循環小数表記を出力 |
 | `from_base` | `from_base("FF", 16)` / `from_base("1011", 2)` | 任意基数（2〜64）の文字列から厳密整数への復元 |
