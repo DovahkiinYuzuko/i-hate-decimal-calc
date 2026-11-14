@@ -56,6 +56,8 @@ func simplifyUnaryOp(op string, expr Node) (Node, error) {
 				return nil, err
 			}
 			return NewQuantityNode(negVal, v.Scale, v.Dimensions, v.DisplayUnit), nil
+		case *IntervalNode, *PadicNode, *PuiseuxNode:
+			return negateClosedDomain(v)
 		default:
 			negOne, _ := NewRational(-1, 1)
 			return simplifyMul([]Node{negOne, expr})

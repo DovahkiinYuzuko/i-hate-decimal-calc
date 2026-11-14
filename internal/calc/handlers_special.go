@@ -55,6 +55,27 @@ func handleInterval(args []Node, env *Env) (Node, error) {
 		evalExpr = args[0]
 	}
 
+	if len(args) == 1 {
+		if list, ok := evalExpr.(*ListNode); ok && len(list.Elements) == 2 {
+			lowNode, errL := EvalWithEnv(list.Elements[0], env)
+			if errL != nil {
+				lowNode = list.Elements[0]
+			}
+			highNode, errH := EvalWithEnv(list.Elements[1], env)
+			if errH != nil {
+				highNode = list.Elements[1]
+			}
+			lowRat, okL := lowNode.(*RationalNode)
+			highRat, okH := highNode.(*RationalNode)
+			if okL && okH {
+				if lowRat.Val.Cmp(highRat.Val) > 0 {
+					return nil, NewDomainError("interval.err_invalid_bounds", "", lowRat.Val.RatString(), highRat.Val.RatString())
+				}
+				return NewIntervalNode(lowRat.Val, highRat.Val), nil
+			}
+		}
+	}
+
 	eps := big.NewRat(1, 1000000)
 	if len(args) == 2 {
 		evalEps, err := EvalWithEnv(args[1], env)

@@ -666,6 +666,7 @@
   "interval": {
     "err_cos_expects_1_argument": "cos には1つの引数が必要です",
     "err_exp_expects_1_argument": "exp には1つの引数が必要です",
+    "err_invalid_bounds": "区間エラー: 下限値 %s は上限値 %s 以下である必要があります",
     "err_invalid_epsilon": "区間解析の目標誤差限界が無効です: %v (正の有理数である必要があります)",
     "err_invalid_fsm_transition": "区間適応細分化FSMの不正な状態遷移です: %s -> %s",
     "err_ln_argument_must_be_strictly": "ln の引数は真に正である必要があります: %s",
@@ -933,11 +934,14 @@
     "err_arg_must_be_variable": "入力エラー: puiseux: 変数名である必要があります (取得値: %s)",
     "err_cannot_expand": "数理計算エラー: puiseux: 局所展開に失敗しました: %s",
     "err_equation_contains_no_var": "代数エラー: puiseux: 方程式に対象変数 %s が含まれていません",
+    "err_exponent_out_of_range": "領域エラー: puiseux: 整数指数が許容範囲外です: %s",
     "err_identity_equation": "代数エラー: puiseux: 恒等式のため解空間を一意決定できません",
     "err_invalid_fsm_transition": "状態遷移エラー: puiseux: 不正な状態遷移です (%v -> %v)",
     "err_no_characteristic_roots": "代数エラー: puiseux: 特性多項式の非ゼロ代数根が存在しません",
     "err_order_must_be_positive_int": "入力エラー: puiseux: 展開次数は非負の整数である必要があります (取得値: %s)",
-    "err_puiseux_args": "引数エラー: puiseux は 3つまたは4つの引数 (F, y, x [, order]) が必要です"
+    "err_puiseux_args": "引数エラー: puiseux は 3つまたは4つの引数 (F, y, x [, order]) が必要です",
+    "err_var_mismatch": "領域エラー: puiseux: 異なる変数のピュイズー級数同士は演算できません (%s と %s)",
+    "err_zero_division": "ゼロ除算エラー: puiseux: ゼロ級数での除算はできません"
   },
   "qe": {
     "err_expected_var_list": "量化子構文エラー: 第1引数は変数または変数リストである必要があります",

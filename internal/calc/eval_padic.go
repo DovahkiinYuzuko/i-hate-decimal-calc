@@ -95,7 +95,7 @@ func EvalPadicExpand(args []Node) (Node, error) {
 	}
 
 	precRat, okPrec := args[2].(*RationalNode)
-	if !okPrec || !precRat.Val.IsInt() {
+	if !okPrec || !precRat.Val.IsInt() || !precRat.Val.Num().IsInt64() {
 		return nil, fmt.Errorf("%s", i18n.T("padic.err_arg_must_be_integer", "padic_expand", args[2].String()))
 	}
 
@@ -110,6 +110,5 @@ func EvalPadicExpand(args []Node) (Node, error) {
 		return nil, err
 	}
 
-	str := padic.ExpansionString(padicNum)
-	return NewVar(str), nil
+	return NewPadicNode(padicNum.Prime, padicNum.Valuation, padicNum.Unit, padicNum.Precision, padicNum.IsZero)
 }

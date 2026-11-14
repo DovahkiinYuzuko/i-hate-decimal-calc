@@ -60,6 +60,11 @@ func simplifyMul(factors []Node) (Node, error) {
 		return current, nil
 	}
 
+	// Closed-domain objects (IntervalNode, PadicNode, PuiseuxNode): evaluate before distributive expansion or factor cancellation
+	if containsClosedDomainDeep(flatFactors) {
+		return simplifyClosedDomainMul(flatFactors)
+	}
+
 	// 2. Check for Distributive Law: if any factor is an AddNode, expand!
 	// (A + B) * (C + D) -> A*C + A*D + B*C + B*D
 	for i, f := range flatFactors {
