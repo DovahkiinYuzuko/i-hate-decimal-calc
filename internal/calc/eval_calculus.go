@@ -27,6 +27,9 @@ func differentiate(n Node, varName string) (Node, error) {
 		}
 		return mustRational(0, 1), nil
 
+	case *PuiseuxNode:
+		return DifferentiatePuiseux(v, varName)
+
 	case *AddNode:
 		dTerms := make([]Node, len(v.Terms))
 		for i, t := range v.Terms {

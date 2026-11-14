@@ -27,7 +27,17 @@ func newDomainErr(msgKey, fallback string, args ...any) error {
 	if DomainErrorFactory != nil {
 		return DomainErrorFactory(msgKey, fallback, args...)
 	}
+	if fallback == "" {
+		return fmt.Errorf("%s", msgKey)
+	}
 	return fmt.Errorf(fallback, args...)
+}
+
+func newDomainErrKey(msgKey string, args ...any) error {
+	if DomainErrorFactory != nil {
+		return DomainErrorFactory(msgKey, "", args...)
+	}
+	return fmt.Errorf("%s", msgKey)
 }
 
 func isNegative(n Node) bool {
@@ -90,6 +100,8 @@ const (
 	NodeRule
 	NodeAlgebraicReal
 	NodeCF
+	NodePadic
+	NodePuiseux
 )
 
 // Node represents any node in the mathematical expression tree.

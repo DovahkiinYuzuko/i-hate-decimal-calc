@@ -95,17 +95,17 @@ func (i RationalInterval) Div(other RationalInterval) (RationalInterval, error) 
 	return i.Mul(inv), nil
 }
 
-// PowInt computes interval raised to non-negative integer power k.
-func (i RationalInterval) PowInt(k int) RationalInterval {
+// PowIntChecked computes interval raised to integer power k, returning an error on division by zero-containing interval.
+func (i RationalInterval) PowIntChecked(k int) (RationalInterval, error) {
 	if k == 0 {
-		return NewExactRationalInterval(big.NewRat(1, 1))
+		return NewExactRationalInterval(big.NewRat(1, 1)), nil
 	}
 	if k < 0 {
 		inv, err := i.Inv()
 		if err != nil {
-			return RationalInterval{Low: big.NewRat(0, 1), High: big.NewRat(0, 1)}
+			return RationalInterval{}, err
 		}
-		return inv.PowInt(-k)
+		return inv.PowIntChecked(-k)
 	}
 
 	powRat := func(r *big.Rat, exp int) *big.Rat {
@@ -116,7 +116,7 @@ func (i RationalInterval) PowInt(k int) RationalInterval {
 
 	if k%2 == 1 {
 		// Odd power: monotonically increasing
-		return NewRationalInterval(powRat(i.Low, k), powRat(i.High, k))
+		return NewRationalInterval(powRat(i.Low, k), powRat(i.High, k)), nil
 	}
 
 	// Even power:
@@ -127,14 +127,23 @@ func (i RationalInterval) PowInt(k int) RationalInterval {
 		if pHigh.Cmp(maxVal) > 0 {
 			maxVal = pHigh
 		}
-		return NewRationalInterval(big.NewRat(0, 1), maxVal)
+		return NewRationalInterval(big.NewRat(0, 1), maxVal), nil
 	}
 
 	zero := big.NewRat(0, 1)
 	if i.Low.Cmp(zero) >= 0 {
-		return NewRationalInterval(pLow, pHigh)
+		return NewRationalInterval(pLow, pHigh), nil
 	}
-	return NewRationalInterval(pHigh, pLow)
+	return NewRationalInterval(pHigh, pLow), nil
+}
+
+// PowInt computes interval raised to integer power k (deprecated for unchecked negative powers).
+func (i RationalInterval) PowInt(k int) RationalInterval {
+	res, err := i.PowIntChecked(k)
+	if err != nil {
+		return RationalInterval{Low: big.NewRat(0, 1), High: big.NewRat(0, 1)}
+	}
+	return res
 }
 
 // IsStrictlyPositive returns true if Low > 0.
@@ -521,6 +530,9 @@ func EvalNodeInterval(n Node, steps int) (RationalInterval, error) {
 	case *RationalNode:
 		return NewExactRationalInterval(node.Val), nil
 
+	case *IntervalNode:
+		return NewRationalInterval(node.Low, node.High), nil
+
 	case *SqrtNode:
 		sub, err := EvalNodeInterval(node.Radicand, steps)
 		if err != nil {
@@ -625,11 +637,19 @@ func EvalNodeInterval(n Node, steps int) (RationalInterval, error) {
 		// Base ^ Exp
 		// Special case 1: Integer power
 		if expRat, isRat := node.Exp.(*RationalNode); isRat && expRat.Val.IsInt() {
+			if !expRat.Val.Num().IsInt64() {
+				return RationalInterval{}, fmt.Errorf("%s", i18n.T("interval.err_unsupported_node_for_interval_evaluation", node.String()))
+			}
+			exp64 := expRat.Val.Num().Int64()
+			expInt := int(exp64)
+			if int64(expInt) != exp64 {
+				return RationalInterval{}, fmt.Errorf("%s", i18n.T("interval.err_unsupported_node_for_interval_evaluation", node.String()))
+			}
 			baseInt, err := EvalNodeInterval(node.Base, steps)
 			if err != nil {
 				return RationalInterval{}, err
 			}
-			return baseInt.PowInt(int(expRat.Val.Num().Int64())), nil
+			return baseInt.PowIntChecked(expInt)
 		}
 
 		// Special case 2: e ^ Exp => exp(Exp)

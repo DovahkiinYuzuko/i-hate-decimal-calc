@@ -666,6 +666,7 @@
   "interval": {
     "err_cos_expects_1_argument": "cos expects 1 argument",
     "err_exp_expects_1_argument": "exp expects 1 argument",
+    "err_invalid_bounds": "interval: lower bound %s must not exceed upper bound %s",
     "err_invalid_epsilon": "invalid epsilon tolerance for interval: %v (must be positive rational)",
     "err_invalid_fsm_transition": "invalid interval refiner FSM transition: %s -> %s",
     "err_ln_argument_must_be_strictly": "ln argument must be strictly positive: %s",
@@ -933,11 +934,14 @@
     "err_arg_must_be_variable": "puiseux: argument must be a variable, got %s",
     "err_cannot_expand": "puiseux: local expansion failed: %s",
     "err_equation_contains_no_var": "puiseux: equation contains no variable %s",
+    "err_exponent_out_of_range": "puiseux: integer exponent out of range: %s",
     "err_identity_equation": "puiseux: identity equation (infinite solutions)",
     "err_invalid_fsm_transition": "puiseux: invalid FSM state transition (%v -> %v)",
     "err_no_characteristic_roots": "puiseux: no non-zero characteristic roots found",
     "err_order_must_be_positive_int": "puiseux: expansion order must be a non-negative integer, got %s",
-    "err_puiseux_args": "puiseux requires 3 or 4 arguments: (F, y, x [, order])"
+    "err_puiseux_args": "puiseux requires 3 or 4 arguments: (F, y, x [, order])",
+    "err_var_mismatch": "puiseux: cannot combine Puiseux series in different variables: %s and %s",
+    "err_zero_division": "puiseux: division by zero series"
   },
   "qe": {
     "err_expected_var_list": "quantifier syntax error: first argument must be variable or list of variables",

@@ -61,6 +61,14 @@ func simplifyPowWithEnv(base, exp Node, env *Env) (Node, error) {
 		return NewPow(base, exp)
 	}
 
+	// Closed-domain objects (IntervalNode, PadicNode, PuiseuxNode): integer powers stay in closed domain
+	if isClosedDomainNode(base) {
+		if expIsRat && ratExp.Val.IsInt() {
+			return simplifyClosedDomainPow(base, ratExp.Val.Num())
+		}
+		return NewPow(base, exp)
+	}
+
 	// base^0 = 1
 	if expIsRat && ratExp.Val.Sign() == 0 {
 		return mustRational(1, 1), nil
