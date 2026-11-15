@@ -128,3 +128,16 @@ func TestPadicExpansionString(t *testing.T) {
 		t.Fatalf("expected '%s', got '%s'", expected, s)
 	}
 }
+
+func TestPadicCompositePrimeRejected(t *testing.T) {
+	composites := []int64{4, 6, 9, 15, 561}
+	for _, c := range composites {
+		p := big.NewInt(c)
+		if _, err := Valuation(big.NewRat(1, 1), p); err == nil {
+			t.Errorf("Valuation expected error for composite p=%d, got nil", c)
+		}
+		if _, err := NewPadicFromRat(big.NewRat(1, 3), p, 4); err == nil {
+			t.Errorf("NewPadicFromRat expected error for composite p=%d, got nil", c)
+		}
+	}
+}

@@ -192,3 +192,79 @@ func TestFormatDecimalEnclosure(t *testing.T) {
 	}
 }
 
+func TestRationalInterval_SinCosExtremaAndRangeReduction(t *testing.T) {
+	// sin([0, 4]) crosses pi/2 (~1.57) and 7pi/6 (~3.66), so max must reach 1 (not endpoint max = 0).
+	sinNode := &FuncNode{Name: "sin", Args: []Node{NewIntervalNode(big.NewRat(0, 1), big.NewRat(4, 1))}}
+	ivSin, err := EvalNodeInterval(sinNode, 12)
+	if err != nil {
+		t.Fatalf("EvalNodeInterval(sin([0,4])) failed: %v", err)
+	}
+	if ivSin.High.Cmp(big.NewRat(1, 1)) < 0 {
+		t.Errorf("sin([0,4]) upper bound = %s, must enclose maximum 1", ivSin.High.RatString())
+	}
+	if ivSin.Low.Cmp(big.NewRat(-1, 1)) < 0 || ivSin.High.Cmp(big.NewRat(1, 1)) > 0 {
+		t.Errorf("sin([0,4]) out of [-1, 1]: %s", ivSin.String())
+	}
+
+	// cos([0, 7]) spans more than a full 2*pi period, so must enclose both -1 and 1.
+	cosNode := &FuncNode{Name: "cos", Args: []Node{NewIntervalNode(big.NewRat(0, 1), big.NewRat(7, 1))}}
+	ivCos, err := EvalNodeInterval(cosNode, 12)
+	if err != nil {
+		t.Fatalf("EvalNodeInterval(cos([0,7])) failed: %v", err)
+	}
+	if ivCos.Low.Cmp(big.NewRat(-1, 1)) > 0 || ivCos.High.Cmp(big.NewRat(1, 1)) < 0 {
+		t.Errorf("cos([0,7]) = %s, must enclose [-1, 1]", ivCos.String())
+	}
+
+	// cos([1, 4]) crosses pi (~3.14159), so min must reach -1.
+	cosPiNode := &FuncNode{Name: "cos", Args: []Node{NewIntervalNode(big.NewRat(1, 1), big.NewRat(4, 1))}}
+	ivCosPi, err := EvalNodeInterval(cosPiNode, 12)
+	if err != nil {
+		t.Fatalf("EvalNodeInterval(cos([1,4])) failed: %v", err)
+	}
+	if ivCosPi.Low.Cmp(big.NewRat(-1, 1)) > 0 {
+		t.Errorf("cos([1,4]) lower bound = %s, must enclose minimum -1", ivCosPi.Low.RatString())
+	}
+
+	// Large rational argument beyond int64: 10^25 must not overflow int64 or hang.
+	hugeX, _ := new(big.Int).SetString("10000000000000000000000000", 10)
+	sinHuge := RationalBoundSinCos(new(big.Rat).SetInt(hugeX), true, 12)
+	if sinHuge.Low.Cmp(big.NewRat(-1, 1)) < 0 || sinHuge.High.Cmp(big.NewRat(1, 1)) > 0 {
+		t.Errorf("sin(10^25) out of [-1, 1]: %s", sinHuge.String())
+	}
+}
+
+func TestRationalInterval_LargeExpAndBoundedCbrt(t *testing.T) {
+	// exp(40) via binary scaling without O(x) loop
+	exp40 := RationalBoundExp(big.NewRat(40, 1), 12)
+	// exp(40) ~ 2.35385e17
+	if exp40.Low.Cmp(big.NewRat(235000000000000000, 1)) < 0 || exp40.High.Cmp(big.NewRat(236000000000000000, 1)) > 0 {
+		t.Errorf("exp(40) enclosure unexpected: %s", exp40.String())
+	}
+
+	// cbrt(2) at steps=20: must enclose 2^(1/3) and keep bit length O(k) (no 3^iterSteps explosion)
+	cbrt2, err := RationalBoundCbrt(big.NewRat(2, 1), 20)
+	if err != nil {
+		t.Fatalf("RationalBoundCbrt(2, 20) failed: %v", err)
+	}
+	lowCube := new(big.Rat).Mul(cbrt2.Low, new(big.Rat).Mul(cbrt2.Low, cbrt2.Low))
+	highCube := new(big.Rat).Mul(cbrt2.High, new(big.Rat).Mul(cbrt2.High, cbrt2.High))
+	two := big.NewRat(2, 1)
+	if lowCube.Cmp(two) > 0 || highCube.Cmp(two) < 0 {
+		t.Errorf("cbrt(2) failed enclosure: low^3=%s, high^3=%s", lowCube.RatString(), highCube.RatString())
+	}
+	if cbrt2.Low.Num().BitLen() > 256 || cbrt2.Low.Denom().BitLen() > 256 {
+		t.Errorf("cbrt(2) bit length exploded: num=%d bits, den=%d bits", cbrt2.Low.Num().BitLen(), cbrt2.Low.Denom().BitLen())
+	}
+
+	// Negative exact cube: cbrt(-8) must enclose -2
+	cbrtNeg8, err := RationalBoundCbrt(big.NewRat(-8, 1), 16)
+	if err != nil {
+		t.Fatalf("RationalBoundCbrt(-8, 16) failed: %v", err)
+	}
+	negTwo := big.NewRat(-2, 1)
+	if cbrtNeg8.Low.Cmp(negTwo) > 0 || cbrtNeg8.High.Cmp(negTwo) < 0 {
+		t.Errorf("cbrt(-8) = %s, must enclose -2", cbrtNeg8.String())
+	}
+}
+

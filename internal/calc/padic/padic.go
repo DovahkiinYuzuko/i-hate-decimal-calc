@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"math/bits"
 	"strings"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
@@ -49,14 +50,88 @@ func invMod(a, m *big.Int) (*big.Int, error) {
 	return x, nil
 }
 
+// isDeterministicPrime checks whether p is prime deterministically for uint64
+// (Miller-Rabin bases {2, 325, 9375, 28178, 450775, 9780504, 1795265022})
+// and uses Baillie-PSW (big.Int.ProbablyPrime(0)) for larger integers.
+func isDeterministicPrime(p *big.Int) bool {
+	if p == nil || p.Sign() <= 0 {
+		return false
+	}
+	if p.IsUint64() {
+		n := p.Uint64()
+		if n < 2 {
+			return false
+		}
+		smallPrimes := [...]uint64{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37}
+		for _, sp := range smallPrimes {
+			if n == sp {
+				return true
+			}
+			if n%sp == 0 {
+				return false
+			}
+		}
+		d := n - 1
+		s := bits.TrailingZeros64(d)
+		d >>= s
+		bases := [...]uint64{2, 325, 9375, 28178, 450775, 9780504, 1795265022}
+		for _, a := range bases {
+			if a%n == 0 {
+				continue
+			}
+			if !millerRabinWitness64(n, d, s, a) {
+				return false
+			}
+		}
+		return true
+	}
+	return p.ProbablyPrime(0)
+}
+
+func mulMod64(a, b, mod uint64) uint64 {
+	hi, lo := bits.Mul64(a, b)
+	_, rem := bits.Div64(hi, lo, mod)
+	return rem
+}
+
+func powMod64(base, exp, mod uint64) uint64 {
+	res := uint64(1)
+	b := base % mod
+	for exp > 0 {
+		if exp&1 == 1 {
+			res = mulMod64(res, b, mod)
+		}
+		b = mulMod64(b, b, mod)
+		exp >>= 1
+	}
+	return res
+}
+
+func millerRabinWitness64(n, d uint64, s int, a uint64) bool {
+	x := powMod64(a, d, n)
+	if x == 1 || x == n-1 {
+		return true
+	}
+	for r := 1; r < s; r++ {
+		x = mulMod64(x, x, n)
+		if x == n-1 {
+			return true
+		}
+	}
+	return false
+}
+
 // Valuation computes the p-adic valuation v_p(x) of a rational number x.
-// Returns an error if rat == 0.
+// Returns an error if rat == 0 or prime is not a prime number.
 func Valuation(rat *big.Rat, prime *big.Int) (int, error) {
 	if rat.Sign() == 0 {
 		return 0, fmt.Errorf("%s", i18n.T("padic.err_zero_valuation"))
 	}
 	if prime.Cmp(big.NewInt(2)) < 0 {
 		return 0, fmt.Errorf("%s", i18n.T("padic.err_prime_less_than_2"))
+	}
+	if !isDeterministicPrime(prime) {
+		return 0, fmt.Errorf("%s", i18n.T("padic.err_prime_must_be_prime", prime.String()))
 	}
 
 	num := new(big.Int).Abs(rat.Num())
@@ -114,6 +189,9 @@ func Norm(rat *big.Rat, prime *big.Int) (*big.Rat, error) {
 func NewPadicFromRat(rat *big.Rat, prime *big.Int, prec int) (*PadicNumber, error) {
 	if prime.Cmp(big.NewInt(2)) < 0 {
 		return nil, fmt.Errorf("%s", i18n.T("padic.err_prime_less_than_2"))
+	}
+	if !isDeterministicPrime(prime) {
+		return nil, fmt.Errorf("%s", i18n.T("padic.err_prime_must_be_prime", prime.String()))
 	}
 	if prec <= 0 {
 		return nil, fmt.Errorf("%s", i18n.T("padic.err_prec_positive"))

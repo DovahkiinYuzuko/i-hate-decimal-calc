@@ -359,6 +359,7 @@
     "bayes_zero_evidence": "marginal probability (evidence) cannot be zero",
     "bernoulli_non_negative": "bernoulli error: argument must be a non-negative integer (%s)",
     "cfrac_unsupported": "continued fraction expansion is only supported for rational numbers and square roots",
+    "circular_var_ref": "circular variable reference detected: %s",
     "clifford_contraction_mode": "invalid contraction mode: %s (expected 'left', 'right', or 'inner')",
     "clifford_dim_limit": "metric dimension %d exceeds maximum 64",
     "clifford_metric_int": "metric signature (p, q, r) components must be non-negative integers",
@@ -666,6 +667,7 @@
   "interval": {
     "err_cos_expects_1_argument": "cos expects 1 argument",
     "err_exp_expects_1_argument": "exp expects 1 argument",
+    "err_factorial_too_large": "factorial argument too large: %d",
     "err_invalid_bounds": "interval: lower bound %s must not exceed upper bound %s",
     "err_invalid_epsilon": "invalid epsilon tolerance for interval: %v (must be positive rational)",
     "err_invalid_fsm_transition": "invalid interval refiner FSM transition: %s -> %s",

@@ -248,7 +248,26 @@ func RationalBoundE(steps int) RationalInterval {
 	return NewRationalInterval(low, high)
 }
 
-// RationalBoundExp computes rigorous rational enclosure for exp(x) with x in Q.
+// roundOutwardBinary rounds interval endpoints outward to denominators of 2^precBits
+// to prevent exponential bit-length blowup during repeated squaring while strictly preserving enclosure.
+func roundOutwardBinary(iv RationalInterval, precBits int) RationalInterval {
+	if precBits < 16 {
+		precBits = 16
+	}
+	scaleDenom := new(big.Int).Lsh(big.NewInt(1), uint(precBits))
+	roundEndpoint := func(val *big.Rat, up bool) *big.Rat {
+		scaled := new(big.Int).Lsh(val.Num(), uint(precBits))
+		q, rem := new(big.Int).DivMod(scaled, val.Denom(), new(big.Int))
+		if up && rem.Sign() != 0 {
+			q.Add(q, big.NewInt(1))
+		}
+		return new(big.Rat).SetFrac(q, scaleDenom)
+	}
+	return NewRationalInterval(roundEndpoint(iv.Low, false), roundEndpoint(iv.High, true))
+}
+
+// RationalBoundExp computes rigorous rational enclosure for exp(x) with x in Q
+// using binary scaling exp(x) = (exp(x / 2^m))^(2^m) so evaluation runs in O(steps + log|x|) steps.
 func RationalBoundExp(x *big.Rat, steps int) RationalInterval {
 	if steps < 4 {
 		steps = 12
@@ -268,69 +287,146 @@ func RationalBoundExp(x *big.Rat, steps int) RationalInterval {
 		}
 	}
 
-	// For x > 0:
-	// S_n = sum_{k=0}^n x^k / k!
-	// Remainder R_n = sum_{k=n+1}^inf x^k / k! < (x^(n+1) / (n+1)!) / (1 - x/(n+2))
-	// provided n+2 > x.
-	n := steps
-	xInt := new(big.Int).Quo(x.Num(), x.Denom()).Int64()
-	if int64(n) < xInt+3 {
-		n = int(xInt) + 4
+	// Binary scaling: choose m >= 0 so y = x / 2^m lies in (0, 1).
+	intPart := new(big.Int).Quo(x.Num(), x.Denom())
+	m := 0
+	if intPart.Sign() > 0 {
+		m = intPart.BitLen()
 	}
 
+	y := new(big.Rat).Set(x)
+	if m > 0 {
+		pow2m := new(big.Int).Lsh(big.NewInt(1), uint(m))
+		y.Quo(y, new(big.Rat).SetInt(pow2m))
+	}
+
+	n := steps + m
+	if n < 12 {
+		n = 12
+	}
+
+	// For y in (0, 1):
+	// S_n = sum_{k=0}^n y^k / k!
+	// Remainder R_n = sum_{k=n+1}^inf y^k / k! < (y^(n+1) / (n+1)!) / (1 - y/(n+2))
 	sum := big.NewRat(0, 1)
 	curPow := big.NewRat(1, 1)
 	fact := big.NewInt(1)
 
 	for k := 0; k <= n; k++ {
 		if k > 0 {
-			curPow.Mul(curPow, x)
+			curPow.Mul(curPow, y)
 			fact.Mul(fact, big.NewInt(int64(k)))
 		}
 		term := new(big.Rat).Quo(curPow, new(big.Rat).SetInt(fact))
 		sum.Add(sum, term)
 	}
 
-	// Next term: x^(n+1) / (n+1)!
-	nextPow := new(big.Rat).Mul(curPow, x)
+	// Next term: y^(n+1) / (n+1)!
+	nextPow := new(big.Rat).Mul(curPow, y)
 	nextFact := new(big.Int).Mul(fact, big.NewInt(int64(n+1)))
 	nextTerm := new(big.Rat).Quo(nextPow, new(big.Rat).SetInt(nextFact))
 
-	// geomFactor = 1 / (1 - x/(n+2))
-	xOverN2 := new(big.Rat).Quo(x, big.NewRat(int64(n+2), 1))
-	oneMinus := new(big.Rat).Sub(big.NewRat(1, 1), xOverN2)
+	// geomFactor = 1 / (1 - y/(n+2))
+	yOverN2 := new(big.Rat).Quo(y, big.NewRat(int64(n+2), 1))
+	oneMinus := new(big.Rat).Sub(big.NewRat(1, 1), yOverN2)
 	geomFactor := new(big.Rat).Quo(big.NewRat(1, 1), oneMinus)
 
 	rem := new(big.Rat).Mul(nextTerm, geomFactor)
 
-	low := new(big.Rat).Set(sum)
-	high := new(big.Rat).Add(sum, rem)
+	res := NewRationalInterval(sum, new(big.Rat).Add(sum, rem))
+	if m > 0 {
+		roundBits := steps*12 + m*4 + 64
+		if roundBits > 4096 {
+			roundBits = 4096
+		}
+		res = roundOutwardBinary(res, roundBits)
+		for i := 0; i < m; i++ {
+			res = roundOutwardBinary(res.Mul(res), roundBits)
+		}
+	}
+	return res
+}
 
+func ratFloor(r *big.Rat) *big.Int {
+	return new(big.Int).Div(r.Num(), r.Denom())
+}
+
+func ratCeil(r *big.Rat) *big.Int {
+	q, rem := new(big.Int).DivMod(r.Num(), r.Denom(), new(big.Int))
+	if rem.Sign() != 0 {
+		q.Add(q, big.NewInt(1))
+	}
+	return q
+}
+
+func ratNearestInt(r *big.Rat) *big.Int {
+	twoNum := new(big.Int).Lsh(r.Num(), 1)
+	twoNum.Add(twoNum, r.Denom())
+	twoDen := new(big.Int).Lsh(r.Denom(), 1)
+	return new(big.Int).Div(twoNum, twoDen)
+}
+
+func clampTrigInterval(iv RationalInterval) RationalInterval {
+	negOne := big.NewRat(-1, 1)
+	posOne := big.NewRat(1, 1)
+	low := new(big.Rat).Set(iv.Low)
+	if low.Cmp(negOne) < 0 {
+		low.Set(negOne)
+	}
+	high := new(big.Rat).Set(iv.High)
+	if high.Cmp(posOne) > 0 {
+		high.Set(posOne)
+	}
+	if low.Cmp(high) > 0 {
+		return NewRationalInterval(negOne, posOne)
+	}
 	return NewRationalInterval(low, high)
 }
 
-// RationalBoundSinCos computes rigorous rational enclosure for sin(x) or cos(x) with x in Q.
-func RationalBoundSinCos(x *big.Rat, isSin bool, steps int) RationalInterval {
+// sinCosPiSteps chooses Machin series steps scaled modestly for huge argument magnitudes,
+// capped to preserve O(1)/bounded runtime and falling back cleanly to [-1, 1] beyond cap.
+func sinCosPiSteps(steps int, vals ...*big.Rat) int {
+	maxBits := 0
+	for _, v := range vals {
+		if v == nil || v.Sign() == 0 {
+			continue
+		}
+		bits := v.Num().BitLen() - v.Denom().BitLen()
+		if bits > maxBits {
+			maxBits = bits
+		}
+	}
+	piSteps := steps
+	if maxBits > 32 {
+		extra := maxBits / 8
+		if extra > 64 {
+			extra = 64
+		}
+		piSteps += extra
+	}
+	return piSteps
+}
+
+// evalAlternatingSinCos computes rigorous enclosure for sin(x) or cos(x) assuming |x| <= 2*pi + 1.
+func evalAlternatingSinCos(x *big.Rat, isSin bool, steps int) RationalInterval {
 	if steps < 4 {
 		steps = 10
 	}
-
 	if x.Sign() == 0 {
 		if isSin {
 			return NewExactRationalInterval(big.NewRat(0, 1))
 		}
 		return NewExactRationalInterval(big.NewRat(1, 1))
 	}
-
 	if x.Sign() < 0 {
 		negX := new(big.Rat).Neg(x)
+		res := evalAlternatingSinCos(negX, isSin, steps)
 		if isSin {
-			return RationalBoundSinCos(negX, true, steps).Neg()
+			return res.Neg()
 		}
-		return RationalBoundSinCos(negX, false, steps)
+		return res
 	}
 
-	// Ensure steps is large enough so that the terms strictly decrease: (2k+2)(2k+3) > x^2
 	xInt := new(big.Int).Quo(x.Num(), x.Denom()).Int64()
 	if int64(steps) < xInt+2 {
 		steps = int(xInt) + 4
@@ -346,39 +442,138 @@ func RationalBoundSinCos(x *big.Rat, isSin bool, steps int) RationalInterval {
 	maxK := steps * 2
 	if isSin {
 		curPow.Set(x)
-		fact.SetInt64(1)
-	} else {
-		curPow.Set(big.NewRat(1, 1))
-		fact.SetInt64(1)
 	}
 
 	for k := 0; k < maxK; k++ {
 		term := new(big.Rat).Quo(curPow, new(big.Rat).SetInt(fact))
 
 		if k%2 == 0 {
-			// + term
 			sumHigh = new(big.Rat).Add(sumLow, term)
 		} else {
-			// - term
 			sumLow = new(big.Rat).Sub(sumHigh, term)
 		}
 
-		// Advance power and factorial for next step
 		curPow.Mul(curPow, xSquared)
 		if isSin {
-			idx1 := int64(2*k + 2)
-			idx2 := int64(2*k + 3)
-			fact.Mul(fact, big.NewInt(idx1))
-			fact.Mul(fact, big.NewInt(idx2))
+			fact.Mul(fact, big.NewInt(int64(2*k+2)))
+			fact.Mul(fact, big.NewInt(int64(2*k+3)))
 		} else {
-			idx1 := int64(2*k + 1)
-			idx2 := int64(2*k + 2)
-			fact.Mul(fact, big.NewInt(idx1))
-			fact.Mul(fact, big.NewInt(idx2))
+			fact.Mul(fact, big.NewInt(int64(2*k+1)))
+			fact.Mul(fact, big.NewInt(int64(2*k+2)))
 		}
 	}
 
-	return NewRationalInterval(sumLow, sumHigh)
+	return clampTrigInterval(NewRationalInterval(sumLow, sumHigh))
+}
+
+func containsTrigExtremum(argInt RationalInterval, piInv RationalInterval, offset *big.Rat) bool {
+	// x in [a, b] may cross (2*k + offset)*pi iff (argInt / pi - offset) / 2 contains an integer k.
+	ratio := argInt.Mul(piInv)
+	half := NewExactRationalInterval(big.NewRat(1, 2))
+	kRange := ratio.Sub(NewExactRationalInterval(offset)).Mul(half)
+	return ratCeil(kRange.Low).Cmp(ratFloor(kRange.High)) <= 0
+}
+
+func widenTrigExtrema(argInt RationalInterval, minVal, maxVal *big.Rat, isSin bool, piIv RationalInterval) RationalInterval {
+	piInv, err := piIv.Inv()
+	if err != nil {
+		return NewRationalInterval(big.NewRat(-1, 1), big.NewRat(1, 1))
+	}
+	var maxOffset, minOffset *big.Rat
+	if isSin {
+		maxOffset = big.NewRat(1, 2)
+		minOffset = big.NewRat(-1, 2)
+	} else {
+		maxOffset = big.NewRat(0, 1)
+		minOffset = big.NewRat(1, 1)
+	}
+	outLow := new(big.Rat).Set(minVal)
+	outHigh := new(big.Rat).Set(maxVal)
+	if containsTrigExtremum(argInt, piInv, maxOffset) {
+		outHigh = big.NewRat(1, 1)
+	}
+	if containsTrigExtremum(argInt, piInv, minOffset) {
+		outLow = big.NewRat(-1, 1)
+	}
+	return clampTrigInterval(NewRationalInterval(outLow, outHigh))
+}
+
+func evalPointSinCosWithPi(x *big.Rat, isSin bool, steps int, piIv, twoPi RationalInterval) RationalInterval {
+	if x.Sign() == 0 {
+		if isSin {
+			return NewExactRationalInterval(big.NewRat(0, 1))
+		}
+		return NewExactRationalInterval(big.NewRat(1, 1))
+	}
+
+	twoPiMid := new(big.Rat).Add(twoPi.Low, twoPi.High)
+	twoPiMid.Mul(twoPiMid, big.NewRat(1, 2))
+
+	k := ratNearestInt(new(big.Rat).Quo(x, twoPiMid))
+	if k.Sign() == 0 {
+		return evalAlternatingSinCos(x, isSin, steps)
+	}
+
+	kIv := NewExactRationalInterval(new(big.Rat).SetInt(k))
+	rInt := NewExactRationalInterval(x).Sub(kIv.Mul(twoPi))
+	if rInt.Width().Cmp(twoPi.Low) >= 0 {
+		return NewRationalInterval(big.NewRat(-1, 1), big.NewRat(1, 1))
+	}
+
+	b1 := evalAlternatingSinCos(rInt.Low, isSin, steps)
+	b2 := evalAlternatingSinCos(rInt.High, isSin, steps)
+	minVal := b1.Low
+	if b2.Low.Cmp(minVal) < 0 {
+		minVal = b2.Low
+	}
+	maxVal := b1.High
+	if b2.High.Cmp(maxVal) > 0 {
+		maxVal = b2.High
+	}
+	return widenTrigExtrema(rInt, minVal, maxVal, isSin, piIv)
+}
+
+func evalIntervalSinCos(argInt RationalInterval, isSin bool, steps int) RationalInterval {
+	if steps < 4 {
+		steps = 10
+	}
+	piSteps := sinCosPiSteps(steps, argInt.Low, argInt.High)
+	piIv := RationalBoundPi(piSteps)
+	twoPi := piIv.Mul(NewExactRationalInterval(big.NewRat(2, 1)))
+
+	if argInt.Width().Cmp(twoPi.Low) >= 0 {
+		return NewRationalInterval(big.NewRat(-1, 1), big.NewRat(1, 1))
+	}
+
+	b1 := evalPointSinCosWithPi(argInt.Low, isSin, steps, piIv, twoPi)
+	b2 := evalPointSinCosWithPi(argInt.High, isSin, steps, piIv, twoPi)
+	minVal := b1.Low
+	if b2.Low.Cmp(minVal) < 0 {
+		minVal = b2.Low
+	}
+	maxVal := b1.High
+	if b2.High.Cmp(maxVal) > 0 {
+		maxVal = b2.High
+	}
+	return widenTrigExtrema(argInt, minVal, maxVal, isSin, piIv)
+}
+
+// RationalBoundSinCos computes rigorous rational enclosure for sin(x) or cos(x) with x in Q
+// using O(1) mod 2pi range reduction and sound [-1, 1] fallback when reduction width exceeds 2pi.
+func RationalBoundSinCos(x *big.Rat, isSin bool, steps int) RationalInterval {
+	if steps < 4 {
+		steps = 10
+	}
+	if x.Sign() == 0 {
+		if isSin {
+			return NewExactRationalInterval(big.NewRat(0, 1))
+		}
+		return NewExactRationalInterval(big.NewRat(1, 1))
+	}
+	piSteps := sinCosPiSteps(steps, x)
+	piIv := RationalBoundPi(piSteps)
+	twoPi := piIv.Mul(NewExactRationalInterval(big.NewRat(2, 1)))
+	return evalPointSinCosWithPi(x, isSin, steps, piIv, twoPi)
 }
 
 // RationalBoundLn computes rigorous rational enclosure for ln(x) with x in Q, x > 0
@@ -468,8 +663,55 @@ func RationalBoundSqrt(x *big.Rat, steps int) (RationalInterval, error) {
 	return NewRationalInterval(low, high), nil
 }
 
+// bigIntCbrtFloor computes floor(n^(1/3)) for non-negative integer n using monotonically
+// descending integer Newton-Raphson followed by exact cube comparison adjustment.
+func bigIntCbrtFloor(n *big.Int) *big.Int {
+	if n.Sign() <= 0 {
+		return big.NewInt(0)
+	}
+	exp := (n.BitLen() + 2) / 3
+	u := new(big.Int).Lsh(big.NewInt(1), uint(exp))
+	two := big.NewInt(2)
+	three := big.NewInt(3)
+	one := big.NewInt(1)
+	u2 := new(big.Int)
+	next := new(big.Int)
+
+	for {
+		u2.Mul(u, u)
+		next.Quo(n, u2)
+		next.Add(next, new(big.Int).Mul(two, u))
+		next.Quo(next, three)
+		if next.Cmp(u) >= 0 {
+			break
+		}
+		u.Set(next)
+	}
+
+	cube := new(big.Int)
+	for {
+		cube.Mul(u, u)
+		cube.Mul(cube, u)
+		if cube.Cmp(n) <= 0 {
+			break
+		}
+		u.Sub(u, one)
+	}
+	uPlus1 := new(big.Int)
+	for {
+		uPlus1.Add(u, one)
+		cube.Mul(uPlus1, uPlus1)
+		cube.Mul(cube, uPlus1)
+		if cube.Cmp(n) > 0 {
+			break
+		}
+		u.Set(uPlus1)
+	}
+	return u
+}
+
 // RationalBoundCbrt computes certified rational upper and lower bounds for cbrt(x)
-// using Newton-Raphson iteration with paired bracket endpoints.
+// using integer cube root with dyadic scaling, guaranteeing O(k) bit complexity.
 func RationalBoundCbrt(x *big.Rat, steps int) (RationalInterval, error) {
 	if x.Sign() == 0 {
 		return NewExactRationalInterval(big.NewRat(0, 1)), nil
@@ -477,42 +719,23 @@ func RationalBoundCbrt(x *big.Rat, steps int) (RationalInterval, error) {
 	neg := x.Sign() < 0
 	absX := new(big.Rat).Abs(x)
 
-	iterSteps := steps / 2
-	if iterSteps < 6 {
-		iterSteps = 6
+	k := steps * 4
+	if k < 16 {
+		k = 16
 	}
-	if iterSteps > 40 {
-		iterSteps = 40
-	}
-
-	// Initial guess y0
-	y := new(big.Rat).Set(absX)
-	if absX.Cmp(big.NewRat(1, 1)) > 0 {
-		y.SetFrac(big.NewInt(2), big.NewInt(1))
-	} else {
-		y.SetFrac(big.NewInt(1), big.NewInt(1))
+	if k > 16384 {
+		k = 16384
 	}
 
-	oneThird := big.NewRat(1, 3)
-	twoThird := big.NewRat(2, 3)
+	scaledNum := new(big.Int).Lsh(absX.Num(), uint(3*k))
+	div := new(big.Int).Quo(scaledNum, absX.Denom())
 
-	for i := 0; i < iterSteps; i++ {
-		y2 := new(big.Rat).Mul(y, y)
-		term2 := new(big.Rat).Quo(absX, y2)
-		part1 := new(big.Rat).Mul(twoThird, y)
-		part2 := new(big.Rat).Mul(oneThird, term2)
-		y = new(big.Rat).Add(part1, part2)
-	}
+	m := bigIntCbrtFloor(div)
+	mPlusOne := new(big.Int).Add(m, big.NewInt(1))
+	denom := new(big.Int).Lsh(big.NewInt(1), uint(k))
 
-	// Paired bracket endpoint: z = absX / y^2
-	y2 := new(big.Rat).Mul(y, y)
-	z := new(big.Rat).Quo(absX, y2)
-
-	low := y
-	high := z
-	if low.Cmp(high) > 0 {
-		low, high = high, low
-	}
+	low := new(big.Rat).SetFrac(m, denom)
+	high := new(big.Rat).SetFrac(mPlusOne, denom)
 
 	if neg {
 		return NewRationalInterval(new(big.Rat).Neg(high), new(big.Rat).Neg(low)), nil
@@ -587,10 +810,10 @@ func EvalNodeInterval(n Node, steps int) (RationalInterval, error) {
 			if sub.Low.Cmp(sub.High) != 0 || !sub.Low.IsInt() || sub.Low.Sign() < 0 {
 				return RationalInterval{}, fmt.Errorf("%s", i18n.T("approx.err_factorial_requires_non_negative_integer"))
 			}
-			nVal := sub.Low.Num().Int64()
-			if nVal > 10000 {
-				return RationalInterval{}, fmt.Errorf("factorial argument too large: %d", nVal)
+			if !sub.Low.Num().IsInt64() || sub.Low.Num().Int64() > 10000 {
+				return RationalInterval{}, fmt.Errorf("%s", i18n.T("interval.err_factorial_too_large", sub.Low.Num()))
 			}
+			nVal := sub.Low.Num().Int64()
 			fact := big.NewInt(1)
 			for i := int64(2); i <= nVal; i++ {
 				fact.Mul(fact, big.NewInt(i))
@@ -749,18 +972,7 @@ func EvalNodeInterval(n Node, steps int) (RationalInterval, error) {
 			if err != nil {
 				return RationalInterval{}, err
 			}
-			// For narrow intervals within monotone region or evaluation at endpoints:
-			b1 := RationalBoundSinCos(argInt.Low, true, steps)
-			b2 := RationalBoundSinCos(argInt.High, true, steps)
-			minVal := b1.Low
-			if b2.Low.Cmp(minVal) < 0 {
-				minVal = b2.Low
-			}
-			maxVal := b1.High
-			if b2.High.Cmp(maxVal) > 0 {
-				maxVal = b2.High
-			}
-			return NewRationalInterval(minVal, maxVal), nil
+			return evalIntervalSinCos(argInt, true, steps), nil
 
 		case "cos":
 			if len(node.Args) != 1 {
@@ -773,17 +985,7 @@ func EvalNodeInterval(n Node, steps int) (RationalInterval, error) {
 			if err != nil {
 				return RationalInterval{}, err
 			}
-			b1 := RationalBoundSinCos(argInt.Low, false, steps)
-			b2 := RationalBoundSinCos(argInt.High, false, steps)
-			minVal := b1.Low
-			if b2.Low.Cmp(minVal) < 0 {
-				minVal = b2.Low
-			}
-			maxVal := b1.High
-			if b2.High.Cmp(maxVal) > 0 {
-				maxVal = b2.High
-			}
-			return NewRationalInterval(minVal, maxVal), nil
+			return evalIntervalSinCos(argInt, false, steps), nil
 
 		case "cbrt":
 			if len(node.Args) != 1 {

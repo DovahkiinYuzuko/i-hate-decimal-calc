@@ -42,6 +42,9 @@ func EvalPadicVal(args []Node) (Node, error) {
 		if p.Cmp(big.NewInt(2)) < 0 {
 			return nil, fmt.Errorf("%s", i18n.T("padic.err_prime_less_than_2"))
 		}
+		if !IsDeterministicPrime(p) {
+			return nil, fmt.Errorf("%s", i18n.T("padic.err_prime_must_be_prime", p.String()))
+		}
 		return &VarNode{Name: "infinity"}, nil
 	}
 

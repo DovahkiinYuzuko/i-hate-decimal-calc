@@ -5,3 +5,9 @@ CAT47-003,cat_47_rational_interval_arithmetic_transcendental_inequalities,"""sin
 CAT47-004,cat_47_rational_interval_arithmetic_transcendental_inequalities,"""exp(2) > 7""",,exact,true,,0,deductive,Interval: Exponential inequality exp(2) > 7
 CAT47-005,cat_47_rational_interval_arithmetic_transcendental_inequalities,"""exp(pi) > pi^e""",,exact,true,,0,deductive,Interval: Gelfond constant inequality exp(pi) > pi^e
 CAT47-006,cat_47_rational_interval_arithmetic_transcendental_inequalities,"""solve(pi < 22/7)""",,exact,true,,0,deductive,Interval: CAD solve on transcendental inequality
+CAT47-007,cat_47_rational_interval_arithmetic_transcendental_inequalities,"""sin(10^20) <= 1""",,exact,true,,0,deductive,Interval: sin(10^20) <= 1 via O(1) mod 2pi range reduction
+CAT47-008,cat_47_rational_interval_arithmetic_transcendental_inequalities,"""cos(10^20) >= -1""",,exact,true,,0,deductive,Interval: cos(10^20) >= -1 via O(1) mod 2pi range reduction
+CAT47-009,cat_47_rational_interval_arithmetic_transcendental_inequalities,"""exp(1000) > 1""",,exact,true,,0,deductive,Interval: exp(1000) > 1 via binary scaling
+CAT47-010,cat_47_rational_interval_arithmetic_transcendental_inequalities,"""sin(interval([0, 4])) < 2""",,exact,true,,0,deductive,Interval: sin([0, 4]) < 2 sound upper bound
+CAT47-011,cat_47_rational_interval_arithmetic_transcendental_inequalities,"""sin(interval([0, 4])) < 1/2""",,exact,"sin([0, 4] (width: 4)) < 1/2",,0,contradiction,Interval Falsification: sin([0, 4]) reaches 1 so < 1/2 must not evaluate to true
+CAT47-012,cat_47_rational_interval_arithmetic_transcendental_inequalities,"""cos(interval([1, 4])) > -1/2""",,exact,"cos([1, 4] (width: 3)) > -1/2",,0,contradiction,Interval Falsification: cos([1, 4]) reaches -1 so > -1/2 must not evaluate to true

@@ -400,4 +400,18 @@ func TestIssue163SubIssueRegressions(t *testing.T) {
 			t.Errorf("nil *PuiseuxNode Equal should return false")
 		}
 	})
+
+	// 4. Composite base p in padic_val/padic_norm/padic_expand must be rejected
+	t.Run("PadicCompositePrimeRejected", func(t *testing.T) {
+		for _, expr := range []string{
+			"padic_val(0, 4)",
+			"padic_val(12, 6)",
+			"padic_norm(5, 9)",
+			"padic_expand(1/3, 4, 4)",
+		} {
+			if _, err := EvalString(expr); err == nil {
+				t.Errorf("%s: expected composite prime error, got nil", expr)
+			}
+		}
+	})
 }

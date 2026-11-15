@@ -359,6 +359,7 @@
     "bayes_zero_evidence": "周辺確率 (事象の確率) をゼロにすることはできません",
     "bernoulli_non_negative": "bernoulli エラー: 引数は非負整数である必要があります (%s)",
     "cfrac_unsupported": "連分数展開は有理数または平方根のみ対応しています",
+    "circular_var_ref": "循環変数参照が検出されました: %s",
     "clifford_contraction_mode": "無効な縮約モードです: %s ('left', 'right', 'inner' のいずれかを指定してください)",
     "clifford_dim_limit": "計量の次元 %d は最大値 64 を超えています",
     "clifford_metric_int": "計量シグネチャ (p, q, r) の各成分は非負整数である必要があります",
@@ -666,6 +667,7 @@
   "interval": {
     "err_cos_expects_1_argument": "cos には1つの引数が必要です",
     "err_exp_expects_1_argument": "exp には1つの引数が必要です",
+    "err_factorial_too_large": "階乗の引数が大きすぎます: %d",
     "err_invalid_bounds": "区間エラー: 下限値 %s は上限値 %s 以下である必要があります",
     "err_invalid_epsilon": "区間解析の目標誤差限界が無効です: %v (正の有理数である必要があります)",
     "err_invalid_fsm_transition": "区間適応細分化FSMの不正な状態遷移です: %s -> %s",
