@@ -12,6 +12,7 @@ REPO="DovahkiinYuzuko/i-hate-decimal-calc"
 IHD_HOME="$HOME/.ihd"
 INSTALL_DIR="$IHD_HOME/bin"
 EXAM_DIR="$IHD_HOME/exam"
+SAMPLE_DIR="$IHD_HOME/sample"
 REFERENCES_DIR="$IHD_HOME/references"
 VERIFIER_SRC_DIR="$IHD_HOME/tools/micro-verifier"
 SYMPY_ORACLE_DIR="$IHD_HOME/tools/sympy-oracle"
@@ -34,11 +35,15 @@ if [ "$LOCAL_MODE" = true ]; then
         cp -r "$SCRIPT_DIR/exam" "$IHD_HOME/"
         chmod +x "$EXAM_DIR/exam.sh" 2>/dev/null || true
     fi
+    if [ -d "$SCRIPT_DIR/sample" ]; then
+        mkdir -p "$SAMPLE_DIR"
+        cp -r "$SCRIPT_DIR/sample/." "$SAMPLE_DIR/"
+    fi
     if [ -d "$SCRIPT_DIR/docs/references" ]; then
         mkdir -p "$REFERENCES_DIR"
         cp -r "$SCRIPT_DIR/docs/references/"* "$REFERENCES_DIR/"
     fi
-    for doc in LICENSE.MIT NOTICE.md README.md; do
+    for doc in LICENSE.MIT NOTICE.md README.md README.en.md; do
         if [ -f "$SCRIPT_DIR/$doc" ]; then
             cp "$SCRIPT_DIR/$doc" "$IHD_HOME/"
         fi
@@ -162,12 +167,17 @@ else
         chmod +x "$EXAM_DIR/exam.sh" 2>/dev/null || true
     fi
 
+    if [ -d "$TMP_DIR/sample" ]; then
+        mkdir -p "$SAMPLE_DIR"
+        cp -r "$TMP_DIR/sample/." "$SAMPLE_DIR/"
+    fi
+
     if [ -d "$TMP_DIR/docs/references" ]; then
         mkdir -p "$REFERENCES_DIR"
         cp -r "$TMP_DIR/docs/references/"* "$REFERENCES_DIR/"
     fi
 
-    for doc in LICENSE.MIT NOTICE.md README.md; do
+    for doc in LICENSE.MIT NOTICE.md README.md README.en.md; do
         if [ -f "$TMP_DIR/$doc" ]; then
             cp "$TMP_DIR/$doc" "$IHD_HOME/"
         fi

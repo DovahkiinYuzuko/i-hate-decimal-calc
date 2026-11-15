@@ -10,6 +10,7 @@ $Repo = "DovahkiinYuzuko/i-hate-decimal-calc"
 $IhdHome = "$env:USERPROFILE\.ihd"
 $InstallDir = "$IhdHome\bin"
 $ExamDir = "$IhdHome\exam"
+$SampleDir = "$IhdHome\sample"
 $ReferencesDir = "$IhdHome\references"
 $VerifierSrcDir = "$IhdHome\tools\micro-verifier"
 $SympyOracleDir = "$IhdHome\tools\sympy-oracle"
@@ -46,6 +47,13 @@ if ($Local) {
     if (Test-Path (Join-Path $LocalRoot "exam")) {
         Copy-Item -Path (Join-Path $LocalRoot "exam") -Destination $IhdHome -Recurse -Force
     }
+    $LocalSampleSource = Join-Path $LocalRoot "sample"
+    if (Test-Path $LocalSampleSource) {
+        if (-not (Test-Path $SampleDir)) {
+            New-Item -ItemType Directory -Path $SampleDir -Force | Out-Null
+        }
+        Copy-Item -Path (Join-Path $LocalSampleSource "*") -Destination $SampleDir -Recurse -Force
+    }
     $LocalRefSource = Join-Path $LocalRoot "docs\references"
     if (Test-Path $LocalRefSource) {
         if (-not (Test-Path $ReferencesDir)) {
@@ -57,7 +65,7 @@ if ($Local) {
         }
         Copy-Item -Path (Join-Path $LocalRefSource "*") -Destination $ReferencesDir -Recurse -Force
     }
-    foreach ($doc in @("LICENSE.MIT", "NOTICE.md", "README.md")) {
+    foreach ($doc in @("LICENSE.MIT", "NOTICE.md", "README.md", "README.en.md")) {
         $docPath = Join-Path $LocalRoot $doc
         if (Test-Path $docPath) {
             Copy-Item -Path $docPath -Destination $IhdHome -Force
@@ -156,6 +164,14 @@ if ($Local) {
             Copy-Item -Path $ExamSource -Destination $IhdHome -Recurse -Force
         }
 
+        $SampleSource = Join-Path $TmpExtract "sample"
+        if (Test-Path $SampleSource) {
+            if (-not (Test-Path $SampleDir)) {
+                New-Item -ItemType Directory -Path $SampleDir -Force | Out-Null
+            }
+            Copy-Item -Path (Join-Path $SampleSource "*") -Destination $SampleDir -Recurse -Force
+        }
+
         $RefSource = Join-Path $TmpExtract "docs\references"
         if (Test-Path $RefSource) {
             if (-not (Test-Path $ReferencesDir)) {
@@ -168,7 +184,7 @@ if ($Local) {
             Copy-Item -Path (Join-Path $RefSource "*") -Destination $ReferencesDir -Recurse -Force
         }
 
-        foreach ($doc in @("LICENSE.MIT", "NOTICE.md", "README.md")) {
+        foreach ($doc in @("LICENSE.MIT", "NOTICE.md", "README.md", "README.en.md")) {
             $docSource = Join-Path $TmpExtract $doc
             if (Test-Path $docSource) {
                 Copy-Item -Path $docSource -Destination $IhdHome -Force

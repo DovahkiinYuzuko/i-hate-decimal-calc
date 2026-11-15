@@ -4,7 +4,7 @@
   <img src="./assets/logo/ihd-logo.svg" alt="ihd (i-hate-decimal-calc) Logo" width="798" />
 </p>
 
-A command-line Computer Algebra System (CAS) calculator that rejects all decimal approximations, immediately converting every decimal input into exact arbitrary-precision rationals (`big.Rat`) and computing symbolically over radicals, constants, p-adic expansions, Puiseux series, and rational intervals.
+A command-line Computer Algebra System (CAS) calculator that excludes decimal approximations throughout input and evaluation, computing strictly with arbitrary-precision rationals (`big.Rat`) and symbolic AST nodes to return exact results, derivation steps, and externally verifiable outputs (Lean 4 / Typst / certificate JSON).
 
 ![Go](https://img.shields.io/badge/Go-1.26.5-00ADD8?style=flat-square&logo=go&logoColor=white)
 [![Lean 4 Verification](https://github.com/DovahkiinYuzuko/i-hate-decimal-calc/actions/workflows/lean-verify.yml/badge.svg)](https://github.com/DovahkiinYuzuko/i-hate-decimal-calc/actions/workflows/lean-verify.yml)
@@ -15,37 +15,38 @@ A command-line Computer Algebra System (CAS) calculator that rejects all decimal
 
 ## Table of Contents
 
-- [Why ihd? (Elimination of Decimals & Exact Algebraic Computation)](#why-ihd-elimination-of-decimals--exact-algebraic-computation)
+- [Why ihd? (Eliminating Decimals & When to Use It)](#why-ihd-eliminating-decimals--when-to-use-it)
 - [Installation](#installation)
-- [Quick Start & Execution Modes](#quick-start--execution-modes)
-- [Feature Highlights](#feature-highlights)
-- [Syntax & Functions Reference](#syntax--functions-reference)
-- [Command-Line Options & Subcommands](#command-line-options--subcommands)
+- [Quick Start](#quick-start)
+- [Feature Highlights & Verification Ecosystem](#feature-highlights--verification-ecosystem)
+- [Package & Repository Layout](#package--repository-layout)
+- [Core Commands & Reference](#core-commands--reference)
+- [Design Scope, Limitations & External Verification](#design-scope-limitations--external-verification)
 - [Development & Testing](#development--testing)
 - [Practical Problem Cookbook (Exam & Cookbook)](#practical-problem-cookbook-exam--cookbook)
 - [LICENSE](#license)
 
-### Why ihd? (Elimination of Decimals & Exact Algebraic Computation)
+## Why ihd? (Eliminating Decimals & When to Use It)
 
-Standard programming languages and calculators rely on `float64` floating-point numbers, introducing rounding errors and truncating irrational or transcendental values into finite decimals.
+Standard programming languages and calculators rely on `float64` floating-point arithmetic, introducing rounding errors and truncating irrational or transcendental values into finite decimals.
 
-`ihd` (i-hate-decimal-calc) is a command-line Computer Algebra System (CAS) calculator built on the strict philosophy of **"Never tolerate decimals."** All decimal inputs are converted into exact arbitrary-precision rational fractions (`big.Rat`) during lexical analysis. Radicals, trigonometric functions, logarithms, transcendental constants, imaginary units, p-adic expansions, Puiseux series, and closed rational intervals are preserved as first-class symbolic AST nodes and simplified using algebraic rewrite rules.
+`ihd` (i-hate-decimal-calc) is a command-line CAS calculator built around the design principle of rejecting decimal approximations. Decimal and repeating-decimal inputs are converted into exact arbitrary-precision rational fractions (`big.Rat`) during lexing, while radicals, trigonometric functions, logarithms, transcendental constants, imaginary units, $p$-adic expansions, Puiseux series, and closed rational intervals remain first-class symbolic AST nodes.
 
-| Input Expression      | Typical Calculators / Languages (`float64`) | `ihd` (Exact Calculation) | Simplification Behavior                                             |
-| :-------------------- | :------------------------------------------ | :------------------------ | :------------------------------------------------------------------ |
-| `0.1 + 0.2`           | `0.30000000000000004`                       | `3/10`                    | Zero-error exact rational fraction                                  |
-| `0.(3)`               | `0.3333333333333333`                        | `1/3`                     | FSM lexical analysis converts repeating decimals to exact fractions |
-| `sqrt(8)`             | `2.8284271247461903`                        | `2*√2`                    | Automatic extraction of perfect squares                             |
-| `sqrt(5 + 2*sqrt(6))` | `3.1462643699419726`                        | `√2 + √3`                 | Automatic radical denesting via Borodin (1985) algorithm            |
-| `1 / (sqrt(2) + 1)`   | `0.4142135623730951`                        | `-1 + √2`                 | Binomial conjugate radical rationalization                          |
-| `sin(pi/6)`           | `0.49999999999999994`                       | `1/2`                     | Exact algebraic evaluation of special angles                        |
-| `１＋２×３`           | Error (Unsupported)                         | `7`                       | Automatic normalization of Zenkaku characters to ASCII              |
+| Input Expression | Typical Calculators / Languages (`float64`) | `ihd` (Exact Calculation) | Simplification Behavior |
+| :--- | :--- | :--- | :--- |
+| `0.1 + 0.2` | `0.30000000000000004` | `3/10` | Zero-error exact rational fraction |
+| `0.(3)` | `0.3333333333333333` | `1/3` | FSM lexical analysis converts repeating decimals to exact fractions |
+| `sqrt(8)` | `2.8284271247461903` | `2*√2` | Automatic extraction of square factors |
+| `sqrt(5 + 2*sqrt(6))` | `3.1462643699419726` | `√2 + √3` | Radical denesting via Borodin (1985) algorithm |
+| `1 / (sqrt(2) + 1)` | `0.4142135623730951` | `-1 + √2` | Binomial conjugate radical rationalization |
+| `sin(pi/6)` | `0.49999999999999994` | `1/2` | Exact algebraic evaluation of special angles |
+| `１＋２×３` | Error (Unsupported) | `7` | Transparent normalization of full-width IME characters to ASCII |
 
-> [!WARNING]
-> **Mathematical Exactness & External Verification (Important Notice)**:  
-> While `ihd` strictly rejects decimal approximations and maintains exact symbolic representations, it does **not** guarantee 100% mathematical flawlessness across all mathematical domains. Due to the inherent algorithmic complexities of Computer Algebra Systems (CAS) and active ongoing development, `ihd` may occasionally produce incorrect, incomplete, or partially reduced results—particularly in advanced integration, limits, or equation solving. Additionally, integer factorization of large composites uses deterministic work-budget bounds; when the budget is exceeded, `factor` returns a partial factorization preserving the discovered prime factors alongside any unfactored composite remainder.  
-> Currently, this repository continuously runs automated pipelines in GitHub Actions CI for **Unit Tests (`unit-test.yml`)**, **Lean 4 Kernel Formal Verification (`lean-verify.yml`)**, **Typst Math Compilation (`typst-verify.yml`)**, and **Mathematical Invariants Fuzzing (`fuzz-smoke.yml`)**. Expressions and theorems included within the CI test suite are mechanically verified and guaranteed. However, calculations outside of these explicit suites may be subject to bugs or omissions.  
-> To address this, `ihd` prioritizes **external verifiability** over blind trust. We actively develop verifiable pipelines including **automated reverse-verification (`--verify`)**, **proof certificates (`--certificate`)**, a **standalone micro-verifier (`tools/micro-verifier`)**, and formal theorem transpilation to **Lean 4 (`--lean`)**. For critical research or mission-critical calculations, please verify results independently with external tools.
+### Where `ihd` Fits vs. Alternative Tools
+
+- **Zero-dependency exact verification**: Deployable as a single static binary in CI pipelines, containers, or offline hosts where installing Python and SymPy is impractical or undesired, supporting symbolic reduction and algebraic equivalence diffing (`ihd diff`).
+- **Full-width IME input & formal/typesetting projection**: Accepts full-width Japanese IME digits and operators directly in CLI/REPL, and projects derivation graphs directly to **Typst (`--typst`)**, **LaTeX (`--latex`)**, and **Lean 4 (`--lean`)**.
+- **When other tools fit better**: General-purpose scripting workflows or large-scale floating-point numerical array simulations are better served by Python (SymPy / NumPy). `ihd` focuses specifically on standalone symbolic-rational calculation and externally checkable derivation artifacts.
 
 <details>
 <summary><b>Logo Trivia</b></summary>
@@ -58,11 +59,9 @@ Standard programming languages and calculators rely on `float64` floating-point 
   ```
 </details>
 
----
+## Installation
 
-### Installation
-
-#### One-line Installer (Recommended)
+### One-line Installer
 
 **Linux / macOS (bash / zsh):**
 ```bash
@@ -75,30 +74,27 @@ irm https://raw.githubusercontent.com/DovahkiinYuzuko/i-hate-decimal-calc/main/i
 ```
 
 > [!NOTE]
-> **Android (Termux) & Login Shell Environments**:  
-> In environments like Termux on Android, `~/.bash_profile` is evaluated primarily upon session startup instead of `~/.bashrc`. To persist the `PATH` environment variable across sessions, append `export PATH="$HOME/.ihd/bin:$PATH"` to your `~/.bash_profile`, or ensure `~/.bashrc` is sourced within `~/.bash_profile` (`[ -f ~/.bashrc ] && . ~/.bashrc`).
+> **Android (Termux) & Login Shell `PATH` Configuration**:  
+> In environments such as Termux on Android, `~/.bash_profile` is evaluated at login instead of `~/.bashrc`. To persist `PATH`, append `export PATH="$HOME/.ihd/bin:$PATH"` to `~/.bash_profile` or source `~/.bashrc` inside it (`[ -f ~/.bashrc ] && . ~/.bashrc`).
 
-#### Building from Source
+### Building from Source
 
-Requires Go 1.26.5. Build directly from the root of the repository:
+With Go 1.26.5 installed, build a standalone binary from the repository root:
 
 ```bash
 go build -o ihd ./cmd/ihd
 ```
 
----
+## Quick Start
 
-### Quick Start & Execution Modes
-
-#### 1. One-shot Calculation
-Provide expressions directly as command-line arguments for instant exact evaluation:
+Pass an expression as a CLI argument for immediate exact rational or symbolic evaluation:
 
 ```bash
-# Exact rational arithmetic
-ihd "1/2 + 1/3"
-# Output: 5/6
+# Exact rational arithmetic (zero rounding error)
+ihd "0.1 + 0.2"
+# Output: 3/10
 
-# Exact algebraic equivalence & nested radicals
+# Radical denesting and algebraic equivalence
 ihd "sqrt(2) + sqrt(3) == sqrt(5 + 2*sqrt(6))"
 # Output: true
 
@@ -107,8 +103,13 @@ ihd "solve(x^2 - 4 < 0)"
 # Output: [[-2, 2]]
 ```
 
-#### 2. Interactive REPL
-Running without arguments launches the interactive REPL with command history, navigation, and full IME support:
+Four execution modes are available depending on the workflow:
+
+<details>
+<summary><strong>Interactive REPL, Piped Input, Script Files, and Full-width Normalization Examples</strong></summary>
+
+#### 1. Interactive REPL
+Running `ihd` without arguments starts the interactive REPL with history navigation, real-time argument hints, and syntax highlighting:
 
 ```text
 $ ihd
@@ -124,199 +125,157 @@ ihd> exit
 Goodbye.
 ```
 
-#### 3. Piped Input (Batch Integration)
-Process expressions sequentially from standard input. Variable states persist across lines within the same piped session:
+#### 2. Piped Input (Batch Integration)
+Expressions read sequentially from standard input share variable bindings within the same session:
 
 ```bash
-echo "sin(pi/6)^2 + cos(pi/6)^2" | ihd
-# Output: 1
-
 printf "x = 1/2 + sqrt(2)\nx * 2\n" | ihd
 # Output:
 # 1/2 + √2
 # 1 + 2*√2
 ```
 
-#### 4. Script Execution (`ihd run <file.ihd>`)
-Execute `.ihd` text files containing multi-line variable definitions and calculations. Lines ending with a semicolon `;` suppress output display while still persisting variables:
+#### 3. Script Execution (`ihd run <file.ihd>`)
+Runs multi-line `.ihd` files. Lines terminated with `;` evaluate and persist state while suppressing stdout output:
 
 ```bash
 ihd run sample.ihd
-# Or direct invocation
+# Direct file invocation is also accepted
 ihd sample.ihd
 ```
 
-#### 5. Full-width (Zenkaku) Normalization
-Automatically normalizes full-width digits, letters, operators (`＋`, `−`, `×`, `÷`, `＾`, `！`, `＝`), parentheses, and spaces to half-width ASCII across all execution modes:
+#### 4. Full-width (Zenkaku) Normalization
+Full-width digits, letters, operators (`＋`, `−`, `×`, `÷`, `＾`, `！`, `＝`), parentheses, and spaces are converted to half-width ASCII prior to lexing:
 
 ```bash
 ihd "１＋２×３"
 # Output: 7
 ```
 
----
+</details>
 
-### Feature Highlights
+## Feature Highlights & Verification Ecosystem
 
-`ihd` is designed to combine algebraic exactness with external verifiability and practical terminal usability:
+### Closed-Domain First-Class AST Nodes & Exact Arithmetic
+- **First-Class Closed Domains (`PadicNode` / `PuiseuxNode` / `IntervalNode`)**: Truncated $p$-adic series (`padic_expand`), Puiseux series (`puiseux`), and closed rational intervals (`interval`) are represented as first-class AST nodes supporting closed arithmetic, integer powers, differentiation (Puiseux), and interval comparisons. Mixed-prime or symbolic-coefficient combinations remain symbolic or raise domain errors instead of approximating.
+- **Budgeted Deterministic Integer Factorization (`factor`)**: Applies trial division, perfect-power detection, Pollard-Brent rho, and deterministic Lenstra Elliptic Curve Method (ECM Stage 1 / Stage 2) sequentially.
+- **Rational Vector-Space Physical Units**: Performs exact dimensional analysis and conversions (`convert_unit`) over the 7-dimensional rational vector space $\mathbb{Q}^7$ of SI base units.
 
-#### Exact Closed-Domain First-Class AST Nodes
-- **Closed-Domain Arithmetic (`PadicNode` / `PuiseuxNode` / `IntervalNode`)**: Truncated p-adic series from `padic_expand`, Puiseux series from `puiseux`, and rational enclosures from `interval([low, high])` or `interval(expr)` are represented as first-class AST nodes rather than flat strings. Each domain supports closed arithmetic (`+`, `-`, `*`, `/`, integer powers), differentiation for Puiseux series, and exact relational comparisons for disjoint intervals. Mixed-prime or mixed-variable expressions safely preserve symbolic form or raise domain errors instead of silently approximating.
-- **Deterministic Integer Factorization Pipeline (`factor`)**: Combines small trial division, perfect-power detection, Pollard-Brent rho, and deterministic Lenstra Elliptic Curve Method (ECM Stage 1 / Stage 2). When work budgets are exhausted on large composites, `factor` returns a partial factorization with the discovered prime factors and remaining unfactored factor so evaluation stays responsive and bounded.
-- **Exact Rational Physical Units & Dimensional Analysis**: Implements exact dimensional calculus over the 7-dimensional vector space $\mathbb{Q}^7$ of SI base units, supporting unit multiplication, prefix scaling, and exact conversions (`convert_unit`).
+### Visualization, Formal Projection & Safety
+- **Derivation Trees & Single-DAG Formal Projection (`--explain` / `--typst` / `--lean`)**: Displays algebraic transformation trees and projects from the same provenance DAG into Typst reports (`--explain --typst`) or Lean 4 transitive equational proofs (`--explain --lean`).
+- **2D Typesetting & Braille Plotter (`--pretty` / `plot`)**: Renders fractions, roots, and matrices as multi-line terminal box models, and plots curves with Unicode 2×4 Braille characters.
+- **REPL Assistance & Collection Control**: Zero-dependency FSM provides live signature guides and rainbow delimiters, alongside Python-style slicing (`[start:end:step]`), `range`, `lambda`, `map`, `filter`, and loop guards (`--warn-loop` / `--max-loop`).
 
-#### Visualization, Interactivity & Safety
-- **Derivation Step Trees & Formal Proofs (`--explain`)**: Visualizes exact transformation steps across rationalization, radical denesting, factoring, and limits (L'Hopital). From a single provenance DAG, it directly projects into **Typst documents (`--typst`)** or **Lean 4 transitive equational proofs (`--lean`)**.
-- **Terminal 2D Pretty Printing (`--pretty`)**: Renders fractions, square roots, and matrices in multi-line ASCII/Unicode box-model typography.
-- **Braille 2×4 Subpixel Terminal Plotter (`plot`)**: Uses Unicode Braille characters to plot function curves, extrema, and roots directly in terminal windows.
-- **REPL Real-time Signature Guide & Syntax Highlighting**: Zero-dependency FSM provides real-time argument index indicators, localized signature tooltips, rainbow nested parentheses, and session variable highlighting.
-- **Collection Manipulation & Lambdas**: Supports Python-style slicing (`[start:end:step]`), rational range sequences (`range`), first-class lambdas, and higher-order functions (`map`, `filter`).
-- **Iteration Runaway Guard (`--warn-loop` / `--max-loop`)**: Protects against runaway CAS loops (`table`, `for`, `product`) with non-destructive `os.Stderr` warnings and hard cutoffs without corrupting standard output pipelines.
+Concrete CLI outputs, terminal plots, derivation trees, and Typst/Lean 4 artifacts are shown in **[Visual Samples (English)](./sample/sample.en.md)** / **[出力サンプル集（日本語）](./sample/sample.ja.md)**.
 
-> [!TIP]
-> For detailed visual examples, ASCII plots, derivation trees, and Typst/Lean4 outputs, see the **[Visual Samples & Showcases](./sample/sample.en.md)**.
+## Package & Repository Layout
 
----
+Installed release bundles (`~/.ihd/`) and cloned source repositories contain different subsets of files:
 
-### Syntax & Functions Reference
+| File / Directory | Release Archive Path | Installer Path (`~/.ihd/`) | Repository Only | Purpose |
+| :--- | :--- | :--- | :--- | :--- |
+| `ihd` / `micro-verifier` binaries | `./` (archive root) | `~/.ihd/bin/` | - | Main CAS binary and standalone certificate verifier |
+| Reference manuals (MD / HTML / JSON) | `docs/references/` | `~/.ihd/references/` | - | Offline documentation and machine-audit specs |
+| Live showcase & cookbook (`exam/`) | `exam/` | `~/.ihd/exam/` | - | 24-problem math benchmark suite and cookbook |
+| Output samples (`sample/`) | `sample/` | `~/.ihd/sample/` | - | Concrete CLI, typesetting, and proof outputs |
+| Verification helpers (`tools/`) | `tools/micro-verifier/`, `tools/sympy-oracle/` | Under `~/.ihd/tools/` | - | Standalone verifier source and SymPy differential oracle |
+| `README.md`, `README.en.md`, `LICENSE.MIT`, `NOTICE.md` | `./` (archive root) | `~/.ihd/` root | - | Overview documentation and license notices |
+| `docs/development.*.md`, `test-scripts/`, `internal/` | Not included | Not included | Included | Unit tests, fuzzing, E2E suite, and HTML builder |
 
-`ihd` provides exact symbolic functions spanning elementary algebra and calculus through number theory, real algebraic geometry, local series analysis, and formal proof verification:
+## Core Commands & Reference
 
-| Mathematical Domain | Representative Functions |
-| :--- | :--- |
-| **Basic Algebra, Number Theory & Equations** | `expand`, `factor` (perfect-power check, Pollard-Brent rho, ECM), `apart`, `together`, `gcd`, `lcm`, `mod`, `is_prime`, `solve`, `cfrac`, `groebner`, `sturm`, `interval` |
-| **Trigonometric, Logarithmic & Complex** | `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `trig_expand`, `trig_reduce`, `exp`, `log`, `ln`, `polar` |
-| **Calculus, ODEs, Special Functions & Local Series** | `diff`, `integrate`, `limit`, `taylor`, `puiseux`, `dsolve`, `laplace`, `lambert_w`, `erf`, `gamma`, `sum` |
-| **Linear Algebra, LP & Integer Normal Forms** | `det`, `inv`, `rank`, `rref`, `eigenvals`, `linsolve`, `lp_maximize`, `hnf`, `snf`, `lll` |
-| **Computational Geometry & Automated Proving** | `line_intersect`, `circle_intersect`, `triangle_area`, `geo_prove` (Wu's method) |
-| **Algebraic Structures, p-adic, Arithmetic Geometry & Quantum** | `padic_val`, `padic_norm`, `padic_expand`, `galois_group`, `is_solvable_by_radicals`, `ec_p_order`, `ec_rank_bound`, `clifford`, `quantum_equiv` |
-| **Units, Assumptions & CAS Iteration** | `convert_unit`, `assume`, `unassume`, `table`, `range`, `map`, `filter` |
-
-> [!TIP]
-> For complete specifications, parameter definitions, mathematical explanations, and examples:  
-> - **Markdown Edition**: [Japanese Reference](docs/references/ja/reference.ja.md) / [English Reference](docs/references/en/reference.en.md)  
-> - **Offline Single-File HTML Edition**: [Japanese Reference (HTML)](docs/references/ja/reference.ja.html) / [English Reference (HTML)](docs/references/en/reference.en.html)
-
----
-
-### Command-Line Options & Subcommands
-
-#### Subcommands
+### Subcommands
 
 | Command | Description & Examples |
 | :--- | :--- |
-| `ihd diff <f1\|e1> <f2\|e2>` | Compares two expressions or scripts to determine algebraic equivalence (`EQUIVALENT`) or changes (`CHANGED`).<br>`ihd diff "x^2 - 1" "(x - 1)*(x + 1)"` |
-| `ihd run <file.ihd>` | Executes multi-line variable definitions and expressions from a script file.<br>`ihd run script.ihd` |
-| `ihd completion <shell>` | Generates tab completion scripts for major shells (`bash`, `zsh`, `fish`, `powershell`).<br>`ihd completion powershell \| Out-String \| Invoke-Expression` |
-| `ihd update` | Self-updates the binary to the latest GitHub release (`self-update` also accepted). |
+| `ihd diff <f1\|e1> <f2\|e2>` | Compares syntactic differences and algebraic equivalence (`EQUIVALENT` / `CHANGED`).<br>`ihd diff "x^2 - 1" "(x - 1)*(x + 1)"` |
+| `ihd run <file.ihd>` | Executes multi-line `.ihd` calculation scripts.<br>`ihd run script.ihd` |
+| `ihd completion <shell>` | Generates shell completion scripts (`bash`, `zsh`, `fish`, `powershell`).<br>`ihd completion powershell \| Out-String \| Invoke-Expression` |
+| `ihd update` | Self-updates from GitHub Releases (supports `--check` / `-c` and `--force` / `-f`). |
 
-#### Major CLI Options
+### Major CLI Options
 
 | Option | Description & Examples |
 | :--- | :--- |
-| `-a`, `--approx` | Display arbitrary-precision `big.Float` approximation alongside exact results with interval enclosure error bounds (`±`).<br>`ihd -a "sqrt(2)"` |
-| `--approx-digits <N>`, `--digits <N>` | Specifies decimal digits for approximation output (default: 30).<br>`ihd -a --digits 50 "sqrt(2)"` |
-| `--format <fmt>` | Specify output format (`typst`, `latex`, `ascii`, `pretty`).<br>`ihd --format typst "1/2 + sqrt(2)"` |
-| `--pretty` | Output expression in multi-line 2D pretty-printed Unicode typography.<br>`ihd --pretty "1/2 + sqrt(2)/2"` |
-| `--typst` | Output expression in Typst math mode format (`$ ... $`).<br>`ihd --typst "1/2 + sqrt(2)"` |
-| `--latex` | Output expression in LaTeX format (`$$ ... $$`).<br>`ihd --latex "1/2 + sqrt(2)"` |
-| `--ascii` | Output using standard ASCII strings (`sqrt`, `pi`) instead of Unicode symbols.<br>`ihd --ascii "sqrt(2) + pi"` |
+| `-a`, `--approx` | Prints arbitrary-precision `big.Float` approximation and interval error bounds (`±`) beside the exact result (default 30 digits; override via `--digits <N>`).<br>`ihd -a "sqrt(2)"` |
+| `--format <fmt>` | Sets output format (`typst`, `latex`, `ascii`, `pretty`); individual flags `--typst`, `--latex`, `--ascii`, `--pretty` are also supported.<br>`ihd --format typst "1/2 + sqrt(2)"` |
 | `--explain` | Displays step-by-step algebraic derivation trees.<br>`ihd --explain "1 / (sqrt(2) + 1)"` |
 | `--verify` | Reverse-verifies algebraic correctness by checking residual vanishing.<br>`ihd --verify "integrate(1/(x^2 + 1), x)"` |
-| `-i`, `--interval` | Evaluates expressions using adaptive rational interval arithmetic enclosures.<br>`ihd -i "sin(1)"` |
-| `--lean` | Transpiles calculation results into formal **Lean 4 (Mathlib4)** proof theorems.<br>`ihd --lean "factor(x^2 - 1)"` |
-| `-h`, `--help` | Display categorized color-highlighted help message. |
+| `-i`, `--interval` | Evaluates expressions using adaptive rational interval enclosures (tolerance configurable via `--interval-eps`).<br>`ihd -i "sin(1)"` |
+| `--lean`, `--lean-file <path>` | Emits formal **Lean 4 (Mathlib4)** proof code to stdout or a `.lean` file.<br>`ihd --lean "factor(x^2 - 1)"` |
+| `-h`, `--help` | Displays categorized, color-highlighted CLI help. |
 
 <details>
-<summary><strong>Expand Advanced & Execution Control Options (Click)</strong></summary>
+<summary><strong>Expand Execution Control, Tracing & Certificate Options</strong></summary>
 
 | Option | Description & Examples |
 | :--- | :--- |
-| `--step` | Prints step-by-step algebraic transformations to stdout.<br>`ihd --step "expand((x+1)^3)"` |
-| `--trace` | Outputs detailed AST rewrite traces and rule application logs.<br>`ihd --trace "factor(x^2 - 1)"` |
-| `--certificate <file>` | Exports calculation steps and residuals into a certificate JSON file (`ihd-proof-trace-v1`).<br>`ihd --certificate cert.json "factor(x^2 - 1)"` |
-| `--replay <file>` | Reads a certificate JSON file and verifies that residuals vanish.<br>`ihd --replay cert.json` |
-| `--lean-file <path>` | Save generated Lean 4 proof code as a standalone `.lean` file.<br>`ihd --lean-file proof.lean "factor(x^2 - 1)"` |
-| `--interval-eps <eps>` | Specifies maximum allowed enclosure tolerance for interval arithmetic.<br>`ihd -i --interval-eps 1/1000000 "sin(1)"` |
-| `--deg` | Evaluate trigonometric functions in degrees.<br>`ihd --deg "sin(30)"` |
-| `--theme <dark\|light\|none>` | Specify REPL color theme (persisted to `~/.ihd/config.json`).<br>`ihd --theme light` |
-| `--lang <code/auto>` | Specify display language (`ja`, `en`, `auto`).<br>`ihd --lang en "1/2 + 1/3"` |
-| `--timeout <dur>` | Sets wall-clock execution timeout (e.g. `2s`, `500ms`).<br>`ihd --timeout 2s "factor(x^100 - 1)"` |
-| `--budget-steps <N>` | Maximum simplification step budget per rule pass.<br>`ihd --budget-steps 5000 "expand((x+1)^20)"` |
-| `--max-nodes <N>` | Maximum allowed AST node count during expression tree expansion.<br>`ihd --max-nodes 10000 "expand((x+1)^10)"` |
-| `--max-depth <N>` | Maximum recursion depth limit for symbolic rewrites.<br>`ihd --max-depth 200 "diff(x^10, x)"` |
-| `--warn-loop <N>` | Warning threshold iterations for CAS loops (`table`, `for`, `product`, default: 1000). |
-| `--max-loop <N>` | Hard limit cutoff for CAS loops (default: 100000). |
-| `--deterministic` | Normalizes iterations and polynomial ordering for byte-identical outputs.<br>`ihd --deterministic "factor(x^4 - 5*x^2 + 4)"` |
-| `--no-color` | Disables ANSI color sequence outputs. |
-| `--no-update-check` | Disables automated checks for newer releases. |
+| `--step` | Prints intermediate rewrite rules and expressions step by step.<br>`ihd --step "expand((x+1)^3)"` |
+| `--trace` | Emits structured rewrite and solver search logs.<br>`ihd --trace "factor(x^2 - 1)"` |
+| `--certificate <file>` | Saves calculation results and derivation steps as a JSON certificate (`ihd-proof-trace-v1`).<br>`ihd --certificate cert.json "factor(x^2 - 1)"` |
+| `--replay <file>` | Reads a JSON certificate and verifies zero residuals without invoking CAS solvers.<br>`ihd --replay cert.json` |
+| `--deg` | Evaluates trigonometric and inverse trigonometric functions in degrees.<br>`ihd --deg "sin(30)"` |
+| `--theme <dark\|light\|none>` | Sets the REPL color theme (persisted to `~/.ihd/config.json`).<br>`ihd --theme light` |
+| `--lang <ja\|en\|auto>` | Sets display language.<br>`ihd --lang en "1/2 + 1/3"` |
+| `--timeout <dur>` | Sets wall-clock timeout (default: unlimited).<br>`ihd --timeout 2s "factor(x^100 - 1)"` |
+| `--budget-steps <N>` | Sets maximum rewrite steps per reduction pass (default: `0` = unlimited).<br>`ihd --budget-steps 5000 "expand((x+1)^20)"` |
+| `--max-nodes <N>` | Sets maximum AST node count during expansion (default: `0` = unlimited).<br>`ihd --max-nodes 10000 "expand((x+1)^10)"` |
+| `--max-depth <N>` | Sets maximum recursion depth for symbolic rewrites (default: `0` = unlimited).<br>`ihd --max-depth 200 "diff(x^10, x)"` |
+| `--warn-loop <N>` | Warning threshold for CAS loops (`table`, `for`, `product`, written to stderr; default: `100000`). |
+| `--max-loop <N>` | Hard cutoff limit for CAS loops (default: `-1` = unlimited). |
+| `--deterministic` | Normalizes map iterations and polynomial ordering for byte-identical outputs.<br>`ihd --deterministic "factor(x^4 - 5*x^2 + 4)"` |
+| `--no-color` | Disables ANSI color escape sequences. |
+| `--no-update-check` | Disables automatic release checks at startup. |
 | `-v`, `--version` | Displays version information. |
 
 </details>
 
-> [!NOTE]
-> For the complete list of flags and options, see the [Complete Syntax Reference](docs/references/en/reference.en.md) or run `ihd --help`.
+### Mathematical Domains & Reference Manuals
 
----
+Built-in functions span elementary algebra and calculus through number theory, real algebraic geometry, local series analysis, and formal proof verification:
 
-### Development & Testing
+| Mathematical Domain | Representative Functions |
+| :--- | :--- |
+| **Basic Algebra, Number Theory & Equations** | `expand`, `factor`, `apart`, `together`, `gcd`, `lcm`, `mod`, `is_prime`, `solve`, `cfrac`, `groebner`, `sturm`, `interval` |
+| **Trigonometric, Logarithmic & Complex** | `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `trig_expand`, `trig_reduce`, `exp`, `log`, `ln`, `polar` |
+| **Calculus, ODEs, Special Functions & Local Series** | `diff`, `integrate`, `limit`, `taylor`, `puiseux`, `dsolve`, `laplace`, `lambert_w`, `erf`, `gamma`, `sum` |
+| **Linear Algebra, LP & Integer Normal Forms** | `det`, `inv`, `rank`, `rref`, `eigenvals`, `linsolve`, `lp_maximize`, `hnf`, `snf`, `lll` |
+| **Computational Geometry & Automated Proving** | `line_intersect`, `circle_intersect`, `triangle_area`, `geo_prove` |
+| **Algebraic Structures, p-adic, Arithmetic Geometry & Quantum** | `padic_val`, `padic_norm`, `padic_expand`, `galois_group`, `is_solvable_by_radicals`, `ec_p_order`, `ec_rank_bound`, `clifford`, `quantum_equiv` |
+| **Units, Assumptions & CAS Iteration** | `convert_unit`, `assume`, `unassume`, `table`, `range`, `map`, `filter` |
 
-Developers who clone this repository can run tests and verifications using the following standard commands:
+All function signatures, operator precedence rules, and CLI flags are documented in the syntax references and `ihd --help`:
+- **Markdown Edition**: [Japanese Reference](docs/references/ja/reference.ja.md) / [English Reference](docs/references/en/reference.en.md)
+- **Offline Single-File HTML Edition**: [Japanese Reference (HTML)](docs/references/ja/reference.ja.html) / [English Reference (HTML)](docs/references/en/reference.en.html) (installed to `~/.ihd/references/` via installers)
 
-#### 1. Unit Tests
-Runs standard Go unit tests across all packages:
+## Design Scope, Limitations & External Verification
+
+- **No universal correctness guarantee across arbitrary inputs**: In complex indefinite integration, higher-degree equations, limits, and symbolic simplification, algorithmic boundaries or implementation limits can produce incomplete reductions, dropped branches, or incorrect results. In addition, `factor` enforces deterministic work budgets on large composites to prevent hangs; when exhausted, it returns a partial factorization preserving discovered prime factors alongside any unfactored composite remainder.
+- **Trade-off for standalone binary distribution**: Because `ihd` avoids bundling external heavy runtimes or commercial CAS backends, it prioritizes independent external checkability over claiming universal coverage on its own.
+- **Verification workflows**: GitHub Actions CI continuously runs unit tests (`unit-test.yml`), Lean 4 formal proofs (`lean-verify.yml`), Typst compilation (`typst-verify.yml`), and invariant fuzzing (`fuzz-smoke.yml`). For high-assurance research or engineering calculations, combine `--verify` (reverse residual checks), `--certificate` with `micro-verifier` (standalone zero-CAS-dependency replay), `--lean` (Lean 4 proof emission), or the bundled `tools/sympy-oracle`.
+
+## Development & Testing
+
+In a cloned repository, standard Go unit tests and the 24-problem showcase run directly:
+
 ```bash
+# Run Go unit tests
 go test ./...
-```
 
-#### 2. Mathematical Invariants Property-Based Testing & Fuzzing
-Executes the fuzzing harness with exact multi-point evaluation oracles over Gaussian rationals $\mathbb{Q}[i]$:
-```bash
-# Smoke test all seed corpora and oracle tests
-go test -v ./internal/calc -run "^(Fuzz|TestOracle|TestProvider)"
-
-# Continuous fuzzing exploration on a specific invariant target (e.g., 30s)
-go test ./internal/calc -run "^FuzzAlgebra_SimplifyIdempotence$" -fuzz "^FuzzAlgebra_SimplifyIdempotence$" -fuzztime 30s
-```
-
-#### 3. Standalone Proof Verifier (`tools/micro-verifier`)
-A standalone CLI tool that independently verifies emitted certificate JSON files without relying on `ihd` solver logic:
-```bash
-# Unit tests for verifier
-go test ./tools/micro-verifier
-
-# Standalone verification of certificate file
-go run ./tools/micro-verifier cert.json
-```
-
-#### 4. Live Exam Showcase
-An automated showcase solving 24 benchmark problems ranging from high school math to competitions and university STEM:
-```bash
-# Windows (PowerShell)
+# Run the 24-problem live showcase (Windows / Linux & macOS)
 pwsh exam/exam.ps1
-
-# Linux / macOS (Bash)
 ./exam/exam.sh
 ```
 
-#### 5. Resident SymPy Differential Fuzzing Oracle (`tools/sympy-oracle`)
-Bundled in binary release packages, the standalone script (`tools/sympy-oracle/sympy_oracle.py`) enables differential equivalence verification against SymPy over a persistent JSON-RPC IPC channel.
-```bash
-# Run SymPy differential oracle unit tests
-go test -v ./internal/calc -run "^(TestSymPyClient_|TestDifferentialOracle_)"
-```
+Procedures for invariant fuzzing (Schwartz-Zippel over $\mathbb{Q}[i]$), standalone verification (`tools/micro-verifier`), differential fuzzing (`tools/sympy-oracle`), and reference auditing are documented in **[Development Guide (English)](docs/development.en.md)** / **[開発・テスト・検証ガイド（日本語）](docs/development.ja.md)**.
 
----
+## Practical Problem Cookbook (Exam & Cookbook)
 
-### Practical Problem Cookbook (Exam & Cookbook)
-
-Practical cookbook recipes and explanations solving 24 benchmark problems using `ihd`:
+Worked solutions and explanations for 24 representative problems (high school math, entrance exams, linear algebra, calculus, number theory, and geometry):
 - [Japanese Edition Cookbook](./exam/problems.ja.md)
 - [English Edition Cookbook](./exam/problems.en.md)
 
----
-
-### LICENSE
+## LICENSE
 
 [MIT](./LICENSE.MIT)
 

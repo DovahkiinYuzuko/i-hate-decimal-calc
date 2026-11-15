@@ -1,48 +1,147 @@
-# ihd Complete Syntax, Operators & Functions Reference
+# ihd Syntax, Operators & Functions Reference
 
-Complete language specification and built-in function reference for `ihd` (i-hate-decimal-calc), a strict CAS calculator that rejects all decimal approximations and computes strictly using arbitrary-precision rational numbers and algebraic symbols.
-
----
+Language specification and built-in function reference for `ihd` (i-hate-decimal-calc), a CAS calculator that excludes floating-point decimals and computes using arbitrary-precision rational numbers and algebraic symbols.
 
 ## Table of Contents
-- [ihd Complete Syntax, Operators \& Functions Reference](#ihd-complete-syntax-operators--functions-reference)
-  - [Table of Contents](#table-of-contents)
-  - [Operators \& Precedence](#operators--precedence)
-    - [Distinguishing Relational Operators and Variable Assignment](#distinguishing-relational-operators-and-variable-assignment)
-  - [Number Literal Syntax (Multi-Radix \& Repeating Decimals)](#number-literal-syntax-multi-radix--repeating-decimals)
-  - [Reserved Constants](#reserved-constants)
-  - [First-Class Closed Domains & Design Trade-offs](#first-class-closed-domains--design-trade-offs)
-  - [Built-in Functions by Category](#built-in-functions-by-category)
-    - [1. Basic Algebra, Number Theory \& Equations](#1-basic-algebra-number-theory--equations)
-    - [2. Trigonometric, Logarithmic \& Complex Functions](#2-trigonometric-logarithmic--complex-functions)
-    - [3. Calculus, Differential Equations, Special Functions \& Discrete Summation](#3-calculus-differential-equations-special-functions--discrete-summation)
-    - [4. Linear Algebra \& 3D Vector Calculus](#4-linear-algebra--3d-vector-calculus)
-    - [5. Computational Geometry](#5-computational-geometry)
-    - [6. Exact Discrete Probability \& Statistics](#6-exact-discrete-probability--statistics)
-    - [7. Symbolic Assumptions System](#7-symbolic-assumptions-system)
-    - [8. Real Algebraic Geometry, Mathematical Logic \& Quantifier Elimination](#8-real-algebraic-geometry-mathematical-logic--quantifier-elimination)
-    - [9. Elliptic Curves \& Arithmetic Geometry](#9-elliptic-curves--arithmetic-geometry)
-    - [10. Visualization \& Verification Tools](#10-visualization--verification-tools)
-    - [11. Lattice Basis Reduction \& Integer Relations (LLL)](#11-lattice-basis-reduction--integer-relations-lll)
-    - [12. p-adic Arithmetic, Local Algebra \& Hensel Lifting](#12-p-adic-arithmetic-local-algebra--hensel-lifting)
-    - [13. Local Algebraic Series \& Singularities (Puiseux Series)](#13-local-algebraic-series--singularities-puiseux-series)
-    - [14. Galois Theory, Solvability by Radicals \& Abel-Ruffini Certificates](#14-galois-theory-solvability-by-radicals--abel-ruffini-certificates)
-    - [15. Self-Verifying Certificates \& Formal Proof Infrastructure (ProofTrace / Explain / Verify / Lean 4)](#15-self-verifying-certificates--formal-proof-infrastructure-prooftrace--explain--verify--lean-4)
-    - [16. Clifford Geometric Algebra \& Binary Cyclotomic Quantum Circuit Verification](#16-clifford-geometric-algebra--binary-cyclotomic-quantum-circuit-verification)
-    - [17. CAS Iteration Control \& Multi-Radix Arithmetic](#17-cas-iteration-control--multi-radix-arithmetic)
-    - [18. REPL Syntax Highlighting, Themes \& Interactive Commands](#18-repl-syntax-highlighting-themes--interactive-commands)
-    - [19. Multivariate Polynomial Ideals \& Primary Decomposition (GTZ)](#19-multivariate-polynomial-ideals--primary-decomposition-gtz)
-    - [20. Collection Manipulation \& First-Class Lambda Expressions](#20-collection-manipulation--first-class-lambda-expressions)
-    - [21. Physical Units \& Dimensional Analysis](#21-physical-units--dimensional-analysis)
-      - [Supported Units \& Prefixes](#supported-units--prefixes)
-    - [22. Algebraic Pattern Matching & Term Rewriting Rules (TRS)](#22-algebraic-pattern-matching--term-rewriting-rules-trs)
-    - [23. Complete CLI Command-Line Options Specification](#23-complete-cli-command-line-options-specification)
+- [1. Execution Environment, CLI & Interactive REPL](#1-execution-environment-cli--interactive-repl)
+  - [1.1 CLI Command-Line Options Specification](#11-cli-command-line-options-specification)
+  - [1.2 REPL Interactive Commands, Themes & Syntax Highlighting](#12-repl-interactive-commands-themes--syntax-highlighting)
+- [2. Language Specification, Type System & Core Semantics](#2-language-specification-type-system--core-semantics)
+  - [2.1 Operators & Precedence](#21-operators--precedence)
+  - [2.2 Number Literal Syntax (Multi-Radix & Repeating Decimals)](#22-number-literal-syntax-multi-radix--repeating-decimals)
+  - [2.3 Reserved Constants](#23-reserved-constants)
+  - [2.4 First-Class Closed Domains & Design Trade-offs](#24-first-class-closed-domains--design-trade-offs)
+- [3. Basic Algebra, Equations, Number Theory & Logic](#3-basic-algebra-equations-number-theory--logic)
+  - [3.1 Basic Algebra, Polynomials & Radix Conversion](#31-basic-algebra-polynomials--radix-conversion)
+  - [3.2 Trigonometric, Logarithmic & Complex Functions](#32-trigonometric-logarithmic--complex-functions)
+  - [3.3 Symbolic Assumptions System](#33-symbolic-assumptions-system)
+  - [3.4 Real Algebraic Geometry, Mathematical Logic & Quantifier Elimination](#34-real-algebraic-geometry-mathematical-logic--quantifier-elimination)
+  - [3.5 Lattice Basis Reduction & Integer Relations (LLL)](#35-lattice-basis-reduction--integer-relations-lll)
+  - [3.6 p-adic Arithmetic, Local Algebra & Hensel Lifting](#36-p-adic-arithmetic-local-algebra--hensel-lifting)
+  - [3.7 Local Algebraic Series & Singularities (Puiseux Series)](#37-local-algebraic-series--singularities-puiseux-series)
+  - [3.8 Galois Theory, Solvability by Radicals & Abel-Ruffini Certificates](#38-galois-theory-solvability-by-radicals--abel-ruffini-certificates)
+  - [3.9 Multivariate Polynomial Ideals & Primary Decomposition (GTZ)](#39-multivariate-polynomial-ideals--primary-decomposition-gtz)
+  - [3.10 Elliptic Curves & Arithmetic Geometry](#310-elliptic-curves--arithmetic-geometry)
+- [4. Calculus, Differential Equations, Transforms & Special Functions](#4-calculus-differential-equations-transforms--special-functions)
+  - [4.1 Calculus, Limits, Series & Residues](#41-calculus-limits-series--residues)
+  - [4.2 Differential Equations, Recurrences & Integral/Z Transforms](#42-differential-equations-recurrences--integralz-transforms)
+  - [4.3 Special Functions, Piecewise Algebra & Discrete Summation](#43-special-functions-piecewise-algebra--discrete-summation)
+- [5. Linear Algebra, Geometry, Optimization & Discrete Probability](#5-linear-algebra-geometry-optimization--discrete-probability)
+  - [5.1 Linear Algebra & 3D Vector Calculus](#51-linear-algebra--3d-vector-calculus)
+  - [5.2 Computational Geometry](#52-computational-geometry)
+  - [5.3 Exact Discrete Probability, Statistics & Combinatorics](#53-exact-discrete-probability-statistics--combinatorics)
+  - [5.4 Clifford Geometric Algebra & Binary Cyclotomic Quantum Circuit Verification](#54-clifford-geometric-algebra--binary-cyclotomic-quantum-circuit-verification)
+- [6. Iteration Control, Collections, Units, Rewriting & Formal Output](#6-iteration-control-collections-units-rewriting--formal-output)
+  - [6.1 Collection Manipulation & First-Class Lambda Expressions](#61-collection-manipulation--first-class-lambda-expressions)
+  - [6.2 CAS Iteration Control](#62-cas-iteration-control)
+  - [6.3 Physical Units & Dimensional Analysis](#63-physical-units--dimensional-analysis)
+  - [6.4 Algebraic Pattern Matching & Term Rewriting System (TRS)](#64-algebraic-pattern-matching--term-rewriting-system-trs)
+  - [6.5 Self-Verifying Certificates, Formal Proofs & Visualization](#65-self-verifying-certificates-formal-proofs--visualization)
 
 ---
 
-## Operators & Precedence
+## 1. Execution Environment, CLI & Interactive REPL
 
-Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) causes a syntax ambiguity with function application and raises a parse error; multiplication uses an explicit `*` operator.
+### 1.1 CLI Command-Line Options Specification
+
+In addition to the interactive REPL, `ihd` provides subcommands and CLI flags for shell one-liners, pipe workflows, batch scripts, and certificate verification.
+
+#### Subcommands
+
+| Option / Flag | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `diff` | `ihd diff <expr1\|file1> <expr2\|file2>` | Compares syntactic differences and algebraic equivalence via expansion/factoring |
+| `run` | `ihd run <file.ihd>` | Executes batch calculations from an ihd script file |
+| `completion` | `ihd completion <bash\|zsh\|fish\|powershell>` | Generates shell tab-completion script |
+| `update` | `ihd update` / `ihd update --check` / `ihd update --force` | Self-updates `ihd` to the latest release (also aliased as `self-update`; `--check` / `-c` checks for updates only, `--force` / `-f` forces reinstallation) |
+
+#### Output & Formatting
+
+| Option / Flag | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `--format` | `ihd --format typst "1/2 + sqrt(2)"` | Specifies output format (`typst`, `latex`, `ascii`, `pretty`) |
+| `--pretty` | `ihd --pretty "1/2 + sqrt(2)/2"` | 2D multi-line ASCII-art typesetting output |
+| `--latex` | `ihd --latex "1/2 + sqrt(2)"` | Outputs expression in LaTeX math mode (`$$ ... $$`) |
+| `--typst` | `ihd --typst "1/2 + sqrt(2)"` | Outputs expression in Typst math mode (`$ ... $`) |
+| `--ascii` | `ihd --ascii "sqrt(2) + pi"` | Falls back Unicode symbols to standard ASCII identifiers |
+| `--no-color` | `ihd --no-color` | Disables ANSI color escapes across REPL and CLI outputs |
+| `--theme` | `ihd --theme light` | Configures REPL syntax highlighting theme (`dark`, `light`, `none`) |
+
+#### Approximation & Numerics
+
+| Option / Flag | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `-a`, `--approx` | `ihd -a "sqrt(2)"` | Displays reference arbitrary-precision decimal value derived via rational interval enclosure alongside the exact result |
+| `--approx-digits`, `--digits` | `ihd -a --digits 50 "sqrt(2)"` | Sets decimal precision digits for approximation (default: 30) |
+| `-i`, `--interval` | `ihd -i "sin(1)"` | Computes certified rational interval enclosure `[L, R]` containing the true value |
+| `--interval-eps` | `ihd -i --interval-eps 1/1000000 "sin(1)"` | Sets tolerance epsilon for rational interval refinement |
+| `--deg` | `ihd --deg "sin(30)"` | Interprets trigonometric and inverse trigonometric functions in degrees |
+
+#### Derivation & Verification
+
+| Option / Flag | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `--explain` | `ihd --explain "1/(sqrt(2)+1)"` | Displays step-by-step algebraic derivation tree |
+| `--step` | `ihd --step "expand((x+1)^3)"` | Iteratively prints derivation and simplification steps |
+| `--trace` | `ihd --trace "factor(x^2 - 1)"` | Outputs internal search process events (Buchberger, CAD, Risch) as structured JSON |
+| `--verify` | `ihd --verify "factor(x^2 - 1)"` | Verifies algebraic correctness autonomously and prints certificate |
+| `--certificate` | `ihd --certificate cert.json "factor(x^2 - 1)"` | Saves standalone proof certificate (`ihd-proof-trace-v1`) to JSON file |
+| `--replay` | `ihd --replay cert.json` | Replays and verifies residual vanishing independently from JSON certificate |
+| `--lean` | `ihd --lean "factor(x^2 - 1)"` | Generates formal proof code in Lean 4 (Mathlib4) syntax |
+| `--lean-file` | `ihd --lean-file proof.lean "factor(x^2 - 1)"` | Saves generated Lean 4 formal proof code to `.lean` file |
+
+#### Execution & Limits
+
+| Option / Flag | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `--timeout` | `ihd --timeout 2s "factor(x^100 - 1)"` | Sets wall-clock execution timeout (e.g., `2s`, `500ms`; default: unlimited) |
+| `--budget-steps` | `ihd --budget-steps 5000 "expand((x+1)^20)"` | Sets maximum rewrite budget steps per reduction pass (default: 0; 0 for unlimited) |
+| `--max-nodes` | `ihd --max-nodes 10000 "expand((x+1)^10)"` | Sets maximum allowed AST node count (default: 0; 0 for unlimited) |
+| `--max-depth` | `ihd --max-depth 200 "diff(x^10, x)"` | Sets maximum recursion depth (default: 0; 0 for unlimited) |
+| `--warn-loop` | `ihd --warn-loop 100000 "table(k^2, k, 1, 200000)"` | Temporarily sets iteration warning step threshold (default: 100000) |
+| `--max-loop` | `ihd --max-loop 500000 "table(k^2, k, 1, 200000)"` | Temporarily sets iteration hard safety limit (default: -1; -1 for unlimited) |
+| `--deterministic` | `ihd --deterministic "factor(x^4 - 5*x^2 + 4)"` | Normalizes map iterations and polynomial ordering for byte-reproducible output |
+
+#### General
+
+| Option / Flag | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `-h`, `--help` | `ihd -h` / `ihd --help` | Displays categorized, color-highlighted help message |
+| `-v`, `--version` | `ihd -v` / `ihd --version` | Displays version information |
+| `--lang` | `ihd --lang en` / `ihd --lang ja` | Sets display language locale |
+| `--no-update-check` | `ihd --no-update-check` | Disables automated newer release checks |
+
+### 1.2 REPL Interactive Commands, Themes & Syntax Highlighting
+
+Interactive control commands, high-contrast color themes, and real-time lexical syntax highlighting features available inside the REPL.
+
+| Command / Option | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `theme` | `theme` | Displays the currently active syntax highlight color theme (`dark`, `light`, or `none`) |
+| `theme dark` | `theme dark` | Switches to the dark-background palette (cyan/magenta/green/blue rainbow delimiters, yellow numbers, bright white operators), persisted to `~/.ihd/config.json` |
+| `theme light` | `theme light` | Switches to the light-background palette (bold blue/magenta/green/cyan delimiters, red numbers, black operators), persisted to `~/.ihd/config.json` |
+| `highlight` | `highlight` / `color` | Shows current syntax highlight status (enabled / disabled) |
+| `highlight on` / `off` | `highlight on` / `highlight off` | Toggles real-time lexical highlighting and nested rainbow delimiters dynamically |
+| `warn-loop` | `warn-loop <N>` / `warn-loop` | Configures and displays warning threshold for iteration loops, persisted to `~/.ihd/config.json` (default: 100000) |
+| `max-loop` | `max-loop <N>` / `max-loop` | Configures and displays maximum iteration limit for loops, persisted to `~/.ihd/config.json` (default: -1, unlimited) |
+| `config loop` | `config loop` | Displays current loop warning threshold and maximum iteration safety limit |
+| `vars` | `vars` | Displays all currently bound user variables and constants in the active environment |
+| `help` | `help` / `help <func>` | Displays quick help or explicit argument signature and description for a function |
+| `search` | `search <keyword>` | Searches built-in functions by name or localized description |
+| `whatis` | `whatis <expr_or_concept>` | Explains mathematical concept or AST structure and lists applicable built-in functions |
+| `similar` | `similar(<expr>)` / `similar <expr>` | Finds structurally similar expressions in session history using AST hashes |
+| `save` | `save <filepath>` | Persists current REPL session environment (variables and assumptions) to `.ihd` file |
+| `load` | `load <filepath>` | Restores session environment from a saved `.ihd` file |
+| `clear` / `reset` | `clear` / `reset` | Resets all variables and assumptions in current session environment |
+| `exit` / `quit` | `exit` / `quit` / `Ctrl+D` | Exits the interactive REPL session cleanly |
+
+---
+
+## 2. Language Specification, Type System & Core Semantics
+
+### 2.1 Operators & Precedence
+
+Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) causes a syntax ambiguity with function application and raises a parse error; multiplication is written using an explicit `*` operator (such as `2*pi`).
 
 | Rank | Operator | Associativity | Description & Examples |
 | :---: | :---: | :---: | :--- |
@@ -50,20 +149,18 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) causes a syntax ambiguity 
 | 2 | `!` | Postfix Unary | Factorial of non-negative integers (e.g., `5! = 120`. Large factorials are computed via Legendre's formula, binary splitting tree, and NTT) |
 | 3 | `^` | **Right-associative** | Exponentiation (e.g., `2^3^2 = 2^(3^2) = 512`) |
 | 4 | `-` | Prefix Unary | Unary negation (Lower precedence than `^`: `-3^2 = -(3^2) = -9`) |
-| 5 | `*`, `/` | Left-associative | Multiplication and division (Explicit `*` required) |
+| 5 | `*`, `/` | Left-associative | Multiplication and division (uses an explicit `*` operator) |
 | 6 | `+`, `-` | Left-associative | Addition and subtraction |
-| 7 | `<`, `<=`, `>`, `>=`, `==`, `!=` | None | Relational operations & inequalities (Rigorous evaluation via rational interval arithmetic and algebraic proof) |
+| 7 | `<`, `<=`, `>`, `>=`, `==`, `!=` | None | Relational operations & inequalities (exact evaluation via rational interval arithmetic and algebraic equivalence proof) |
 
-### Distinguishing Relational Operators and Variable Assignment
+#### Distinguishing Relational Operators and Variable Assignment
 - **Assignment Operator (`=`)**: Binds an evaluated expression to a variable in REPL and scripts (e.g., `x = 42`, `f = sin(x)`).
 - **Equality & Relational Comparison (`==`, `!=`)**:
-  - Top-level evaluation: Rigorously evaluated to `true` or `false` using exact algebraic identity (`lhs - rhs == 0` and equivalence verification) and rational interval arithmetic (e.g., `1 == 2` $\to$ `false`, `0.(9) == 1` $\to$ `true`, `sqrt(2)+sqrt(3) == sqrt(5+2*sqrt(6))` $\to$ `true`, `1 != 2` $\to$ `true`).
-  - Solver arguments (`solve`, `dsolve`, `rsolve`, `verify`, etc.): Preserved intact as equation/relation AST nodes to serve as equation inputs for root finding and theorem proving (e.g., `solve(2 == 0, x)` correctly raises a contradiction error, and `dsolve(y' == y, y, x)` is solved as an ODE).
-- **Disambiguation from Factorial (`!`)**: When an expression contains factorial adjacent to equality, `1!=2` is unambiguously tokenized as `1 != 2` (not-equal). Explicit factorial comparisons can be written as `(5!) == 120` or `5! != 120`.
+  - Top-level evaluation: Evaluated to `true` or `false` using exact algebraic identity (`lhs - rhs == 0` and equivalence verification) and rational interval arithmetic (e.g., `1 == 2` $\to$ `false`, `0.(9) == 1` $\to$ `true`, `sqrt(2)+sqrt(3) == sqrt(5+2*sqrt(6))` $\to$ `true`, `1 != 2` $\to$ `true`).
+  - Solver arguments (`solve`, `dsolve`, `rsolve`, `verify`, etc.): Preserved intact as equation/relation AST nodes to serve as equation inputs for root finding and theorem proving (e.g., `solve(2 == 0, x)` reports a contradiction error, and `dsolve(y' == y, y, x)` is solved as an ODE).
+- **Disambiguation from Factorial (`!`)**: When an expression contains factorial adjacent to equality, `1!=2` is tokenized as `1 != 2` (not-equal). Explicit factorial comparisons can be written as `(5!) == 120` or `5! != 120`.
 
----
-
-## Number Literal Syntax (Multi-Radix & Repeating Decimals)
+### 2.2 Number Literal Syntax (Multi-Radix & Repeating Decimals)
 
 `ihd` is a decimal-free exact rational CAS calculator. Number literals are parsed directly into arbitrary-precision rationals ($\mathbb{Q}$) at lexing time.
 
@@ -76,13 +173,11 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) causes a syntax ambiguity 
 | **Hexadecimal Literals** | `0xff`, `0X1A` | `255`, `26` | Prefixed hexadecimal integer notation |
 | **Arbitrary-Radix Literals** | `2^^101`, `16^^ff`, `64^^@_` | `5`, `255`, `4031` | Mathematica-style `base^^digits` syntax ($2 \le \text{base} \le 64$. Base 64 uses Bash-compatible `@`=62, `_`=63) |
 
----
-
-## Reserved Constants
+### 2.3 Reserved Constants
 
 | Identifier | Symbol | Description |
 | :--- | :---: | :--- |
-| `pi`, `π` | $\pi$ | Archimedes' constant (Ratio of circumference to diameter) |
+| `pi`, `π` | $\pi$ | Archimedes' constant (Ratio of circumference to diameter; stored as a symbolic node) |
 | `e` | $e$ | Euler's number (Base of natural logarithm) |
 | `i` | $i$ | Imaginary unit ($i^2 = -1$) |
 | `inf`, `infinity` | $\infty$ | Positive infinity (Used in limits `limit`, root isolation bounds, etc.) |
@@ -92,9 +187,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) causes a syntax ambiguity 
 | `delta` | $\delta$ | Dirac delta generalized function (Laplace transforms) |
 | `true`, `false` | - | Boolean logical constants (Relational operations, QE outcomes) |
 
----
-
-## First-Class Closed Domains & Design Trade-offs
+### 2.4 First-Class Closed Domains & Design Trade-offs
 
 `ihd` preserves local series expansions and rational enclosures as first-class AST nodes rather than flattening them to strings, enforcing domain closure and explicit boundary checks.
 
@@ -107,9 +200,9 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) causes a syntax ambiguity 
 
 ---
 
-## Built-in Functions by Category
+## 3. Basic Algebra, Equations, Number Theory & Logic
 
-### 1. Basic Algebra, Number Theory & Equations
+### 3.1 Basic Algebra, Polynomials & Radix Conversion
 
 | Function | Syntax & Example | Description |
 | :--- | :--- | :--- |
@@ -145,12 +238,12 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) causes a syntax ambiguity 
 | `interval` | `interval([1, 3])` / `interval(sin(1), 1/1000)` | Constructs a first-class rational `IntervalNode` from explicit `[low, high]` bounds or by adaptive refinement of `expr` within tolerance `eps`; supports closed arithmetic, integer powers, and comparisons |
 | `to_poly` | `to_poly(expr, [x, y], "lex")` | Explicitly converts an expression to a canonical `PolyNode` under specified variables and monomial order (`lex`, `grevlex`) |
 | `to_alg` | `to_alg(rep, min_poly, [var])` | Constructs an algebraic number node `AlgNode` in field extension $\mathbb{Q}(\alpha) \cong \mathbb{Q}[x]/\langle m(x) \rangle$ |
-| `alg_inv` | `alg_inv(rep)` | Computes multiplicative inverse $\beta^{-1} \in \mathbb{Q}(\alpha)$ via Extended Euclidean Algorithm |
+| `alg_inv` | `alg_inv(alg_node)` | Computes multiplicative inverse $\beta^{-1} \in \mathbb{Q}(\alpha)$ via Extended Euclidean Algorithm |
 | `min_poly` / `minimal_polynomial` | `min_poly(rep, min_poly)` | Derives the irreducible monic minimal polynomial $m(x) \in \mathbb{Q}[x]$ of an algebraic element |
 | `solve_diophantine` | `solve_diophantine(3*x + 5*y == 7, [x, y])` | Exact Diophantine equation solver for linear Diophantine equations (via Extended Euclidean Algorithm and Bezout's identity parameterized by integer $t$) and Pythagorean triples. Supports `--verify` algebraic certificate and `--lean` formal proof generation |
-| `pell_solve` / `solve_pell` / `pell` | `pell_solve(D)` / `pell_solve(D, 1)` / `pell_solve(D, -1)` | Exact solver for Pell's equation $x^2 - D y^2 = 1$ and negative Pell's equation $x^2 - D y^2 = -1$, computing fundamental integer solutions $(x_1, y_1)$ via continuous fraction expansion of $\sqrt{D}$. Supports `--verify` and `--lean` (`by decide` proof) |
+| `pell_solve` / `solve_pell` / `pell` | `pell_solve(D)` / `pell_solve(D, 1)` / `pell_solve(D, -1)` | Exact solver for Pell's equation $x^2 - D y^2 = 1$ and negative Pell's equation $x^2 - D y^2 = -1$, computing fundamental integer solutions $(x_1, y_1)$ via continued fraction expansion of $\sqrt{D}$. Supports `--verify` and `--lean` (`by decide` proof) |
 | `to_primitive_element` / `primitive_element` | `to_primitive_element([sqrt(2), sqrt(3)])` / `to_primitive_element([x^2 - 2, x^2 - 3])` | Derives the simple extension isomorphism $\mathbb{Q}(\theta) \cong \mathbb{Q}(\alpha_1, \dots, \alpha_k)$ via the Primitive Element Theorem. Computes primitive element symbol, composite minimal polynomial $m_\theta(x)$, and generator representation polynomial list $[P_{\alpha_1}(\theta), \dots, P_{\alpha_k}(\theta)]$ using Sylvester resultants and algebraic field GCD. `primitive_element` is an alias. Supports `--verify` and `--lean` formal proof verification |
-| `fib` / `fibonacci` | `fib(n)` / `fibonacci(n)` | Fibonacci number $F_n$. Evaluated in $O(\log n)$ sub-quadratic time via the Fast Doubling algorithm. Fully supports negative integer inputs via negafibonacci relations $F_{-n} = (-1)^{n+1} F_n$ |
+| `fib` / `fibonacci` | `fib(n)` / `fibonacci(n)` | Fibonacci number $F_n$. Evaluated in $O(\log n)$ sub-quadratic time via the Fast Doubling algorithm. Supports negative integer inputs via negafibonacci relations $F_{-n} = (-1)^{n+1} F_n$ |
 | `digit_count` | `digit_count(n)` | Exact digit count of giant integers in base 10. Example: `digit_count(fib(10000))` $\to$ `2090` |
 | `to_base` | `to_base(n, base)` | Arbitrary-base conversion ($2 \le \text{base} \le 64$). Formats integers into positional numeral notation and rational fractions $p/q$ into repeating repetend notation via long division remainder hashing (e.g., `to_base(255, 16)` $\to$ `ff`, `to_base(1/3, 2)` $\to$ `0.(01)_2`, `to_base(1/3, 16)` $\to$ `0.(5)_16`, `to_base(4031, 64)` $\to$ `@_`) |
 | `from_base` | `from_base(str, base)` | Parses an arbitrary-base string ($2 \le \text{base} \le 64$) into an exact integer. Automatically accepts optional `0x`, `0b`, `0o` prefixes, and Base 64 `@`/`_` or `+`/`/` representations (e.g., `from_base("ff", 16)` $\to$ `255`, `from_base("@_", 64)` $\to$ `4031`) |
@@ -158,9 +251,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) causes a syntax ambiguity 
 | `oct` | `oct(n)` | Octal conversion shortcut with `0o` prefix (e.g., `oct(63)` $\to$ `0o77`) |
 | `hex` | `hex(n)` | Hexadecimal conversion shortcut with `0x` prefix (e.g., `hex(255)` $\to$ `0xff`) |
 
----
-
-### 2. Trigonometric, Logarithmic & Complex Functions
+### 3.2 Trigonometric, Logarithmic & Complex Functions
 
 | Function | Syntax & Example | Description |
 | :--- | :--- | :--- |
@@ -176,40 +267,126 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) causes a syntax ambiguity 
 | `polar_exp` | `polar_exp(1 + i)` | Exponential polar conversion $r e^{i\theta}$ via Euler's formula |
 | `rect` | `rect(sqrt(2), pi/4)` | Converts polar form $(r, \theta)$ to rectangular form $a + bi$ |
 
+### 3.3 Symbolic Assumptions System
+
+| Command | Example | Description |
+| :--- | :--- | :--- |
+| `assume` | `assume(x > 0)`, `assume(n, integer)` | Sets domain constraints (`sqrt(x^2)` $\to$ `x`, `sin(n*pi)` $\to$ `0`, etc.) |
+| `unassume` | `unassume(x)` | Clears assumptions for the specified variable |
+| `assumptions` | `assumptions()` | Displays all active domain constraints |
+| `clear_assumptions` | `clear_assumptions()` | Clears all active domain constraints simultaneously |
+
+### 3.4 Real Algebraic Geometry, Mathematical Logic & Quantifier Elimination
+
+| Function | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `qe` | `qe(forall([x], x^2 + a*x + b > 0))` | Deterministic Quantifier Elimination via Cylindrical Algebraic Decomposition (CAD) (constructs equivalent quantifier-free conditions via Hong (1992) boundary polynomials) |
+| `forall` | `forall([x], formula)` | Universal quantifier formula constructor $\forall x \, \Phi(x)$ |
+| `exists` | `exists([x], formula)` | Existential quantifier formula constructor $\exists x \, \Phi(x)$ |
+| `cad` | `cad([x^2 - 2], [x])` | Direct execution of Cylindrical Algebraic Decomposition (1D cell decomposition and sample point derivation for semi-algebraic sets) |
+
+### 3.5 Lattice Basis Reduction & Integer Relations (LLL)
+
+| Function | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `lll` | `lll([[1, -1, 3], [1, 0, 5], [1, 2, 6]])` | Lenstra–Lenstra–Lovász (1982) lattice basis reduction algorithm over exact rationals |
+| `find_min_poly` | `find_min_poly(sqrt(2) + sqrt(3), 4)` | Exact minimal polynomial reconstruction for algebraic numbers using LLL lattice reduction |
+
+### 3.6 p-adic Arithmetic, Local Algebra & Hensel Lifting
+
+| Function | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `padic_val` | `padic_val(50, 5)` | Exact p-adic valuation $v_p(x) \in \mathbb{Z}$ for rational $x$ and prime base $p$ ($x=0$ yields infinity) |
+| `padic_norm` | `padic_norm(3/20, 2)` | Exact ultrametric norm $|x|_p = p^{-v_p(x)}$ as an exact rational (`big.Rat`) |
+| `padic_expand` | `padic_expand(2/3, 5, 4)` | Returns the truncated p-adic power series expansion `+ O(p^k)` as a first-class `PadicNode`; supports closed arithmetic (`+`, `-`, `*`, `/`, integer powers) and rational promotion for matching prime $p$ (preserves symbolic form when primes differ) |
+
+### 3.7 Local Algebraic Series & Singularities (Puiseux Series)
+
+| Function | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `puiseux` | `puiseux(y^2 - x^3, y, x, 3)` | Deterministically derives local fractional-power Puiseux series branches $y(x) = \sum c_k x^{p_k/q_k} + O(x^N)$ around singularities/branch points of $F(x, y) = 0$ via the Newton polygon algorithm (default order 3) as first-class `PuiseuxNode` values supporting closed arithmetic, integer powers, and symbolic differentiation `diff` |
+
+### 3.8 Galois Theory, Solvability by Radicals & Abel-Ruffini Certificates
+
+| Function | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `galois_group` | `galois_group(x^3 - 2)` / `galois_group(p, x)` | Deterministic Galois group $\mathrm{Gal}(f/\mathbb{Q})$ computation for polynomials up to degree 5 over $\mathbb{Q}$ (identifies permutation group isomorphism types such as $S_n, A_n, D_n, C_n, V_4, F_{20}$ via squarefree factorization, discriminants, cubic/sextic resolvents, and Dedekind-Frobenius cycle-type positive witnesses) |
+| `is_solvable_by_radicals` | `is_solvable_by_radicals(x^5 - 4*x + 2)` | Deterministic solvability by radicals test based on the Fundamental Theorem of Galois Theory and Abel-Ruffini Theorem. Returns `true` for solvable Galois groups and `false` for non-solvable groups ($A_5, S_5$). Under `--verify`, emits an independently verifiable Abel-Ruffini Impossibility Certificate IR; under `--lean`, generates formal Lean 4 (Mathlib4) proof code |
+
+### 3.9 Multivariate Polynomial Ideals & Primary Decomposition (GTZ)
+
+| Function | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `ideal_member` | `ideal_member(target, [f1, f2, ...], [x, y, ...])` | Tests polynomial ideal membership via Gröbner basis reduction and returns cofactor certificate coefficients if contained |
+| `primary_decomposition` | `primary_decomposition([x^2 - 1, y], [x, y])` | Computes primary decomposition $I = \bigcap Q_i$ of multivariate polynomial ideal $I = \langle p_1, \dots \rangle$ via Gianni-Trager-Zacharias (GTZ) algorithm, returning a list of `[[Q_1, P_1], ...]` pairs of primary component $Q_i$ and associated prime $P_i = \sqrt{Q_i}$. Optional 3rd argument specifies monomial order (`"grevlex"` or `"lex"`). |
+| `ideal_radical` | `ideal_radical([x^2, x*y], [x, y])` | Computes generator list of radical ideal $\sqrt{I}$ (applying Seidenberg's lemma for zero-dimensional components). |
+| `ideal_dimension` | `ideal_dimension([x*y, x*z], [x, y, z])` | Finds maximal independent variable set from leading monomial ideal of Gröbner basis and returns Krull dimension as an integer. |
+| `ideal_intersection` | `ideal_intersection([x], [y], [x, y])` | Computes ideal intersection $I \cap J$ via auxiliary variable elimination. |
+| `ideal_colon` | `ideal_colon([x^2], x, [x])` | Computes colon ideal (quotient ideal) $I : f = \{ g \mid f g \in I \}$ by polynomial $f$. |
+| `ideal_saturation` | `ideal_saturation([x^2], x, [x])` | Computes saturation ideal $I : f^\infty$ iteratively and returns generators upon reaching stabilization index $m$. |
+
+### 3.10 Elliptic Curves & Arithmetic Geometry
+
+| Function | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `ec_add` | `ec_add(A, B, P1, P2)` / `ec_add(A, B, x1, y1, x2, y2)` | Rational point addition on Weierstrass elliptic curve $y^2 = x^3 + Ax + B$ via Chord and Tangent method (handles point at infinity `O`) |
+| `ec_mul` | `ec_mul(A, B, n, P)` / `ec_mul(A, B, n, x, y)` | Scalar multiplication $n P$ of rational points on elliptic curves via binary Double-and-Add algorithm |
+| `ec_torsion` | `ec_torsion(A, B)` | Determination of the rational torsion subgroup $E(\mathbb{Q})_{\text{tors}}$ based on the Nagell-Lutz and Mazur theorems |
+| `ec_p_order` | `ec_p_order([A, B], p)` | Polynomial-time deterministic group order computation $\#E(\mathbb{F}_p)$ of non-singular elliptic curves over prime finite fields $\mathbb{F}_p$ via Schoof's algorithm (division polynomials, Frobenius endomorphism & CRT) |
+| `ec_p_trace` | `ec_p_trace([A, B], p)` | Computes the Frobenius trace $a = p + 1 - \#E(\mathbb{F}_p)$ of elliptic curves over $\mathbb{F}_p$ (satisfying Hasse's bound $|a| \le 2\sqrt{p}$) |
+| `ec_p_add` | `ec_p_add([A, B], P, Q, p)` | Group point addition $P + Q$ on elliptic curves over prime finite field $\mathbb{F}_p$ (via modular inverse and Chord-and-Tangent law, supporting identity `O`) |
+| `ec_p_mul` | `ec_p_mul([A, B], n, P, p)` | Scalar point multiplication $n P$ on elliptic curves over prime finite field $\mathbb{F}_p$ (via Double-and-Add algorithm $\pmod p$) |
+| `ec_rank_bound` | `ec_rank_bound(A, B)` | Computes deterministic Mordell-Weil rank bounds $[r_{\text{lower}}, r_{\text{upper}}]$ via 2-isogeny descent and Selmer group dimension calculation for curves with rational 2-torsion |
+| `ec_generators` | `ec_generators(A, B)` | Extracts a set of linearly independent infinite-order rational points (generators of the lower-bound subgroup) via rational point search on 2-covering homogeneous spaces |
+
 ---
 
-### 3. Calculus, Differential Equations, Special Functions & Discrete Summation
+## 4. Calculus, Differential Equations, Transforms & Special Functions
+
+### 4.1 Calculus, Limits, Series & Residues
 
 | Function | Syntax & Example | Description |
 | :--- | :--- | :--- |
 | `diff` | `diff(sin(x)*x, x)` / `diff(x^4, x, 2)` | Exact symbolic differentiation (Product, Quotient, Chain rules, and higher-order derivatives) |
 | `integrate` | `integrate(x^2, x)` / `integrate(sin(x), x, 0, pi)` | Exact symbolic indefinite integration (antiderivatives, closed-form Gaussian integrals $\int e^{-a x^2} dx \to \frac{\sqrt{\pi}}{2\sqrt{a}} \operatorname{erf}(\sqrt{a}x)$, and $\int W(x) dx$) and definite integration over $[a, b]$ |
 | `risch_integrate` | `risch_integrate(x*exp(x^2), x)` | Deterministic Risch algorithm (transcendental extension & Rothstein-Trager method) for exact indefinite integration |
-| `lambert_w` | `lambert_w(z)` / `lambert_w(z, k)` | Lambert W function $W_k(z)$ (multivalued inverse of $w e^w = z$; principal branch $k=0$ by default, exact simplification for special values $W(0)=0, W(e)=1, W(-1/e)=-1$, derivative $\frac{d}{dz}W(z) = \frac{W(z)}{z(1+W(z))}$, antiderivative $\int W(x) dx = x W(x) - x + e^{W(x)}$, and algebraic identity elimination $W(z)e^{W(z)} \to z$) |
-| `erf` | `erf(z)` | Gauss error function $\operatorname{erf}(z) = \frac{2}{\sqrt{\pi}}\int_0^z e^{-t^2} dt$ (special value $\operatorname{erf}(0)=0$, odd symmetry $\operatorname{erf}(-z) = -\operatorname{erf}(z)$, derivative $\frac{d}{dz}\operatorname{erf}(z) = \frac{2}{\sqrt{\pi}} e^{-z^2}$, and closed-form evaluation of Gaussian integrals $\int e^{-a x^2} dx$) |
-| `limit` | `limit(sin(x)/x, x, 0)` / `limit(1/x, x, 0, 1)` | Exact symbolic limit computation (indeterminate forms, factoring, L'Hopital's rule, one-sided limits) |
+| `limit` | `limit(sin(x)/x, x, 0)` / `limit(1/x, x, 0, 1)` | Exact symbolic limit computation (indeterminate forms, factoring, L'Hôpital's rule, degree comparison, one-sided limits) |
+| `taylor` | `taylor(f, x, a, n)` | Taylor / Maclaurin series expansion around $x=a$ up to order $n$ |
+| `fourier_series` | `fourier_series(f, [t, L, n])` | Symbolic Fourier series expansion (computes exact definite integrals via Euler-Fourier formulas up to order $n$) |
+| `residue` | `residue(1/(z^2*(z+1)), z, 0)` / `residue(exp(z)/z^3, z, 0)` | Exact algebraic residue $\mathrm{Res}(f, z_0)$ at isolated singularity $z_0$ in complex analysis (order determination, Taylor recurrence & Cauchy formula) |
+
+### 4.2 Differential Equations, Recurrences & Integral/Z Transforms
+
+| Function | Syntax & Example | Description |
+| :--- | :--- | :--- |
 | `dsolve` | `dsolve(diff(y, x) == y, y, x)` / `dsolve(diff(y, x, 2) + 4*y == 0, y, x)` | Symbolic ODE solver (1st-order linear via integrating factor, 2nd-order linear with constant coefficients and undetermined coefficients) |
 | `rsolve` | `rsolve(a(n+1) == 2*a(n) + 1, a(n), [a(1) == 1])` / `rsolve(a(n+3) - 6*a(n+2) + 11*a(n+1) - 6*a(n) == 0, a(n), [a(0) == 1, a(1) == 2, a(2) == 4])` | Linear recurrence relation solver (arbitrary order $d \ge 1$ linear recurrences with constant coefficients, characteristic roots analysis, repeated roots Jordan basis $n^j r^n$, resonance forcing undetermined coefficients, $d \times d$ linear initial condition fitting, `--explain` trace, dual `--verify`, Lean 4 `geom_solution_iff` formal proofs, and Typst math export) |
 | `ztrans` | `ztrans(2^n, n, z)` / `ztrans(n, n, z)` / `ztrans(cos(w*n), n, z)` | Exact symbolic unilateral Z-transform $\mathcal{Z}\{f[n]\} = \sum_{n=0}^{\infty} f[n] z^{-n}$ (elementary signals $\delta[n], u[n], a^n, n^k, \sin, \cos$, linearity, time/frequency shift rules, product transforms) |
 | `iztrans` | `iztrans(z / (z - 2), z, n)` / `iztrans(z / (z - 1)^2, z, n)` / `iztrans(1/z, z, n)` | Exact causal inverse Z-transform $\mathcal{Z}^{-1}\{X(z)\}$ ($X(z)/z$ partial fraction decomposition PFD, improper rational division $\delta[n+k]$, origin delay poles, repeated pole binomial expansion) |
 | `laplace` | `laplace(sin(2*t), t, s)` / `laplace(exp(3*t)*t^2)` | Exact symbolic Laplace transform $\mathcal{L}\{f(t)\}$ (linearity, polynomial, exponential, trigonometric, damped oscillation & frequency shifting) |
 | `inv_laplace` | `inv_laplace(1/(s-3), s, t)` / `inv_laplace(1/(s^2+4))` | Exact symbolic inverse Laplace transform $\mathcal{L}^{-1}\{F(s)\}$ (via partial fraction decomposition `apart` and pole matching) |
-| `taylor` | `taylor(f, x, a, n)` | Taylor / Maclaurin series expansion around $x=a$ up to order $n$ |
-| `fourier_series` | `fourier_series(f, [t, L, n])` | Symbolic Fourier series expansion (computes exact definite integrals via Euler-Fourier formulas up to order $n$) |
-| `residue` | `residue(1/(z^2*(z+1)), z, 0)` / `residue(exp(z)/z^3, z, 0)` | Exact algebraic residue $\mathrm{Res}(f, z_0)$ at isolated singularity $z_0$ in complex analysis (order determination, Taylor recurrence & Cauchy formula) |
+| `delta` | `delta(x)` | Dirac delta function $\delta(x)$ (Generalized function / impulse response in calculus, Laplace, and Z-transforms) |
+
+### 4.3 Special Functions, Piecewise Algebra & Discrete Summation
+
+| Function | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `lambert_w` | `lambert_w(z)` / `lambert_w(z, k)` | Lambert W function $W_k(z)$ (multivalued inverse of $w e^w = z$; principal branch $k=0$ by default, exact simplification for special values $W(0)=0, W(e)=1, W(-1/e)=-1$, derivative $\frac{d}{dz}W(z) = \frac{W(z)}{z(1+W(z))}$, antiderivative $\int W(x) dx = x W(x) - x + e^{W(x)}$, and algebraic identity elimination $W(z)e^{W(z)} \to z$) |
+| `erf` | `erf(z)` | Gauss error function $\operatorname{erf}(z) = \frac{2}{\sqrt{\pi}}\int_0^z e^{-t^2} dt$ (special value $\operatorname{erf}(0)=0$, odd symmetry $\operatorname{erf}(-z) = -\operatorname{erf}(z)$, derivative $\frac{d}{dz}\operatorname{erf}(z) = \frac{2}{\sqrt{\pi}} e^{-z^2}$, and closed-form evaluation of Gaussian integrals $\int e^{-a x^2} dx$) |
 | `gamma` | `gamma(5)` / `gamma(1/2)` / `gamma(-1/2)` | Gamma function $\Gamma(z)$ (factorial $(n-1)!$ for positive integers, $\sqrt{\pi}$ expansion for half-integers, pole detection for non-positive integers) |
-| `beta` | `beta(2, 3)` / `beta(1/2, 1/2)` | Beta function $\mathrm{B}(p, q) = \frac{\Gamma(p)\Gamma(q)}{\Gamma(p+q)}$ (exact rational or algebraic expansion for integers/half-integers, e.g. $\mathrm{B}(1/2, 1/2) = \pi$) |
-| `bernoulli` | `bernoulli(4)` / `bernoulli(10)` | $n$-th Bernoulli number $B_n$ (exact arbitrary-precision rational via Akiyama-Tanigawa algorithm, e.g. $B_{10} = 5/66$) |
-| `zeta` | `zeta(2)` / `zeta(4)` / `zeta(6)` | Riemann zeta function $\zeta(s)$ (exact algebraic closed forms for positive even integers via Euler formula, e.g. $\zeta(4) = \pi^4/90$, pole detection at $s=1$) |
+| `beta` | `beta(2, 3)` / `beta(1/2, 1/2)` | Beta function $\mathrm{B}(p, q) = \frac{\Gamma(p)\Gamma(q)}{\Gamma(p+q)}$ (exact rational or algebraic expansion for integers/half-integers, e.g., $\mathrm{B}(1/2, 1/2) = \pi$) |
+| `bernoulli` | `bernoulli(4)` / `bernoulli(10)` | $n$-th Bernoulli number $B_n$ (exact arbitrary-precision rational via Akiyama-Tanigawa algorithm, e.g., $B_{10} = 5/66$) |
+| `zeta` | `zeta(2)` / `zeta(4)` / `zeta(6)` | Riemann zeta function $\zeta(s)$ (exact algebraic closed forms for positive even integers via Euler formula, e.g., $\zeta(4) = \pi^4/90$, pole detection at $s=1$) |
 | `piecewise` | `piecewise([[expr1, cond1], ...], default)` | Piecewise algebraic function (first-class `PiecewiseNode`). Evaluates exact calculus (`diff`, `integrate`) and algebraic equation solving (`solve`) across sign-invariant CAD cells |
 | `sum` | `sum(expr, k, start, end)` | Discrete summation (finite sum or exact polynomial closed form via Faulhaber formula) |
-| `gosper_sum` | `gosper_sum(t_k, k)` | Gosper's algorithm for hypergeometric summation: finds closed-form antiderivative $z_k$ such that $z_{k+1}-z_k=t_k$ |
+| `gosper_sum` | `gosper_sum(t_k, k)` | Gosper's algorithm for hypergeometric summation: finds closed-form antidifference $z_k$ such that $z_{k+1}-z_k=t_k$ |
 | `wz_cert` | `wz_cert(F, n, k)` | Generates rational function certificate $R(n, k)$ for hypergeometric identity verification via Wilf-Zeilberger (WZ) theory |
-| `delta` | `delta(x)` | Dirac delta function $\delta(x)$ (Generalized function / impulse response in calculus, Laplace, and Z-transforms) |
 
 ---
 
-### 4. Linear Algebra & 3D Vector Calculus
+## 5. Linear Algebra, Geometry, Optimization & Discrete Probability
+
+### 5.1 Linear Algebra & 3D Vector Calculus
 
 | Function | Syntax & Example | Description |
 | :--- | :--- | :--- |
@@ -238,16 +415,14 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) causes a syntax ambiguity 
 | `snf` | `snf(A)` | Smith Normal Form (SNF) of integer matrices via elementary row/column operations with invariant factor divisibility chain $d_1 \mid d_2 \mid \dots \mid d_r$ |
 | `snf_transform` | `snf_transform(A)` | Smith Normal Form with bilateral unimodular transforms $[D, U, V]$ ($U \in \text{GL}_m(\mathbb{Z}), V \in \text{GL}_n(\mathbb{Z}), U A V = D$) |
 | `invariant_factors` | `invariant_factors(A)` | Extract invariant factors $[d_1, d_2, \dots, d_r]$ (positive diagonal entries of SNF) |
-| `abelian_group_structure` | `abelian_group_structure(A)` | Identify direct sum structure of finitely generated abelian group $G = \mathbb{Z}^m / \operatorname{Im}(A)$ (e.g. `Z_2 + Z_6`, free part `Z`) |
+| `abelian_group_structure` | `abelian_group_structure(A)` | Identify direct sum structure of finitely generated abelian group $G = \mathbb{Z}^m / \operatorname{Im}(A)$ (e.g., `Z_2 + Z_6`, free part `Z`) |
 | `dot`, `cross` | `dot(u, v)`, `cross(u, v)` | Vector dot product and 3D vector cross product |
 | `norm` | `norm(v)` | Euclidean vector norm ($\sqrt{\sum v_i^2}$, with radical simplification) |
 | `grad` | `grad(f, [x, y, z])` | Gradient vector field ($\nabla f$) |
 | `div`, `curl` | `div(F, [x, y, z])`, `curl(F, [x, y, z])` | Divergence ($\nabla \cdot F$) and 3D curl ($\nabla \times F$) |
 | Matrix / Vector Syntax | `[[1, 2], [3, 4]]`, `[1, 2, 3]` | Matrix and vector literal syntax |
 
----
-
-### 5. Computational Geometry
+### 5.2 Computational Geometry
 
 | Function | Syntax & Example | Description |
 | :--- | :--- | :--- |
@@ -263,9 +438,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) causes a syntax ambiguity 
 | `equal_length` / `equal_length_sq` | `equal_length(A, B, C, D)`, `equal_length_sq(A, B, C, D)` | Predicates asserting equal segment lengths ($AB = CD$) and equal squared segment lengths ($AB^2 = CD^2$) |
 | `circle_concyclic` | `circle_concyclic(A, B, C, D)` | Predicate asserting points $A, B, C, D$ lie on a common circle (concyclic condition) |
 
----
-
-### 6. Exact Discrete Probability & Statistics
+### 5.3 Exact Discrete Probability, Statistics & Combinatorics
 
 | Function | Syntax & Example | Description |
 | :--- | :--- | :--- |
@@ -293,196 +466,47 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) causes a syntax ambiguity 
 | `rs_encode` | `rs_encode([1, 2], [1, 2, 3, 4], 5)` | Reed-Solomon polynomial evaluation encoding over $\mathbb{F}_p$ |
 | `rs_decode` | `rs_decode([3, 4, 2, 4], [1, 2, 3, 4], 2, 5)` | Exact Reed-Solomon error correction decoding via Berlekamp-Welch over $\mathbb{F}_p$ |
 
----
-
-### 7. Symbolic Assumptions System
-
-| Command | Example | Description |
-| :--- | :--- | :--- |
-| `assume` | `assume(x > 0)`, `assume(n, integer)` | Sets domain constraints (`sqrt(x^2)` → `x`, `sin(n*pi)` → `0`, etc.) |
-| `unassume` | `unassume(x)` | Clears assumptions for the specified variable |
-| `assumptions` | `assumptions()` | Displays all active domain constraints |
-| `clear_assumptions` | `clear_assumptions()` | Clears all active domain constraints simultaneously |
-
----
-
-### 8. Real Algebraic Geometry, Mathematical Logic & Quantifier Elimination
-
-| Function | Syntax & Example | Description |
-| :--- | :--- | :--- |
-| `qe` | `qe(forall([x], x^2 + a*x + b > 0))` | Full Quantifier Elimination via Cylindrical Algebraic Decomposition (CAD) (constructs equivalent quantifier-free conditions via Hong (1992) boundary polynomials) |
-| `forall` | `forall([x], formula)` | Universal quantifier formula constructor $\forall x \, \Phi(x)$ |
-| `exists` | `exists([x], formula)` | Existential quantifier formula constructor $\exists x \, \Phi(x)$ |
-| `cad` | `cad([x^2 - 2], [x])` | Direct execution of Cylindrical Algebraic Decomposition (1D cell decomposition and sample point derivation for semi-algebraic sets) |
-
----
-
-### 9. Elliptic Curves & Arithmetic Geometry
-
-| Function | Syntax & Example | Description |
-| :--- | :--- | :--- |
-| `ec_add` | `ec_add(A, B, P1, P2)` / `ec_add(A, B, x1, y1, x2, y2)` | Rational point addition on Weierstrass elliptic curve $y^2 = x^3 + Ax + B$ via Chord and Tangent method (handles point at infinity `O`) |
-| `ec_mul` | `ec_mul(A, B, n, P)` / `ec_mul(A, B, n, x, y)` | Scalar multiplication $n P$ of rational points on elliptic curves via binary Double-and-Add algorithm |
-| `ec_torsion` | `ec_torsion(A, B)` | Full determination of the rational torsion subgroup $E(\mathbb{Q})_{\text{tors}}$ based on the Nagell-Lutz and Mazur theorems |
-| `ec_p_order` | `ec_p_order([A, B], p)` | Polynomial-time deterministic group order computation $\#E(\mathbb{F}_p)$ of non-singular elliptic curves over prime finite fields $\mathbb{F}_p$ via Schoof's algorithm (division polynomials, Frobenius endomorphism & CRT) |
-| `ec_p_trace` | `ec_p_trace([A, B], p)` | Computes the Frobenius trace $a = p + 1 - \#E(\mathbb{F}_p)$ of elliptic curves over $\mathbb{F}_p$ (satisfying Hasse's bound $|a| \le 2\sqrt{p}$) |
-| `ec_p_add` | `ec_p_add([A, B], P, Q, p)` | Group point addition $P + Q$ on elliptic curves over prime finite field $\mathbb{F}_p$ (via modular inverse and Chord-and-Tangent law, supporting identity `O`) |
-| `ec_p_mul` | `ec_p_mul([A, B], n, P, p)` | Scalar point multiplication $n P$ on elliptic curves over prime finite field $\mathbb{F}_p$ (via Double-and-Add algorithm $\pmod p$) |
-| `ec_rank_bound` | `ec_rank_bound(A, B)` | Computes deterministic Mordell-Weil rank bounds $[r_{\text{lower}}, r_{\text{upper}}]$ via 2-isogeny descent and Selmer group dimension calculation for curves with rational 2-torsion |
-| `ec_generators` | `ec_generators(A, B)` | Extracts a set of linearly independent infinite-order rational points (generators of the lower-bound subgroup) via rational point search on 2-covering homogeneous spaces |
-
----
-
-### 10. Visualization & Verification Tools
-
-| Function | Syntax & Example | Description |
-| :--- | :--- | :--- |
-| `verify` | `verify(integrate(1/(x^2+1), x), atan(x))` | Independently verifies algebraic equivalence of two expressions and issues an algebraic verification certificate |
-| `plot` | `plot(sin(x), [-pi, pi])` | High-resolution terminal curve plotter using Unicode 2×4 Braille characters (automatic root/extrema detection, singularity discontinuity handling) |
-
----
-
-### 11. Lattice Basis Reduction & Integer Relations (LLL)
-
-| Function | Syntax & Example | Description |
-| :--- | :--- | :--- |
-| `lll` | `lll([[1, -1, 3], [1, 0, 5], [1, 2, 6]])` | Lenstra–Lenstra–Lovász (1982) lattice basis reduction algorithm over exact rationals |
-| `find_min_poly` | `find_min_poly(sqrt(2) + sqrt(3), 4)` | Exact minimal polynomial reconstruction for algebraic numbers using LLL lattice reduction |
-
----
-
-### 12. p-adic Arithmetic, Local Algebra & Hensel Lifting
-
-| Function | Syntax & Example | Description |
-| :--- | :--- | :--- |
-| `padic_val` | `padic_val(50, 5)` | Exact p-adic valuation $v_p(x) \in \mathbb{Z}$ for rational $x$ and prime base $p$ ($x=0$ yields infinity) |
-| `padic_norm` | `padic_norm(3/20, 2)` | Exact ultrametric norm $|x|_p = p^{-v_p(x)}$ as an exact rational (`big.Rat`) |
-| `padic_expand` | `padic_expand(2/3, 5, 4)` | Returns the truncated p-adic power series expansion `+ O(p^k)` as a first-class `PadicNode`; supports closed arithmetic (`+`, `-`, `*`, `/`, integer powers) and rational promotion for matching prime $p$ (preserves symbolic form when primes differ) |
-
----
-
-### 13. Local Algebraic Series & Singularities (Puiseux Series)
-
-| Function | Syntax & Example | Description |
-| :--- | :--- | :--- |
-| `puiseux` | `puiseux(y^2 - x^3, y, x, 3)` | Deterministically derives local fractional-power Puiseux series branches $y(x) = \sum c_k x^{p_k/q_k} + O(x^N)$ around singularities/branch points of $F(x, y) = 0$ via the Newton polygon algorithm (default order 3) as first-class `PuiseuxNode` values supporting closed arithmetic, integer powers, and symbolic differentiation `diff` |
-
----
-
-### 14. Galois Theory, Solvability by Radicals & Abel-Ruffini Certificates
-
-| Function | Syntax & Example | Description |
-| :--- | :--- | :--- |
-| `galois_group` | `galois_group(x^3 - 2)` / `galois_group(p, x)` | Deterministic Galois group $\mathrm{Gal}(f/\mathbb{Q})$ computation for polynomials up to degree 5 over $\mathbb{Q}$ (identifies permutation group isomorphism types such as $S_n, A_n, D_n, C_n, V_4, F_{20}$ via squarefree factorization, discriminants, cubic/sextic resolvents, and Dedekind-Frobenius cycle-type positive witnesses) |
-| `is_solvable_by_radicals` | `is_solvable_by_radicals(x^5 - 4*x + 2)` | Deterministic solvability by radicals test based on the Fundamental Theorem of Galois Theory and Abel-Ruffini Theorem. Returns `true` for solvable Galois groups and `false` for non-solvable groups ($A_5, S_5$). Under `--verify`, emits an independently verifiable Abel-Ruffini Impossibility Certificate IR; under `--lean`, generates formal Lean 4 (Mathlib4) proof code |
-
----
-
-### 15. Self-Verifying Certificates & Formal Proof Infrastructure (ProofTrace / Explain / Verify / Lean 4)
-
-| Feature / Option | Syntax & Example | Description |
-| :--- | :--- | :--- |
-| `ProofTrace` | Internal Data Structure | Data structure storing each step of the derivation (Before/After nodes, applied rule, residual expression, verification status). Acts as a shared representation for derivations, reverse-checks, and Lean 4 code generation |
-| `--explain` / `explain` / `steps` | `ihd --explain "1/(sqrt(2)+1)"` | Displays tree-formatted step-by-step algebraic derivations (radical denesting, rationalization, factoring, differentiation rules, etc.) based on derivation step sequences |
-| `--verify` / `verify` | `ihd --verify "factor(x^2 - 1)"` | Checks algebraic correctness for steps and results against defining relations and derivatives, confirming that residuals vanish |
-| `--certificate` | `ihd --certificate [file] "factor(x^2 - 1)"` | Exports computation and rewriting sequence into a certificate JSON file (schema `ihd-proof-trace-v1`) to stdout or file |
-| `--replay` | `ihd --replay cert.json` | Reads an exported certificate JSON file and verifies that residuals vanish without invoking CAS solver algorithms |
-| `micro-verifier` | `micro-verifier cert.json` | Standalone zero-dependency micro-verification binary built using only the Go standard library. Validates certificate JSON files (`ihd-proof-trace-v1`) objectively without relying on the CAS solver itself |
-| `--lean` / `--lean-file` | `ihd --lean "factor(x^2 - 1)"` / `ihd --lean-file p.lean "factor(x^2 - 1)"` | Automatically transpiles computation and proof traces into formal **Lean 4 (Mathlib4)** proof theorems (`by ring`, `by ext <;> fin_cases`, `by repeat constructor <;> norm_num`, `by simp`, etc.) |
-| `--typst` / `--format typst` | `ihd --typst "1/2 + sqrt(2)"` / `ihd --format typst "[[1, 2], [3, 4]]"` | Formats output expressions in **Typst** math mode syntax (`$ ... $`, `/` for fraction, `mat(...)` for matrices, etc.) |
-| `--explain --lean` | `ihd --explain --lean "factor(x^4 + 4)"` | Projects from the single provenance DAG into a **Lean 4 (Mathlib4)** transitive equational derivation `calc` block (`by ring`, `by norm_num`, etc.) with zero sorry assertions |
-| `--explain --typst` | `ihd --explain --typst "expand((x + 1)^2)"` | Projects from the single provenance DAG into a formatted **Typst** Mathematical Derivation Report document (`= Mathematical Derivation Report`) |
-
----
-
-### 16. Clifford Geometric Algebra & Binary Cyclotomic Quantum Circuit Verification
+### 5.4 Clifford Geometric Algebra & Binary Cyclotomic Quantum Circuit Verification
 
 Supports real Clifford geometric algebras $\mathrm{Cl}(p, q, r)$ equipped with orthogonal diagonal signatures $(p, q, r)$ ($p$ positive basis vectors $e_i^2 = +1$, $q$ negative basis vectors $e_i^2 = -1$, and $r$ degenerate/null basis vectors $e_i^2 = 0$), alongside zero-decimal Clifford+T quantum circuit equivalence verification over the binary cyclotomic ring $\mathbb{Z}[1/\sqrt{2}, i]$.
 
 | Function | Syntax & Example | Description |
 | :--- | :--- | :--- |
 | `clifford` | `clifford(e0 * e1 + e1 * e0, 3, 0)` / `clifford(e0 * e0, 3, 0)` | Computes the Clifford geometric product and simplifies multivector expressions canonically under signature $(p, q, [r])$ (basis squaring and anti-commutation reduction). Basis generator symbols are `e0`, `e1`, `e2` ... |
-| `clifford_wedge` | `clifford_wedge(e0, e1, 3, 0)` | Grassmann exterior product (wedge product) $A \wedge B$. Evaluates completely anti-symmetrized graded blades under metric $(p, q, [r])$ |
+| `clifford_wedge` | `clifford_wedge(e0, e1, 3, 0)` | Grassmann exterior product (wedge product) $A \wedge B$. Evaluates anti-symmetrized graded blades under metric $(p, q, [r])$ |
 | `clifford_contract` | `clifford_contract(e0, e0, "left", 3, 0)` | Left/Right contractions (inner product extensions). The 3rd argument selects contraction direction (`"left"`: left contraction $\lrcorner$, `"right"`: right contraction $\llcorner$) |
-| `clifford_dual` | `clifford_dual(e3, 3, 0, 1)` | Poincaré complement dual. Computes the dual multivector via contraction with the unit pseudoscalar blade $I$ (fully supports degenerate metrics $r > 0$) |
+| `clifford_dual` | `clifford_dual(e3, 3, 0, 1)` | Poincaré complement dual. Computes the dual multivector via contraction with the unit pseudoscalar blade $I$ (supports degenerate metrics $r > 0$) |
 | `quantum_equiv` | `quantum_equiv(c1, c2)` / `quantum_equiv(c1, c2, strict)` | Strictly verifies algebraic equivalence between two Clifford+T circuits $c1, c2$ over the binary cyclotomic ring $\mathbb{Z}[1/\sqrt{2}, i]$ up to global phase. If inequivalent, extracts a concrete refuting witness basis state |
 | `quantum_eval` | `quantum_eval(circuit, numQubits)` | Exactly simulates and computes the symbolic unitary matrix of a Clifford+T quantum circuit over binary cyclotomic ring coefficients |
 
 ---
 
-### 17. CAS Iteration Control & Multi-Radix Arithmetic
+## 6. Iteration Control, Collections, Units, Rewriting & Formal Output
 
-Provides list comprehension, discrete products, procedural loops, and multi-radix (bases 2 through 64) integer/rational literals and conversion functions.
-
-| Function / Syntax | Syntax & Example | Description |
-| :--- | :--- | :--- |
-| `table` | `table(x^2, x, 1, 5)` / `table(k, k, 1, 9, 2)` | Mathematica-style list comprehension. Evaluates `table(expr, var, start, end, [step])` under automatic dynamic scope protection (supports nested multidimensional table generation) |
-| `product` | `product(k, k, 1, 5)` / `product(2*k + 1, k, 0, 4)` | Discrete product computation ($\prod_{k=\text{start}}^{\text{end}} \text{expr}$) with dynamic scope protection and zero-short-circuiting |
-| `for` | `for(k, 1, 5, s = s + k)` | Procedural iteration loop with syntax `for(var, start, end, [step], body)`. Returns the evaluation result of the final iteration (use variable names other than imaginary unit `i`, e.g. `k`, `j`, `n`) |
-| `to_base` | `to_base(255, 16)` / `to_base(1/3, 2)` | Converts an integer or exact rational into a string representation in the specified base (2 to 64), outputting repeating fractional digits when periodic |
-| `from_base` | `from_base("FF", 16)` / `from_base("1011", 2)` | Parses a base-$N$ string representation back into an exact arbitrary-precision integer |
-| `bin`, `oct`, `hex` | `bin(42)`, `oct(42)`, `hex(255)` | Convenience aliases for standard binary, octal, and hexadecimal radix conversions |
-| Radix Literals | `16^^FF`, `2^^1011`, `0x1A`, `0b101` | Lexer support for arbitrary-radix literal constants ($2 \le \text{base} \le 64$) |
-
----
-
-### 18. REPL Syntax Highlighting, Themes & Interactive Commands
-
-Interactive control commands, high-contrast color themes, and real-time lexical syntax highlighting features available inside the REPL.
-
-| Command / Option | Syntax & Example | Description |
-| :--- | :--- | :--- |
-| `theme` | `theme` | Displays the currently active syntax highlight color theme (`dark`, `light`, or `none`) |
-| `theme dark` | `theme dark` | Switches to the dark-background palette (cyan/magenta/green/blue rainbow delimiters, yellow numbers, bright white operators), persisted to `~/.ihd/config.json` |
-| `theme light` | `theme light` | Switches to the light-background palette (bold blue/magenta/green/cyan delimiters, red numbers, black operators), persisted to configuration |
-| `highlight` | `highlight` / `color` | Shows current syntax highlight status (enabled / disabled) |
-| `highlight on` / `off` | `highlight on` / `highlight off` | Toggles real-time lexical highlighting and nested rainbow delimiters dynamically |
-| `warn-loop` | `warn-loop <N>` / `warn-loop` | Configure and display warning threshold for iteration loops, persisted to `~/.ihd/config.json` (default: 100,000) |
-| `max-loop` | `max-loop <N>` / `max-loop` | Configure and display maximum iteration limit for loops, persisted to `~/.ihd/config.json` (default: -1: unlimited) |
-| `config loop` | `config loop` | Display current loop warning threshold and maximum iteration safety limit |
-| `vars` | `vars` | Displays all currently bound user variables in the active environment |
-| `help` | `help` / `help <func>` | Display quick help or explicit argument signature and description for a function |
-| `search` | `search <keyword>` | Search built-in functions by name or localized description |
-| `whatis` | `whatis <expr_or_concept>` | Explain mathematical concept or AST structure and suggest applicable built-in functions |
-| `similar` | `similar(<expr>)` / `similar <expr>` | Find structurally similar expressions in session history using AST hashes |
-| `save` | `save <filepath>` | Persist current REPL session environment (variables and assumptions) to `.ihd` file |
-| `load` | `load <filepath>` | Restore session environment from a saved `.ihd` file |
-| `clear` / `reset` | `clear` / `reset` | Reset all variables and assumptions in current session environment |
-| `exit` / `quit` | `exit` / `quit` / `Ctrl+D` | Exits the interactive REPL session cleanly |
-| CLI Options | `ihd --theme light` / `--no-color` / `--warn-loop <N>` / `--max-loop <N>` | CLI startup flags to set initial color theme, disable color, or set loop thresholds |
-
----
-
-### 19. Multivariate Polynomial Ideals & Primary Decomposition (GTZ)
-
-| Function | Syntax & Example | Description |
-| :--- | :--- | :--- |
-| `ideal_member` | `ideal_member(target, [f1, f2, ...], [x, y, ...])` | Tests polynomial ideal membership via Groebner basis reduction and returns cofactor certificate coefficients if contained |
-| `primary_decomposition` | `primary_decomposition([x^2 - 1, y], [x, y])` | Computes primary decomposition $I = \bigcap Q_i$ of multivariate polynomial ideal $I = \langle p_1, \dots \rangle$ via Gianni-Trager-Zacharias (GTZ) algorithm, returning a list of `[[Q_1, P_1], ...]` pairs of primary component $Q_i$ and associated prime $P_i = \sqrt{Q_i}$. Optional 3rd argument specifies monomial order (`"grevlex"` or `"lex"`). |
-| `ideal_radical` | `ideal_radical([x^2, x*y], [x, y])` | Computes generator list of radical ideal $\sqrt{I}$. |
-| `ideal_dimension` | `ideal_dimension([x*y, x*z], [x, y, z])` | Finds maximal independent variable set from leading monomial ideal of Groebner basis and returns Krull dimension as an integer. |
-| `ideal_intersection` | `ideal_intersection([x], [y], [x, y])` | Computes ideal intersection $I \cap J$ via auxiliary variable elimination. |
-| `ideal_colon` | `ideal_colon([x^2], x, [x])` | Computes colon ideal (quotient ideal) $I : f = \{ g \mid f g \in I \}$ by polynomial $f$. |
-| `ideal_saturation` | `ideal_saturation([x^2], x, [x])` | Computes saturation ideal $I : f^\infty$ iteratively and returns generators upon reaching stabilization index $m$. |
-
----
-
-### 20. Collection Manipulation & First-Class Lambda Expressions
+### 6.1 Collection Manipulation & First-Class Lambda Expressions
 
 Provides sequence generation, higher-order function mapping, predicate filtering, first-class lambda expressions, and array slicing.
 
 | Function / Syntax | Syntax & Example | Description |
 | :--- | :--- | :--- |
-| `range` | `range(5)` / `range(2, 6)` / `range(0, 1, 1/3)` | Generates an arithmetic sequence as a list. Syntax: `range(stop)` or `range(start, stop, [step])`. The step argument accepts integers and exact rational fractions (step = 0 yields an error) |
+| `range` | `range(5)` / `range(2, 6)` / `range(0, 1, 1/3)` | Generates an arithmetic sequence as a list. Syntax: `range(stop)` or `range(start, stop, [step])`. The step argument accepts integers and exact rational fractions (`step = 0` yields an error) |
 | `map` | `map(sin, [0, pi/2, pi])` / `map(lambda(x, x^2), range(5))` | Applies a function or lambda expression to each element of a collection, returning a new list. Syntax: `map(fn, list)`. Protects parent environment variables using a shadow scope |
 | `filter` | `filter(is_prime, range(1, 11))` / `filter(lambda(x, x > 2), [1, 2, 3, 4])` | Extracts elements that satisfy a predicate function or boolean lambda expression. Syntax: `filter(pred, list)` |
 | `lambda` | `lambda(x, x^2)` / `lambda([x, y], x + y)` | Defines a first-class anonymous function. Syntax: `lambda(param, body)` or `lambda([p1, p2, ...], body)`. Supports immediate calls `lambda(x, x+1)(5)` and calls via bound variables `f = lambda(x, x^2); f(3)` |
 | Single Index | `list[0]`, `list[-1]` | 0-indexed element access. Negative indices denote positions from the end ($-1$ is the last element). Out-of-bounds access returns an IndexError |
-| Slice Syntax | `list[start:stop]`, `list[start:stop:step]` | Subsequence extraction conforming to CPython `PySlice_GetIndicesEx` normalization. Supports all 8 patterns (`[:]`, `[:end]`, `[start:]`, `[start:end]`, `[::step]`, `[start::step]`, `[:end:step]`, `[start:end:step]`), negative indices, negative steps, and boundary clipping (step = 0 yields an error) |
+| Slice Syntax | `list[start:stop]`, `list[start:stop:step]` | Subsequence extraction conforming to CPython `PySlice_GetIndicesEx` normalization. Supports all 8 patterns (`[:]`, `[:end]`, `[start:]`, `[start:end]`, `[::step]`, `[start::step]`, `[:end:step]`, `[start:end:step]`), negative indices, negative steps, and boundary clipping (`step = 0` yields an error) |
 
----
+### 6.2 CAS Iteration Control
 
-### 21. Physical Units & Dimensional Analysis
+Provides list comprehension, discrete products, and procedural loops (iteration warning and safety limits can be controlled via `warn-loop` / `max-loop` or `--warn-loop` / `--max-loop`).
+
+| Function / Syntax | Syntax & Example | Description |
+| :--- | :--- | :--- |
+| `table` | `table(x^2, x, 1, 5)` / `table(k, k, 1, 9, 2)` | Mathematica-style list comprehension. Evaluates `table(expr, var, start, end, [step])` under automatic dynamic scope protection (supports nested multidimensional table generation) |
+| `product` | `product(k, k, 1, 5)` / `product(2*k + 1, k, 0, 4)` | Discrete product computation ($\prod_{k=\text{start}}^{\text{end}} \text{expr}$) with dynamic scope protection and zero-short-circuiting |
+| `for` | `for(k, 1, 5, s = s + k)` | Procedural iteration loop with syntax `for(var, start, end, [step], body)`. Returns the evaluation result of the final iteration (variable names other than imaginary unit `i`, e.g., `k`, `j`, `n`) |
+
+### 6.3 Physical Units & Dimensional Analysis
 
 Performs dimensional analysis and physical unit calculations over the 7-dimensional rational vector space $\mathbb{Q}^7$ of SI base units without floating-point approximations.
 
@@ -494,22 +518,16 @@ Performs dimensional analysis and physical unit calculations over the 7-dimensio
 
 | Function / Syntax | Syntax & Example | Description |
 | :--- | :--- | :--- |
-| `[unit]` Syntax | `10 [m/s]`, `5 [kg*m/s^2]`, `(1/4) [h]` | Attaches a unit expression to a value or expression. Operators `*`, `/`, `^` are supported inside the unit expression. Use parentheses for fractions such as `(1/4) [h]` |
+| `[unit]` Syntax | `10 [m/s]`, `5 [kg*m/s^2]`, `(1/4) [h]` | Attaches a unit expression to a value or expression. Operators `*`, `/`, `^` are supported inside the unit expression; fractions are parenthesized such as `(1/4) [h]` |
 | `unit` / `u` | `unit(m/s)`, `u(N)` | Constructs a unit quantity with magnitude 1 |
 | `convert_unit` | `convert_unit(100 [km/h], m/s)`, `convert_unit((1/4) [h], min)` | Converts a physical quantity to dimensionally compatible target units via exact rational ratio. Returns an error on dimension mismatch |
 | Arithmetic Operations | `10 [m/s] * 5 [s]` $\to$ `50 [m]`, `1 [km] - 200 [m]` $\to$ `4/5 [km]` | Validates dimensional consistency on addition/subtraction. Multiplies/divides rational dimension vectors. Automatically unboxes to standard numbers when dimensionless |
 | Transcendental Guards | `sin(10 [m])` $\to$ Error | Rejects dimensioned arguments to elementary transcendental functions (`sin`, `cos`, `exp`, `ln`, etc.) |
 | Verification (`--verify`) | `ihd --verify "convert_unit(100 [km/h], m/s)"` | Verifies that source and target quantities have zero residual when expanded to SI base units |
 
+### 6.4 Algebraic Pattern Matching & Term Rewriting System (TRS)
 
-
-
-
----
-
-### 22. Algebraic Pattern Matching & Term Rewriting System (TRS)
-
-Provides term rewriting and pattern matching using underscore wildcard variables (_x, _a), supporting non-linear pattern consistency, associative-commutative (AC) partial matching for addition and multiplication, and fixed-point rewrite loops.
+Provides term rewriting and pattern matching using underscore wildcard variables (`_x`, `_a`), supporting non-linear pattern consistency, associative-commutative (AC) partial matching for addition and multiplication, and fixed-point rewrite loops.
 
 | Function / Syntax | Example | Description |
 | :--- | :--- | :--- |
@@ -518,73 +536,21 @@ Provides term rewriting and pattern matching using underscore wildcard variables
 | `replace` | `replace(sin(t)^2, rule(sin(_x)^2, 1 - cos(_x)^2))` | Traverses expression bottom-up and replaces matched subterms once |
 | `rewrite` | `rewrite(sin(sin(x)), rule(sin(_t), _t))` / `rewrite(expr, [r1, r2], [max_steps])` | Iteratively applies rules until a fixed point is reached. Protected by cycle detection and configurable step limit in `~/.ihd/config.json` (`rewrite_max_steps`, default 1000) |
 
----
+### 6.5 Self-Verifying Certificates, Formal Proofs & Visualization
 
-### 23. Complete CLI Command-Line Options Specification
+External verification of results, certificate emission and independent replay, Lean 4 / Typst projection, and terminal graphing features.
 
-`ihd` provides rich command-line interfaces for one-liners, pipe workflows, batch scripts, and autonomous certificate verification.
-
-#### Subcommands
-
-| Option / Flag | Syntax & Example | Description |
+| Function / Option | Syntax & Example | Description |
 | :--- | :--- | :--- |
-| `diff` | `ihd diff <expr1\|file1> <expr2\|file2>` | Compares syntactic differences and algebraic equivalence via expansion/factoring |
-| `run` | `ihd run <file.ihd>` | Executes batch calculations from an ihd script file |
-| `completion` | `ihd completion <bash\|zsh\|fish\|powershell>` | Generates shell tab-completion script |
-| `update` | `ihd update` / `ihd update -check` | Self-updates ihd to latest release (supports check-only and forced reinstallation) |
-
-#### Output & Formatting
-
-| Option / Flag | Syntax & Example | Description |
-| :--- | :--- | :--- |
-| `--format` | `ihd --format typst "1/2 + sqrt(2)"` | Specifies output format (`typst`, `latex`, `ascii`, `pretty`) |
-| `--pretty` | `ihd --pretty "1/2 + sqrt(2)/2"` | 2D multi-line ASCII-art typesetting output |
-| `--latex` | `ihd --latex "1/2 + sqrt(2)"` | Outputs expression in LaTeX math mode (`$$ ... $$`) |
-| `--typst` | `ihd --typst "1/2 + sqrt(2)"` | Outputs expression in Typst math mode (`$ ... $`) |
-| `--ascii` | `ihd --ascii "sqrt(2) + pi"` | Falls back Unicode symbols to standard ASCII identifiers |
-| `--no-color` | `ihd --no-color` | Disables ANSI color escapes across REPL and CLI outputs |
-| `--theme` | `ihd --theme light` | Configures REPL syntax highlighting theme (`dark`, `light`, `none`) |
-
-#### Approximation & Numerics
-
-| Option / Flag | Syntax & Example | Description |
-| :--- | :--- | :--- |
-| `-a`, `--approx` | `ihd -a "sqrt(2)"` | Displays reference arbitrary-precision decimal value derived via rational interval enclosure |
-| `--approx-digits`, `--digits` | `ihd -a --digits 50 "sqrt(2)"` | Sets decimal precision digits for approximation (default: 30) |
-| `-i`, `--interval` | `ihd -i "sin(1)"` | Computes certified rational interval enclosure `[L, R]` guaranteeing true value |
-| `--interval-eps` | `ihd -i --interval-eps 1/1000000 "sin(1)"` | Sets tolerance epsilon for rational interval refinement |
-| `--deg` | `ihd --deg "sin(30)"` | Interprets trigonometric and inverse trigonometric functions in degrees |
-
-#### Derivation & Verification
-
-| Option / Flag | Syntax & Example | Description |
-| :--- | :--- | :--- |
-| `--explain` | `ihd --explain "1/(sqrt(2)+1)"` | Displays step-by-step algebraic derivation tree |
-| `--step` | `ihd --step "expand((x+1)^3)"` | Iteratively prints derivation and simplification steps |
-| `--trace` | `ihd --trace "factor(x^2 - 1)"` | Outputs internal search process events (Buchberger, CAD, Risch) as structured JSON |
-| `--verify` | `ihd --verify "factor(x^2 - 1)"` | Verifies algebraic correctness autonomously and prints certificate |
-| `--certificate` | `ihd --certificate cert.json "factor(x^2 - 1)"` | Saves standalone proof certificate to JSON file |
-| `--replay` | `ihd --replay cert.json` | Replays and verifies residual vanishing independently from JSON certificate |
-| `--lean` | `ihd --lean "factor(x^2 - 1)"` | Generates formal proof code in Lean 4 (Mathlib4) syntax |
-| `--lean-file` | `ihd --lean-file proof.lean "factor(x^2 - 1)"` | Saves generated Lean 4 formal proof code to `.lean` file |
-
-#### Execution & Limits
-
-| Option / Flag | Syntax & Example | Description |
-| :--- | :--- | :--- |
-| `--timeout` | `ihd --timeout 2s "factor(x^100 - 1)"` | Sets wall-clock execution timeout (e.g. `2s`, `500ms`) |
-| `--budget-steps` | `ihd --budget-steps 5000 "expand((x+1)^20)"` | Sets maximum rewrite budget steps per reduction pass (0 for unlimited) |
-| `--max-nodes` | `ihd --max-nodes 10000 "expand((x+1)^10)"` | Sets maximum allowed AST node count (0 for unlimited) |
-| `--max-depth` | `ihd --max-depth 200 "diff(x^10, x)"` | Sets maximum recursion depth (0 for unlimited) |
-| `--warn-loop` | `ihd --warn-loop 100000 "table(k^2, [k, 1, 200000])"` | Sets iteration warning step threshold (default: 1000) |
-| `--max-loop` | `ihd --max-loop 500000 "table(k^2, [k, 1, 200000])"` | Sets iteration hard abortion threshold (default: 100000, -1 for unlimited) |
-| `--deterministic` | `ihd --deterministic "factor(x^4 - 5*x^2 + 4)"` | Normalizes map iterations and polynomial ordering for deterministic outputs |
-
-#### General
-
-| Option / Flag | Syntax & Example | Description |
-| :--- | :--- | :--- |
-| `-h`, `--help` | `ihd -h` / `ihd --help` | Displays categorized, color-highlighted help message |
-| `-v`, `--version` | `ihd -v` / `ihd --version` | Displays version information |
-| `--lang` | `ihd --lang en` / `ihd --lang ja` | Sets display language locale |
-| `--no-update-check` | `ihd --no-update-check` | Disables automated newer release checks |
+| `verify` | `verify(integrate(1/(x^2+1), x), atan(x))` | Independently verifies algebraic equivalence of two expressions and issues an algebraic verification certificate |
+| `plot` | `plot(sin(x), [-pi, pi])` | High-resolution terminal curve plotter using Unicode 2×4 Braille characters (automatic root/extrema detection, singularity discontinuity handling) |
+| `ProofTrace` | Internal Data Structure | Data structure storing each step of the derivation (Before/After nodes, applied rule, residual expression, verification status). Acts as a shared representation for derivations, reverse-checks, and Lean 4 code generation |
+| `--explain` / `explain` / `steps` | `ihd --explain "1/(sqrt(2)+1)"` | Displays tree-formatted step-by-step algebraic derivations (radical denesting, rationalization, factoring, differentiation rules, etc.) based on derivation step sequences |
+| `--verify` / `verify` | `ihd --verify "factor(x^2 - 1)"` | Checks algebraic correctness for steps and results against defining relations and derivatives, confirming that residuals vanish |
+| `--certificate` | `ihd --certificate [file] "factor(x^2 - 1)"` | Exports computation and rewriting sequence into a certificate JSON file (schema `ihd-proof-trace-v1`) to stdout or file |
+| `--replay` | `ihd --replay cert.json` | Reads an exported certificate JSON file and verifies that residuals vanish without invoking CAS solver algorithms |
+| `micro-verifier` | `micro-verifier cert.json` | Standalone zero-dependency micro-verification binary built using only the Go standard library. Validates certificate JSON files (`ihd-proof-trace-v1`) objectively without relying on the CAS solver itself |
+| `--lean` / `--lean-file` | `ihd --lean "factor(x^2 - 1)"` / `ihd --lean-file p.lean "factor(x^2 - 1)"` | Transpiles computation and proof traces into formal **Lean 4 (Mathlib4)** proof theorems (`by ring`, `by ext <;> fin_cases`, `by repeat constructor <;> norm_num`, `by simp`, etc.) |
+| `--typst` / `--format typst` | `ihd --typst "1/2 + sqrt(2)"` / `ihd --format typst "[[1, 2], [3, 4]]"` | Formats output expressions in **Typst** math mode syntax (`$ ... $`, `/` for fraction, `mat(...)` for matrices, etc.) |
+| `--explain --lean` | `ihd --explain --lean "factor(x^4 + 4)"` | Projects from the single provenance DAG into a **Lean 4 (Mathlib4)** transitive equational derivation `calc` block (`by ring`, `by norm_num`, etc.) with zero sorry assertions |
+| `--explain --typst` | `ihd --explain --typst "expand((x + 1)^2)"` | Projects from the single provenance DAG into a formatted **Typst** Mathematical Derivation Report document (`= Mathematical Derivation Report`) |
