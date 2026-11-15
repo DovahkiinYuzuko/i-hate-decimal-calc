@@ -90,11 +90,9 @@ func EvalPuiseux(args []Node) (Node, error) {
 		order = int(orderRat.Val.Num().Int64())
 	}
 
-	// Simplify expr before extracting support
-	simplifiedExpr, err := Eval(expr)
-	if err != nil {
-		simplifiedExpr = expr
-	}
+	// Expand and simplify expr before extracting support so forms like (y - x)^2 - x^3
+	// are fully distributed into bivariate polynomial terms.
+	simplifiedExpr := expandAndEval(expr)
 	if isZero(simplifiedExpr) {
 		_ = fsm.TransitionTo(PuiseuxStateFailed)
 		return nil, fmt.Errorf("%s", i18n.T("puiseux.err_identity_equation"))
@@ -137,12 +135,14 @@ func EvalPuiseux(args []Node) (Node, error) {
 		return nil, err
 	}
 
-	// 3. For each edge, compute characteristic roots and expand branches
+	// 3. For each edge, compute characteristic roots and expand all branches
 	var allBranchNodes []Node
 	seenBranches := make(map[string]bool)
 
 	for _, edge := range edges {
-		_ = fsm.TransitionTo(PuiseuxStateEdgeSelected)
+		if err := fsm.TransitionTo(PuiseuxStateEdgeSelected); err != nil {
+			return nil, err
+		}
 
 		// Characteristic roots
 		cRoots, err := SolveCharacteristicPolynomial(edge)
@@ -150,11 +150,13 @@ func EvalPuiseux(args []Node) (Node, error) {
 			_ = fsm.TransitionTo(PuiseuxStateFailed)
 			return nil, err
 		}
-		if len(cRoots) == 0 {
-			continue
-		}
 
-		_ = fsm.TransitionTo(PuiseuxStateCharPolySolved)
+		if err := fsm.TransitionTo(PuiseuxStateCharPolySolved); err != nil {
+			return nil, err
+		}
+		if err := fsm.TransitionTo(PuiseuxStateRamifiedAndShifted); err != nil {
+			return nil, err
+		}
 
 		p := edge.SlopeNumerator
 		q := edge.SlopeDenominator
@@ -164,21 +166,27 @@ func EvalPuiseux(args []Node) (Node, error) {
 				{Coeff: c0, ExpNum: p, ExpDen: q},
 			}
 
-			// If higher order terms are needed, perform shift and recursion
-			_ = fsm.TransitionTo(PuiseuxStateRamifiedAndShifted)
-			expandedTerms := expandHigherTerms(simplifiedExpr, yVar, xVar, branchTerms, order, 1)
-			_ = fsm.TransitionTo(PuiseuxStateRecursiveExpanded)
-
-			branchNode := buildPuiseuxBranchNode(expandedTerms, xVar, order)
-			str := Format(branchNode)
-			if !seenBranches[str] {
-				seenBranches[str] = true
-				allBranchNodes = append(allBranchNodes, branchNode)
+			// Recursively expand higher-order terms and collect all split branches
+			expandedBranches := expandHigherTerms(simplifiedExpr, yVar, xVar, branchTerms, order, 1)
+			for _, expandedTerms := range expandedBranches {
+				filteredTerms := filterTermsBelowOrder(expandedTerms, order)
+				branchNode := buildPuiseuxBranchNode(filteredTerms, xVar, order)
+				str := Format(branchNode)
+				if !seenBranches[str] {
+					seenBranches[str] = true
+					allBranchNodes = append(allBranchNodes, branchNode)
+				}
 			}
+		}
+
+		if err := fsm.TransitionTo(PuiseuxStateRecursiveExpanded); err != nil {
+			return nil, err
 		}
 	}
 
-	_ = fsm.TransitionTo(PuiseuxStateBranchesConstructed)
+	if err := fsm.TransitionTo(PuiseuxStateBranchesConstructed); err != nil {
+		return nil, err
+	}
 	return NewList(allBranchNodes), nil
 }
 
@@ -419,78 +427,146 @@ func SolveCharacteristicPolynomial(edge NewtonEdge) ([]Node, error) {
 	return nonZeroRoots, nil
 }
 
-// expandHigherTerms performs Tschirnhausen shift y = c0 * t^p + y1 and recurses up to maxOrder.
-func expandHigherTerms(expr Node, yVar, xVar string, currentTerms []PuiseuxTerm, maxOrder int, depth int) []PuiseuxTerm {
-	if depth > maxOrder || len(currentTerms) == 0 {
-		return currentTerms
+const maxPuiseuxExpansionSteps = 256
+
+func expandAndEval(n Node) Node {
+	evalN, err := Eval(n)
+	if err != nil {
+		evalN = n
+	}
+	expanded := expandNode(evalN)
+	finalN, err := Eval(expanded)
+	if err != nil {
+		return expanded
+	}
+	return finalN
+}
+
+func clonePuiseuxTerms(terms []PuiseuxTerm) []PuiseuxTerm {
+	cp := make([]PuiseuxTerm, len(terms))
+	copy(cp, terms)
+	return cp
+}
+
+func lcmInt64(a, b int64) int64 {
+	if a == 0 || b == 0 {
+		return 1
+	}
+	g := gcdInt64(a, b)
+	if g == 0 {
+		return 1
+	}
+	return (a / g) * b
+}
+
+func filterTermsBelowOrder(terms []PuiseuxTerm, maxOrder int) []PuiseuxTerm {
+	targetOrder := big.NewRat(int64(maxOrder), 1)
+	filtered := make([]PuiseuxTerm, 0, len(terms))
+	for _, term := range terms {
+		expRat := big.NewRat(int64(term.ExpNum), int64(term.ExpDen))
+		if expRat.Cmp(targetOrder) < 0 {
+			filtered = append(filtered, term)
+		}
+	}
+	return filtered
+}
+
+// expandHigherTerms performs cumulative Tschirnhausen substitution x = t^L, y = sum(c_k t^(e_k*L)) + y1
+// and recurses across all higher-order characteristic branches up to O(x^maxOrder).
+func expandHigherTerms(expr Node, yVar, xVar string, currentTerms []PuiseuxTerm, maxOrder int, depth int) [][]PuiseuxTerm {
+	if len(currentTerms) == 0 || depth > maxPuiseuxExpansionSteps {
+		return [][]PuiseuxTerm{clonePuiseuxTerms(currentTerms)}
 	}
 
 	lastTerm := currentTerms[len(currentTerms)-1]
-	// Check if current order already satisfies maxOrder
-	currDeg := float64(lastTerm.ExpNum) / float64(lastTerm.ExpDen)
-	if currDeg >= float64(maxOrder) {
-		return currentTerms
+	lastExp := big.NewRat(int64(lastTerm.ExpNum), int64(lastTerm.ExpDen))
+	targetOrder := big.NewRat(int64(maxOrder), 1)
+	if lastExp.Cmp(targetOrder) >= 0 {
+		return [][]PuiseuxTerm{clonePuiseuxTerms(currentTerms)}
 	}
 
-	// Substitute x = t^q into expr, where q = lastTerm.ExpDen
-	q := lastTerm.ExpDen
-	p := lastTerm.ExpNum
-	c0 := lastTerm.Coeff
+	// Common ramification index L = lcm(q_1, ..., q_k) across all accumulated terms
+	lcmDen := int64(1)
+	for _, term := range currentTerms {
+		lcmDen = lcmInt64(lcmDen, int64(term.ExpDen))
+	}
 
 	tVar := "__t"
 	y1Var := "__y1"
 
-	// Construct xSub = t^q
+	// Construct xSub = t^L
 	var xSub Node = NewVar(tVar)
-	if q != 1 {
-		xSub = &PowNode{Base: NewVar(tVar), Exp: mustRational(int64(q), 1)}
+	if lcmDen != 1 {
+		xSub = &PowNode{Base: NewVar(tVar), Exp: mustRational(lcmDen, 1)}
 	}
 
-	// Construct ySub = c0 * t^p + y1
-	var leadingTerm Node
-	switch p {
-	case 0:
-		leadingTerm = c0
-	case 1:
-		leadingTerm, _ = simplifyMul([]Node{c0, NewVar(tVar)})
-	default:
-		pow := &PowNode{Base: NewVar(tVar), Exp: mustRational(int64(p), 1)}
-		leadingTerm, _ = simplifyMul([]Node{c0, pow})
+	// Construct ySub = sum(c_k * t^(p_k * (L / q_k))) + y1
+	yAddTerms := make([]Node, 0, len(currentTerms)+1)
+	for _, term := range currentTerms {
+		tExp := int64(term.ExpNum) * (lcmDen / int64(term.ExpDen))
+		var tTerm Node
+		switch tExp {
+		case 0:
+			tTerm = term.Coeff
+		case 1:
+			tTerm, _ = simplifyMul([]Node{term.Coeff, NewVar(tVar)})
+		default:
+			pow := &PowNode{Base: NewVar(tVar), Exp: mustRational(tExp, 1)}
+			tTerm, _ = simplifyMul([]Node{term.Coeff, pow})
+		}
+		yAddTerms = append(yAddTerms, tTerm)
 	}
-	ySub, _ := simplifyAdd([]Node{leadingTerm, NewVar(y1Var)})
+	yAddTerms = append(yAddTerms, NewVar(y1Var))
+	ySub, err := simplifyAdd(yAddTerms)
+	if err != nil {
+		return [][]PuiseuxTerm{clonePuiseuxTerms(currentTerms)}
+	}
 
-	// Substitute into expr
+	// Substitute into original expr and expand polynomial products/powers
 	sub1 := Substitute(expr, xVar, xSub)
 	sub2 := Substitute(sub1, yVar, ySub)
-	evalF1, err := Eval(sub2)
-	if err != nil {
-		return currentTerms
-	}
+	evalF1 := expandAndEval(sub2)
 
 	// Check if y1 = 0 is an exact root (i.e. evalF1 at y1 = 0 is identically zero)
 	zeroTest := Substitute(evalF1, y1Var, mustRational(0, 1))
-	evalZero, _ := Eval(zeroTest)
+	evalZero := expandAndEval(zeroTest)
 	if isZero(evalZero) {
-		return currentTerms // exact closed form
+		return [][]PuiseuxTerm{clonePuiseuxTerms(currentTerms)}
 	}
 
 	// Extract points of F1(t, y1)
 	pts1, err := extractBivariatePoints(evalF1, y1Var, tVar)
 	if err != nil || len(pts1) == 0 {
-		return currentTerms
+		return [][]PuiseuxTerm{clonePuiseuxTerms(currentTerms)}
 	}
 
 	// Find edges of F1
 	edges1, err := BuildNewtonPolygon(pts1)
 	if err != nil || len(edges1) == 0 {
-		return currentTerms
+		return [][]PuiseuxTerm{clonePuiseuxTerms(currentTerms)}
 	}
 
-	// Select the edge with positive slope (higher order correction)
+	var allResults [][]PuiseuxTerm
+	hasHigherEdge := false
+
 	for _, edge := range edges1 {
-		p1 := edge.SlopeNumerator
-		q1 := edge.SlopeDenominator
+		p1 := int64(edge.SlopeNumerator)
+		q1 := int64(edge.SlopeDenominator)
 		if p1 <= 0 {
+			continue
+		}
+
+		// Exponent of the correction term in the original variable x: (p1 / q1) / L = p1 / (L * q1)
+		nextExp := big.NewRat(p1, lcmDen*q1)
+		if nextExp.Cmp(lastExp) <= 0 {
+			continue
+		}
+
+		hasHigherEdge = true
+
+		// Terms at or above targetOrder are absorbed into O(x^maxOrder)
+		if nextExp.Cmp(targetOrder) >= 0 {
+			allResults = append(allResults, clonePuiseuxTerms(currentTerms))
 			continue
 		}
 
@@ -499,35 +575,28 @@ func expandHigherTerms(expr Node, yVar, xVar string, currentTerms []PuiseuxTerm,
 			continue
 		}
 
-		// First valid root
-		c1 := cRoots[0]
-
-		// Effective total exponent: original exponent (p/q) + correction (p1 / (q * q1))
-		// Total exp in original variable x = (p * q1 + p1) / (q * q1)
-		newNum := int64(p*q1 + p1)
-		newDen := int64(q * q1)
-		gcdVal := new(big.Int).GCD(nil, nil, big.NewInt(newNum), big.NewInt(newDen)).Int64()
-		newNum /= gcdVal
-		newDen /= gcdVal
-
-		newTerm := PuiseuxTerm{
-			Coeff:  c1,
-			ExpNum: int(newNum),
-			ExpDen: int(newDen),
+		for _, c1 := range cRoots {
+			newTerm := PuiseuxTerm{
+				Coeff:  c1,
+				ExpNum: int(nextExp.Num().Int64()),
+				ExpDen: int(nextExp.Denom().Int64()),
+			}
+			nextTerms := append(clonePuiseuxTerms(currentTerms), newTerm)
+			subBranches := expandHigherTerms(expr, yVar, xVar, nextTerms, maxOrder, depth+1)
+			allResults = append(allResults, subBranches...)
 		}
-
-		nextTerms := append(currentTerms, newTerm)
-		return expandHigherTerms(expr, yVar, xVar, nextTerms, maxOrder, depth+1)
 	}
 
-	return currentTerms
+	if !hasHigherEdge || len(allResults) == 0 {
+		return [][]PuiseuxTerm{clonePuiseuxTerms(currentTerms)}
+	}
+	return allResults
 }
 
 // buildPuiseuxBranchNode upgrades a rational-coefficient Puiseux expansion into a first-class *PuiseuxNode,
 // falling back to a symbolic expression tree when symbolic coefficients are present.
 func buildPuiseuxBranchNode(terms []PuiseuxTerm, xVar string, order int) Node {
 	astTerms := make([]PuiseuxTermAST, 0, len(terms))
-	var maxExp *big.Rat
 
 	for _, term := range terms {
 		if isZero(term.Coeff) {
@@ -542,16 +611,9 @@ func buildPuiseuxBranchNode(terms []PuiseuxTerm, xVar string, order int) Node {
 			Coeff: rat.Val,
 			Exp:   expRat,
 		})
-		if maxExp == nil || expRat.Cmp(maxExp) > 0 {
-			maxExp = expRat
-		}
 	}
 
 	truncOrder := big.NewRat(int64(order), 1)
-	if maxExp != nil && maxExp.Cmp(truncOrder) >= 0 {
-		truncOrder = new(big.Rat).Add(maxExp, big.NewRat(1, 1))
-	}
-
 	node, err := NewPuiseuxNode(xVar, astTerms, truncOrder)
 	if err != nil {
 		return constructSeriesNode(terms, xVar)
