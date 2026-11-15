@@ -534,6 +534,9 @@ func (f *SOSDecomposeFSM) buildPolyhedronConstraints(totalVars int, includeMargi
 	constraints := make([]lp.Constraint, 0, len(f.cuts)+len(f.facialVectors)*4+1)
 
 	for idx, cut := range f.cuts {
+		if f.facialSeen[cut.Key] {
+			continue
+		}
 		coeffs, c0 := f.space.DirectionQuadFormRow(cut.Block, cut.Vector)
 		row := makeZeroRatVec(totalVars)
 		for k := 0; k < d; k++ {
@@ -592,7 +595,7 @@ func (f *SOSDecomposeFSM) buildPolyhedronConstraints(totalVars int, includeMargi
 				}
 			}
 
-			if !hasNonZero {
+			if !hasNonZero && c0.Sign() == 0 {
 				continue
 			}
 
@@ -666,7 +669,8 @@ func (f *SOSDecomposeFSM) stepCuttingPlaneLP() error {
 	}
 
 	lam := extractLambdaFromLP(res.PrimalSolution, varNames, d)
-	if results, psd := f.evaluateBlocksPSD(lam); psd {
+	results, psd := f.evaluateBlocksPSD(lam)
+	if psd {
 		f.candidateLambda = lam
 		f.candidateLDLTs = results
 		f.state = sosStateVerify
@@ -682,16 +686,15 @@ func (f *SOSDecomposeFSM) stepCuttingPlaneLP() error {
 			mid[k] = new(big.Rat).Add(f.prevZeroLambda[k], lam[k])
 			mid[k].Mul(mid[k], half)
 		}
-		if results, psd := f.evaluateBlocksPSD(mid); psd {
+		if midResults, midPSD := f.evaluateBlocksPSD(mid); midPSD {
 			f.candidateLambda = mid
-			f.candidateLDLTs = results
+			f.candidateLDLTs = midResults
 			f.state = sosStateVerify
 			return nil
 		}
 	}
 
 	// Collect all block refutation witnesses at lam as exact cuts.
-	results, _ := f.evaluateBlocksPSD(lam)
 	addedAny := false
 	for b, rb := range results {
 		if !rb.IsPSD && len(rb.Witness) > 0 {

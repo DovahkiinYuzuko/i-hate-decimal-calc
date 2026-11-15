@@ -128,11 +128,17 @@ func runSOSWarmStartDR(space *sosAffineSpace) sosWarmStartOutput {
 	}
 
 	var candidates [][]*big.Rat
+	seenCand := make(map[string]bool, 4)
 	for _, maxDen := range []int64{16, 64, 256, 2048} {
 		cand := make([]*big.Rat, d)
 		for k := 0; k < d; k++ {
 			cand[k] = floatToRatCF(rawLam[k], maxDen)
 		}
+		key := cutKey(0, cand)
+		if seenCand[key] {
+			continue
+		}
+		seenCand[key] = true
 		candidates = append(candidates, cand)
 	}
 
