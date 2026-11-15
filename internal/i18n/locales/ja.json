@@ -410,6 +410,7 @@
     "interval_zero_division": "有理区間演算エラー: 区間がゼロを含んでいるため逆数を除算できません (%s)",
     "invalid_args_count": "関数 %s は %d 個の引数が必要ですが、%d 個渡されました",
     "invalid_distribution": "不正または未対応の確率分布の指定です",
+    "sos_basis_limit_exceeded": "sos_decompose: 単項式基底候補の列挙数が上限 (%d) を超過しました",
     "linear_dim_mismatch": "係数行列と定数項ベクトルの次元が一致しません",
     "linear_inconsistent": "連立方程式の解が存在しません（不能）",
     "matrix_arg_required": "%s エラー: 引数は行列である必要があります (%s)",

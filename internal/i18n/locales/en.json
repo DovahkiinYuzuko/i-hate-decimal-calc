@@ -410,6 +410,7 @@
     "interval_zero_division": "rational interval error: division by interval containing zero (%s)",
     "invalid_args_count": "function %s requires %d arguments, got %d",
     "invalid_distribution": "invalid or unsupported distribution specification",
+    "sos_basis_limit_exceeded": "sos_decompose: basis candidate enumeration exceeded limit (%d)",
     "linear_dim_mismatch": "dimension mismatch between coefficient matrix and constant vector",
     "linear_inconsistent": "linear system has no solution (inconsistent)",
     "matrix_arg_required": "%s error: argument must be a matrix, got %s",

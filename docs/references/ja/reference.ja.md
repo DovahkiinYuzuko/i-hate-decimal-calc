@@ -234,7 +234,7 @@
 | `totient` | `totient(n)` | オイラーのトーシェント関数 $\phi(n) = n \prod_{p \mid n} (1 - 1/p)$ |
 | `is_prime` | `is_prime(n)` | 素数判定（64bit 範囲は Sinclair / Sorenson-Webster 基底による決定論的判定、巨大数は Baillie-PSW による素数候補判定（反例未発見）） |
 | `solve` | `solve(expr, var)` | 厳密代数・初等超越方程式ソルバー（1次・2次・3次・4次代数方程式の代数的根号求解に加え、ランバート W 関数 `lambert_w` による初等超越方程式 $f(x)e^{f(x)}=c$, $ax+b\ln x=c$, $x^x=c$, $a^x=bx$ の閉形式解に対応。カルダノ公式・フェラーリ法・チルンハウス変換・分解3次方程式レゾルベントによる厳密解、重解・複素数解対応） |
-| `sos_decompose` | `sos_decompose(x^4 + 2*x^2 + 1, [x])` | 多項式の二乗和分解（Sum of Squares Decomposition）。Gram 行列の半正定値分解により多項式を二乗和形式 $\sum_i c_i q_i^2$ へ分解 |
+| `sos_decompose` | `sos_decompose(x^4 + 2*x^2 + 1, [x])` | 有理数体 $\mathbb{Q}$ 上の厳密二乗和分解（Sum of Squares Decomposition）。半ニュートン多面体と符号対称性ブロック対角化による Gram 行列アフィン空間探索（Douglas-Rachford ウォームスタート・DSOS/Cutting-Plane 厳密有理 LP・Facial Reduction・無平方根 $LDL^\top$ 判定）により、`[certified, [[w_i, q_i], ...]]`（$\sum w_i q_i^2 = P$）、負値反例証人 `[refuted, [[var, val], ...]]`、または `[no_certificate_found, []]` を決定論的に返却（`--verify`・`--lean` 対応） |
 | `interval` | `interval([1, 3])` / `interval(sin(1), 1/1000)` | 厳密有理数区間ノード `IntervalNode` の構築（`[low, high]` リストからの直接生成、または式に対する許容誤差 `eps` での適応的区間精密化）。第一級ノードとして閉じた四則・整数乗・関係比較を実行 |
 | `to_poly` | `to_poly(expr, [x, y], "lex")` | 式を指定変数・単項式順序（`lex`, `grevlex`）の正規形多項式ノード `PolyNode` へ明示変換 |
 | `to_alg` | `to_alg(rep, min_poly, [var])` | 代数拡大体 $\mathbb{Q}(\alpha) \cong \mathbb{Q}[x]/\langle m(x) \rangle$ の代数数ノード `AlgNode` を構築 |

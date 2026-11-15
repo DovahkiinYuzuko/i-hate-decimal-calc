@@ -3164,7 +3164,11 @@ func verifySOSDecompose(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycl
 		}
 
 		order := OrderGRevLex
-		residual, holds, err := VerifySOSDecomposition(targetNode, certTerms, vars, order)
+		evalTarget, evalErr := Eval(expandNode(targetNode))
+		if evalErr != nil || evalTarget == nil {
+			evalTarget = targetNode
+		}
+		residual, holds, err := VerifySOSDecomposition(evalTarget, certTerms, vars, order)
 		if err != nil {
 			_ = fsm.TransitionTo(VerifyStateRefuted)
 			return nil, err
