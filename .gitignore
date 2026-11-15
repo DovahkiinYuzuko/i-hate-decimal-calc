@@ -17,6 +17,7 @@
 !cmd/ihd/*.go
 # .gitignores/docs.gitignore
 !docs/
+!docs/development.*.md
 !docs/references/
 !docs/references/*/
 !docs/references/*/*.md
