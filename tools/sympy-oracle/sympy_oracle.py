@@ -577,6 +577,43 @@ def handle_request(req):
             base_res.update({"status": "error", "error": f"build_ast error: {e}"})
         return base_res
 
+    elif action == "sos_verify":
+        try:
+            poly_expr = build_ast(req.get("poly")) if isinstance(req.get("poly"), dict) else sp.sympify(req.get("poly"))
+            terms = req.get("terms") or []
+            witness = req.get("witness")
+
+            sos_sum = sp.Integer(0)
+            all_pos = True
+            for t in terms:
+                w_raw = t.get("weight", "1")
+                w = build_ast(w_raw) if isinstance(w_raw, dict) else sp.Rational(str(w_raw))
+                q_raw = t.get("poly")
+                q = build_ast(q_raw) if isinstance(q_raw, dict) else sp.sympify(q_raw)
+                if sp.simplify(w) <= 0:
+                    all_pos = False
+                sos_sum += w * (q ** 2)
+
+            residual = sp.expand(poly_expr - sos_sum)
+            verified = (residual == 0) and all_pos
+
+            witness_neg = None
+            if isinstance(witness, dict) and len(witness) > 0:
+                subs_map = {sp.Symbol(k): sp.Rational(str(v)) for k, v in witness.items()}
+                val = sp.simplify(poly_expr.subs(subs_map))
+                witness_neg = bool(val < 0)
+
+            base_res.update({
+                "status": "ok",
+                "verified": verified,
+                "all_positive_weights": all_pos,
+                "residual": str(residual),
+                "witness_negative": witness_neg,
+            })
+        except Exception as e:
+            base_res.update({"status": "error", "error": f"sos_verify error: {e}"})
+        return base_res
+
     else:
         base_res.update({"status": "error", "error": f"Unknown action: '{action}'"})
         return base_res

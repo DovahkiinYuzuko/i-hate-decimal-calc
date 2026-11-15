@@ -293,40 +293,13 @@ func tryGreedyQuadraticCompletion(p *MPoly, vars []string, order MonomialOrder) 
 		}
 	}
 
-	// Exact rational LDL^T decomposition with diagonal pivoting
-	L, D, ok := exactRationalLDLT(Q)
-	if !ok {
+	// Exact rational LDL^T decomposition
+	ldl := exactRationalLDLTWithWitness(Q)
+	if !ldl.IsPSD {
 		return nil, false
 	}
 
-	// Construct SOS terms from L and D:
-	// A = L * D * L^T  =>  v^T A v = sum_j D_j * (sum_{i >= j} L_{i,j} v_i)^2
-	var terms []SOSTerm
-	for j := 0; j < numMonomials; j++ {
-		dVal := D[j]
-		if dVal.Sign() < 0 {
-			return nil, false
-		}
-		if dVal.Sign() == 0 {
-			continue // Skip zero weight term
-		}
-
-		// Construct polynomial q_j(x) = sum_{i >= j} L[i][j] * basis[i]
-		var qTerms []Term
-		for i := j; i < numMonomials; i++ {
-			coeff := L[i][j]
-			if coeff.Sign() != 0 {
-				qTerms = append(qTerms, Term{Coeff: new(big.Rat).Set(coeff), Mon: basis[i]})
-			}
-		}
-		if len(qTerms) > 0 {
-			sortPolyTerms(qTerms, order)
-			terms = append(terms, SOSTerm{
-				Weight: new(big.Rat).Set(dVal),
-				Poly:   &MPoly{Terms: qTerms, Sugar: qTerms[0].Mon.TotalDeg},
-			})
-		}
-	}
+	terms := extractSOSTermsFromLDLT(ldl.L, ldl.D, basis, order)
 
 	return &SOSResult{
 		Status:   SOSCertified,
@@ -334,116 +307,6 @@ func tryGreedyQuadraticCompletion(p *MPoly, vars []string, order MonomialOrder) 
 		Residual: NewZeroMPoly(n),
 		Vars:     vars,
 	}, true
-}
-
-// exactRationalLDLT computes the symmetric decomposition Q = L * D * L^T over Q.
-func exactRationalLDLT(A [][]*big.Rat) ([][]*big.Rat, []*big.Rat, bool) {
-	n := len(A)
-	L := make([][]*big.Rat, n)
-	for i := range L {
-		L[i] = make([]*big.Rat, n)
-		for j := range L[i] {
-			if i == j {
-				L[i][j] = big.NewRat(1, 1)
-			} else {
-				L[i][j] = new(big.Rat)
-			}
-		}
-	}
-	D := make([]*big.Rat, n)
-	for i := range D {
-		D[i] = new(big.Rat)
-	}
-
-	// In-place work copy
-	work := make([][]*big.Rat, n)
-	for i := range work {
-		work[i] = make([]*big.Rat, n)
-		for j := range work[i] {
-			work[i][j] = new(big.Rat).Set(A[i][j])
-		}
-	}
-
-	for j := 0; j < n; j++ {
-		// D_j = work[j][j]
-		D[j].Set(work[j][j])
-		if D[j].Sign() < 0 {
-			return nil, nil, false // Negative pivot => Not PSD
-		}
-		if D[j].Sign() == 0 {
-			// Zero diagonal: ensure entire remaining row/col is zero
-			for i := j + 1; i < n; i++ {
-				if work[i][j].Sign() != 0 {
-					return nil, nil, false // Indefinite 2x2 block
-				}
-			}
-			continue
-		}
-
-		invD := new(big.Rat).Inv(D[j])
-		for i := j + 1; i < n; i++ {
-			L[i][j].Mul(work[i][j], invD)
-			factor := L[i][j]
-			for k := j + 1; k <= i; k++ {
-				sub := new(big.Rat).Mul(factor, work[k][j])
-				work[i][k].Sub(work[i][k], sub)
-				if i != k {
-					work[k][i].Set(work[i][k])
-				}
-			}
-		}
-	}
-
-	return L, D, true
-}
-
-// extractHalfNewtonMonomials extracts monomial basis exponents using Powers-Wörmann / Reznick support criteria.
-func extractHalfNewtonMonomials(p *MPoly, vars []string, order MonomialOrder) []Monomial {
-	n := len(vars)
-	halfDeg := p.Degree() / 2
-
-	monSet := make(map[string]Monomial)
-	// Always include constant 1
-	zeroMon := zeroMonomial(n)
-	monSet[fmt.Sprint(zeroMon.Exps)] = zeroMon
-
-	// Include all alpha such that 2*alpha in supp(p)
-	for _, t := range p.Terms {
-		allEven := true
-		halfExps := make([]int, n)
-		for i, e := range t.Mon.Exps {
-			if e%2 != 0 {
-				allEven = false
-				break
-			}
-			halfExps[i] = e / 2
-		}
-		if allEven {
-			m := newMonomial(halfExps)
-			monSet[fmt.Sprint(m.Exps)] = m
-		}
-	}
-
-	// For small degrees, also include linear and sub-monomials up to halfDeg
-	if halfDeg <= 2 {
-		for i := 0; i < n; i++ {
-			exps := make([]int, n)
-			exps[i] = 1
-			m := newMonomial(exps)
-			monSet[fmt.Sprint(m.Exps)] = m
-		}
-	}
-
-	var basis []Monomial
-	for _, m := range monSet {
-		basis = append(basis, m)
-	}
-
-	sort.Slice(basis, func(i, j int) bool {
-		return CompareMonomials(basis[i], basis[j], order) > 0
-	})
-
-	return basis
 }
 
 // DecomposeSOS finds a rational sum-of-squares decomposition for multivariate polynomial p.
@@ -491,124 +354,10 @@ func DecomposeSOS(p *MPoly, vars []string, order MonomialOrder) (*SOSResult, err
 		return res, nil
 	}
 
-	// 4. Powers-Wörmann Half Newton Polytope basis selection
-	basis := extractHalfNewtonMonomials(p, vars, order)
-	k := len(basis)
-
-	// Set up coefficient matching linear system for symmetric Gram matrix Q:
-	// sum_{i, j} Q_ij * (basis[i] * basis[j]) == p
-	pairMonomials := make(map[string]Monomial)
-	for i := 0; i < k; i++ {
-		for j := i; j < k; j++ {
-			mProd := basis[i].Mul(basis[j])
-			pairMonomials[fmt.Sprint(mProd.Exps)] = mProd
-		}
-	}
-
-	// Target monomial map
-	targetCoeffs := make(map[string]*big.Rat)
-	for _, t := range p.Terms {
-		targetCoeffs[fmt.Sprint(t.Mon.Exps)] = new(big.Rat).Set(t.Coeff)
-	}
-
-	// Construct symmetric matrix Q using direct diagonal and cross-term balancing
-	Q := make([][]*big.Rat, k)
-	for i := range Q {
-		Q[i] = make([]*big.Rat, k)
-		for j := range Q[i] {
-			Q[i][j] = new(big.Rat)
-		}
-	}
-
-	// Attempt a canonical particular solution: matching pure squares on diagonal
-	unmatched := p.Clone()
-	matchedMonomials := make(map[string]bool)
-	for i := 0; i < k; i++ {
-		sqMon := basis[i].Mul(basis[i])
-		sqKey := fmt.Sprint(sqMon.Exps)
-		if c, exists := targetCoeffs[sqKey]; exists && c.Sign() > 0 {
-			Q[i][i].Set(c)
-			matchedMonomials[sqKey] = true
-			// Remove from unmatched
-			unmatched = unmatched.Sub(&MPoly{
-				Terms: []Term{{Coeff: c, Mon: sqMon}},
-				Sugar: sqMon.TotalDeg,
-			}, order)
-		}
-	}
-
-	// Match cross terms with equal division (averaging) across all matching basis pairs
-	matchingPairs := make(map[string][][2]int)
-	for i := 0; i < k; i++ {
-		for j := i + 1; j < k; j++ {
-			prodMon := basis[i].Mul(basis[j])
-			prodKey := fmt.Sprint(prodMon.Exps)
-			matchingPairs[prodKey] = append(matchingPairs[prodKey], [2]int{i, j})
-		}
-	}
-
-	for prodKey, pairs := range matchingPairs {
-		if matchedMonomials[prodKey] {
-			continue // Already matched on the diagonal
-		}
-		c, exists := targetCoeffs[prodKey]
-		if !exists || c.Sign() == 0 {
-			continue
-		}
-		numPairs := int64(len(pairs))
-		// Distribute coefficient c equally across all pairs:
-		// 2 * sum_{(i,j)} Q_{i,j} = c => each Q_{i,j} = c / (2 * numPairs)
-		share := new(big.Rat).Mul(c, big.NewRat(1, 2*numPairs))
-		for _, pair := range pairs {
-			i, j := pair[0], pair[1]
-			Q[i][j].Set(share)
-			Q[j][i].Set(share)
-		}
-		unmatched = unmatched.Sub(&MPoly{
-			Terms: []Term{{Coeff: c, Mon: basis[pairs[0][0]].Mul(basis[pairs[0][1]])}},
-			Sugar: basis[pairs[0][0]].Mul(basis[pairs[0][1]]).TotalDeg,
-		}, order)
-	}
-
-	// If all terms matched exactly, verify LDL^T
-	if unmatched.IsZero() {
-		L, D, ok := exactRationalLDLT(Q)
-		if ok {
-			var terms []SOSTerm
-			for j := 0; j < k; j++ {
-				if D[j].Sign() > 0 {
-					var qTerms []Term
-					for i := j; i < k; i++ {
-						if L[i][j].Sign() != 0 {
-							qTerms = append(qTerms, Term{Coeff: new(big.Rat).Set(L[i][j]), Mon: basis[i]})
-						}
-					}
-					if len(qTerms) > 0 {
-						sortPolyTerms(qTerms, order)
-						terms = append(terms, SOSTerm{
-							Weight: new(big.Rat).Set(D[j]),
-							Poly:   &MPoly{Terms: qTerms, Sugar: qTerms[0].Mon.TotalDeg},
-						})
-					}
-				}
-			}
-			return &SOSResult{
-				Status:   SOSCertified,
-				Terms:    terms,
-				Residual: NewZeroMPoly(n),
-				Vars:     vars,
-			}, nil
-		}
-	}
-
-	// If no rational PSD Gram matrix was found under this basis:
-	// Return mathematically honest StatusNoCertificateFound (NOT refuted, NOT false!)
-	return &SOSResult{
-		Status:   SOSNoCertificateFound,
-		Terms:    nil,
-		Residual: p.Clone(),
-		Vars:     vars,
-	}, nil
+	// 4. Deterministic FSM-driven affine Gram exploration:
+	// Half Newton Polytope + Reznick pruning + Sign-Symmetry blocking +
+	// DSOS/SDSOS LP + Cutting-Plane LP + Partial Facial Reduction + Re-expansion Verification.
+	return runSOSDecomposeFSM(p, vars, order)
 }
 
 // EvalSOSDecompose evaluates the sos_decompose builtin function.
@@ -673,11 +422,13 @@ func EvalSOSDecompose(polyNode, varsNode Node, env *Env) (Node, error) {
 		return NewList([]Node{statusNode, NewList(termNodes)}), nil
 	} else if res.Status == SOSRefuted {
 		var ceNodes []Node
-		for vName, val := range res.Counterexample {
-			ceNodes = append(ceNodes, NewList([]Node{
-				&VarNode{Name: vName},
-				NewRationalFromBigRat(val),
-			}))
+		for _, vName := range varNames {
+			if val, exists := res.Counterexample[vName]; exists {
+				ceNodes = append(ceNodes, NewList([]Node{
+					&VarNode{Name: vName},
+					NewRationalFromBigRat(val),
+				}))
+			}
 		}
 		return NewList([]Node{statusNode, NewList(ceNodes)}), nil
 	}

@@ -3106,7 +3106,7 @@ func verifyIdealMember(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycle
 func verifySOSDecompose(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
 	if len(fn.Args) < 1 {
 		_ = fsm.TransitionTo(VerifyStateRefuted)
-		return nil, fmt.Errorf("sos_decompose requires at least 1 argument")
+		return nil, fmt.Errorf("%s", i18n.T("verify.err_sos_requires_at_least_1"))
 	}
 	targetNode := fn.Args[0]
 
@@ -3130,13 +3130,13 @@ func verifySOSDecompose(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycl
 	listRes, ok := result.(*ListNode)
 	if !ok || len(listRes.Elements) != 2 {
 		_ = fsm.TransitionTo(VerifyStateRefuted)
-		return nil, fmt.Errorf("invalid SOS result format")
+		return nil, fmt.Errorf("%s", i18n.T("verify.err_sos_invalid_result_format"))
 	}
 
 	statusVar, ok := listRes.Elements[0].(*VarNode)
 	if !ok {
 		_ = fsm.TransitionTo(VerifyStateRefuted)
-		return nil, fmt.Errorf("invalid SOS status node")
+		return nil, fmt.Errorf("%s", i18n.T("verify.err_sos_invalid_status_node"))
 	}
 
 	switch statusVar.Name {
@@ -3144,7 +3144,7 @@ func verifySOSDecompose(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycl
 		termsList, ok := listRes.Elements[1].(*ListNode)
 		if !ok {
 			_ = fsm.TransitionTo(VerifyStateRefuted)
-			return nil, fmt.Errorf("invalid SOS terms list")
+			return nil, fmt.Errorf("%s", i18n.T("verify.err_sos_invalid_terms_list"))
 		}
 
 		var certTerms []SOSCertificateTerm
@@ -3164,7 +3164,11 @@ func verifySOSDecompose(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycl
 		}
 
 		order := OrderGRevLex
-		residual, holds, err := VerifySOSDecomposition(targetNode, certTerms, vars, order)
+		evalTarget, evalErr := Eval(expandNode(targetNode))
+		if evalErr != nil || evalTarget == nil {
+			evalTarget = targetNode
+		}
+		residual, holds, err := VerifySOSDecomposition(evalTarget, certTerms, vars, order)
 		if err != nil {
 			_ = fsm.TransitionTo(VerifyStateRefuted)
 			return nil, err
@@ -3178,7 +3182,7 @@ func verifySOSDecompose(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycl
 				Equation:   fmt.Sprintf("%s == sum c_i q_i^2", targetNode.String()),
 				Residual:   resNode,
 				IsVerified: false,
-				Details:    "SOS identity failed: non-zero residual",
+				Details:    i18n.T("verify.sos_identity_failed"),
 				State:      VerifyStateRefuted,
 			}, nil
 		}
@@ -3194,7 +3198,7 @@ func verifySOSDecompose(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycl
 			vars,
 			resNode,
 			true,
-			"SOS decomposition certified",
+			i18n.T("verify.sos_certified"),
 		)
 
 		return &VerificationCertificate{
@@ -3246,7 +3250,7 @@ func verifySOSDecompose(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycl
 						Domain:     DomainSOS,
 						Equation:   fmt.Sprintf("not (0 <= %s)", targetNode.String()),
 						IsVerified: false,
-						Details:    fmt.Sprintf("invalid refutation witness: evaluates to %s >= 0", val.String()),
+						Details:    i18n.T("verify.sos_invalid_refutation_witness", val.String()),
 						State:      VerifyStateRefuted,
 					}, nil
 				}
@@ -3254,7 +3258,7 @@ func verifySOSDecompose(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycl
 					Domain:     DomainSOS,
 					Equation:   fmt.Sprintf("not (0 <= %s)", targetNode.String()),
 					IsVerified: false,
-					Details:    fmt.Sprintf("polynomial refuted to be SOS via verified counterexample (value = %s)", val.String()),
+					Details:    i18n.T("verify.sos_refuted_with_value", val.String()),
 					State:      VerifyStateRefuted,
 				}, nil
 			}
@@ -3264,7 +3268,7 @@ func verifySOSDecompose(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycl
 			Domain:     DomainSOS,
 			Equation:   fmt.Sprintf("not (0 <= %s)", targetNode.String()),
 			IsVerified: false,
-			Details:    "polynomial refuted to be SOS via counterexample",
+			Details:    i18n.T("verify.sos_refuted"),
 			State:      VerifyStateRefuted,
 		}, nil
 
@@ -3274,7 +3278,7 @@ func verifySOSDecompose(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycl
 			Domain:     DomainSOS,
 			Equation:   fmt.Sprintf("sos(%s)", targetNode.String()),
 			IsVerified: false,
-			Details:    "no rational SOS certificate found",
+			Details:    i18n.T("verify.sos_no_certificate_found"),
 			State:      VerifyStateUnsupportedDomain,
 		}, nil
 	}
