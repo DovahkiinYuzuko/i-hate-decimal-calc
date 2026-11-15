@@ -303,8 +303,24 @@ func hasImpossibleNewtonVertex(p *MPoly, n int) (bool, error) {
 }
 
 // enumerateLatticeCandidates enumerates all integer lattice points alpha in N^n satisfying
-// coordinate and total-degree box bounds derived from New(P)/2.
+// coordinate and total-degree box bounds derived from New(P)/2, pruning dead branches via suffix bounds.
 func enumerateLatticeCandidates(n int, minExp, maxExp []int, minDeg, maxDeg int) ([]Monomial, error) {
+	if minDeg > maxDeg {
+		return nil, nil
+	}
+	for i := 0; i < n; i++ {
+		if minExp[i] > maxExp[i] {
+			return nil, nil
+		}
+	}
+
+	suffixMin := make([]int, n+1)
+	suffixMax := make([]int, n+1)
+	for i := n - 1; i >= 0; i-- {
+		suffixMin[i] = suffixMin[i+1] + minExp[i]
+		suffixMax[i] = suffixMax[i+1] + maxExp[i]
+	}
+
 	var result []Monomial
 	current := make([]int, n)
 
@@ -313,18 +329,22 @@ func enumerateLatticeCandidates(n int, minExp, maxExp []int, minDeg, maxDeg int)
 		if len(result) >= sosMaxBasisCandidates {
 			return fmt.Errorf("%s", i18n.T("errors.sos_basis_limit_exceeded", sosMaxBasisCandidates))
 		}
-		if idx == n {
-			if degSoFar >= minDeg && degSoFar <= maxDeg {
-				result = append(result, newMonomial(current))
-			}
+		if degSoFar+suffixMax[idx] < minDeg || degSoFar+suffixMin[idx] > maxDeg {
 			return nil
 		}
+		if idx == n {
+			result = append(result, newMonomial(current))
+			return nil
+		}
+		lo := minExp[idx]
+		if need := minDeg - degSoFar - suffixMax[idx+1]; need > lo {
+			lo = need
+		}
 		hi := maxExp[idx]
-		rem := maxDeg - degSoFar
-		if rem < hi {
+		if rem := maxDeg - degSoFar - suffixMin[idx+1]; rem < hi {
 			hi = rem
 		}
-		for e := minExp[idx]; e <= hi; e++ {
+		for e := lo; e <= hi; e++ {
 			current[idx] = e
 			if err := dfs(idx+1, degSoFar+e); err != nil {
 				return err

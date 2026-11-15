@@ -4,6 +4,8 @@ import (
 	"math/big"
 	"strings"
 	"testing"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/lp"
 )
 
 func TestDecomposeSOS_UnivariateSquare(t *testing.T) {
@@ -103,6 +105,13 @@ func TestDecomposeSOS_Refuted(t *testing.T) {
 	if len(res.Counterexample) == 0 {
 		t.Fatalf("expected non-empty counterexample point")
 	}
+	xVal, ok := res.Counterexample["x"]
+	if !ok {
+		t.Fatalf("expected counterexample coordinate for x, got %v", res.Counterexample)
+	}
+	if val := evaluateAt(p, []*big.Rat{xVal}); val.Sign() >= 0 {
+		t.Fatalf("expected P(counterexample) < 0, got %s at x=%s", val.String(), xVal.String())
+	}
 }
 
 func TestDecomposeSOS_MotzkinPolynomial(t *testing.T) {
@@ -149,6 +158,32 @@ func TestEvalSOSDecompose_Builtin(t *testing.T) {
 	statusVar, ok := listNode.Elements[0].(*VarNode)
 	if !ok || statusVar.Name != "certified" {
 		t.Fatalf("expected certified, got: %s", Format(listNode.Elements[0]))
+	}
+	termsList, ok := listNode.Elements[1].(*ListNode)
+	if !ok || len(termsList.Elements) == 0 {
+		t.Fatalf("expected non-empty SOS terms list, got: %s", Format(listNode.Elements[1]))
+	}
+	var certTerms []SOSCertificateTerm
+	for idx, elem := range termsList.Elements {
+		pair, ok := elem.(*ListNode)
+		if !ok || len(pair.Elements) != 2 {
+			t.Fatalf("expected [weight, poly] pair at term %d, got: %s", idx, Format(elem))
+		}
+		weightNode, ok := pair.Elements[0].(*RationalNode)
+		if !ok || weightNode.Val.Sign() <= 0 {
+			t.Fatalf("expected strictly positive rational weight at term %d, got: %s", idx, Format(pair.Elements[0]))
+		}
+		certTerms = append(certTerms, SOSCertificateTerm{
+			Weight: weightNode.Val,
+			Poly:   pair.Elements[1],
+		})
+	}
+	residual, holds, err := VerifySOSDecomposition(mustParseNode(t, "x^2 + 2*x + 1"), certTerms, []string{"x"}, OrderGRevLex)
+	if err != nil {
+		t.Fatalf("VerifySOSDecomposition error: %v", err)
+	}
+	if !holds || !residual.IsZero() {
+		t.Fatalf("expected zero reconstruction residual, got holds=%v residual=%v", holds, residual)
 	}
 }
 
@@ -201,6 +236,21 @@ func TestDecomposeSOS_SymmetricAveraging(t *testing.T) {
 	}
 	if res.Status != SOSCertified {
 		t.Fatalf("expected SOSCertified for (x^2 + y^2)^2, got %v", res.Status)
+	}
+	if len(res.Terms) == 0 {
+		t.Fatalf("expected non-empty SOS terms for (x^2 + y^2)^2")
+	}
+	reconstructed := NewZeroMPoly(2)
+	for idx, term := range res.Terms {
+		if term.Weight.Sign() <= 0 {
+			t.Fatalf("expected positive weight at term %d, got %s", idx, term.Weight.String())
+		}
+		sq := term.Poly.Mul(term.Poly, order)
+		sqScaled := sq.MulTerm(Term{Coeff: term.Weight, Mon: zeroMonomial(2)}, order)
+		reconstructed = reconstructed.Add(sqScaled, order)
+	}
+	if diff := p.Sub(reconstructed, order); !diff.IsZero() {
+		t.Fatalf("reconstruction mismatch for (x^2 + y^2)^2: diff=%v", mpolyToNode(diff, []string{"x", "y"}))
 	}
 }
 
@@ -476,5 +526,215 @@ func TestVerifyAndLeanSOSDecompose(t *testing.T) {
 	}
 	if motzCert != nil && motzCert.IsVerified {
 		t.Fatalf("Motzkin polynomial must never yield IsVerified certificate")
+	}
+}
+
+func TestSOSDecomposeFSM_FacialReductionRecoversPositiveMargin(t *testing.T) {
+	// P(x, y) = (x - y)^2 + (x^2 - y^2)^2 + (x*y)^2
+	// Has a fixed rank-deficient block {x, y} with kernel vector [1, 1] and
+	// a coupled quartic block {x^2, x*y, y^2} admitting strictly positive interior margin.
+	vars := []string{"x", "y"}
+	order := OrderGRevLex
+	varMap := map[string]int{"x": 0, "y": 1}
+
+	evalP, err := Eval(expandNode(mustParseNode(t, "(x - y)^2 + (x^2 - y^2)^2 + (x*y)^2")))
+	if err != nil {
+		t.Fatalf("Eval error: %v", err)
+	}
+	p, err := nodeToMPoly(evalP, varMap, len(vars), order)
+	if err != nil {
+		t.Fatalf("nodeToMPoly error: %v", err)
+	}
+
+	fsm := &SOSDecomposeFSM{
+		state:      sosStateInit,
+		poly:       p,
+		vars:       vars,
+		order:      order,
+		cutSeen:    make(map[string]bool),
+		facialSeen: make(map[string]bool),
+	}
+	if err := fsm.stepInit(); err != nil {
+		t.Fatalf("stepInit error: %v", err)
+	}
+	if fsm.space == nil || fsm.space.Dim < 1 {
+		t.Fatalf("expected affine dimension >= 1, got space=%+v", fsm.space)
+	}
+	fsm.seedInitialCuttingPlanes()
+
+	// Locate the block containing kernel vector [1, 1] (for (x - y)^2) and register it as a tight cut.
+	foundKernelBlock := false
+	for b, mat := range fsm.space.BlockBase {
+		if len(mat) != 2 {
+			continue
+		}
+		candVec := []*big.Rat{big.NewRat(1, 1), big.NewRat(1, 1)}
+		q := fsm.space.EvaluateBlock(b, fsm.space.EqualLambda)
+		if evalSymQuadForm(q, candVec).Sign() == 0 {
+			fsm.addCut(b, candVec)
+			foundKernelBlock = true
+			break
+		}
+	}
+	if !foundKernelBlock {
+		t.Fatalf("expected 2x2 block with [1, 1] kernel vector")
+	}
+
+	fsm.prevZeroLambda = append([]*big.Rat(nil), fsm.space.EqualLambda...)
+	fsm.zeroMarginStreak = sosFacialStallThreshold
+	if err := fsm.stepFacialReduction(); err != nil {
+		t.Fatalf("stepFacialReduction error: %v", err)
+	}
+	if len(fsm.facialVectors) == 0 {
+		t.Fatalf("expected facial reduction to register tight forced-zero vector")
+	}
+
+	// After facial reduction, reduced-face cutting-plane LP must recover strictly positive t_margin > 0.
+	d := fsm.space.Dim
+	totalVars := 2*d + 1
+	tIdx := 2 * d
+	varNames := make([]string, totalVars)
+	obj := makeZeroRatVec(totalVars)
+	for k := 0; k < d; k++ {
+		varNames[2*k] = "lp_" + string(rune('0'+k))
+		varNames[2*k+1] = "lm_" + string(rune('0'+k))
+	}
+	varNames[tIdx] = "t_margin"
+	obj[tIdx] = big.NewRat(1, 1)
+
+	cons := fsm.buildPolyhedronConstraints(totalVars, true, tIdx)
+	tCap := makeZeroRatVec(totalVars)
+	tCap[tIdx] = big.NewRat(1, 1)
+	cons = append(cons, lp.Constraint{
+		Name:   "t_cap",
+		Coeffs: tCap,
+		Sense:  lp.RelLe,
+		RHS:    big.NewRat(1, 1),
+	})
+	lpRes, err := lp.Solve(&lp.Problem{
+		Sense:       lp.OptMaximize,
+		Objective:   obj,
+		ObjConstant: big.NewRat(0, 1),
+		VarNames:    varNames,
+		Constraints: cons,
+	})
+	if err != nil {
+		t.Fatalf("lp.Solve error: %v", err)
+	}
+	if lpRes.Status != lp.StatusOptimal || lpRes.OptimalValue.Sign() <= 0 {
+		t.Fatalf("expected strictly positive t_margin > 0 after facial reduction, got status=%v opt=%v", lpRes.Status, lpRes.OptimalValue)
+	}
+
+	// Continue FSM cutting-plane steps until certified.
+	for iter := 0; iter < sosMaxCuttingPlaneIters && fsm.state == sosStateCuttingPlaneLP; iter++ {
+		if err := fsm.stepCuttingPlaneLP(); err != nil {
+			t.Fatalf("stepCuttingPlaneLP error: %v", err)
+		}
+	}
+	if fsm.state != sosStateVerify {
+		t.Fatalf("expected state sosStateVerify after facial reduction recovery, got %v", fsm.state)
+	}
+	fsm.stepVerify()
+	if fsm.state != sosStateCertified || fsm.result == nil || fsm.result.Status != SOSCertified {
+		t.Fatalf("expected SOSCertified, got state=%v res=%+v", fsm.state, fsm.result)
+	}
+}
+
+func TestSOSDecomposeFSM_FacialInfeasibleConstantRow(t *testing.T) {
+	// Verify that a zero-lambda-coefficient facial row with non-zero constant c0 != 0
+	// is NOT silently dropped, causing the LP to correctly report StatusInfeasible.
+	vars := []string{"x", "y"}
+	order := OrderGRevLex
+	varMap := map[string]int{"x": 0, "y": 1}
+
+	evalP, err := Eval(expandNode(mustParseNode(t, "(x^2 - y^2)^2 + (x*y)^2 + x^2")))
+	if err != nil {
+		t.Fatalf("Eval error: %v", err)
+	}
+	p, err := nodeToMPoly(evalP, varMap, len(vars), order)
+	if err != nil {
+		t.Fatalf("nodeToMPoly error: %v", err)
+	}
+
+	fsm := &SOSDecomposeFSM{
+		state:      sosStateInit,
+		poly:       p,
+		vars:       vars,
+		order:      order,
+		cutSeen:    make(map[string]bool),
+		facialSeen: make(map[string]bool),
+	}
+	if err := fsm.stepInit(); err != nil {
+		t.Fatalf("stepInit error: %v", err)
+	}
+
+	// Find a 1x1 constant block (like {x}, Q=[[1]]) and add an impossible Q*v = 0 constraint for v=[1].
+	added := false
+	for b, mat := range fsm.space.BlockBase {
+		if len(mat) == 1 && mat[0][0].Sign() != 0 {
+			fsm.addFacialVector(b, []*big.Rat{big.NewRat(1, 1)})
+			added = true
+			break
+		}
+	}
+	if !added {
+		t.Fatalf("expected 1x1 non-zero constant block")
+	}
+
+	d := fsm.space.Dim
+	totalVars := 2 * d
+	varNames := make([]string, totalVars)
+	for k := 0; k < d; k++ {
+		varNames[2*k] = "lp_" + string(rune('0'+k))
+		varNames[2*k+1] = "lm_" + string(rune('0'+k))
+	}
+	cons := fsm.buildPolyhedronConstraints(totalVars, false, -1)
+	lpRes, err := lp.Solve(&lp.Problem{
+		Sense:       lp.OptMinimize,
+		Objective:   makeZeroRatVec(totalVars),
+		ObjConstant: big.NewRat(0, 1),
+		VarNames:    varNames,
+		Constraints: cons,
+	})
+	if err != nil {
+		t.Fatalf("lp.Solve error: %v", err)
+	}
+	if lpRes.Status != lp.StatusInfeasible {
+		t.Fatalf("expected StatusInfeasible for contradictory constant facial row, got %v", lpRes.Status)
+	}
+}
+
+func TestSOS_EnumerateLatticeCandidatesHighDimSparsePruning(t *testing.T) {
+	// n = 24 binary coordinate box with minDeg = 23, maxDeg = 24.
+	// Without suffixMin/suffixMax pruning, DFS traverses ~2^24 dead branches;
+	// with suffix pruning, only the exact C(24,23) + C(24,24) = 25 lattice points are visited.
+	const n = 24
+	minExp := make([]int, n)
+	maxExp := make([]int, n)
+	for i := 0; i < n; i++ {
+		maxExp[i] = 1
+	}
+
+	cands, err := enumerateLatticeCandidates(n, minExp, maxExp, n-1, n)
+	if err != nil {
+		t.Fatalf("enumerateLatticeCandidates error: %v", err)
+	}
+	const expected = n + 1
+	if len(cands) != expected {
+		t.Fatalf("expected %d candidates, got %d", expected, len(cands))
+	}
+	for idx, m := range cands {
+		if m.TotalDeg < n-1 || m.TotalDeg > n {
+			t.Fatalf("candidate %d out of degree bounds [%d,%d]: %d", idx, n-1, n, m.TotalDeg)
+		}
+	}
+
+	// Also verify impossible degree window short-circuits cleanly to empty without error.
+	empty, err := enumerateLatticeCandidates(n, minExp, maxExp, n+1, n+2)
+	if err != nil {
+		t.Fatalf("enumerateLatticeCandidates impossible window error: %v", err)
+	}
+	if len(empty) != 0 {
+		t.Fatalf("expected 0 candidates for impossible degree window, got %d", len(empty))
 	}
 }
