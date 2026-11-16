@@ -4,8 +4,8 @@
 
 This guide covers how to run Go unit tests, mathematical invariant fuzzing, standalone proof verification, differential SymPy oracles, and documentation audits in a cloned `ihd` repository. Unlike the end-user syntax reference bundled in release archives and `~/.ihd/references/` ([reference.en.md](references/en/reference.en.md)), this guide targets contributors working on the repository source and test suite.
 
-- **Base environment**: Go 1.26.5 (`pwsh` for Windows test runners)
-- **Optional tools (for specific checks)**: Python with SymPy (differential oracle), Bun or Node.js (reference HTML rebuild)
+- **Base environment**: Go 1.26.5 (`pwsh` or `bash` for Exam runners)
+- **Optional tools (for specific checks)**: Python with SymPy (differential oracle), Node.js (or Bun: reference HTML rebuild)
 
 ## Table of Contents
 
@@ -24,19 +24,13 @@ Run standard Go unit tests across all packages:
 go test ./...
 ```
 
-To run the project unit test runner with CI-compatible logging on Windows, execute from the repository root:
-
-```powershell
-pwsh -File test-scripts/go/unit/run.ps1
-```
-
 ## 2. Mathematical Invariants Property-Based Testing & Fuzzing
 
 Run the fuzzing harness backed by exact multi-point evaluation oracles over Gaussian rationals $\mathbb{Q}[i]$ (Schwartz-Zippel lemma) and algebraic/calculus invariants:
 
 ```bash
-# Smoke test all Fuzz target seed corpora and oracle tests
-go test -v ./internal/calc -run "^(Fuzz|TestOracle|TestProvider)"
+# Smoke test all Fuzz target seed corpora, oracle, and provider tests
+go test -v ./internal/calc -run "^(Fuzz|TestThreeTierOracle_|TestByteStreamProvider_)"
 
 # Continuous fuzzing exploration on a specific invariant target (e.g., 30s)
 go test ./internal/calc -run "^FuzzAlgebra_SimplifyIdempotence$" -fuzz "^FuzzAlgebra_SimplifyIdempotence$" -fuzztime 30s
@@ -46,7 +40,7 @@ Main fuzz targets are defined in `fuzz_*_test.go` under [internal/calc/](../inte
 
 ## 3. Standalone Proof Verifier (`tools/micro-verifier`)
 
-A standalone CLI tool that independently verifies certificate JSON files (`ihd-proof-trace-v1`) emitted by `ihd --certificate <file>` without relying on `ihd` solver logic:
+A standalone CLI tool that independently verifies certificate JSON files (version `"1.0"`) emitted by `ihd --certificate <file>` without relying on `ihd` solver logic:
 
 ```bash
 # Unit tests for verifier
@@ -79,15 +73,12 @@ go test -v ./internal/calc -run "^(TestSymPyClient_|TestDifferentialOracle_)"
 
 ## 6. Reference HTML Build & Documentation Audit
 
-After editing `docs/references/{ja,en}/reference.{ja,en}.md`, rebuild the offline Single-File HTML manuals and `doc_specs.json`, then verify registry consistency via `tools/doc-auditor` and CLI sample execution:
+After editing `docs/references/{ja,en}/reference.{ja,en}.md`, rebuild the offline Single-File HTML manuals and `doc_specs.json`, then verify registry consistency via `tools/doc-auditor` (run `npm ci` in `tools/reference-builder` on first setup):
 
-```powershell
+```bash
 # Rebuild Single-File HTML references and doc_specs.json
-pwsh -File build-html.ps1
+node tools/reference-builder/index.js
 
-# Build reference HTML + run doc-auditor (exits 0 when no discrepancies remain)
-pwsh -File test-scripts/test-reference-audit.ps1
-
-# Run documented CLI sample verification
-pwsh -File test-scripts/test-doc-samples.ps1
+# Run doc-auditor (exits 0 when no discrepancies remain)
+go run ./tools/doc-auditor
 ```

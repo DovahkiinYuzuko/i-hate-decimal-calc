@@ -86,7 +86,7 @@ In addition to the interactive REPL, `ihd` provides subcommands and CLI flags fo
 | `--step` | `ihd --step "expand((x+1)^3)"` | Iteratively prints derivation and simplification steps |
 | `--trace` | `ihd --trace "factor(x^2 - 1)"` | Outputs internal search process events (Buchberger, CAD, Risch) as structured JSON |
 | `--verify` | `ihd --verify "factor(x^2 - 1)"` | Verifies algebraic correctness autonomously and prints certificate |
-| `--certificate` | `ihd --certificate cert.json "factor(x^2 - 1)"` | Saves standalone proof certificate (`ihd-proof-trace-v1`) to JSON file |
+| `--certificate` | `ihd --certificate cert.json "factor(x^2 - 1)"` | Saves standalone proof certificate (`ProofTrace` JSON, version `"1.0"`) to JSON file |
 | `--replay` | `ihd --replay cert.json` | Replays and verifies residual vanishing independently from JSON certificate |
 | `--lean` | `ihd --lean "factor(x^2 - 1)"` | Generates formal proof code in Lean 4 (Mathlib4) syntax |
 | `--lean-file` | `ihd --lean-file proof.lean "factor(x^2 - 1)"` | Saves generated Lean 4 formal proof code to `.lean` file |
@@ -549,9 +549,9 @@ External verification of results, certificate emission and independent replay, L
 | `ProofTrace` | Internal Data Structure | Data structure storing each step of the derivation (Before/After nodes, applied rule, residual expression, verification status). Acts as a shared representation for derivations, reverse-checks, and Lean 4 code generation |
 | `--explain` / `explain` / `steps` | `ihd --explain "1/(sqrt(2)+1)"` | Displays tree-formatted step-by-step algebraic derivations (radical denesting, rationalization, factoring, differentiation rules, etc.) based on derivation step sequences |
 | `--verify` / `verify` | `ihd --verify "factor(x^2 - 1)"` | Checks algebraic correctness for steps and results against defining relations and derivatives, confirming that residuals vanish |
-| `--certificate` | `ihd --certificate [file] "factor(x^2 - 1)"` | Exports computation and rewriting sequence into a certificate JSON file (schema `ihd-proof-trace-v1`) to stdout or file |
+| `--certificate` | `ihd --certificate [file] "factor(x^2 - 1)"` | Exports computation and rewriting sequence into a certificate JSON file (`ProofTrace` JSON, version `"1.0"`) to stdout or file |
 | `--replay` | `ihd --replay cert.json` | Reads an exported certificate JSON file and verifies that residuals vanish without invoking CAS solver algorithms |
-| `micro-verifier` | `micro-verifier cert.json` | Standalone zero-dependency micro-verification binary built using only the Go standard library. Validates certificate JSON files (`ihd-proof-trace-v1`) objectively without relying on the CAS solver itself |
+| `micro-verifier` | `micro-verifier cert.json` | Standalone zero-dependency micro-verification binary built using only the Go standard library. Validates certificate JSON files (version `"1.0"`) objectively without relying on the CAS solver itself |
 | `--lean` / `--lean-file` | `ihd --lean "factor(x^2 - 1)"` / `ihd --lean-file p.lean "factor(x^2 - 1)"` | Transpiles computation and proof traces into formal **Lean 4 (Mathlib4)** proof theorems (`by ring`, `by ext <;> fin_cases`, `by repeat constructor <;> norm_num`, `by simp`, etc.) |
 | `--typst` / `--format typst` | `ihd --typst "1/2 + sqrt(2)"` / `ihd --format typst "[[1, 2], [3, 4]]"` | Formats output expressions in **Typst** math mode syntax (`$ ... $`, `/` for fraction, `mat(...)` for matrices, etc.) |
 | `--explain --lean` | `ihd --explain --lean "factor(x^4 + 4)"` | Projects from the single provenance DAG into a **Lean 4 (Mathlib4)** transitive equational derivation `calc` block (`by ring`, `by norm_num`, etc.) with zero sorry assertions |

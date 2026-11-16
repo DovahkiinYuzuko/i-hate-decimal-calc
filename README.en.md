@@ -180,7 +180,7 @@ Installed release bundles (`~/.ihd/`) and cloned source repositories contain dif
 | Output samples (`sample/`) | `sample/` | `~/.ihd/sample/` | - | Concrete CLI, typesetting, and proof outputs |
 | Verification helpers (`tools/`) | `tools/micro-verifier/`, `tools/sympy-oracle/` | Under `~/.ihd/tools/` | - | Standalone verifier source and SymPy differential oracle |
 | `README.md`, `README.en.md`, `LICENSE.MIT`, `NOTICE.md` | `./` (archive root) | `~/.ihd/` root | - | Overview documentation and license notices |
-| `docs/development.*.md`, `test-scripts/`, `internal/` | Not included | Not included | Included | Unit tests, fuzzing, E2E suite, and HTML builder |
+| `docs/development.*.md`, `tools/`, `internal/` | Not included | Not included | Included | Unit tests, fuzzing, E2E suite, and HTML builder |
 
 ## Core Commands & Reference
 
@@ -198,7 +198,7 @@ Installed release bundles (`~/.ihd/`) and cloned source repositories contain dif
 | Option | Description & Examples |
 | :--- | :--- |
 | `-a`, `--approx` | Prints arbitrary-precision `big.Float` approximation and interval error bounds (`±`) beside the exact result (default 30 digits; override via `--digits <N>`).<br>`ihd -a "sqrt(2)"` |
-| `--format <fmt>` | Sets output format (`typst`, `latex`, `ascii`, `pretty`); individual flags `--typst`, `--latex`, `--ascii`, `--pretty` are also supported.<br>`ihd --format typst "1/2 + sqrt(2)"` |
+| `--format <fmt>` | Sets output format (`typst`, `latex`, `ascii`, `pretty`, `svg`); individual flags `--typst`, `--latex`, `--ascii`, `--pretty` are also supported.<br>`ihd --format typst "1/2 + sqrt(2)"` |
 | `--explain` | Displays step-by-step algebraic derivation trees.<br>`ihd --explain "1 / (sqrt(2) + 1)"` |
 | `--verify` | Reverse-verifies algebraic correctness by checking residual vanishing.<br>`ihd --verify "integrate(1/(x^2 + 1), x)"` |
 | `-i`, `--interval` | Evaluates expressions using adaptive rational interval enclosures (tolerance configurable via `--interval-eps`).<br>`ihd -i "sin(1)"` |
@@ -212,7 +212,7 @@ Installed release bundles (`~/.ihd/`) and cloned source repositories contain dif
 | :--- | :--- |
 | `--step` | Prints intermediate rewrite rules and expressions step by step.<br>`ihd --step "expand((x+1)^3)"` |
 | `--trace` | Emits structured rewrite and solver search logs.<br>`ihd --trace "factor(x^2 - 1)"` |
-| `--certificate <file>` | Saves calculation results and derivation steps as a JSON certificate (`ihd-proof-trace-v1`).<br>`ihd --certificate cert.json "factor(x^2 - 1)"` |
+| `--certificate <file>` | Saves calculation results and derivation steps as a JSON certificate (version `"1.0"`).<br>`ihd --certificate cert.json "factor(x^2 - 1)"` |
 | `--replay <file>` | Reads a JSON certificate and verifies zero residuals without invoking CAS solvers.<br>`ihd --replay cert.json` |
 | `--deg` | Evaluates trigonometric and inverse trigonometric functions in degrees.<br>`ihd --deg "sin(30)"` |
 | `--theme <dark\|light\|none>` | Sets the REPL color theme (persisted to `~/.ihd/config.json`).<br>`ihd --theme light` |

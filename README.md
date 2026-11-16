@@ -180,7 +180,7 @@ ihd "１＋２×３"
 | 出力サンプル集（`sample/`） | `sample/` | `~/.ihd/sample/` | - | CLI 出力・組版・証明コードの実例集 |
 | 検証補助ソース（`tools/` 配下） | `tools/micro-verifier/`, `tools/sympy-oracle/` | `~/.ihd/tools/` 配下 | - | 独立検証器ソースと SymPy 差分オラクル |
 | `README.md`, `README.en.md`, `LICENSE.MIT`, `NOTICE.md` | `./`（アーカイブ直下） | `~/.ihd/` 直下 | - | 概要ドキュメントおよびライセンス表記 |
-| `docs/development.*.md`, `test-scripts/`, `internal/` 等 | 含まれない | 含まれない | 同梱 | 単体テスト・Fuzz・E2E・HTML ビルド環境 |
+| `docs/development.*.md`, `tools/`, `internal/` 等 | 含まれない | 含まれない | 同梱 | 単体テスト・Fuzz・E2E・HTML ビルド環境 |
 
 ## 主なコマンドとリファレンス
 
@@ -198,7 +198,7 @@ ihd "１＋２×３"
 | オプション | 説明・使用例 |
 | :--- | :--- |
 | `-a`, `--approx` | 厳密解の横に有理数区間演算に基づく任意精度 `big.Float` 近似値と誤差上限 `±` を併記（既定 30 桁、`--digits <N>` で変更）。<br>`ihd -a "sqrt(2)"` |
-| `--format <fmt>` | 出力形式を指定（`typst`, `latex`, `ascii`, `pretty`）。個別フラグ `--typst`, `--latex`, `--ascii`, `--pretty` も指定可能。<br>`ihd --format typst "1/2 + sqrt(2)"` |
+| `--format <fmt>` | 出力形式を指定（`typst`, `latex`, `ascii`, `pretty`, `svg`）。個別フラグ `--typst`, `--latex`, `--ascii`, `--pretty` も指定可能。<br>`ihd --format typst "1/2 + sqrt(2)"` |
 | `--explain` | 有理化・因数分解・微分・極限等の計算過程を途中式ツリーで表示。<br>`ihd --explain "1 / (sqrt(2) + 1)"` |
 | `--verify` | 定義式や導関数に基づき計算結果の残差が 0 になるかを逆算検算。<br>`ihd --verify "integrate(1/(x^2 + 1), x)"` |
 | `-i`, `--interval` | 適応的有理数区間演算による真値包含区間を算出（許容幅は `--interval-eps` で指定）。<br>`ihd -i "sin(1)"` |
@@ -212,7 +212,7 @@ ihd "１＋２×３"
 | :--- | :--- |
 | `--step` | 各簡約ステップの適用ルールと中間式を標準出力へ順次出力。<br>`ihd --step "expand((x+1)^3)"` |
 | `--trace` | 式木の書き換え過程や内部探索イベントを構造化ログとして出力。<br>`ihd --trace "factor(x^2 - 1)"` |
-| `--certificate <file>` | 計算結果と導出ステップ列を証明書 JSON（`ihd-proof-trace-v1`）として保存。<br>`ihd --certificate cert.json "factor(x^2 - 1)"` |
+| `--certificate <file>` | 計算結果と導出ステップ列を証明書 JSON（version `"1.0"`）として保存。<br>`ihd --certificate cert.json "factor(x^2 - 1)"` |
 | `--replay <file>` | 証明書 JSON ファイルを読み込み、ソルバを再実行せず各ステップの残差 0 を再検証。<br>`ihd --replay cert.json` |
 | `--deg` | 三角関数・逆三角関数を度数法（Degree）として解釈。<br>`ihd --deg "sin(30)"` |
 | `--theme <dark\|light\|none>` | REPL のカラーテーマを指定（`~/.ihd/config.json` に保存）。<br>`ihd --theme light` |

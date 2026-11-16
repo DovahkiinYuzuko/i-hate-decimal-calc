@@ -36,14 +36,18 @@ tools/reference-builder/
 ├── assets/
 │   └── katex/
 │       └── katex-inline.css    # Base64 WebFont埋め込み済み KaTeX CSS
-├── i18n/              
-│   └── {locales}.json          # 外枠UI辞書 (元となるMDファイルにないテキストを登録)
+├── docs/
+│   └── licenses-cache/
+│       └── MIT.json            # ライセンスメタデータキャッシュ
+├── i18n/
+│   └── {lang}.json             # 外枠UI辞書 (元となるMDファイルにないテキストを登録)
 ├── templates/
 │   ├── layout.html             # HTML5骨格テンプレート
 │   ├── dads.css                # DADSデザイントークン＋GFMスタイル定義
 │   └── viewer.js               # 検索・アコーディオン・目次・コピー機能
 ├── index.js                    # unified ビルドエントリーポイント
 ├── package.json                # npm 依存関係
+├── package-lock.json           # npm 依存関係ロックファイル
 ├── README.md                   # 本ドキュメント
 ├── NOTICE.md                   # サードパーティライセンス表示
 └── LICENSE.MIT                 # MIT ライセンス
@@ -68,9 +72,9 @@ node tools/reference-builder/index.js
 
 > [!NOTE]
 > 正常に完了すると、HTMLファイルが更新されます：  
-> `docs/references/{locale}/reference.{locale}.html`
+> `docs/references/{lang}/reference.{lang}.html`
 
-CI（GitHub Actions `reference-sync.yml`）においても、Markdown 原稿と HTML 生成物の同期状態が自動検証されます。
+CI（GitHub Actions `reference-sync.yml`）では Node.js 20 を使用し、Markdown 原稿と HTML 生成物の同期状態を自動検証しています。
 
 ### LICENSE
 [MIT](./LICENSE.MIT)
@@ -97,7 +101,7 @@ Third-Party → [NOTICE.md](./NOTICE.md)
    - Prevents unintended language mixing in localized editions.
 5. **Single-File HTML Generation**:
    - Inlines DADS CSS, viewer.js (search, accordion controls), and Base64-encoded KaTeX WebFonts into a single HTML file.
-   - Enables offline browsing and fast full-text searching without external network requests.
+   - Enables offline browsing and full-text searching without external network requests.
 
 ### Directory Structure
 
@@ -106,14 +110,18 @@ tools/reference-builder/
 ├── assets/
 │   └── katex/
 │       └── katex-inline.css    # KaTeX CSS with Base64 embedded WebFonts
-├── i18n/              
-│   └── {locales}.json          # Shell UI dictionary (strings not present in source Markdown)
+├── docs/
+│   └── licenses-cache/
+│       └── MIT.json            # License metadata cache
+├── i18n/
+│   └── {lang}.json             # Shell UI dictionary (strings not present in source Markdown)
 ├── templates/
 │   ├── layout.html             # HTML5 template skeleton
 │   ├── dads.css                # DADS design tokens + GFM style definitions
 │   └── viewer.js               # Search, accordion, TOC, and copy handlers
 ├── index.js                    # unified build entrypoint
 ├── package.json                # npm dependencies
+├── package-lock.json           # npm dependency lockfile
 ├── README.md                   # This document
 ├── NOTICE.md                   # Third-party license notices
 └── LICENSE.MIT                 # MIT License
@@ -138,9 +146,9 @@ node tools/reference-builder/index.js
 
 > [!NOTE]
 > Upon successful completion, the HTML files are updated:  
-> `docs/references/{locale}/reference.{locale}.html`
+> `docs/references/{lang}/reference.{lang}.html`
 
-CI (GitHub Actions `reference-sync.yml`) automatically validates synchronization between Markdown sources and HTML build artifacts.
+CI (GitHub Actions `reference-sync.yml`) runs on Node.js 20 and automatically validates synchronization between Markdown sources and HTML build artifacts.
 
 ### LICENSE
 [MIT](./LICENSE.MIT)

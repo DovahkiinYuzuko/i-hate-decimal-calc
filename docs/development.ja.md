@@ -2,10 +2,10 @@
 
 [日本語](development.ja.md) | [English](development.en.md) | [README に戻る](../README.md)
 
-このガイドは、`ihd` のリポジトリをクローンして Go 単体テスト、数学的不変条件ファジング、独立証明検証、SymPy 差分オラクル、およびドキュメント監査を実行する開発者・コントリビュータ向けの手順書です。リリースアーカイブやインストーラ（`~/.ihd/`）に同梱される利用向けリファレンス（[reference.ja.md](references/ja/reference.ja.md)）とは役割が異なり、リポジトリ直下のソース・テスト基盤を対象としています。
+このガイドは、`ihd` のリポジトリをクローンして Go 単体テスト、数学的不変条件ファジング、独立証明検証、SymPy 差分オラクル、およびドキュメント監査を実行する開発者・コントリビュータ向けの手順書です。リリースアーカイブやインストーラ（`~/.ihd/references/`）に同梱される利用向けリファレンス（[reference.ja.md](references/ja/reference.ja.md)）とは役割が異なり、リポジトリ直下のソース・テスト基盤を対象としています。
 
-- **基本前提環境**: Go 1.26.5（Windows 向けランナーは PowerShell `pwsh` を使用）
-- **追加ツール（該当テスト実行時のみ）**: Python + SymPy（差分オラクル）、Bun または Node.js（リファレンス HTML 再生成）
+- **基本前提環境**: Go 1.26.5（Exam ランナーは `pwsh` または `bash` を使用）
+- **追加ツール（該当テスト実行時のみ）**: Python + SymPy（差分オラクル）、Node.js（または Bun：リファレンス HTML 再生成）
 
 ## 目次
 
@@ -24,19 +24,13 @@
 go test ./...
 ```
 
-Windows 環境でプロジェクト標準のログ出力付きテストランナーを使う場合は、リポジトリルートから以下を実行します。
-
-```powershell
-pwsh -File test-scripts/go/unit/run.ps1
-```
-
 ## 2. 数学的不変条件 Property-Based Testing & Fuzzing
 
 ガウス有理数体 $\mathbb{Q}[i]$ 上の多点評価オラクル（Schwartz-Zippel 補題）および代数・微積分の不変条件を用いたファジングハーネスを実行します。
 
 ```bash
-# 全 Fuzz ターゲットのシードコーパスおよびオラクルテストのスモーク実行
-go test -v ./internal/calc -run "^(Fuzz|TestOracle|TestProvider)"
+# 全 Fuzz ターゲットのシードコーパスおよびオラクル・プロバイダテストのスモーク実行
+go test -v ./internal/calc -run "^(Fuzz|TestThreeTierOracle_|TestByteStreamProvider_)"
 
 # 特定ターゲットに対する連続ファジング探索（例: 30秒間）
 go test ./internal/calc -run "^FuzzAlgebra_SimplifyIdempotence$" -fuzz "^FuzzAlgebra_SimplifyIdempotence$" -fuzztime 30s
@@ -46,7 +40,7 @@ go test ./internal/calc -run "^FuzzAlgebra_SimplifyIdempotence$" -fuzz "^FuzzAlg
 
 ## 3. 独立証明検証器 (`tools/micro-verifier`)
 
-本体ソルバの簡約ロジックに依存せず、`ihd --certificate <file>` で出力された証明書 JSON（`ihd-proof-trace-v1`）を独立して再検証するスタンドアロン CLI ツールです。
+本体ソルバの簡約ロジックに依存せず、`ihd --certificate <file>` で出力された証明書 JSON（version `"1.0"`）を独立して再検証するスタンドアロン CLI ツールです。
 
 ```bash
 # 独立検証器の単体テスト
@@ -79,15 +73,12 @@ go test -v ./internal/calc -run "^(TestSymPyClient_|TestDifferentialOracle_)"
 
 ## 6. リファレンス HTML ビルドとドキュメント監査
 
-リファレンス Markdown（`docs/references/{ja,en}/reference.{ja,en}.md`）を更新した際は、オフライン Single-File HTML と `doc_specs.json` を再生成した上で、`tools/doc-auditor` による関数レジストリ・構文例整合性チェックおよび README/sample コマンドの実行検証を行えます。
+リファレンス Markdown（`docs/references/{ja,en}/reference.{ja,en}.md`）を更新した際は、オフライン Single-File HTML と `doc_specs.json` を再生成した上で、`tools/doc-auditor` による関数レジストリ・構文例整合性チェックを実行できます（初回のみ `tools/reference-builder` で `npm ci` が必要です）。
 
-```powershell
+```bash
 # Single-File HTML と doc_specs.json の再生成
-pwsh -File build-html.ps1
+node tools/reference-builder/index.js
 
-# リファレンス HTML 生成 + doc-auditor 整合性監査（不整合ゼロで終了コード 0）
-pwsh -File test-scripts/test-reference-audit.ps1
-
-# ドキュメント掲載 CLI サンプルの実行テスト
-pwsh -File test-scripts/test-doc-samples.ps1
+# doc-auditor による整合性監査（不整合ゼロで終了コード 0）
+go run ./tools/doc-auditor
 ```

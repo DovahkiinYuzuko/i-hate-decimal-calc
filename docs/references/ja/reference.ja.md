@@ -86,7 +86,7 @@
 | `--step` | `ihd --step "expand((x+1)^3)"` | 数式変形および証明ステップを標準出力に順次表示 |
 | `--trace` | `ihd --trace "factor(x^2 - 1)"` | グレブナー基底や CAD 等の内部探索過程を構造化 JSON で出力 |
 | `--verify` | `ihd --verify "factor(x^2 - 1)"` | 計算結果の代数的正当性を逆算検算し証明書を表示 |
-| `--certificate` | `ihd --certificate cert.json "factor(x^2 - 1)"` | 自己完結型代数証明書（`ihd-proof-trace-v1`）を JSON ファイルへ保存 |
+| `--certificate` | `ihd --certificate cert.json "factor(x^2 - 1)"` | 自己完結型代数証明書（`ProofTrace` JSON, version `"1.0"`）を JSON ファイルへ保存 |
 | `--replay` | `ihd --replay cert.json` | 証明書 JSON ファイルを読み込み残差 0 を独立再検証 |
 | `--lean` | `ihd --lean "factor(x^2 - 1)"` | Lean 4（Mathlib4）形式の形式証明コードを出力 |
 | `--lean-file` | `ihd --lean-file proof.lean "factor(x^2 - 1)"` | Lean 4 形式証明コードを指定パスの `.lean` ファイルへ保存 |
@@ -549,9 +549,9 @@
 | `ProofTrace` | 内部データ構造 | 計算過程の各ステップ（Before/After、適用規則、残差式、検証状態）を保持するデータ構造。途中式表示、逆算検算、Lean 4 証明コード生成の共通表現として機能 |
 | `--explain` / `explain` / `steps` | `ihd --explain "1/(sqrt(2)+1)"` | 導出ステップ列に基づき、代数的項書き換え（二重根号分解、有理化、因数分解、微分則等）をツリー形式で表示 |
 | `--verify` / `verify` | `ihd --verify "factor(x^2 - 1)"` | 各ステップや結果に対し、定義式や導関数に基づく逆算検算を行い、残差が 0 であることを確認 |
-| `--certificate` | `ihd --certificate [file] "factor(x^2 - 1)"` | 計算結果と導出ステップ列を証明書 JSON（スキーマ `ihd-proof-trace-v1`）として出力またはファイルへ保存 |
+| `--certificate` | `ihd --certificate [file] "factor(x^2 - 1)"` | 計算結果と導出ステップ列を証明書 JSON（`ProofTrace` JSON, version `"1.0"`）として出力またはファイルへ保存 |
 | `--replay` | `ihd --replay cert.json` | 保存された証明書 JSON を読み込み、各ステップの残差が 0 かを再検証 |
-| `micro-verifier` | `micro-verifier cert.json` | 外部依存ゼロ・Go 標準ライブラリのみで実装された独立検証バイナリ。証明書 JSON（`ihd-proof-trace-v1`）を読み込み、CAS 本体に依存せず残差ゼロを客観的に再検証 |
+| `micro-verifier` | `micro-verifier cert.json` | 外部依存ゼロ・Go 標準ライブラリのみで実装された独立検証バイナリ。証明書 JSON（version `"1.0"`）を読み込み、CAS 本体に依存せず残差ゼロを客観的に再検証 |
 | `--lean` / `--lean-file` | `ihd --lean "factor(x^2 - 1)"` / `ihd --lean-file p.lean "factor(x^2 - 1)"` | 計算結果や導出ステップを **Lean 4（Mathlib4）** の形式証明コード（`by ring`, `by ext <;> fin_cases`, `by repeat constructor <;> norm_num`, `by simp` 等）として出力 |
 | `--typst` / `--format typst` | `ihd --typst "1/2 + sqrt(2)"` / `ihd --format typst "[[1, 2], [3, 4]]"` | **Typst** の数式モード記法（`$ ... $`、分数 `/`、根号 `sqrt(...)`/`root(...)`、行列 `mat(...)` 等）で出力 |
 | `--explain --lean` | `ihd --explain --lean "factor(x^4 + 4)"` | 単一の証明 DAG から **Lean 4（Mathlib4）** の推移的等式連鎖 `calc` ブロック（`by ring`, `by norm_num` 等）を生成（Zero-sorry 契約遵守） |
