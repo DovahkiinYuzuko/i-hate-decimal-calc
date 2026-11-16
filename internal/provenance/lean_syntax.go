@@ -199,13 +199,23 @@ func ToLeanSyntax(node ast.Node) (string, error) {
 			baseStr = "(" + baseStr + ")"
 		} else if _, isMul := n.Base.(*ast.MulNode); isMul {
 			baseStr = "(" + baseStr + ")"
+		} else if _, isPow := n.Base.(*ast.PowNode); isPow {
+			baseStr = "(" + baseStr + ")"
 		}
 
 		expStr, err := ToLeanSyntax(n.Exp)
 		if err != nil {
 			return "", err
 		}
-		if _, isAdd := n.Exp.(*ast.AddNode); isAdd {
+		if rat, ok := n.Exp.(*ast.RationalNode); ok && rat.Val != nil && rat.Val.IsInt() && rat.Val.Sign() < 0 {
+			expStr = fmt.Sprintf("(%s : ℤ)", rat.Val.Num().String()) // txthc-ignore
+		} else if u, ok := n.Exp.(*ast.UnaryOpNode); ok && u.Op == "-" {
+			if rat, ok2 := u.Expr.(*ast.RationalNode); ok2 && rat.Val != nil && rat.Val.IsInt() && rat.Val.Sign() > 0 {
+				expStr = fmt.Sprintf("(-%s : ℤ)", rat.Val.Num().String()) // txthc-ignore
+			} else {
+				expStr = "(" + expStr + ")"
+			}
+		} else if _, isAdd := n.Exp.(*ast.AddNode); isAdd {
 			expStr = "(" + expStr + ")"
 		} else if _, isMul := n.Exp.(*ast.MulNode); isMul {
 			expStr = "(" + expStr + ")"
@@ -247,6 +257,11 @@ func ToLeanSyntax(node ast.Node) (string, error) {
 			return fmt.Sprintf("Real.exp (%s)", strings.Join(argStrs, ", ")), nil
 		case "ln", "log":
 			return fmt.Sprintf("Real.log (%s)", strings.Join(argStrs, ", ")), nil
+		case "mod":
+			if len(argStrs) == 2 {
+				return fmt.Sprintf("((%s : ℤ) %% (%s : ℤ))", argStrs[0], argStrs[1]), nil // txthc-ignore
+			}
+			return fmt.Sprintf("%s (%s)", escapeLeanIdent(n.Name), strings.Join(argStrs, ", ")), nil
 		default:
 			return fmt.Sprintf("%s (%s)", escapeLeanIdent(n.Name), strings.Join(argStrs, ", ")), nil
 		}

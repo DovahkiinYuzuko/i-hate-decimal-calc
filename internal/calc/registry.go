@@ -215,6 +215,7 @@ var defaultFunctionArgs = map[string][]string{
 	"triangle_area":    {"a", "b", "c"},
 	"triangle_centers": {"a", "b", "c"},
 	"plot":             {"expr", "range"},
+	"plot_svg":         {"expr", "range"},
 	"cad":              {"formula", "vars"},
 	"qe":               {"formula"},
 	"clifford":         {"expr", "p", "q", "r"},
@@ -944,6 +945,11 @@ func init() {
 		Name:    "plot",
 		MinArgs: 2,
 		MaxArgs: 3,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:    "plot_svg",
+		MinArgs: 2,
+		MaxArgs: 4,
 	})
 
 	// Assumptions

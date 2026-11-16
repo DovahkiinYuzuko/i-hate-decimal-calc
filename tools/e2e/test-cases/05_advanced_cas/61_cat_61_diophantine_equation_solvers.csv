@@ -10,3 +10,8 @@ CAT61-007,cat_61_diophantine_equation_solvers,--verify pell_solve(61),,exact,"[1
 CAT61-008,cat_61_diophantine_equation_solvers,"""solve_diophantine(x^2 + y^2 == z^2, [x, y, z])""",,exact,"[x == -1*n^2*k + m^2*k, y == 2*k*m*n, z == m^2*k + n^2*k]",,0,deductive,Diophantine: Pythagorean equation parametric
 CAT61-009,cat_61_diophantine_equation_solvers,pell_solve(4),,error,,perfect square,1,contradiction,Negative: Pell square D error
 CAT61-010,cat_61_diophantine_equation_solvers,"""solve_diophantine(2*x + 4*y == 3, [x, y])""",,error,,no integer solution exists,1,contradiction,Negative: Linear Diophantine insoluble
+CAT61-011,cat_61_diophantine_equation_solvers,"--verify ""solve_diophantine(3*x + 5*y == 1, [x, y])""",,contains,[VERIFIED:,,0,deductive,Diophantine: Verify linear Diophantine parametric certificate
+CAT61-012,cat_61_diophantine_equation_solvers,"--explain --lean ""solve_diophantine(3*x + 5*y == 1, [x, y])""",,contains,ring,,0,deductive,Diophantine: Explain and Lean 4 proof projection for linear Diophantine
+CAT61-013,cat_61_diophantine_equation_solvers,"--verify ""solve_diophantine(x^2 - 2*y^2 == 1, [x, y])""",,contains,[VERIFIED:,,0,deductive,Diophantine: Verify Pell solution via solve_diophantine
+CAT61-014,cat_61_diophantine_equation_solvers,"--explain --lean ""solve_diophantine(x^2 - 5*y^2 == -1, [x, y])""",,contains,#print axioms,,0,deductive,Diophantine: Explain and Lean 4 proof projection for negative Pell equation
+CAT61-015,cat_61_diophantine_equation_solvers,"--verify ""solve_diophantine(x^2 + y^2 == z^2, [x, y, z])""",,contains,[VERIFIED:,,0,deductive,Diophantine: Verify Pythagorean parametric solution certificate

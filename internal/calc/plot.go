@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"sort"
 	"strings"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
@@ -199,9 +200,9 @@ func (c *BrailleCanvas) Render() string {
 		}
 	}
 
-	// Place feature markers (◆ for roots, ● for extrema) and pin labels
+	// Place feature markers (◆ for roots, ● for extrema, ○ for removable holes) and pin labels
 	for _, feat := range c.Features {
-		if feat.Kind == "asymptote" {
+		if feat.Kind == "asymptote" || feat.Kind == "horiz_asymptote" || feat.Kind == "oblique_asymptote" {
 			continue
 		}
 		px := c.toPixelX(feat.XVal)
@@ -213,6 +214,8 @@ func (c *BrailleCanvas) Render() string {
 			marker := '◆'
 			if feat.Kind == "min" || feat.Kind == "max" {
 				marker = '●'
+			} else if feat.Kind == "hole" {
+				marker = '○'
 			}
 			grid[cy][cx] = marker
 
@@ -302,6 +305,12 @@ func (c *BrailleCanvas) Render() string {
 			sb.WriteString(i18n.T("plot.local_max", Format(feat.XNode), Format(feat.YNode)))
 		case "asymptote":
 			sb.WriteString(i18n.T("plot.asymptote", Format(feat.XNode)))
+		case "hole":
+			sb.WriteString(i18n.T("plot.hole", Format(feat.XNode), Format(feat.YNode)))
+		case "horiz_asymptote":
+			sb.WriteString(i18n.T("plot.horiz_asymptote", Format(feat.YNode)))
+		case "oblique_asymptote":
+			sb.WriteString(i18n.T("plot.oblique_asymptote", Format(feat.YNode)))
 		}
 	}
 	if !hasFeature {
@@ -380,9 +389,45 @@ func parseDomain(n Node) (Node, Node, float64, float64, error) {
 	return lowerNode, upperNode, lowerVal, upperVal, nil
 }
 
-// findAsymptotes identifies vertical asymptotes where denominator is 0.
+// PlotPoint represents a point in continuous mathematical coordinates.
+type PlotPoint struct {
+	X float64
+	Y float64
+}
+
+// PlotBranch represents a continuous curve segment without singularities or viewport jumps.
+type PlotBranch struct {
+	Points []PlotPoint
+}
+
+// PlotAsymptote represents a vertical, horizontal, or oblique asymptote in mathematical coordinates.
+type PlotAsymptote struct {
+	Kind      string  // "vertical", "horizontal", "oblique"
+	XVal      float64 // vertical asymptote x
+	YVal      float64 // horizontal asymptote y
+	Slope     float64 // oblique asymptote m
+	Intercept float64 // oblique asymptote b
+	ExactNode Node
+}
+
+// PlotScene is the renderer-independent intermediate representation in mathematical coordinates.
+type PlotScene struct {
+	Expr       Node
+	VarName    string
+	XMin, XMax float64
+	YMin, YMax float64
+	XMinNode   Node
+	XMaxNode   Node
+	YMinNode   Node
+	YMaxNode   Node
+	Branches   []PlotBranch
+	Features   []plotFeature
+	Asymptotes []PlotAsymptote
+}
+
+// findAsymptotes identifies vertical asymptotes and removable singularities where denominator is 0.
 func findAsymptotes(expr Node, varName string, xMin, xMax float64) []plotFeature {
-	var asyms []plotFeature
+	var features []plotFeature
 	var denominators []Node
 
 	var walk func(n Node)
@@ -416,6 +461,7 @@ func findAsymptotes(expr Node, varName string, xMin, xMax float64) []plotFeature
 	}
 	walk(expr)
 
+	seenX := make(map[string]bool)
 	for _, denom := range denominators {
 		solList, err := solveEquation(denom, varName)
 		if err == nil {
@@ -423,7 +469,29 @@ func findAsymptotes(expr Node, varName string, xMin, xMax float64) []plotFeature
 				for _, sol := range list.Elements {
 					val, err := evalNodeFloat(sol)
 					if err == nil && val >= xMin && val <= xMax {
-						asyms = append(asyms, plotFeature{
+						key := Format(sol)
+						if seenX[key] {
+							continue
+						}
+						seenX[key] = true
+
+						// Distinguish removable singularity (finite limit exists) from vertical asymptote
+						limRes, limErr := EvalLimit(expr, &VarNode{Name: varName}, sol, nil)
+						if limErr == nil && limRes != nil {
+							if yLim, yErr := evalNodeFloat(limRes); yErr == nil && !math.IsNaN(yLim) && !math.IsInf(yLim, 0) {
+								features = append(features, plotFeature{
+									Kind:     "hole",
+									XNode:    sol,
+									YNode:    limRes,
+									XVal:     val,
+									YVal:     yLim,
+									LabelStr: fmt.Sprintf("[%s, %s]", Format(sol), Format(limRes)),
+								})
+								continue
+							}
+						}
+
+						features = append(features, plotFeature{
 							Kind:     "asymptote",
 							XNode:    sol,
 							XVal:     val,
@@ -435,11 +503,335 @@ func findAsymptotes(expr Node, varName string, xMin, xMax float64) []plotFeature
 		}
 	}
 
-	return asyms
+	return features
 }
 
-// EvalPlot parses arguments and renders a 2D exact terminal plot.
-func EvalPlot(args []Node) (Node, error) {
+func roundToSpanPrecision(v, span float64) *big.Rat {
+	if math.IsNaN(v) || math.IsInf(v, 0) {
+		return big.NewRat(0, 1)
+	}
+	if span <= 0 || math.IsNaN(span) || math.IsInf(span, 0) {
+		span = 1
+	}
+	exp := math.Floor(math.Log10(span)) - 2
+	step := math.Pow(10, exp)
+	if step <= 0 || math.IsNaN(step) || math.IsInf(step, 0) {
+		return new(big.Rat).SetFloat64(v)
+	}
+	rounded := math.Round(v/step) * step
+	if math.Abs(rounded) < step*1e-6 {
+		rounded = 0
+	}
+	r := new(big.Rat).SetFloat64(rounded)
+	if r == nil {
+		return big.NewRat(0, 1)
+	}
+	return r
+}
+
+type evalFloatState uint8
+
+const (
+	evalFloatOK evalFloatState = iota
+	evalFloatDomainError
+	evalFloatUnsupported
+)
+
+func evalSampleFloat(expr Node, varName string, x float64) (float64, bool) {
+	if math.IsNaN(x) || math.IsInf(x, 0) {
+		return 0, false
+	}
+	y, state := evalASTFloat64(expr, varName, x)
+	switch state {
+	case evalFloatOK:
+		if math.IsNaN(y) || math.IsInf(y, 0) {
+			return 0, false
+		}
+		return y, true
+	case evalFloatDomainError:
+		return 0, false
+	default:
+		return evalSampleIntervalFallback(expr, varName, x)
+	}
+}
+
+func evalSampleIntervalFallback(expr Node, varName string, x float64) (float64, bool) {
+	rRat := new(big.Rat).SetFloat64(x)
+	if rRat == nil {
+		return 0, false
+	}
+	subExpr := substituteVar(expr, varName, NewRationalFromBigRat(rRat))
+	y, err := evalNodeFloat(subExpr)
+	if err != nil || math.IsNaN(y) || math.IsInf(y, 0) {
+		return 0, false
+	}
+	return y, true
+}
+
+func evalASTFloat64(n Node, varName string, x float64) (float64, evalFloatState) {
+	if n == nil {
+		return 0, evalFloatUnsupported
+	}
+	switch v := n.(type) {
+	case *RationalNode:
+		f, _ := v.Val.Float64()
+		if math.IsNaN(f) || math.IsInf(f, 0) {
+			return 0, evalFloatDomainError
+		}
+		return f, evalFloatOK
+	case *VarNode:
+		if v.Name == varName {
+			return x, evalFloatOK
+		}
+		return 0, evalFloatUnsupported
+	case *ConstNode:
+		switch strings.ToLower(v.Name) {
+		case "pi":
+			return math.Pi, evalFloatOK
+		case "e":
+			return math.E, evalFloatOK
+		case "phi":
+			return math.Phi, evalFloatOK
+		default:
+			return 0, evalFloatUnsupported
+		}
+	case *UnaryOpNode:
+		val, st := evalASTFloat64(v.Expr, varName, x)
+		if st != evalFloatOK {
+			return 0, st
+		}
+		if v.Op == "-" {
+			return -val, evalFloatOK
+		}
+		return val, evalFloatOK
+	case *AddNode:
+		sum := 0.0
+		for _, t := range v.Terms {
+			tv, st := evalASTFloat64(t, varName, x)
+			if st != evalFloatOK {
+				return 0, st
+			}
+			sum += tv
+		}
+		if math.IsNaN(sum) || math.IsInf(sum, 0) {
+			return 0, evalFloatDomainError
+		}
+		return sum, evalFloatOK
+	case *MulNode:
+		prod := 1.0
+		for _, f := range v.Factors {
+			fv, st := evalASTFloat64(f, varName, x)
+			if st != evalFloatOK {
+				return 0, st
+			}
+			prod *= fv
+		}
+		if math.IsNaN(prod) || math.IsInf(prod, 0) {
+			return 0, evalFloatDomainError
+		}
+		return prod, evalFloatOK
+	case *PowNode:
+		base, stB := evalASTFloat64(v.Base, varName, x)
+		if stB != evalFloatOK {
+			return 0, stB
+		}
+		exp, stE := evalASTFloat64(v.Exp, varName, x)
+		if stE != evalFloatOK {
+			return 0, stE
+		}
+		if base == 0 && exp <= 0 {
+			return 0, evalFloatDomainError
+		}
+		if base < 0 {
+			if r, okR := v.Exp.(*RationalNode); okR && r.Val.IsInt() {
+				res := math.Pow(base, exp)
+				if math.IsNaN(res) || math.IsInf(res, 0) {
+					return 0, evalFloatDomainError
+				}
+				return res, evalFloatOK
+			}
+			if r, okR := v.Exp.(*RationalNode); okR && r.Val.Denom().Cmp(big.NewInt(3)) == 0 {
+				num := float64(r.Val.Num().Int64())
+				res := math.Pow(math.Cbrt(base), num)
+				if math.IsNaN(res) || math.IsInf(res, 0) {
+					return 0, evalFloatDomainError
+				}
+				return res, evalFloatOK
+			}
+			return 0, evalFloatDomainError
+		}
+		res := math.Pow(base, exp)
+		if math.IsNaN(res) || math.IsInf(res, 0) {
+			return 0, evalFloatDomainError
+		}
+		return res, evalFloatOK
+	case *SqrtNode:
+		rad, st := evalASTFloat64(v.Radicand, varName, x)
+		if st != evalFloatOK {
+			return 0, st
+		}
+		if rad < 0 {
+			return 0, evalFloatDomainError
+		}
+		return math.Sqrt(rad), evalFloatOK
+	case *FuncNode:
+		if len(v.Args) != 1 {
+			return 0, evalFloatUnsupported
+		}
+		arg, st := evalASTFloat64(v.Args[0], varName, x)
+		if st != evalFloatOK {
+			return 0, st
+		}
+		switch strings.ToLower(v.Name) {
+		case "sin":
+			return math.Sin(arg), evalFloatOK
+		case "cos":
+			return math.Cos(arg), evalFloatOK
+		case "tan":
+			c := math.Cos(arg)
+			if math.Abs(c) < 1e-12 {
+				return 0, evalFloatDomainError
+			}
+			return math.Tan(arg), evalFloatOK
+		case "asin":
+			if arg < -1 || arg > 1 {
+				return 0, evalFloatDomainError
+			}
+			return math.Asin(arg), evalFloatOK
+		case "acos":
+			if arg < -1 || arg > 1 {
+				return 0, evalFloatDomainError
+			}
+			return math.Acos(arg), evalFloatOK
+		case "atan":
+			return math.Atan(arg), evalFloatOK
+		case "sinh":
+			res := math.Sinh(arg)
+			if math.IsInf(res, 0) {
+				return 0, evalFloatDomainError
+			}
+			return res, evalFloatOK
+		case "cosh":
+			res := math.Cosh(arg)
+			if math.IsInf(res, 0) {
+				return 0, evalFloatDomainError
+			}
+			return res, evalFloatOK
+		case "tanh":
+			return math.Tanh(arg), evalFloatOK
+		case "exp":
+			res := math.Exp(arg)
+			if math.IsInf(res, 0) {
+				return 0, evalFloatDomainError
+			}
+			return res, evalFloatOK
+		case "ln", "log":
+			if arg <= 0 {
+				return 0, evalFloatDomainError
+			}
+			return math.Log(arg), evalFloatOK
+		case "abs":
+			return math.Abs(arg), evalFloatOK
+		case "sqrt":
+			if arg < 0 {
+				return 0, evalFloatDomainError
+			}
+			return math.Sqrt(arg), evalFloatOK
+		case "cbrt":
+			return math.Cbrt(arg), evalFloatOK
+		case "floor":
+			return math.Floor(arg), evalFloatOK
+		case "ceil":
+			return math.Ceil(arg), evalFloatOK
+		default:
+			return 0, evalFloatUnsupported
+		}
+	default:
+		return 0, evalFloatUnsupported
+	}
+}
+
+// clipSegmentLiangBarsky clips segment (x0,y0)-(x1,y1) against [xMin,xMax] x [yMin,yMax].
+func clipSegmentLiangBarsky(x0, y0, x1, y1, xMin, xMax, yMin, yMax float64) (float64, float64, float64, float64, bool) {
+	dx := x1 - x0
+	dy := y1 - y0
+	t0, t1 := 0.0, 1.0
+
+	clip := func(p, q float64) bool {
+		if p == 0 {
+			return q >= 0
+		}
+		r := q / p
+		if p < 0 {
+			if r > t1 {
+				return false
+			}
+			if r > t0 {
+				t0 = r
+			}
+		} else {
+			if r < t0 {
+				return false
+			}
+			if r < t1 {
+				t1 = r
+			}
+		}
+		return true
+	}
+
+	if !clip(-dx, x0-xMin) || !clip(dx, xMax-x0) || !clip(-dy, y0-yMin) || !clip(dy, yMax-y0) {
+		return 0, 0, 0, 0, false
+	}
+
+	cx0 := x0 + t0*dx
+	cy0 := y0 + t0*dy
+	cx1 := x0 + t1*dx
+	cy1 := y0 + t1*dy
+	return cx0, cy0, cx1, cy1, true
+}
+
+// simplifyBranchRDP applies Ramer-Douglas-Peucker simplification in normalized [0,1] viewport space.
+func simplifyBranchRDP(pts []PlotPoint, xSpan, ySpan, eps float64) []PlotPoint {
+	if len(pts) <= 2 || xSpan <= 0 || ySpan <= 0 {
+		return pts
+	}
+	dmax := 0.0
+	idx := 0
+	p0 := pts[0]
+	pn := pts[len(pts)-1]
+	x1, y1 := p0.X/xSpan, p0.Y/ySpan
+	x2, y2 := pn.X/xSpan, pn.Y/ySpan
+	dx, dy := x2-x1, y2-y1
+	segLenSq := dx*dx + dy*dy
+
+	for i := 1; i < len(pts)-1; i++ {
+		px, py := pts[i].X/xSpan, pts[i].Y/ySpan
+		var dist float64
+		if segLenSq == 0 {
+			dist = math.Hypot(px-x1, py-y1)
+		} else {
+			dist = math.Abs(dy*px-dx*py+x2*y1-y2*x1) / math.Sqrt(segLenSq)
+		}
+		if dist > dmax {
+			idx = i
+			dmax = dist
+		}
+	}
+
+	if dmax > eps {
+		left := simplifyBranchRDP(pts[:idx+1], xSpan, ySpan, eps)
+		right := simplifyBranchRDP(pts[idx:], xSpan, ySpan, eps)
+		out := make([]PlotPoint, 0, len(left)+len(right)-1)
+		out = append(out, left[:len(left)-1]...)
+		out = append(out, right...)
+		return out
+	}
+	return []PlotPoint{p0, pn}
+}
+
+// BuildPlotScene constructs a PlotScene IR with CAS exact pre-splitting, adaptive sampling, and viewport clipping.
+func BuildPlotScene(args []Node) (*PlotScene, error) {
 	if len(args) < 2 || len(args) > 3 {
 		return nil, fmt.Errorf("%s", i18n.T("errors.plot_args_count", len(args)))
 	}
@@ -464,74 +856,71 @@ func EvalPlot(args []Node) (Node, error) {
 
 	varName := findFreeVariable(expr)
 
-	// Canvas dimensions (default: 50 cells wide x 16 lines high)
-	charW, charH := 50, 16
-	pixelW := charW * 2
-	pixelH := charH * 4
+	// Detect exact CAS singularities (vertical asymptotes & removable holes) first for pre-splitting
+	singularities := findAsymptotes(expr, varName, xMin, xMax)
 
-	// Sample points to find range if y is not explicit
-	type samplePoint struct {
-		x     float64
-		y     float64
-		valid bool
-	}
-	samples := make([]samplePoint, pixelW)
-	var validYs []float64
-
-	for px := 0; px < pixelW; px++ {
-		frac := float64(px) / float64(pixelW-1)
-		x := xMin + frac*(xMax-xMin)
-
-		// Substitute x into expression
-		rNode := NewRationalFromBigRat(new(big.Rat).SetFloat64(x))
-		subExpr := substituteVar(expr, varName, rNode)
-		y, err := evalNodeFloat(subExpr)
-		if err != nil || math.IsNaN(y) || math.IsInf(y, 0) {
-			samples[px] = samplePoint{x: x, valid: false}
-		} else {
-			samples[px] = samplePoint{x: x, y: y, valid: true}
-			validYs = append(validYs, y)
-		}
-	}
-
+	// Estimate y-range if not explicitly supplied, using golden-ratio offset to avoid aliasing
 	if !hasExplicitY {
+		const coarseCount = 72
+		const phiOffset = 0.6180339887498949
+		var validYs []float64
+		xSpan := xMax - xMin
+		for i := 0; i < coarseCount; i++ {
+			frac := (float64(i) + phiOffset) / float64(coarseCount)
+			if frac >= 1.0 {
+				frac = 0.999
+			}
+			x := xMin + frac*xSpan
+			if y, ok := evalSampleFloat(expr, varName, x); ok && math.Abs(y) < 1e6 {
+				validYs = append(validYs, y)
+			}
+		}
 		if len(validYs) == 0 {
 			yMin, yMax = -2, 2
 			yMinNode = mustRational(-2, 1)
 			yMaxNode = mustRational(2, 1)
 		} else {
-			minY, maxY := validYs[0], validYs[0]
-			for _, y := range validYs {
-				if y < minY {
-					minY = y
-				}
-				if y > maxY {
-					maxY = y
-				}
+			sort.Float64s(validYs)
+			// Trim extreme outliers near undetected poles
+			loIdx := 0
+			hiIdx := len(validYs) - 1
+			if len(validYs) >= 20 {
+				loIdx = len(validYs) / 20
+				hiIdx = len(validYs) - 1 - loIdx
 			}
-			// Add 10% padding
+			minY, maxY := validYs[loIdx], validYs[hiIdx]
 			span := maxY - minY
 			if span < 1e-6 {
 				span = 2
 			}
 			yMin = minY - span*0.1
 			yMax = maxY + span*0.1
-			yMinNode = NewRationalFromBigRat(new(big.Rat).SetFloat64(math.Round(yMin)))
-			yMaxNode = NewRationalFromBigRat(new(big.Rat).SetFloat64(math.Round(yMax)))
+			yMinNode = NewRationalFromBigRat(roundToSpanPrecision(yMin, yMax-yMin))
+			yMaxNode = NewRationalFromBigRat(roundToSpanPrecision(yMax, yMax-yMin))
 		}
 	}
 
-	canvas := newBrailleCanvas(charW, charH, xMin, xMax, yMin, yMax, xMinNode, xMaxNode, yMinNode, yMaxNode)
+	scene := &PlotScene{
+		Expr:     expr,
+		VarName:  varName,
+		XMin:     xMin,
+		XMax:     xMax,
+		YMin:     yMin,
+		YMax:     yMax,
+		XMinNode: xMinNode,
+		XMaxNode: xMaxNode,
+		YMinNode: yMinNode,
+		YMaxNode: yMaxNode,
+	}
 
-	// CAS Feature Detection:
-	// 1. Zeros (Roots): solve(f(x) == 0, x)
+	// CAS Feature Detection: Roots, Extrema, Singularities, and Oblique/Horizontal Asymptotes
 	solList, err := solveEquation(expr, varName)
 	if err == nil {
 		if list, ok := solList.(*ListNode); ok {
 			for _, root := range list.Elements {
 				rVal, err := evalNodeFloat(root)
 				if err == nil && rVal >= xMin && rVal <= xMax {
-					canvas.Features = append(canvas.Features, plotFeature{
+					scene.Features = append(scene.Features, plotFeature{
 						Kind:     "root",
 						XNode:    root,
 						YNode:    mustRational(0, 1),
@@ -544,7 +933,6 @@ func EvalPlot(args []Node) (Node, error) {
 		}
 	}
 
-	// 2. Extrema: diff(f(x), x) == 0
 	deriv, err := differentiate(expr, varName)
 	if err == nil {
 		critList, err := solveEquation(deriv, varName)
@@ -558,7 +946,6 @@ func EvalPlot(args []Node) (Node, error) {
 							yCritVal, err := evalNodeFloat(yCritNode)
 							if err == nil && yCritVal >= yMin && yCritVal <= yMax {
 								kind := "min"
-								// Test second derivative for min/max
 								deriv2, err := differentiate(deriv, varName)
 								if err == nil {
 									d2ValNode, err := Eval(substituteVar(deriv2, varName, crit))
@@ -569,7 +956,7 @@ func EvalPlot(args []Node) (Node, error) {
 										}
 									}
 								}
-								canvas.Features = append(canvas.Features, plotFeature{
+								scene.Features = append(scene.Features, plotFeature{
 									Kind:     kind,
 									XNode:    crit,
 									YNode:    yCritNode,
@@ -585,46 +972,257 @@ func EvalPlot(args []Node) (Node, error) {
 		}
 	}
 
-	// 3. Asymptotes: denominator == 0
-	asyms := findAsymptotes(expr, varName, xMin, xMax)
-	canvas.Features = append(canvas.Features, asyms...)
+	scene.Features = append(scene.Features, singularities...)
+	for _, s := range singularities {
+		if s.Kind == "asymptote" {
+			scene.Asymptotes = append(scene.Asymptotes, PlotAsymptote{
+				Kind:      "vertical",
+				XVal:      s.XVal,
+				ExactNode: s.XNode,
+			})
+		}
+	}
 
-	// Rasterize curve with Tupper discontinuity isolation
-	var prevPx, prevPy int
-	var prevValid bool
+	// Horizontal / oblique asymptotes via polynomial quotient from EvalApart helper
+	if quotNode, ok := ExtractPolyQuotient(expr, varName); ok {
+		if qPoly, okP := extractPoly(quotNode, varName); okP && qPoly.degree() <= 1 {
+			var bVal, mVal float64
+			if len(qPoly.coeffs) > 0 {
+				if v, err := evalNodeFloat(qPoly.coeffs[0]); err == nil {
+					bVal = v
+				}
+			}
+			if qPoly.degree() == 1 && len(qPoly.coeffs) > 1 {
+				if v, err := evalNodeFloat(qPoly.coeffs[1]); err == nil {
+					mVal = v
+				}
+			}
+			if qPoly.degree() == 0 {
+				scene.Asymptotes = append(scene.Asymptotes, PlotAsymptote{
+					Kind:      "horizontal",
+					YVal:      bVal,
+					ExactNode: quotNode,
+				})
+				scene.Features = append(scene.Features, plotFeature{
+					Kind:     "horiz_asymptote",
+					YNode:    quotNode,
+					YVal:     bVal,
+					LabelStr: fmt.Sprintf("y = %s", Format(quotNode)),
+				})
+			} else if qPoly.degree() == 1 {
+				scene.Asymptotes = append(scene.Asymptotes, PlotAsymptote{
+					Kind:      "oblique",
+					Slope:     mVal,
+					Intercept: bVal,
+					ExactNode: quotNode,
+				})
+				scene.Features = append(scene.Features, plotFeature{
+					Kind:     "oblique_asymptote",
+					YNode:    quotNode,
+					LabelStr: fmt.Sprintf("y = %s", Format(quotNode)),
+				})
+			}
+		}
+	}
 
-	for px := 0; px < pixelW; px++ {
-		sp := samples[px]
-		if !sp.valid {
-			prevValid = false
+	// Partition [xMin, xMax] at exact singularities
+	var splits []float64
+	splits = append(splits, xMin)
+	epsMargin := (xMax - xMin) * 1e-6
+	var singXs []float64
+	for _, s := range singularities {
+		if s.XVal > xMin+epsMargin && s.XVal < xMax-epsMargin {
+			singXs = append(singXs, s.XVal)
+		}
+	}
+	sort.Float64s(singXs)
+	for _, sx := range singXs {
+		if len(splits) == 0 || sx-splits[len(splits)-1] > epsMargin*2 {
+			splits = append(splits, sx)
+		}
+	}
+	splits = append(splits, xMax)
+
+	xSpan := xMax - xMin
+	ySpan := yMax - yMin
+	if ySpan <= 0 {
+		ySpan = 1
+	}
+
+	// Adaptive subdivision within each continuous partition, with total evaluation budget
+	const maxTotalPoints = 900
+	const maxDepth = 6
+	totalPoints := 0
+
+	type samplePair struct {
+		x, y  float64
+		valid bool
+	}
+
+	for segIdx := 0; segIdx < len(splits)-1; segIdx++ {
+		segStart := splits[segIdx]
+		segEnd := splits[segIdx+1]
+		if segIdx > 0 {
+			segStart += epsMargin
+		}
+		if segIdx < len(splits)-2 {
+			segEnd -= epsMargin
+		}
+		if segStart >= segEnd {
 			continue
 		}
 
-		py := canvas.toPixelY(sp.y)
+		// Initial grid with slight irrational interior shift to avoid periodic aliasing
+		initN := 24
+		if len(splits) > 2 {
+			initN = 18
+		}
+		grid := make([]samplePair, initN+1)
+		for i := 0; i <= initN; i++ {
+			var x float64
+			if i == 0 {
+				x = segStart
+			} else if i == initN {
+				x = segEnd
+			} else {
+				jitter := (float64(i) + 0.0314159) / float64(initN)
+				if jitter >= 1.0 {
+					jitter = float64(i) / float64(initN)
+				}
+				x = segStart + jitter*(segEnd-segStart)
+			}
+			y, ok := evalSampleFloat(expr, varName, x)
+			grid[i] = samplePair{x: x, y: y, valid: ok}
+			totalPoints++
+		}
 
-		// Check asymptote crossing
-		hasAsymBetween := false
-		for _, asym := range asyms {
-			asymPx := canvas.toPixelX(asym.XVal)
-			if (prevPx <= asymPx && asymPx <= px) || (px <= asymPx && asymPx <= prevPx) {
-				hasAsymBetween = true
-				break
+		var rawSamples []samplePair
+		var subdivide func(a, b samplePair, depth int)
+		subdivide = func(a, b samplePair, depth int) {
+			if depth >= maxDepth || totalPoints >= maxTotalPoints {
+				rawSamples = append(rawSamples, b)
+				return
+			}
+			// Do not refine deep outside viewport unless crossing viewport
+			bothOutHigh := a.valid && b.valid && a.y > yMax+ySpan && b.y > yMax+ySpan
+			bothOutLow := a.valid && b.valid && a.y < yMin-ySpan && b.y < yMin-ySpan
+			if bothOutHigh || bothOutLow {
+				rawSamples = append(rawSamples, b)
+				return
+			}
+
+			mx := 0.5 * (a.x + b.x)
+			my, mok := evalSampleFloat(expr, varName, mx)
+			totalPoints++
+			m := samplePair{x: mx, y: my, valid: mok}
+
+			needRefine := false
+			if !a.valid || !b.valid || !m.valid {
+				needRefine = (a.valid != b.valid) || (a.valid && b.valid && !m.valid)
+			} else {
+				interpY := 0.5 * (a.y + b.y)
+				if math.Abs(m.y-interpY) > ySpan*0.015 {
+					needRefine = true
+				}
+			}
+
+			if needRefine {
+				subdivide(a, m, depth+1)
+				subdivide(m, b, depth+1)
+			} else {
+				rawSamples = append(rawSamples, b)
 			}
 		}
 
-		// Tupper discontinuity condition: jump > half height without a valid continuous slope
-		isDiscontinuous := hasAsymBetween || (prevValid && math.Abs(float64(py-prevPy)) > float64(pixelH)/2)
-
-		if prevValid && !isDiscontinuous {
-			canvas.drawLine(prevPx, prevPy, px, py)
-		} else {
-			canvas.SetPixel(px, py)
+		rawSamples = append(rawSamples, grid[0])
+		for i := 0; i < len(grid)-1; i++ {
+			subdivide(grid[i], grid[i+1], 0)
 		}
 
-		prevPx = px
-		prevPy = py
-		prevValid = true
+		// Split rawSamples into clipped continuous PlotBranches
+		var curBranch []PlotPoint
+		flushBranch := func() {
+			if len(curBranch) >= 2 {
+				simplified := simplifyBranchRDP(curBranch, xSpan, ySpan, 0.002)
+				scene.Branches = append(scene.Branches, PlotBranch{Points: simplified})
+			} else if len(curBranch) == 1 {
+				scene.Branches = append(scene.Branches, PlotBranch{Points: curBranch})
+			}
+			curBranch = nil
+		}
+
+		for i := 0; i < len(rawSamples)-1; i++ {
+			p1 := rawSamples[i]
+			p2 := rawSamples[i+1]
+			if !p1.valid || !p2.valid {
+				flushBranch()
+				continue
+			}
+
+			// Fallback discontinuity check for undetected periodic poles (e.g. 1/sin(x), tan(x)+10):
+			// large vertical jump exceeding 80% of viewport height where at least one endpoint leaves viewport or crosses midpoint
+			midY := 0.5 * (yMin + yMax)
+			if math.Abs(p2.y-p1.y) > ySpan*0.8 && (p1.y < yMin || p1.y > yMax || p2.y < yMin || p2.y > yMax || (p1.y-midY)*(p2.y-midY) < 0) {
+				flushBranch()
+				continue
+			}
+
+			cx0, cy0, cx1, cy1, visible := clipSegmentLiangBarsky(p1.x, p1.y, p2.x, p2.y, xMin, xMax, yMin, yMax)
+			if !visible {
+				flushBranch()
+				continue
+			}
+
+			if len(curBranch) == 0 {
+				curBranch = append(curBranch, PlotPoint{X: cx0, Y: cy0})
+			} else {
+				last := curBranch[len(curBranch)-1]
+				if math.Hypot((cx0-last.X)/xSpan, (cy0-last.Y)/ySpan) > 1e-4 {
+					flushBranch()
+					curBranch = append(curBranch, PlotPoint{X: cx0, Y: cy0})
+				}
+			}
+			curBranch = append(curBranch, PlotPoint{X: cx1, Y: cy1})
+		}
+		flushBranch()
 	}
 
-	return NewPlotNode(canvas.Render()), nil
+	return scene, nil
+}
+
+// RenderBraille renders a PlotScene onto a Unicode BrailleCanvas for terminal display.
+func RenderBraille(scene *PlotScene) string {
+	charW, charH := 50, 16
+	canvas := newBrailleCanvas(charW, charH, scene.XMin, scene.XMax, scene.YMin, scene.YMax, scene.XMinNode, scene.XMaxNode, scene.YMinNode, scene.YMaxNode)
+	canvas.Features = scene.Features
+
+	for _, branch := range scene.Branches {
+		if len(branch.Points) == 1 {
+			px := canvas.toPixelX(branch.Points[0].X)
+			py := canvas.toPixelY(branch.Points[0].Y)
+			canvas.SetPixel(px, py)
+			continue
+		}
+		for i := 0; i < len(branch.Points)-1; i++ {
+			px0 := canvas.toPixelX(branch.Points[i].X)
+			py0 := canvas.toPixelY(branch.Points[i].Y)
+			px1 := canvas.toPixelX(branch.Points[i+1].X)
+			py1 := canvas.toPixelY(branch.Points[i+1].Y)
+			canvas.drawLine(px0, py0, px1, py1)
+		}
+	}
+
+	return canvas.Render()
+}
+
+// EvalPlot parses arguments and renders a 2D exact terminal plot (with embedded SVG & Typst projections).
+func EvalPlot(args []Node) (Node, error) {
+	scene, err := BuildPlotScene(args)
+	if err != nil {
+		return nil, err
+	}
+	brailleStr := RenderBraille(scene)
+	svgStr := RenderPlotSVG(scene)
+	typstStr := RenderPlotTypst(scene)
+	return NewPlotNodeWithVectors(brailleStr, svgStr, typstStr), nil
 }

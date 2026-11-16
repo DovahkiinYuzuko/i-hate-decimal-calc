@@ -36,6 +36,7 @@ const (
 	DomainGraph         VerificationDomain = "graph"
 	DomainGame          VerificationDomain = "game"
 	DomainProbability   VerificationDomain = "probability"
+	DomainNumberTheory  VerificationDomain = "number_theory"
 )
 
 // VerificationCertificate represents a certified mathematical proof of correctness.
@@ -188,6 +189,10 @@ func VerifyComputation(expr, result Node, env *Env) (*VerificationCertificate, e
 			_ = fsm.TransitionTo(VerifyStateTargetClassified)
 			return verifyPell(fn, result, env, fsm)
 
+		case "solve_diophantine":
+			_ = fsm.TransitionTo(VerifyStateTargetClassified)
+			return verifySolveDiophantine(fn, result, env, fsm)
+
 		case "minimal_polynomial":
 			_ = fsm.TransitionTo(VerifyStateTargetClassified)
 			return verifyMinimalPolynomial(fn, result, env, fsm)
@@ -253,6 +258,14 @@ func VerifyComputation(expr, result Node, env *Env) (*VerificationCertificate, e
 		case "markov_stationary":
 			_ = fsm.TransitionTo(VerifyStateTargetClassified)
 			return verifyMarkovStationary(fn, result, env, fsm)
+
+		case "inv_mod":
+			_ = fsm.TransitionTo(VerifyStateTargetClassified)
+			return verifyInvMod(fn, result, env, fsm)
+
+		case "crt":
+			_ = fsm.TransitionTo(VerifyStateTargetClassified)
+			return verifyCRT(fn, result, env, fsm)
 		}
 
 	case *RelOpNode:
@@ -3392,5 +3405,470 @@ func verifyMarkovStationary(fn *FuncNode, result Node, env *Env, fsm *VerifyLife
 		Details:    certIR.Details(),
 		State:      VerifyStateCertified,
 		CertIR:     certIR,
+	}, nil
+}
+
+func verifyInvMod(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
+	if len(fn.Args) != 2 {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, fmt.Errorf("%s", i18n.T("verify.err_nt_inv_mod_args"))
+	}
+	aVal, err := EvalWithEnv(fn.Args[0], env)
+	if err != nil {
+		return nil, err
+	}
+	mVal, err := EvalWithEnv(fn.Args[1], env)
+	if err != nil {
+		return nil, err
+	}
+	resVal, err := EvalWithEnv(result, env)
+	if err != nil {
+		return nil, err
+	}
+
+	aRat, okA := aVal.(*RationalNode)
+	mRat, okM := mVal.(*RationalNode)
+	xRat, okX := resVal.(*RationalNode)
+	if !okA || !okM || !okX || !aRat.Val.IsInt() || !mRat.Val.IsInt() || !xRat.Val.IsInt() {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, fmt.Errorf("%s", i18n.T("verify.err_nt_inv_mod_args"))
+	}
+
+	aBig := aRat.Val.Num()
+	mBig := mRat.Val.Num()
+	xBig := xRat.Val.Num()
+	if mBig.Cmp(big.NewInt(2)) < 0 {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, fmt.Errorf("%s", i18n.T("verify.err_nt_inv_mod_args"))
+	}
+
+	_ = fsm.TransitionTo(VerifyStateResidualConstructed)
+	prod := new(big.Int).Mul(aBig, xBig)
+	rem := new(big.Int).Mod(prod, mBig)
+	inRange := xBig.Sign() >= 0 && xBig.Cmp(mBig) < 0
+	res := new(big.Int).Sub(rem, big.NewInt(1))
+
+	// Compute Bezout coefficient y such that a*x + m*y = gcd(a,m) for witness completeness
+	gCheck := new(big.Int).GCD(nil, nil, aBig, mBig)
+	var bezoutYNode Node
+	if gCheck.Cmp(big.NewInt(1)) == 0 && res.Sign() == 0 {
+		// k = (1 - a*x) / m
+		oneMinusAX := new(big.Int).Sub(big.NewInt(1), prod)
+		yCoeff := new(big.Int).Div(oneMinusAX, mBig)
+		bezoutYNode = NewRationalFromBigRat(new(big.Rat).SetInt(yCoeff))
+	}
+
+	_ = fsm.TransitionTo(VerifyStateSimplificationEvaluated)
+	eqStr := fmt.Sprintf("(%s * %s) mod %s == 1", aBig.String(), xBig.String(), mBig.String())
+
+	if res.Sign() == 0 && inRange && gCheck.Cmp(big.NewInt(1)) == 0 {
+		_ = fsm.TransitionTo(VerifyStateCertified)
+		details := i18n.T("verify.nt_inv_mod_holds")
+		certIR := NewModularInverseCertificate(aVal, mVal, resVal, bezoutYNode, mustRational(0, 1), true, details)
+		return &VerificationCertificate{
+			Domain:     DomainNumberTheory,
+			Equation:   eqStr,
+			Residual:   mustRational(0, 1),
+			IsVerified: true,
+			Details:    details,
+			State:      VerifyStateCertified,
+			CertIR:     certIR,
+		}, nil
+	}
+
+	_ = fsm.TransitionTo(VerifyStateRefuted)
+	resNode := NewRationalFromBigRat(new(big.Rat).SetInt(res))
+	details := i18n.T("verify.err_nt_inv_mod_mismatch", res.String())
+	certIR := NewModularInverseCertificate(aVal, mVal, resVal, nil, resNode, false, details)
+	return &VerificationCertificate{
+		Domain:     DomainNumberTheory,
+		Equation:   eqStr,
+		Residual:   resNode,
+		IsVerified: false,
+		Details:    details,
+		State:      VerifyStateRefuted,
+		CertIR:     certIR,
+	}, nil
+}
+
+func verifyCRT(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
+	evalArgs := make([]Node, len(fn.Args))
+	for i, arg := range fn.Args {
+		v, evalErr := EvalWithEnv(arg, env)
+		if evalErr != nil {
+			_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+			return nil, evalErr
+		}
+		evalArgs[i] = v
+	}
+	remBig, modBig, err := parseCRTArgs(evalArgs)
+	if err != nil {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, err
+	}
+	resVal, err := EvalWithEnv(result, env)
+	if err != nil {
+		return nil, err
+	}
+	xRat, okX := resVal.(*RationalNode)
+	if !okX || !xRat.Val.IsInt() {
+		_ = fsm.TransitionTo(VerifyStateRefuted)
+		resNode := mustRational(1, 1)
+		details := i18n.T("verify.err_nt_crt_mismatch", 1, "?", resVal.String())
+		return &VerificationCertificate{
+			Domain:     DomainNumberTheory,
+			Equation:   fn.String(),
+			Residual:   resNode,
+			IsVerified: false,
+			Details:    details,
+			State:      VerifyStateRefuted,
+		}, nil
+	}
+	xBig := xRat.Val.Num()
+
+	_ = fsm.TransitionTo(VerifyStateResidualConstructed)
+	rems := make([]Node, len(remBig))
+	mods := make([]Node, len(modBig))
+	combinedMod := big.NewInt(1)
+	var failedIdx int = -1
+	var failedMod *big.Int
+	var failedRes *big.Int
+
+	for i := range remBig {
+		rems[i] = NewRationalFromBigRat(new(big.Rat).SetInt(remBig[i]))
+		mods[i] = NewRationalFromBigRat(new(big.Rat).SetInt(modBig[i]))
+		g := new(big.Int).GCD(nil, nil, combinedMod, modBig[i])
+		lcmStep := new(big.Int).Div(modBig[i], g)
+		combinedMod.Mul(combinedMod, lcmStep)
+
+		lhsRem := new(big.Int).Mod(xBig, modBig[i])
+		rhsRem := new(big.Int).Mod(remBig[i], modBig[i])
+		diff := new(big.Int).Sub(lhsRem, rhsRem)
+		if diff.Sign() != 0 && failedIdx == -1 {
+			failedIdx = i
+			failedMod = modBig[i]
+			failedRes = diff
+		}
+	}
+
+	_ = fsm.TransitionTo(VerifyStateSimplificationEvaluated)
+	combinedModNode := NewRationalFromBigRat(new(big.Rat).SetInt(combinedMod))
+	eqStr := fmt.Sprintf("%s == %s", fn.String(), xBig.String())
+
+	if failedIdx == -1 {
+		_ = fsm.TransitionTo(VerifyStateCertified)
+		details := i18n.T("verify.nt_crt_holds")
+		certIR := NewCRTCertificate(rems, mods, resVal, combinedModNode, mustRational(0, 1), true, details)
+		return &VerificationCertificate{
+			Domain:     DomainNumberTheory,
+			Equation:   eqStr,
+			Residual:   mustRational(0, 1),
+			IsVerified: true,
+			Details:    details,
+			State:      VerifyStateCertified,
+			CertIR:     certIR,
+		}, nil
+	}
+
+	_ = fsm.TransitionTo(VerifyStateRefuted)
+	resNode := NewRationalFromBigRat(new(big.Rat).SetInt(failedRes))
+	details := i18n.T("verify.err_nt_crt_mismatch", failedIdx+1, failedMod.String(), failedRes.String())
+	certIR := NewCRTCertificate(rems, mods, resVal, combinedModNode, resNode, false, details)
+	return &VerificationCertificate{
+		Domain:     DomainNumberTheory,
+		Equation:   eqStr,
+		Residual:   resNode,
+		IsVerified: false,
+		Details:    details,
+		State:      VerifyStateRefuted,
+		CertIR:     certIR,
+	}, nil
+}
+
+func isExactIntegerNode(n Node) bool {
+	if n == nil {
+		return false
+	}
+	r, ok := EvalOrSelf(n).(*RationalNode)
+	return ok && r.Val != nil && r.Val.IsInt()
+}
+
+func isIntegerPolynomialExpr(n Node) bool {
+	if n == nil {
+		return false
+	}
+	switch v := n.(type) {
+	case *RationalNode:
+		return v.Val != nil && v.Val.IsInt()
+	case *VarNode:
+		return true
+	case *UnaryOpNode:
+		return (v.Op == "-" || v.Op == "+") && isIntegerPolynomialExpr(v.Expr)
+	case *AddNode:
+		for _, t := range v.Terms {
+			if !isIntegerPolynomialExpr(t) {
+				return false
+			}
+		}
+		return len(v.Terms) > 0
+	case *MulNode:
+		for _, f := range v.Factors {
+			if !isIntegerPolynomialExpr(f) {
+				return false
+			}
+		}
+		return len(v.Factors) > 0
+	case *PowNode:
+		if !isIntegerPolynomialExpr(v.Base) {
+			return false
+		}
+		expRat, ok := EvalOrSelf(v.Exp).(*RationalNode)
+		return ok && expRat.Val != nil && expRat.Val.IsInt() && expRat.Val.Sign() >= 0
+	default:
+		return false
+	}
+}
+
+func verifySolveDiophantine(fn *FuncNode, result Node, env *Env, fsm *VerifyLifecycleFSM) (*VerificationCertificate, error) {
+	if len(fn.Args) < 1 {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, fmt.Errorf("%s", i18n.T("diophantine.err_solve_diophantine_args"))
+	}
+	eqNode := EvalOrSelf(fn.Args[0])
+	var diffExpr Node
+	if rel, ok := eqNode.(*RelOpNode); ok && (rel.Op == "==" || rel.Op == "=") {
+		negRHS, err := simplifyUnaryOp("-", rel.RHS)
+		if err != nil {
+			return nil, err
+		}
+		diffExpr, err = simplifyAdd([]Node{rel.LHS, negRHS})
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		diffExpr = eqNode
+	}
+
+	var targetVars []string
+	if len(fn.Args) == 2 {
+		varsNode := EvalOrSelf(fn.Args[1])
+		if list, ok := varsNode.(*ListNode); ok {
+			for _, elem := range list.Elements {
+				if sym, isSym := elem.(*VarNode); isSym {
+					targetVars = append(targetVars, sym.Name)
+				}
+			}
+		} else if sym, ok := varsNode.(*VarNode); ok {
+			targetVars = []string{sym.Name}
+		}
+	} else {
+		targetVars = CollectFreeVariables(diffExpr)
+	}
+
+	resList, okList := result.(*ListNode)
+	if !okList || len(resList.Elements) == 0 {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, fmt.Errorf("%s", i18n.T("verify.err_diophantine_mismatch", result.String()))
+	}
+
+	substEnv := NewEnv()
+	solMap := make(map[string]Node)
+	for _, elem := range resList.Elements {
+		if rel, ok := elem.(*RelOpNode); ok && (rel.Op == "==" || rel.Op == "=") {
+			if v, okV := rel.LHS.(*VarNode); okV {
+				solMap[v.Name] = rel.RHS
+				substEnv.Set(v.Name, rel.RHS)
+			}
+		}
+	}
+
+	coeffs, constTerm, err := extractPolynomialCoeffs(diffExpr, targetVars)
+	if err != nil {
+		_ = fsm.TransitionTo(VerifyStateUnsupportedDomain)
+		return nil, err
+	}
+
+	_ = fsm.TransitionTo(VerifyStateResidualConstructed)
+	residualNode, err := EvalWithEnv(diffExpr, substEnv)
+	if err != nil {
+		return nil, err
+	}
+	if !isZeroNode(residualNode) {
+		if expanded, expErr := Eval(expandNode(residualNode)); expErr == nil {
+			residualNode = expanded
+		}
+	}
+	_ = fsm.TransitionTo(VerifyStateSimplificationEvaluated)
+
+	isZero := isZeroNode(residualNode)
+	allVarsMapped := len(targetVars) > 0
+	allIntPoly := true
+	for _, tv := range targetVars {
+		solVal, exists := solMap[tv]
+		if !exists || solVal == nil {
+			allVarsMapped = false
+			break
+		}
+		if !isIntegerPolynomialExpr(solVal) {
+			allIntPoly = false
+		}
+	}
+	isIntegralValid := allVarsMapped && allIntPoly && isZero
+	effectiveResidual := residualNode
+	if isZero && (!allVarsMapped || !allIntPoly) {
+		effectiveResidual = mustRational(1, 1)
+	}
+
+	// 1. Linear 2-variable case -> LinearDiophantineCertificate
+	if len(targetVars) == 2 {
+		v1, v2 := targetVars[0], targetVars[1]
+		c1, c2 := coeffs[v1], coeffs[v2]
+		isLinear := true
+		for k := range coeffs {
+			if k != v1 && k != v2 {
+				isLinear = false
+				break
+			}
+		}
+		if isLinear && (c1 != nil || c2 != nil) && solMap[v1] != nil && solMap[v2] != nil {
+			aBig := big.NewInt(0)
+			if c1 != nil {
+				aBig.Set(c1)
+			}
+			bBig := big.NewInt(0)
+			if c2 != nil {
+				bBig.Set(c2)
+			}
+			cBig := new(big.Int).Neg(constTerm)
+			aNode := NewRationalFromBigRat(new(big.Rat).SetInt(aBig))
+			bNode := NewRationalFromBigRat(new(big.Rat).SetInt(bBig))
+			cNode := NewRationalFromBigRat(new(big.Rat).SetInt(cBig))
+
+			if isIntegralValid {
+				_ = fsm.TransitionTo(VerifyStateCertified)
+				details := i18n.T("verify.diophantine_linear_holds")
+				certIR := NewLinearDiophantineCertificate(aNode, bNode, cNode, solMap[v1], solMap[v2], "t", mustRational(0, 1), true, details)
+				return &VerificationCertificate{
+					Domain:     DomainNumberTheory,
+					Equation:   eqNode.String(),
+					Residual:   mustRational(0, 1),
+					IsVerified: true,
+					Details:    details,
+					State:      VerifyStateCertified,
+					CertIR:     certIR,
+				}, nil
+			}
+			_ = fsm.TransitionTo(VerifyStateRefuted)
+			details := i18n.T("verify.err_diophantine_mismatch", effectiveResidual.String())
+			certIR := NewLinearDiophantineCertificate(aNode, bNode, cNode, solMap[v1], solMap[v2], "t", effectiveResidual, false, details)
+			return &VerificationCertificate{
+				Domain:     DomainNumberTheory,
+				Equation:   eqNode.String(),
+				Residual:   effectiveResidual,
+				IsVerified: false,
+				Details:    details,
+				State:      VerifyStateRefuted,
+				CertIR:     certIR,
+			}, nil
+		}
+
+		// 2. Pell equation case -> PellCertificate
+		xSqKey := fmt.Sprintf("%s^2", v1)
+		ySqKey := fmt.Sprintf("%s^2", v2)
+		cXSq, cYSq := coeffs[xSqKey], coeffs[ySqKey]
+		if cXSq == nil || cYSq == nil {
+			v1, v2 = v2, v1
+			xSqKey = fmt.Sprintf("%s^2", v1)
+			ySqKey = fmt.Sprintf("%s^2", v2)
+			cXSq, cYSq = coeffs[xSqKey], coeffs[ySqKey]
+		}
+		if cXSq != nil && cYSq != nil && len(coeffs) == 2 && solMap[v1] != nil && solMap[v2] != nil {
+			cTerm := new(big.Int).Set(constTerm)
+			cYSqNorm := new(big.Int).Set(cYSq)
+			cXSqNorm := new(big.Int).Set(cXSq)
+			if cXSqNorm.Cmp(big.NewInt(-1)) == 0 && cYSqNorm.Sign() > 0 {
+				cXSqNorm = big.NewInt(1)
+				cYSqNorm.Neg(cYSqNorm)
+				cTerm.Neg(cTerm)
+			}
+			if cXSqNorm.Cmp(big.NewInt(1)) == 0 && cYSqNorm.Sign() < 0 && (cTerm.Cmp(big.NewInt(-1)) == 0 || cTerm.Cmp(big.NewInt(1)) == 0) {
+				dVal := new(big.Int).Neg(cYSqNorm)
+				dNode := NewRationalFromBigRat(new(big.Rat).SetInt(dVal))
+				var target int64 = 1
+				if cTerm.Cmp(big.NewInt(1)) == 0 {
+					target = -1
+				}
+				pellValid := isIntegralValid && isExactIntegerNode(solMap[v1]) && isExactIntegerNode(solMap[v2])
+				if pellValid {
+					_ = fsm.TransitionTo(VerifyStateCertified)
+					details := i18n.T("verify.diophantine_pell_holds")
+					certIR := NewPellCertificateWithTarget(dNode, solMap[v1], solMap[v2], target, mustRational(0, 1), true, details)
+					return &VerificationCertificate{
+						Domain:     DomainPell,
+						Equation:   eqNode.String(),
+						Residual:   mustRational(0, 1),
+						IsVerified: true,
+						Details:    details,
+						State:      VerifyStateCertified,
+						CertIR:     certIR,
+					}, nil
+				}
+				pellErrRes := effectiveResidual
+				if isZero && !pellValid {
+					pellErrRes = mustRational(1, 1)
+				}
+				_ = fsm.TransitionTo(VerifyStateRefuted)
+				details := i18n.T("verify.err_diophantine_mismatch", pellErrRes.String())
+				certIR := NewPellCertificateWithTarget(dNode, solMap[v1], solMap[v2], target, pellErrRes, false, details)
+				return &VerificationCertificate{
+					Domain:     DomainPell,
+					Equation:   eqNode.String(),
+					Residual:   pellErrRes,
+					IsVerified: false,
+					Details:    details,
+					State:      VerifyStateRefuted,
+					CertIR:     certIR,
+				}, nil
+			}
+		}
+	}
+
+	// 3. Pythagorean / general polynomial identity substitution check
+	if isIntegralValid {
+		_ = fsm.TransitionTo(VerifyStateCertified)
+		details := i18n.T("verify.diophantine_pythagorean_holds")
+		lhsCert := Node(mustRational(0, 1))
+		rhsCert := Node(mustRational(0, 1))
+		if rel, ok := eqNode.(*RelOpNode); ok {
+			if lSub, lErr := EvalWithEnv(rel.LHS, substEnv); lErr == nil {
+				lhsCert = lSub
+			}
+			if rSub, rErr := EvalWithEnv(rel.RHS, substEnv); rErr == nil {
+				rhsCert = rSub
+			}
+		} else if lSub, lErr := EvalWithEnv(diffExpr, substEnv); lErr == nil {
+			lhsCert = lSub
+		}
+		certIR := NewIdentityCertificate(IdentityKindEquivalence, lhsCert, rhsCert, mustRational(0, 1), true, details)
+		return &VerificationCertificate{
+			Domain:     DomainNumberTheory,
+			Equation:   eqNode.String(),
+			Residual:   mustRational(0, 1),
+			IsVerified: true,
+			Details:    details,
+			State:      VerifyStateCertified,
+			CertIR:     certIR,
+		}, nil
+	}
+
+	_ = fsm.TransitionTo(VerifyStateRefuted)
+	details := i18n.T("verify.err_diophantine_mismatch", residualNode.String())
+	return &VerificationCertificate{
+		Domain:     DomainNumberTheory,
+		Equation:   eqNode.String(),
+		Residual:   residualNode,
+		IsVerified: false,
+		Details:    details,
+		State:      VerifyStateRefuted,
 	}, nil
 }

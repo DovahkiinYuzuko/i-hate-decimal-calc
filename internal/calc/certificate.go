@@ -151,6 +151,20 @@ type PellCertificate struct {
 	D Node
 	X Node
 	Y Node
+	Target int64
+}
+
+// NewPellCertificateWithTarget creates a new verified PellCertificate with explicit RHS target (1 or -1).
+func NewPellCertificateWithTarget(d, x, y Node, target int64, residual Node, isVerified bool, details string) *PellCertificate {
+	if target == 0 {
+		target = 1
+	}
+	c := NewPellCertificate(d, x, y, residual, isVerified, details)
+	c.Target = target
+	if d != nil && x != nil && y != nil {
+		c.EquationStr = fmt.Sprintf("%s^2 - %s * %s^2 == %d", x.String(), d.String(), y.String(), target)
+	}
+	return c
 }
 
 // NewPellCertificate creates a new verified PellCertificate.

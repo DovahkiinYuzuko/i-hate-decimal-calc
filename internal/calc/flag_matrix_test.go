@@ -58,13 +58,18 @@ func TestFlagMatrix_30Domains(t *testing.T) {
 		{name: "QE Exists Circle", expr: "qe(exists([x, y], x^2 + y^2 < 1))", allowUnver: true, allowNoLean: true},
 
 		// 7. Diophantine Equations
-		{name: "Diophantine Pell D=2", expr: "solve_diophantine(x^2 - 2*y^2 == 1, [x, y])", allowUnver: true, allowNoLean: true},
-		{name: "Diophantine NegPell D=5", expr: "solve_diophantine(x^2 - 5*y^2 == -1, [x, y])", allowUnver: true, allowNoLean: true},
-		{name: "Diophantine Linear", expr: "solve_diophantine(3*x + 5*y == 1, [x, y])", allowUnver: true, allowNoLean: true},
+		{name: "Diophantine Pell D=2", expr: "solve_diophantine(x^2 - 2*y^2 == 1, [x, y])", allowUnver: false, allowNoLean: false},
+		{name: "Diophantine NegPell D=5", expr: "solve_diophantine(x^2 - 5*y^2 == -1, [x, y])", allowUnver: false, allowNoLean: false},
+		{name: "Diophantine Linear", expr: "solve_diophantine(3*x + 5*y == 1, [x, y])", allowUnver: false, allowNoLean: false},
 
 		// 8. Number Theory & Prime
+		{name: "Modular Inverse", expr: "inv_mod(3, 11)", allowUnver: false, allowNoLean: false},
+		{name: "Chinese Remainder Theorem", expr: "crt([2, 3, 2], [3, 5, 7])", allowUnver: false, allowNoLean: false},
 		{name: "Prime Factor Integer", expr: "factor(360)", allowUnver: true, allowNoLean: true},
 		{name: "Deterministic IsPrime", expr: "is_prime(104729)", allowUnver: true, allowNoLean: true},
+
+		// 8b. Rational Partial Fractions
+		{name: "Partial Fractions Apart", expr: "apart(1 / (x^2 - 1), x)", allowUnver: false, allowNoLean: false},
 
 		// 9. Polynomial Solvers & Galois Theory
 		{name: "Solve Cubic Cardano", expr: "solve(x^3 - 3*x + 1 == 0, x)", allowUnver: true, allowNoLean: true},

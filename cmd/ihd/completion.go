@@ -73,6 +73,7 @@ func RunCompletion(shell string, w io.Writer) error {
 		{"--max-nodes", "cli.flag_max_nodes"},
 		{"--max-depth", "cli.flag_max_depth"},
 		{"--deterministic", "cli.flag_deterministic"},
+		{"--out", "cli.flag_out"},
 	}
 
 	var flags []completionItem
@@ -210,7 +211,7 @@ _ihd_completion() {
 
     case "${prev}" in
         --format)
-            COMPREPLY=( $(compgen -W "typst latex ascii pretty" -- "${cur}") )
+            COMPREPLY=( $(compgen -W "typst latex ascii pretty svg" -- "${cur}") )
             return 0
             ;;
         --theme)
@@ -225,7 +226,7 @@ _ihd_completion() {
             COMPREPLY=( $(compgen -W "bash zsh fish powershell" -- "${cur}") )
             return 0
             ;;
-        --certificate|--replay|--lean-file|run)
+        --certificate|--replay|--lean-file|--out|run)
             _filedir 2>/dev/null || COMPREPLY=( $(compgen -f -- "${cur}") )
             return 0
             ;;
@@ -257,7 +258,7 @@ _ihd() {
 {{end}}    )
 
     local -a formats
-    formats=('typst' 'latex' 'ascii' 'pretty')
+    formats=('typst' 'latex' 'ascii' 'pretty' 'svg')
 
     local -a themes
     themes=('dark' 'light' 'none')
@@ -282,7 +283,7 @@ _ihd() {
         '(-h --help)'{-h,--help}'[{{escapeZsh (index .Flags 19).Desc}}]' \
         '(-v --version)'{-v,--version}'[{{escapeZsh (index .Flags 21).Desc}}]' \
         '--lang[{{escapeZsh (index .Flags 0).Desc}}]:language:(en ja)' \
-        '--format[{{escapeZsh (index .Flags 8).Desc}}]:format:(typst latex ascii pretty)' \
+        '--format[{{escapeZsh (index .Flags 8).Desc}}]:format:(typst latex ascii pretty svg)' \
         '--theme[{{escapeZsh (index .Flags 14).Desc}}]:theme:(dark light none)' \
         '--ascii[{{escapeZsh (index .Flags 1).Desc}}]' \
         '--approx[{{escapeZsh (index .Flags 2).Desc}}]' \
@@ -296,6 +297,7 @@ _ihd() {
         '--replay[{{escapeZsh (index .Flags 11).Desc}}]:file:_files' \
         '--lean[{{escapeZsh (index .Flags 12).Desc}}]' \
         '--lean-file[{{escapeZsh (index .Flags 13).Desc}}]:file:_files' \
+        '--out[{{escapeZsh (index .Flags 36).Desc}}]:file:_files' \
         '--no-color[{{escapeZsh (index .Flags 15).Desc}}]' \
         '--no-update-check[{{escapeZsh (index .Flags 16).Desc}}]' \
         '--warn-loop[{{escapeZsh (index .Flags 17).Desc}}]:limit:' \
@@ -343,7 +345,7 @@ complete -c ihd -n "__fish_seen_subcommand_from run" -F
 {{range .Flags}}complete -c ihd -l "{{trimPrefix .Name "--"}}" -d "{{escapeFish .Desc}}"
 {{end}}
 # Flag choices
-complete -c ihd -l format -a "typst latex ascii pretty"
+complete -c ihd -l format -a "typst latex ascii pretty svg"
 complete -c ihd -l theme -a "dark light none"
 complete -c ihd -l lang -a "en ja"
 
@@ -380,7 +382,7 @@ Register-ArgumentCompleter -Native -CommandName 'ihd' -ScriptBlock {
     $prev = if ($elements.Count -gt 1) { $elements[-2].Extent.Text } else { "" }
 
     if ($prev -eq '--format') {
-        return @('typst', 'latex', 'ascii', 'pretty') | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
+        return @('typst', 'latex', 'ascii', 'pretty', 'svg') | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
             [CompletionResult]::new($_, $_, [CompletionResultType]::ParameterValue, "{{.Labels.Format}}$_")
         }
     }

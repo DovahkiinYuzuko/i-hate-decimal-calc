@@ -2,3 +2,7 @@ id,category,flags,pipe_input,match_mode,expected_stdout,expected_stderr,expected
 CAT16-001,cat_16_terminal_function_plotter,"""plot(x^2 - 2, [-2, 2])""",,contains,,,0,deductive,Plotter: Parabola roots and extrema detection
 CAT16-002,cat_16_terminal_function_plotter,"""plot(1/x, [-2, 2], [-5, 5])""",,contains,,,0,deductive,Plotter: Rational function asymptote Tupper guard
 CAT16-003,cat_16_terminal_function_plotter,"""plot(x, [2, -2])""",,error,,invalid plot domain,1,contradiction,Plotter: Error on inverted domain
+CAT16-004,cat_16_terminal_function_plotter,"--format svg ""plot(x^2 - 2, [-2, 2])""",,contains,<svg,,0,deductive,Plotter: Standalone SVG output via --format svg
+CAT16-005,cat_16_terminal_function_plotter,"""plot_svg(1/x, [-3, 3])""",,contains,</svg>,,0,deductive,Plotter: Builtin plot_svg function for rational function
+CAT16-006,cat_16_terminal_function_plotter,"""plot_svg(1/x, [3, -3])""",,error,,invalid plot domain,1,contradiction,Plotter: plot_svg error on inverted domain
+CAT16-007,cat_16_terminal_function_plotter,"""plot_svg(x^2, [-2, 2], [-5, 5], 123)""",,error,,,1,contrapositive,Plotter: plot_svg error on non-string output file argument

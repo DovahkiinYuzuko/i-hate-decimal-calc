@@ -90,3 +90,63 @@ func NewMarkovStationaryCertificate(trans, dist, residual Node, isVerified bool,
 		StationaryDist:   dist,
 	}
 }
+
+// ModularInverseCertificate represents a certified modular inverse a * x ≡ 1 (mod m) with 0 ≤ x < m.
+type ModularInverseCertificate struct {
+	BaseCertificate
+	A           Node
+	Modulus     Node
+	Inverse     Node
+	BezoutCoeff Node
+}
+
+// NewModularInverseCertificate creates a new verified ModularInverseCertificate.
+func NewModularInverseCertificate(a, m, inv, bezoutY, residual Node, isVerified bool, details string) *ModularInverseCertificate {
+	eqStr := ""
+	if a != nil && inv != nil && m != nil {
+		eqStr = fmt.Sprintf("(%s * %s) mod %s == 1", a.String(), inv.String(), m.String())
+	}
+	return &ModularInverseCertificate{
+		BaseCertificate: BaseCertificate{
+			DomainVal:    CertDomainNumberTheory,
+			Verified:     isVerified,
+			ResidualNode: residual,
+			DetailsMsg:   details,
+			EquationStr:  eqStr,
+		},
+		A:           a,
+		Modulus:     m,
+		Inverse:     inv,
+		BezoutCoeff: bezoutY,
+	}
+}
+
+// CRTCertificate represents a certified solution x to a system of congruences x ≡ r_i (mod m_i).
+type CRTCertificate struct {
+	BaseCertificate
+	Remainders      []Node
+	Moduli          []Node
+	Solution        Node
+	CombinedModulus Node
+}
+
+// NewCRTCertificate creates a new verified CRTCertificate.
+func NewCRTCertificate(rems, mods []Node, sol, combinedMod, residual Node, isVerified bool, details string) *CRTCertificate {
+	eqStr := ""
+	if sol != nil && len(rems) > 0 && len(mods) > 0 {
+		eqStr = fmt.Sprintf("%s == %s (mod %s)", sol.String(), rems[0].String(), mods[0].String())
+	}
+	return &CRTCertificate{
+		BaseCertificate: BaseCertificate{
+			DomainVal:    CertDomainNumberTheory,
+			Verified:     isVerified,
+			ResidualNode: residual,
+			DetailsMsg:   details,
+			EquationStr:  eqStr,
+		},
+		Remainders:      rems,
+		Moduli:          mods,
+		Solution:        sol,
+		CombinedModulus: combinedMod,
+	}
+}

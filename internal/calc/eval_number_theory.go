@@ -4,11 +4,19 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc/ast"
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/provenance"
 )
 
 // EvalInvMod computes the modular inverse of a modulo m: a * x = 1 (mod m).
 // Both a and m must be integers with m >= 2.
 func EvalInvMod(aNode, mNode Node) (Node, error) {
+	return EvalInvModWithTracer(aNode, mNode, nil)
+}
+
+// EvalInvModWithTracer computes the modular inverse and records provenance steps when rec is non-nil.
+func EvalInvModWithTracer(aNode, mNode Node, rec *provenance.TraceRecorder) (Node, error) {
 	aRat, okA := aNode.(*RationalNode)
 	mRat, okM := mNode.(*RationalNode)
 	if !okA || !aRat.Val.IsInt() {
@@ -30,7 +38,41 @@ func EvalInvMod(aNode, mNode Node) (Node, error) {
 		return nil, NewDomainError("", "inv_mod: %s and %s are not coprime (gcd = %s), no modular inverse exists", a.String(), m.String(), g.String())
 	}
 
-	return &RationalNode{Val: new(big.Rat).SetInt(inv)}, nil
+	res := &RationalNode{Val: new(big.Rat).SetInt(inv)}
+	if rec != nil {
+		origCall, _ := NewFunc("inv_mod", []Node{aNode, mNode})
+		rec.StartScope(provenance.RuleNTInvMod, provenance.RelationEq, nil, origCall, provenance.VisPresentable)
+
+		// Compute Bezout coefficients a*x + m*y = 1 only when tracing
+		xCoeff := new(big.Int)
+		yCoeff := new(big.Int)
+		new(big.Int).GCD(xCoeff, yCoeff, a, m)
+
+		bezoutLHS := &ast.AddNode{Terms: []ast.Node{
+			&ast.MulNode{Factors: []ast.Node{
+				NewRationalFromBigRat(new(big.Rat).SetInt(a)),
+				NewRationalFromBigRat(new(big.Rat).SetInt(xCoeff)),
+			}},
+			&ast.MulNode{Factors: []ast.Node{
+				NewRationalFromBigRat(new(big.Rat).SetInt(m)),
+				NewRationalFromBigRat(new(big.Rat).SetInt(yCoeff)),
+			}},
+		}}
+		oneNode := mustRational(1, 1)
+		rec.RecordStep(provenance.RuleNTBezout, provenance.RelationEq, nil, bezoutLHS, oneNode, nil, nil, provenance.TrustCertified, provenance.VisPresentable)
+
+		modCall, _ := NewFunc("mod", []Node{
+			&ast.MulNode{Factors: []ast.Node{
+				NewRationalFromBigRat(new(big.Rat).SetInt(a)),
+				res,
+			}},
+			NewRationalFromBigRat(new(big.Rat).SetInt(m)),
+		})
+		rec.RecordStep(provenance.RuleNTInvMod, provenance.RelationEq, nil, modCall, oneNode, nil, nil, provenance.TrustCertified, provenance.VisPresentable)
+		rec.EndScope(res, nil)
+	}
+
+	return res, nil
 }
 
 // solvePairCRT merges two congruences x = r1 (mod m1) and x = r2 (mod m2)
@@ -129,9 +171,8 @@ func garnerCRT(remainders, moduli []*big.Int) (*big.Int, *big.Int, error) {
 	return x, M, nil
 }
 
-// EvalCRT solves a system of linear congruences x = r_i (mod m_i).
-// Supports either crt([r1, r2, ...], [m1, m2, ...]) or crt(r1, m1, r2, m2, ...).
-func EvalCRT(args []Node) (Node, error) {
+// parseCRTArgs validates and extracts remainders and moduli from CRT arguments.
+func parseCRTArgs(args []Node) ([]*big.Int, []*big.Int, error) {
 	var remNodes, modNodes []Node
 
 	if len(args) == 2 {
@@ -141,7 +182,7 @@ func EvalCRT(args []Node) (Node, error) {
 			remNodes = rList.Elements
 			modNodes = mList.Elements
 		} else {
-			return nil, NewCalcError(ErrInvalidArgs, "", "crt with 2 arguments expects two lists: crt([r1, r2, ...], [m1, m2, ...])")
+			return nil, nil, NewCalcError(ErrInvalidArgs, "", "crt with 2 arguments expects two lists: crt([r1, r2, ...], [m1, m2, ...])")
 		}
 	} else if len(args) >= 2 && len(args)%2 == 0 {
 		for i := 0; i < len(args); i += 2 {
@@ -149,14 +190,14 @@ func EvalCRT(args []Node) (Node, error) {
 			modNodes = append(modNodes, args[i+1])
 		}
 	} else {
-		return nil, NewCalcError(ErrInvalidArgs, "", "crt requires either two lists of equal length or an even number of arguments (r1, m1, r2, m2, ...)")
+		return nil, nil, NewCalcError(ErrInvalidArgs, "", "crt requires either two lists of equal length or an even number of arguments (r1, m1, r2, m2, ...)")
 	}
 
 	if len(remNodes) != len(modNodes) {
-		return nil, NewCalcError(ErrDimensionMismatch, "", "crt: number of remainders (%d) must match number of moduli (%d)", len(remNodes), len(modNodes))
+		return nil, nil, NewCalcError(ErrDimensionMismatch, "", "crt: number of remainders (%d) must match number of moduli (%d)", len(remNodes), len(modNodes))
 	}
 	if len(remNodes) == 0 {
-		return nil, NewCalcError(ErrInvalidArgs, "", "crt: at least one congruence equation is required")
+		return nil, nil, NewCalcError(ErrInvalidArgs, "", "crt: at least one congruence equation is required")
 	}
 
 	remBig := make([]*big.Int, len(remNodes))
@@ -166,15 +207,15 @@ func EvalCRT(args []Node) (Node, error) {
 		rRat, okR := remNodes[i].(*RationalNode)
 		mRat, okM := modNodes[i].(*RationalNode)
 		if !okR || !rRat.Val.IsInt() {
-			return nil, NewDomainError("", "crt: remainder at index %d must be an integer, got %s", i+1, remNodes[i].String())
+			return nil, nil, NewDomainError("", "crt: remainder at index %d must be an integer, got %s", i+1, remNodes[i].String())
 		}
 		if !okM || !mRat.Val.IsInt() {
-			return nil, NewDomainError("", "crt: modulus at index %d must be an integer, got %s", i+1, modNodes[i].String())
+			return nil, nil, NewDomainError("", "crt: modulus at index %d must be an integer, got %s", i+1, modNodes[i].String())
 		}
 
 		m := mRat.Val.Num()
 		if m.Cmp(big.NewInt(2)) < 0 {
-			return nil, NewDomainError("", "crt: modulus at index %d must be >= 2, got %s", i+1, m.String())
+			return nil, nil, NewDomainError("", "crt: modulus at index %d must be >= 2, got %s", i+1, m.String())
 		}
 
 		r := new(big.Int).Mod(rRat.Val.Num(), m)
@@ -184,6 +225,22 @@ func EvalCRT(args []Node) (Node, error) {
 
 		remBig[i] = r
 		modBig[i] = m
+	}
+
+	return remBig, modBig, nil
+}
+
+// EvalCRT solves a system of linear congruences x = r_i (mod m_i).
+// Supports either crt([r1, r2, ...], [m1, m2, ...]) or crt(r1, m1, r2, m2, ...).
+func EvalCRT(args []Node) (Node, error) {
+	return EvalCRTWithTracer(args, nil)
+}
+
+// EvalCRTWithTracer solves CRT and records congruence check steps when rec is non-nil.
+func EvalCRTWithTracer(args []Node, rec *provenance.TraceRecorder) (Node, error) {
+	remBig, modBig, err := parseCRTArgs(args)
+	if err != nil {
+		return nil, err
 	}
 
 	// Check if all moduli are pairwise coprime
@@ -201,29 +258,43 @@ func EvalCRT(args []Node) (Node, error) {
 		}
 	}
 
+	var sol *big.Int
 	if allCoprime {
 		// Fast and memory-efficient Garner's algorithm
-		sol, _, err := garnerCRT(remBig, modBig)
+		sol, _, err = garnerCRT(remBig, modBig)
 		if err != nil {
 			return nil, err
 		}
-		return &RationalNode{Val: new(big.Rat).SetInt(sol)}, nil
-	}
+	} else {
+		// General CRT with non-coprime moduli: iteratively merge pairs
+		currR := new(big.Int).Set(remBig[0])
+		currM := new(big.Int).Set(modBig[0])
 
-	// General CRT with non-coprime moduli: iteratively merge pairs
-	currR := new(big.Int).Set(remBig[0])
-	currM := new(big.Int).Set(modBig[0])
-
-	for i := 1; i < len(remBig); i++ {
-		nextR, nextM, err := solvePairCRT(currR, currM, remBig[i], modBig[i])
-		if err != nil {
-			return nil, err
+		for i := 1; i < len(remBig); i++ {
+			nextR, nextM, err := solvePairCRT(currR, currM, remBig[i], modBig[i])
+			if err != nil {
+				return nil, err
+			}
+			currR = nextR
+			currM = nextM
 		}
-		currR = nextR
-		currM = nextM
+		sol = currR
 	}
 
-	return &RationalNode{Val: new(big.Rat).SetInt(currR)}, nil
+	res := &RationalNode{Val: new(big.Rat).SetInt(sol)}
+	if rec != nil {
+		origCall, _ := NewFunc("crt", args)
+		rec.StartScope(provenance.RuleNTCRT, provenance.RelationEq, nil, origCall, provenance.VisPresentable)
+		for i := range remBig {
+			modNode := NewRationalFromBigRat(new(big.Rat).SetInt(modBig[i]))
+			remNode := NewRationalFromBigRat(new(big.Rat).SetInt(remBig[i]))
+			lhs, _ := NewFunc("mod", []Node{res, modNode})
+			rec.RecordStep(provenance.RuleNTCRT, provenance.RelationEq, nil, lhs, remNode, nil, nil, provenance.TrustCertified, provenance.VisPresentable)
+		}
+		rec.EndScope(res, nil)
+	}
+
+	return res, nil
 }
 
 // getDistinctPrimeFactors extracts unique prime factors of n using wheel factorization.

@@ -1118,7 +1118,12 @@
 <tr>
 <td align="left"><code class="clickable-code" data-copy="--format" title="Click to copy">--format</code></td>
 <td align="left"><code class="clickable-code" data-copy="ihd --format typst &#x22;1/2 + sqrt(2)&#x22;" title="Click to copy">ihd --format typst "1/2 + sqrt(2)"</code></td>
-<td align="left">Specifies output format (<code class="clickable-code" data-copy="typst" title="Click to copy">typst</code>, <code class="clickable-code" data-copy="latex" title="Click to copy">latex</code>, <code class="clickable-code" data-copy="ascii" title="Click to copy">ascii</code>, <code class="clickable-code" data-copy="pretty" title="Click to copy">pretty</code>)</td>
+<td align="left">Specifies output format (<code class="clickable-code" data-copy="typst" title="Click to copy">typst</code>, <code class="clickable-code" data-copy="latex" title="Click to copy">latex</code>, <code class="clickable-code" data-copy="ascii" title="Click to copy">ascii</code>, <code class="clickable-code" data-copy="pretty" title="Click to copy">pretty</code>, <code class="clickable-code" data-copy="svg" title="Click to copy">svg</code>)</td>
+</tr>
+<tr>
+<td align="left"><code class="clickable-code" data-copy="--out" title="Click to copy">--out</code></td>
+<td align="left"><code class="clickable-code" data-copy="ihd --format svg --out graph.svg &#x22;plot(1/x, [-3, 3])&#x22;" title="Click to copy">ihd --format svg --out graph.svg "plot(1/x, [-3, 3])"</code></td>
+<td align="left">Writes formatted output to specified file path (UTF-8 without BOM)</td>
 </tr>
 <tr>
 <td align="left"><code class="clickable-code" data-copy="--pretty" title="Click to copy">--pretty</code></td>
@@ -1879,7 +1884,7 @@ c5.3,-9.3,12,-14,20,-14
 H400000v40H845.2724
 s-225.272,467,-225.272,467s-235,486,-235,486c-2.7,4.7,-9,7,-19,7
 c-6,0,-10,-1,-12,-3s-194,-422,-194,-422s-65,47,-65,47z
-M834 80h400000v40h-400000z"></path></svg></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.1133em;"><span></span></span></span></span></span></span></span></span>. Supports <code class="clickable-code" data-copy="--verify" title="Click to copy">--verify</code> and <code class="clickable-code" data-copy="--lean" title="Click to copy">--lean</code> (<code class="clickable-code" data-copy="by decide" title="Click to copy">by decide</code> proof)</td>
+M834 80h400000v40h-400000z"></path></svg></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.1133em;"><span></span></span></span></span></span></span></span></span>. Supports <code class="clickable-code" data-copy="--verify" title="Click to copy">--verify</code> and <code class="clickable-code" data-copy="--lean" title="Click to copy">--lean</code> (<code class="clickable-code" data-copy="by norm_num" title="Click to copy">by norm_num</code> proof)</td>
 </tr>
 <tr>
 <td align="left"><code class="clickable-code" data-copy="to_primitive_element" title="Click to copy">to_primitive_element</code> / <code class="clickable-code" data-copy="primitive_element" title="Click to copy">primitive_element</code></td>
@@ -3292,6 +3297,11 @@ M834 80h400000v40h-400000z"></path></svg></span></span></span><span class="vlist
 <td align="left"><code class="clickable-code" data-copy="plot" title="Click to copy">plot</code></td>
 <td align="left"><code class="clickable-code" data-copy="plot(sin(x), [-pi, pi])" title="Click to copy">plot(sin(x), [-pi, pi])</code></td>
 <td align="left">High-resolution terminal curve plotter using Unicode 2×4 Braille characters (automatic root/extrema detection, singularity discontinuity handling)</td>
+</tr>
+<tr>
+<td align="left"><code class="clickable-code" data-copy="plot_svg" title="Click to copy">plot_svg</code></td>
+<td align="left"><code class="clickable-code" data-copy="plot_svg(1/x, [-3, 3])" title="Click to copy">plot_svg(1/x, [-3, 3])</code></td>
+<td align="left">Generates a standalone vector SVG 2D function plot (supports optional <code class="clickable-code" data-copy="y_range" title="Click to copy">y_range</code> and output file path)</td>
 </tr>
 <tr>
 <td align="left"><code class="clickable-code" data-copy="ProofTrace" title="Click to copy">ProofTrace</code></td>
