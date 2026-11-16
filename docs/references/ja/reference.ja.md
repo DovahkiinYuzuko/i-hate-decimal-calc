@@ -59,7 +59,8 @@
 
 | フラグ・オプション | 書式・例 | 説明 |
 | :--- | :--- | :--- |
-| `--format` | `ihd --format typst "1/2 + sqrt(2)"` | 出力フォーマットを指定（`typst`, `latex`, `ascii`, `pretty`） |
+| `--format` | `ihd --format typst "1/2 + sqrt(2)"` | 出力フォーマットを指定（`typst`, `latex`, `ascii`, `pretty`, `svg`） |
+| `--out` | `ihd --format svg --out graph.svg "plot(1/x, [-3, 3])"` | フォーマット済み出力を指定ファイルパスへ UTF-8（BOMなし）で書き出し |
 | `--pretty` | `ihd --pretty "1/2 + sqrt(2)/2"` | 2D アスキーアートによる組版プリティプリント |
 | `--latex` | `ihd --latex "1/2 + sqrt(2)"` | LaTeX 数式モード（`$$ ... $$`）で出力 |
 | `--typst` | `ihd --typst "1/2 + sqrt(2)"` | Typst 数式モード（`$ ... $`）で出力 |
@@ -241,7 +242,7 @@
 | `alg_inv` | `alg_inv(alg_node)` | 拡大ユークリッド互除法による代数数ノード $\beta \in \mathbb{Q}(\alpha)$ の乗法逆元 $\beta^{-1}$ 算出 |
 | `min_poly` / `minimal_polynomial` | `min_poly(rep, min_poly)` | 代数数の既約モニック最小多項式 $m(x) \in \mathbb{Q}[x]$ の導出 |
 | `solve_diophantine` | `solve_diophantine(3*x + 5*y == 7, [x, y])` | 不定整数方程式（ディオファントス方程式）の厳密ソルバー。1次線形不定方程式（拡張ユークリッド互除法およびベズーの等式に基づく整数パラメータ $t$ による一般解系）およびピタゴラス方程式（$x^2+y^2=z^2$ 等の代数曲線有理点媒介変数表示）を判定・求解。`--verify` 時には代数的残差ゼロ証明書、`--lean` 時には Lean 4 形式証明を出力 |
-| `pell_solve` / `solve_pell` / `pell` | `pell_solve(D)` / `pell_solve(D, 1)` / `pell_solve(D, -1)` | ペル方程式 $x^2 - D y^2 = 1$（および負のペル方程式 $x^2 - D y^2 = -1$）の最小整数解（基本解 $(x_1, y_1)$）の厳密導出。非平方正整数 $D$ に対する連分数展開周期アルゴリズム（Continued Fraction Expansion）により巨大桁整数でも決定論的に求解。`--verify` および `--lean`（Mathlib4 `by decide` 定理コード生成）に対応 |
+| `pell_solve` / `solve_pell` / `pell` | `pell_solve(D)` / `pell_solve(D, 1)` / `pell_solve(D, -1)` | ペル方程式 $x^2 - D y^2 = 1$（および負のペル方程式 $x^2 - D y^2 = -1$）の最小整数解（基本解 $(x_1, y_1)$）の厳密導出。非平方正整数 $D$ に対する連分数展開周期アルゴリズム（Continued Fraction Expansion）により巨大桁整数でも決定論的に求解。`--verify` および `--lean`（Mathlib4 `by norm_num` 定理コード生成）に対応 |
 | `to_primitive_element` / `primitive_element` | `to_primitive_element([sqrt(2), sqrt(3)])` / `to_primitive_element([x^2 - 2, x^2 - 3])` | 原始元定理（Primitive Element Theorem）に基づき、多重代数拡大体 $\mathbb{Q}(\alpha_1, \dots, \alpha_k)$ を単一の代数的数 $\theta$ による単拡大 $\mathbb{Q}(\theta)$ へ同型変換し、原始元シンボル、合成最小多項式 $m_\theta(x)$、および各生成元の表現多項式リスト $[P_{\alpha_1}(\theta), \dots, P_{\alpha_k}(\theta)]$ を導出。シルベスター終結式と拡大体上多項式 GCD により決定論的に求解。`--verify` および `--lean` による代数関係式検証に対応 |
 | `fib` / `fibonacci` | `fib(n)` / `fibonacci(n)` | フィボナッチ数 $F_n$。Fast Doubling アルゴリズム（$O(\log n)$ ステップ）により大規模インデックスを算出し、負の整数引数に対するネガフィボナッチ数 $F_{-n} = (-1)^{n+1} F_n$ にも対応 |
 | `digit_count` | `digit_count(n)` | 巨大整数の厳密桁数算定（例: `digit_count(fib(10000))` $\to$ `2090`） |
@@ -544,6 +545,7 @@
 | :--- | :--- | :--- |
 | `verify` | `verify(integrate(1/(x^2+1), x), atan(x))` | 2つの式の代数的同値性を独立検証し、代数的証明書（Certificate）を発行 |
 | `plot` | `plot(sin(x), [-pi, pi])` | Braille 2×4 サブピクセル高解像度ターミナルプロット（零点・極値自動検出・特異点漸近線偽結合防止） |
+| `plot_svg` | `plot_svg(1/x, [-3, 3])` | スタンドアロンのベクター SVG 2D 関数プロットを生成（任意の `y_range` および出力ファイルパス指定に対応） |
 | `ProofTrace` | 内部データ構造 | 計算過程の各ステップ（Before/After、適用規則、残差式、検証状態）を保持するデータ構造。途中式表示、逆算検算、Lean 4 証明コード生成の共通表現として機能 |
 | `--explain` / `explain` / `steps` | `ihd --explain "1/(sqrt(2)+1)"` | 導出ステップ列に基づき、代数的項書き換え（二重根号分解、有理化、因数分解、微分則等）をツリー形式で表示 |
 | `--verify` / `verify` | `ihd --verify "factor(x^2 - 1)"` | 各ステップや結果に対し、定義式や導関数に基づく逆算検算を行い、残差が 0 であることを確認 |

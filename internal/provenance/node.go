@@ -88,12 +88,22 @@ type DerivationNode struct {
 
 // Canonical rule identifiers for algebraic and calculus derivations.
 const (
-	RuleAlgebraNormalize   = "algebra.normalize"
-	RuleAlgebraExpand      = "algebra.expand"
-	RuleAlgebraFactor      = "algebra.factor"
-	RuleAlgebraApart       = "algebra.apart"
-	RuleAlgebraTogether    = "algebra.together"
-	RuleAlgebraRationalize = "algebra.rationalize"
+	RuleAlgebraNormalize     = "algebra.normalize"
+	RuleAlgebraExpand        = "algebra.expand"
+	RuleAlgebraFactor        = "algebra.factor"
+	RuleAlgebraApart         = "algebra.apart"
+	RuleAlgebraApartPoly     = "algebra.apart_poly"
+	RuleAlgebraApartRational = "algebra.apart_rational"
+	RuleAlgebraTogether      = "algebra.together"
+	RuleAlgebraRationalize   = "algebra.rationalize"
+
+	RuleNTInvMod = "nt.inv_mod"
+	RuleNTCRT    = "nt.crt"
+	RuleNTBezout = "nt.bezout"
+
+	RuleDiophantineLinear      = "diophantine.linear"
+	RuleDiophantinePell        = "diophantine.pell"
+	RuleDiophantinePythagorean = "diophantine.pythagorean"
 
 	RuleCalcDiffPower          = "calculus.diff_power"
 	RuleCalcDiffProduct        = "calculus.diff_product"

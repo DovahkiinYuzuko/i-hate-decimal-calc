@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"flag"
@@ -32,7 +33,9 @@ type runOptions struct {
 	approxDigits       int
 	latex              bool
 	typst              bool
+	svg                bool
 	format             string
+	outFile            string
 	pretty             bool
 	deg                bool
 	explain            bool
@@ -69,7 +72,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 	var exprArgs []string
 
 	valuedFlags := map[string]bool{
-		"lang": true, "warn-loop": true, "max-loop": true, "lean-file": true,
+		"lang": true, "warn-loop": true, "max-loop": true, "lean-file": true, "out": true,
 		"certificate": true, "replay": true, "interval-eps": true, "theme": true, "format": true,
 		"timeout": true, "budget-steps": true, "max-nodes": true, "max-depth": true,
 		"approx-digits": true, "digits": true,
@@ -121,6 +124,7 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 	approxDigitsFlag := fs.Int("approx-digits", 30, i18n.T("cli.flag_approx_digits"))
 	fs.IntVar(approxDigitsFlag, "digits", 30, i18n.T("cli.flag_approx_digits"))
 	formatFlag := fs.String("format", "", i18n.T("cli.flag_format"))
+	outFlag := fs.String("out", "", i18n.T("cli.flag_out"))
 	typstFlag := fs.Bool("typst", false, i18n.T("cli.flag_typst"))
 	latexFlag := fs.Bool("latex", false, i18n.T("cli.flag_latex"))
 	prettyFlag := fs.Bool("pretty", false, i18n.T("cli.flag_pretty"))
@@ -213,7 +217,9 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 		approxDigits:  *approxDigitsFlag,
 		latex:         *latexFlag || fmtMode == "latex",
 		typst:         *typstFlag || fmtMode == "typst",
+		svg:           fmtMode == "svg",
 		format:        fmtMode,
+		outFile:       *outFlag,
 		pretty:        *prettyFlag || fmtMode == "pretty",
 		deg:           *degFlag,
 		explain:       *explainFlag,
@@ -314,6 +320,10 @@ func run(args []string, in io.Reader, out, errOut io.Writer) int {
 	}
 
 	// Pipe / redirect mode: process line by line with buffered writer
+	if ro.outFile != "" {
+		fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), i18n.T("cli.err_out_multiline_unsupported"))
+		return 1
+	}
 	bufOut := bufio.NewWriterSize(out, 64*1024)
 	defer bufOut.Flush()
 
@@ -430,6 +440,16 @@ func useColor(w io.Writer, noColorFlag bool) bool {
 	return isTerminalWriter(w)
 }
 
+func extractSVGString(node calc.Node) (string, bool) {
+	if pn, ok := node.(*calc.PlotNode); ok && pn.SVG != "" {
+		return pn.SVG, true
+	}
+	if sn, ok := node.(*calc.StringNode); ok && strings.Contains(sn.Value, "<svg") {
+		return sn.Value, true
+	}
+	return "", false
+}
+
 func formatOutput(node calc.Node, ro runOptions) string {
 	if ro.interval {
 		eps := big.NewRat(1, 1000000)
@@ -446,6 +466,11 @@ func formatOutput(node calc.Node, ro runOptions) string {
 		}
 	}
 
+	if ro.svg {
+		if svgStr, ok := extractSVGString(node); ok {
+			return svgStr
+		}
+	}
 	if ro.typst {
 		return calc.FormatTypst(node)
 	}
@@ -483,6 +508,13 @@ func outputNode(out io.Writer, node calc.Node, ro runOptions) error {
 		}
 	}
 
+	if ro.svg {
+		if svgStr, ok := extractSVGString(node); ok {
+			_, err := fmt.Fprintln(out, svgStr)
+			return err
+		}
+		return fmt.Errorf("%s", i18n.T("cli.err_format_svg_requires_plot"))
+	}
 	if ro.typst {
 		_, err := fmt.Fprintln(out, calc.FormatTypst(node))
 		return err
@@ -636,6 +668,11 @@ func handleEvaluationOutputs(origNode, evaled calc.Node, steps []calc.Pedagogica
 		}
 	}
 	if ro.step {
+		if ro.outFile != "" {
+			err := fmt.Errorf("%s", i18n.T("cli.err_out_step_unsupported"))
+			fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
+			return err
+		}
 		tracer := env.GetLastTrace()
 		if tracer == nil || tracer.Root() == nil {
 			fmt.Fprintln(out, i18n.T("cli.repl_step_completed"))
@@ -649,10 +686,28 @@ func handleEvaluationOutputs(origNode, evaled calc.Node, steps []calc.Pedagogica
 		_ = explorer.Run()
 		return nil
 	}
-	if ro.explain {
+	if ro.outFile != "" {
+		var buf bytes.Buffer
+		if ro.explain {
+			renderExplainOutput(origNode, evaled, steps, line, ro, env, &buf)
+		} else {
+			if err := outputNode(&buf, evaled, ro); err != nil {
+				fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
+				return err
+			}
+		}
+		if err := saveOutputFile(ro.outFile, buf.Bytes()); err != nil {
+			fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), fmt.Sprintf(i18n.T("cli.err_write_file"), ro.outFile, err))
+			return err
+		}
+		fmt.Fprintln(out, fmt.Sprintf(i18n.T("cli.out_saved"), ro.outFile))
+	} else if ro.explain {
 		renderExplainOutput(origNode, evaled, steps, line, ro, env, out)
 	} else {
-		_ = outputNode(out, evaled, ro)
+		if err := outputNode(out, evaled, ro); err != nil {
+			fmt.Fprintf(errOut, "%s%v\n", i18n.T("cli.error_prefix"), err)
+			return err
+		}
 	}
 	var verifyErr error
 	if ro.verify {
@@ -876,6 +931,10 @@ func runImportFile(filePath string, ro runOptions, env *calc.Env, in io.Reader, 
 }
 
 func runScriptFile(filePath string, ro runOptions, out, errOut io.Writer) int {
+	if ro.outFile != "" {
+		fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), i18n.T("cli.err_out_multiline_unsupported"))
+		return 1
+	}
 	file, err := os.Open(filePath)
 	if err != nil {
 		fmt.Fprintf(errOut, "%s%s\n", i18n.T("cli.error_prefix"), i18n.T("cli.err_run_open_failed", filePath, err))
@@ -946,14 +1005,18 @@ func executeScriptLine(line string, ro runOptions, env *calc.Env, suppressOutput
 	return evaluateLineInternal(line, ro, env, suppressOutput, nil, out, errOut, prefix)
 }
 
-func saveLeanProofFile(path, code string) error {
+func saveOutputFile(path string, data []byte) error {
 	dir := filepath.Dir(path)
 	if dir != "" && dir != "." {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return err
 		}
 	}
-	return os.WriteFile(path, []byte(code), 0644)
+	return os.WriteFile(path, data, 0644)
+}
+
+func saveLeanProofFile(path, code string) error {
+	return saveOutputFile(path, []byte(code))
 }
 
 func replayCertificate(certPath string, out, errOut io.Writer) int {
@@ -1128,7 +1191,7 @@ func printHelp(fs *flag.FlagSet, out io.Writer, noColor bool) {
 	categories := []flagCategory{
 		{
 			titleKey: "cli.help_group_formatting",
-			flags:    []string{"format", "pretty", "latex", "typst", "ascii", "no-color", "theme"},
+			flags:    []string{"format", "out", "pretty", "latex", "typst", "ascii", "no-color", "theme"},
 		},
 		{
 			titleKey: "cli.help_group_numerics",
@@ -1160,6 +1223,7 @@ func printHelp(fs *flag.FlagSet, out io.Writer, noColor bool) {
 		"lang":          "<code>",
 		"approx-digits": "<int>",
 		"format":        "<fmt>",
+		"out":           "<file>",
 		"certificate":   "<file>",
 		"replay":        "<file>",
 		"lean-file":     "<path>",

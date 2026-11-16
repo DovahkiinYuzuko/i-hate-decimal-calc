@@ -235,7 +235,7 @@ func handleApart(args []Node, env *Env) (Node, error) {
 	var res Node
 	var err error
 	if len(args) == 1 {
-		res, err = EvalApart(args[0])
+		res, err = EvalApartWithTracer(args[0], tracer)
 	} else {
 		varName := ""
 		if v, ok := args[1].(*VarNode); ok {
@@ -246,7 +246,7 @@ func handleApart(args []Node, env *Env) (Node, error) {
 			}
 			return nil, fmt.Errorf("%s", i18n.T("errors.arg_must_be_var", "apart", "second", args[1].String()))
 		}
-		res, err = EvalApart(args[0], varName)
+		res, err = EvalApartWithTracer(args[0], tracer, varName)
 	}
 	if tracer != nil {
 		tracer.EndScope(res, nil)

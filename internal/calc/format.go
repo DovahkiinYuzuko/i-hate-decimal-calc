@@ -607,6 +607,9 @@ func FormatTypst(n Node) string {
 	if n == nil {
 		return "$$"
 	}
+	if pn, ok := n.(*PlotNode); ok && pn.Typst != "" {
+		return pn.Typst
+	}
 	return fmt.Sprintf("$%s$", formatTypstNode(n))
 }
 

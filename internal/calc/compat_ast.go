@@ -145,6 +145,7 @@ var (
 	NewList                 = ast.NewList
 	NewMatrix               = ast.NewMatrix
 	NewPlotNode             = ast.NewPlotNode
+	NewPlotNodeWithVectors  = ast.NewPlotNodeWithVectors
 	NewRelOp                = ast.NewRelOp
 	NewQuantifier           = ast.NewQuantifier
 	NewPiecewiseNode        = ast.NewPiecewiseNode

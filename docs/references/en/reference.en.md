@@ -59,7 +59,8 @@ In addition to the interactive REPL, `ihd` provides subcommands and CLI flags fo
 
 | Option / Flag | Syntax & Example | Description |
 | :--- | :--- | :--- |
-| `--format` | `ihd --format typst "1/2 + sqrt(2)"` | Specifies output format (`typst`, `latex`, `ascii`, `pretty`) |
+| `--format` | `ihd --format typst "1/2 + sqrt(2)"` | Specifies output format (`typst`, `latex`, `ascii`, `pretty`, `svg`) |
+| `--out` | `ihd --format svg --out graph.svg "plot(1/x, [-3, 3])"` | Writes formatted output to specified file path (UTF-8 without BOM) |
 | `--pretty` | `ihd --pretty "1/2 + sqrt(2)/2"` | 2D multi-line ASCII-art typesetting output |
 | `--latex` | `ihd --latex "1/2 + sqrt(2)"` | Outputs expression in LaTeX math mode (`$$ ... $$`) |
 | `--typst` | `ihd --typst "1/2 + sqrt(2)"` | Outputs expression in Typst math mode (`$ ... $`) |
@@ -241,7 +242,7 @@ Implicit multiplication (e.g., `2pi` or `(1+2)(3+4)`) causes a syntax ambiguity 
 | `alg_inv` | `alg_inv(alg_node)` | Computes multiplicative inverse $\beta^{-1} \in \mathbb{Q}(\alpha)$ via Extended Euclidean Algorithm |
 | `min_poly` / `minimal_polynomial` | `min_poly(rep, min_poly)` | Derives the irreducible monic minimal polynomial $m(x) \in \mathbb{Q}[x]$ of an algebraic element |
 | `solve_diophantine` | `solve_diophantine(3*x + 5*y == 7, [x, y])` | Exact Diophantine equation solver for linear Diophantine equations (via Extended Euclidean Algorithm and Bezout's identity parameterized by integer $t$) and Pythagorean triples. Supports `--verify` algebraic certificate and `--lean` formal proof generation |
-| `pell_solve` / `solve_pell` / `pell` | `pell_solve(D)` / `pell_solve(D, 1)` / `pell_solve(D, -1)` | Exact solver for Pell's equation $x^2 - D y^2 = 1$ and negative Pell's equation $x^2 - D y^2 = -1$, computing fundamental integer solutions $(x_1, y_1)$ via continued fraction expansion of $\sqrt{D}$. Supports `--verify` and `--lean` (`by decide` proof) |
+| `pell_solve` / `solve_pell` / `pell` | `pell_solve(D)` / `pell_solve(D, 1)` / `pell_solve(D, -1)` | Exact solver for Pell's equation $x^2 - D y^2 = 1$ and negative Pell's equation $x^2 - D y^2 = -1$, computing fundamental integer solutions $(x_1, y_1)$ via continued fraction expansion of $\sqrt{D}$. Supports `--verify` and `--lean` (`by norm_num` proof) |
 | `to_primitive_element` / `primitive_element` | `to_primitive_element([sqrt(2), sqrt(3)])` / `to_primitive_element([x^2 - 2, x^2 - 3])` | Derives the simple extension isomorphism $\mathbb{Q}(\theta) \cong \mathbb{Q}(\alpha_1, \dots, \alpha_k)$ via the Primitive Element Theorem. Computes primitive element symbol, composite minimal polynomial $m_\theta(x)$, and generator representation polynomial list $[P_{\alpha_1}(\theta), \dots, P_{\alpha_k}(\theta)]$ using Sylvester resultants and algebraic field GCD. `primitive_element` is an alias. Supports `--verify` and `--lean` formal proof verification |
 | `fib` / `fibonacci` | `fib(n)` / `fibonacci(n)` | Fibonacci number $F_n$. Evaluated in $O(\log n)$ sub-quadratic time via the Fast Doubling algorithm. Supports negative integer inputs via negafibonacci relations $F_{-n} = (-1)^{n+1} F_n$ |
 | `digit_count` | `digit_count(n)` | Exact digit count of giant integers in base 10. Example: `digit_count(fib(10000))` $\to$ `2090` |
@@ -544,6 +545,7 @@ External verification of results, certificate emission and independent replay, L
 | :--- | :--- | :--- |
 | `verify` | `verify(integrate(1/(x^2+1), x), atan(x))` | Independently verifies algebraic equivalence of two expressions and issues an algebraic verification certificate |
 | `plot` | `plot(sin(x), [-pi, pi])` | High-resolution terminal curve plotter using Unicode 2×4 Braille characters (automatic root/extrema detection, singularity discontinuity handling) |
+| `plot_svg` | `plot_svg(1/x, [-3, 3])` | Generates a standalone vector SVG 2D function plot (supports optional `y_range` and output file path) |
 | `ProofTrace` | Internal Data Structure | Data structure storing each step of the derivation (Before/After nodes, applied rule, residual expression, verification status). Acts as a shared representation for derivations, reverse-checks, and Lean 4 code generation |
 | `--explain` / `explain` / `steps` | `ihd --explain "1/(sqrt(2)+1)"` | Displays tree-formatted step-by-step algebraic derivations (radical denesting, rationalization, factoring, differentiation rules, etc.) based on derivation step sequences |
 | `--verify` / `verify` | `ihd --verify "factor(x^2 - 1)"` | Checks algebraic correctness for steps and results against defining relations and derivatives, confirming that residuals vanish |

@@ -198,6 +198,8 @@ func ToLeanSyntax(node Node) (string, error) {
 			baseStr = "(" + baseStr + ")"
 		} else if _, isMul := n.Base.(*MulNode); isMul {
 			baseStr = "(" + baseStr + ")"
+		} else if _, isPow := n.Base.(*PowNode); isPow {
+			baseStr = "(" + baseStr + ")"
 		}
 
 		expStr, err := ToLeanSyntax(n.Exp)
@@ -205,7 +207,13 @@ func ToLeanSyntax(node Node) (string, error) {
 			return "", err
 		}
 		if rat, ok := n.Exp.(*RationalNode); ok && rat.Val != nil && rat.Val.IsInt() && rat.Val.Sign() < 0 {
-			expStr = fmt.Sprintf("(%s : ℤ)", rat.Val.Num().String())
+			expStr = fmt.Sprintf("(%s : ℤ)", rat.Val.Num().String()) // txthc-ignore
+		} else if u, ok := n.Exp.(*UnaryOpNode); ok && u.Op == "-" {
+			if rat, ok2 := u.Expr.(*RationalNode); ok2 && rat.Val != nil && rat.Val.IsInt() && rat.Val.Sign() > 0 {
+				expStr = fmt.Sprintf("(-%s : ℤ)", rat.Val.Num().String()) // txthc-ignore
+			} else {
+				expStr = "(" + expStr + ")"
+			}
 		} else if _, isAdd := n.Exp.(*AddNode); isAdd {
 			expStr = "(" + expStr + ")"
 		} else if _, isMul := n.Exp.(*MulNode); isMul {
@@ -250,6 +258,11 @@ func ToLeanSyntax(node Node) (string, error) {
 			return fmt.Sprintf("Real.exp (%s)", strings.Join(argStrs, ", ")), nil
 		case "ln", "log":
 			return fmt.Sprintf("Real.log (%s)", strings.Join(argStrs, ", ")), nil
+		case "mod":
+			if len(argStrs) == 2 {
+				return fmt.Sprintf("((%s : ℤ) %% (%s : ℤ))", argStrs[0], argStrs[1]), nil // txthc-ignore
+			}
+			return fmt.Sprintf("%s (%s)", escapeLeanIdent(n.Name), strings.Join(argStrs, ", ")), nil
 		default:
 			return fmt.Sprintf("%s (%s)", escapeLeanIdent(n.Name), strings.Join(argStrs, ", ")), nil
 		}
@@ -586,8 +599,12 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		equalityStr = fmt.Sprintf("((%s : ℤ)^2 - (%s : ℤ) * (%s : ℤ)^2 : ℤ) = 1", xStr, dStr, yStr)
-		tactic = "by decide"
+		target := c.Target
+		if target == 0 {
+			target = 1
+		}
+		equalityStr = fmt.Sprintf("((%s : ℤ)^2 - (%s : ℤ) * (%s : ℤ)^2 : ℤ) = (%d : ℤ)", xStr, dStr, yStr, target) // txthc-ignore
+		tactic = "by norm_num"
 
 	case *LinearDiophantineCertificate:
 		if c.A == nil || c.B == nil || c.C == nil || c.XSolution == nil || c.YSolution == nil {
@@ -1015,6 +1032,58 @@ func TranspileCertificateIRToLean(cert Certificate) (string, error) {
 	case *ConstructibilityCertificate:
 		return TranspileConstructibilityCertificateToLean(c, "ihd_constructibility_proof")
 
+	case *ModularInverseCertificate:
+		if c.A == nil || c.Modulus == nil || c.Inverse == nil {
+			return "", fmt.Errorf("%s", i18n.T("lean.err_incomplete_certificate_witness", "ModularInverseCertificate"))
+		}
+		aStr, err := ToLeanSyntax(c.A)
+		if err != nil {
+			return "", err
+		}
+		mStr, err := ToLeanSyntax(c.Modulus)
+		if err != nil {
+			return "", err
+		}
+		invStr, err := ToLeanSyntax(c.Inverse)
+		if err != nil {
+			return "", err
+		}
+		if c.BezoutCoeff != nil {
+			yStr, err := ToLeanSyntax(c.BezoutCoeff)
+			if err != nil {
+				return "", err
+			}
+			equalityStr = fmt.Sprintf("(((%s : ℤ) * (%s : ℤ) + (%s : ℤ) * (%s : ℤ) : ℤ) = 1) ∧ ((((%s : ℤ) * (%s : ℤ)) %% (%s : ℤ) : ℤ) = 1) ∧ (0 ≤ (%s : ℤ) ∧ (%s : ℤ) < (%s : ℤ))", // txthc-ignore
+				aStr, invStr, mStr, yStr, aStr, invStr, mStr, invStr, invStr, mStr)
+		} else {
+			equalityStr = fmt.Sprintf("((((%s : ℤ) * (%s : ℤ)) %% (%s : ℤ) : ℤ) = 1) ∧ (0 ≤ (%s : ℤ) ∧ (%s : ℤ) < (%s : ℤ))", // txthc-ignore
+				aStr, invStr, mStr, invStr, invStr, mStr)
+		}
+		tactic = "by norm_num"
+
+	case *CRTCertificate:
+		if c.Solution == nil || len(c.Remainders) == 0 || len(c.Remainders) != len(c.Moduli) {
+			return "", fmt.Errorf("%s", i18n.T("lean.err_incomplete_certificate_witness", "CRTCertificate"))
+		}
+		solStr, err := ToLeanSyntax(c.Solution)
+		if err != nil {
+			return "", err
+		}
+		var congs []string
+		for i := range c.Remainders {
+			rStr, err := ToLeanSyntax(c.Remainders[i])
+			if err != nil {
+				return "", err
+			}
+			mStr, err := ToLeanSyntax(c.Moduli[i])
+			if err != nil {
+				return "", err
+			}
+			congs = append(congs, fmt.Sprintf("((((%s : ℤ) %% (%s : ℤ)) : ℤ) = (((%s : ℤ) %% (%s : ℤ)) : ℤ))", solStr, mStr, rStr, mStr)) // txthc-ignore
+		}
+		equalityStr = strings.Join(congs, " ∧ ") // txthc-ignore
+		tactic = "by norm_num"
+
 	default:
 		eq := cert.EquationString()
 		if eq != "" && (cert.Domain() == CertificateDomain(DomainFactor) || cert.Domain() == CertificateDomain(DomainGeneral) || cert.Domain() == CertificateDomain(DomainRationalApart)) {
@@ -1052,6 +1121,7 @@ func TranspileCertificateToLean(cert *VerificationCertificate, inputExpr, result
 			*IntegerRelationCertificate, *EllipticPointCertificate, *ImpossibilityCertificate,
 			*SmithNormalFormCertificate, *HermiteNormalFormCertificate, *IdealDecompositionCertificate,
 			*KirchhoffCertificate, *MinimaxCertificate, *MarkovStationaryCertificate,
+			*ModularInverseCertificate, *CRTCertificate,
 			*FPSCertificate, *CodingCertificate:
 			return TranspileCertificateIRToLean(certIR)
 		}
@@ -1448,7 +1518,7 @@ func DetermineRequiredImports(cert Certificate, nodes ...Node) []string {
 			importsMap["Mathlib.LinearAlgebra.Matrix.Notation"] = true
 			importsMap["Mathlib.Tactic.FinCases"] = true
 			importsMap["Mathlib.Tactic.NormNum"] = true
-		case *PellCertificate:
+		case *PellCertificate, *ModularInverseCertificate, *CRTCertificate:
 			importsMap["Mathlib.Data.Int.Basic"] = true
 			importsMap["Mathlib.Tactic.NormNum"] = true
 		case *RecurrenceCertificate:
@@ -2269,7 +2339,7 @@ func hasVariableDenominator(nodes ...Node) bool {
 func inferTheoremDomainType(cert Certificate, nodes ...Node) LeanDomainType {
 	if cert != nil {
 		switch c := cert.(type) {
-		case *PellCertificate, *LinearDiophantineCertificate:
+		case *PellCertificate, *LinearDiophantineCertificate, *ModularInverseCertificate, *CRTCertificate:
 			return DomainInt
 		case *IntegerRelationCertificate:
 			allNodes := append([]Node{}, c.Elements...)

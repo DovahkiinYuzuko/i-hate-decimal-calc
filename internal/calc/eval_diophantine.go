@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/provenance"
 )
 
 // PellSolve calculates the fundamental positive integer solution (x_1, y_1)
@@ -384,6 +385,11 @@ func EvalPellSolve(args []Node) (Node, error) {
 
 // EvalSolveDiophantine implements the `solve_diophantine(eq [, [vars]])` CAS function.
 func EvalSolveDiophantine(args []Node) (Node, error) {
+	return EvalSolveDiophantineWithTracer(args, nil)
+}
+
+// EvalSolveDiophantineWithTracer solves Diophantine equations and records provenance steps when rec is non-nil.
+func EvalSolveDiophantineWithTracer(args []Node, rec *provenance.TraceRecorder) (Node, error) {
 	if len(args) < 1 || len(args) > 2 {
 		return nil, fmt.Errorf("%s", i18n.T("diophantine.err_solve_diophantine_args"))
 	}
@@ -466,7 +472,23 @@ func EvalSolveDiophantine(args []Node) (Node, error) {
 				return nil, err
 			}
 			_ = fsm.Transition(DiophantineStateSuccess)
-			return &ListNode{Elements: []Node{xSol, ySol}}, nil
+			resList := &ListNode{Elements: []Node{xSol, ySol}}
+			if rec != nil {
+				xRel, okX := xSol.(*RelOpNode)
+				yRel, okY := ySol.(*RelOpNode)
+				if okX && okY {
+					rec.StartScope(provenance.RuleDiophantineLinear, provenance.RelationEq, nil, eqNode, provenance.VisPresentable)
+					lhs := &AddNode{Terms: []Node{
+						&MulNode{Factors: []Node{NewRationalFromBigRat(new(big.Rat).SetInt(aCoeff)), xRel.RHS}},
+						&MulNode{Factors: []Node{NewRationalFromBigRat(new(big.Rat).SetInt(bCoeff)), yRel.RHS}},
+					}}
+					rhs := NewRationalFromBigRat(new(big.Rat).SetInt(cVal))
+					params := map[string]Node{"forall_param": &VarNode{Name: "t"}}
+					rec.RecordStep(provenance.RuleDiophantineLinear, provenance.RelationEq, nil, lhs, rhs, params, nil, provenance.TrustCertified, provenance.VisPresentable)
+					rec.EndScope(resList, nil)
+				}
+			}
+			return resList, nil
 		}
 
 		// 2. Check for Pell's Equation: x^2 - D*y^2 - 1 = 0  or  x^2 - D*y^2 + 1 = 0
@@ -508,10 +530,12 @@ func EvalSolveDiophantine(args []Node) (Node, error) {
 						return nil, err
 					}
 					_ = fsm.Transition(DiophantineStateSuccess)
-					return &ListNode{Elements: []Node{
+					resList := &ListNode{Elements: []Node{
 						&RelOpNode{Op: "==", LHS: &VarNode{Name: v1}, RHS: NewRationalFromBigRat(new(big.Rat).SetInt(x1))},
 						&RelOpNode{Op: "==", LHS: &VarNode{Name: v2}, RHS: NewRationalFromBigRat(new(big.Rat).SetInt(y1))},
-					}}, nil
+					}}
+					recordPellTrace(rec, eqNode, resList, dVal, x1, y1, 1)
+					return resList, nil
 				} else if constTerm.Cmp(big.NewInt(1)) == 0 {
 					// x^2 - D*y^2 = -1
 					x1, y1, err := PellNegativeSolve(dVal)
@@ -520,10 +544,12 @@ func EvalSolveDiophantine(args []Node) (Node, error) {
 						return nil, err
 					}
 					_ = fsm.Transition(DiophantineStateSuccess)
-					return &ListNode{Elements: []Node{
+					resList := &ListNode{Elements: []Node{
 						&RelOpNode{Op: "==", LHS: &VarNode{Name: v1}, RHS: NewRationalFromBigRat(new(big.Rat).SetInt(x1))},
 						&RelOpNode{Op: "==", LHS: &VarNode{Name: v2}, RHS: NewRationalFromBigRat(new(big.Rat).SetInt(y1))},
-					}}, nil
+					}}
+					recordPellTrace(rec, eqNode, resList, dVal, x1, y1, -1)
+					return resList, nil
 				}
 			}
 		}
@@ -547,6 +573,7 @@ func EvalSolveDiophantine(args []Node) (Node, error) {
 					return nil, err
 				}
 				_ = fsm.Transition(DiophantineStateSuccess)
+				recordPythagoreanTrace(rec, eqNode, sol)
 				return sol, nil
 			} else if c1.Cmp(big.NewInt(1)) == 0 && c3.Cmp(big.NewInt(1)) == 0 && c2.Cmp(big.NewInt(-1)) == 0 {
 				_ = fsm.Transition(DiophantineStateSolvePythagorean)
@@ -556,6 +583,7 @@ func EvalSolveDiophantine(args []Node) (Node, error) {
 					return nil, err
 				}
 				_ = fsm.Transition(DiophantineStateSuccess)
+				recordPythagoreanTrace(rec, eqNode, sol)
 				return sol, nil
 			} else if c2.Cmp(big.NewInt(1)) == 0 && c3.Cmp(big.NewInt(1)) == 0 && c1.Cmp(big.NewInt(-1)) == 0 {
 				_ = fsm.Transition(DiophantineStateSolvePythagorean)
@@ -565,6 +593,7 @@ func EvalSolveDiophantine(args []Node) (Node, error) {
 					return nil, err
 				}
 				_ = fsm.Transition(DiophantineStateSuccess)
+				recordPythagoreanTrace(rec, eqNode, sol)
 				return sol, nil
 			}
 		}
@@ -574,9 +603,49 @@ func EvalSolveDiophantine(args []Node) (Node, error) {
 	return nil, fmt.Errorf("%s", i18n.T("diophantine.err_unsupported_equation_type", eqNode.String()))
 }
 
+func recordPellTrace(rec *provenance.TraceRecorder, eqNode, resList Node, dVal, x1, y1 *big.Int, target int64) {
+	if rec == nil {
+		return
+	}
+	rec.StartScope(provenance.RuleDiophantinePell, provenance.RelationEq, nil, eqNode, provenance.VisPresentable)
+	x1Node := NewRationalFromBigRat(new(big.Rat).SetInt(x1))
+	y1Node := NewRationalFromBigRat(new(big.Rat).SetInt(y1))
+	dNode := NewRationalFromBigRat(new(big.Rat).SetInt(dVal))
+	lhs := &AddNode{Terms: []Node{
+		&PowNode{Base: x1Node, Exp: mustRational(2, 1)},
+		&UnaryOpNode{Op: "-", Expr: &MulNode{Factors: []Node{dNode, &PowNode{Base: y1Node, Exp: mustRational(2, 1)}}}},
+	}}
+	rec.RecordStep(provenance.RuleDiophantinePell, provenance.RelationEq, nil, lhs, mustRational(target, 1), nil, nil, provenance.TrustCertified, provenance.VisPresentable)
+	rec.EndScope(resList, nil)
+}
+
+func recordPythagoreanTrace(rec *provenance.TraceRecorder, eqNode, sol Node) {
+	if rec == nil {
+		return
+	}
+	list, ok := sol.(*ListNode)
+	if !ok || len(list.Elements) < 3 {
+		return
+	}
+	r0, ok0 := list.Elements[0].(*RelOpNode)
+	r1, ok1 := list.Elements[1].(*RelOpNode)
+	r2, ok2 := list.Elements[2].(*RelOpNode)
+	if !ok0 || !ok1 || !ok2 {
+		return
+	}
+	rec.StartScope(provenance.RuleDiophantinePythagorean, provenance.RelationEq, nil, eqNode, provenance.VisPresentable)
+	lhs := &AddNode{Terms: []Node{
+		&PowNode{Base: r0.RHS, Exp: mustRational(2, 1)},
+		&PowNode{Base: r1.RHS, Exp: mustRational(2, 1)},
+	}}
+	rhs := &PowNode{Base: r2.RHS, Exp: mustRational(2, 1)}
+	rec.RecordStep(provenance.RuleDiophantinePythagorean, provenance.RelationEq, nil, lhs, rhs, nil, nil, provenance.TrustCertified, provenance.VisPresentable)
+	rec.EndScope(sol, nil)
+}
+
 func init() {
 	RegisterHandler("solve_diophantine", func(args []Node, env *Env) (Node, error) {
-		return EvalSolveDiophantine(args)
+		return EvalSolveDiophantineWithTracer(args, env.GetTracer())
 	})
 	RegisterHandler("pell_solve", func(args []Node, env *Env) (Node, error) {
 		return EvalPellSolve(args)

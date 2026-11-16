@@ -11,3 +11,10 @@ CAT24-009,cat_24_advanced_number_theory_modular_arithmetic,is_prime(13),,exact,1
 CAT24-010,cat_24_advanced_number_theory_modular_arithmetic,is_prime(561),,exact,0,,0,deductive,Number Theory: Prime test Carmichael number 561
 CAT24-011,cat_24_advanced_number_theory_modular_arithmetic,is_prime(1000000007),,exact,1,,0,deductive,Number Theory: Prime test large prime 1000000007
 CAT24-012,cat_24_advanced_number_theory_modular_arithmetic,is_prime(2305843009213693951),,exact,1,,0,deductive,Number Theory: Prime test 64-bit Mersenne prime M61
+CAT24-013,cat_24_advanced_number_theory_modular_arithmetic,"--verify ""inv_mod(3, 11)""",,contains,[VERIFIED:,,0,deductive,Number Theory: Verify inv_mod certificate
+CAT24-014,cat_24_advanced_number_theory_modular_arithmetic,"--explain --lean ""inv_mod(3, 11)""",,contains,norm_num,,0,deductive,Number Theory: Explain and Lean 4 projection for inv_mod
+CAT24-015,cat_24_advanced_number_theory_modular_arithmetic,"--explain ""inv_mod(2, 4)""",,error,,,1,contradiction,Number Theory: Non-coprime modular inverse fails cleanly under --explain
+CAT24-016,cat_24_advanced_number_theory_modular_arithmetic,"--verify ""crt([2, 3, 2], [3, 5, 7])""",,contains,[VERIFIED:,,0,deductive,Number Theory: Verify CRT certificate
+CAT24-017,cat_24_advanced_number_theory_modular_arithmetic,"--explain --lean ""crt([2, 3, 2], [3, 5, 7])""",,contains,norm_num,,0,deductive,Number Theory: Explain and Lean 4 projection for CRT
+CAT24-018,cat_24_advanced_number_theory_modular_arithmetic,"--verify ""crt([1, 2], [4, 6])""",,error,,,1,contradiction,Number Theory: Incompatible non-coprime CRT fails cleanly under --verify
+CAT24-019,cat_24_advanced_number_theory_modular_arithmetic,"""mod(10 * inv_mod(10, 17), 17)""",,exact,1,,0,metamorphic,Number Theory: Metamorphic modular inverse identity a * a^-1 mod m = 1

@@ -4,3 +4,8 @@ CAT26-002,cat_26_partial_fractions_rational_simplification,"""apart((x^2 + 1) / 
 CAT26-003,cat_26_partial_fractions_rational_simplification,"""together(1/x + 1/(x + 1))""",,exact,(1 + 2*x)*(x + x^2)^-1,,0,deductive,Rational: Together basic sum
 CAT26-004,cat_26_partial_fractions_rational_simplification,"""together(1/(x - 1) - 1/(x + 1))""",,exact,2*(-1 + x^2)^-1,,0,deductive,Rational: Together difference cancellation
 CAT26-005,cat_26_partial_fractions_rational_simplification,"""apart(together(1/(x - 1) - 1/(x + 1)))""",,exact,(-1 + x)^-1 - (1 + x)^-1,,0,deductive,Rational: Round-trip together and apart
+CAT26-006,cat_26_partial_fractions_rational_simplification,"--verify ""apart(1 / (x^2 - 1), x)""",,contains,[VERIFIED:,,0,deductive,Rational: Verify apart certificate
+CAT26-007,cat_26_partial_fractions_rational_simplification,"--explain --lean ""apart(1 / (x^2 - 1), x)""",,contains,field_simp,,0,deductive,Rational: Explain and Lean 4 field_simp calc projection for apart
+CAT26-008,cat_26_partial_fractions_rational_simplification,"--explain --typst ""apart((x^2 + 1) / (x - 1), x)""",,contains,Derivation Steps,,0,deductive,Rational: Explain Typst projection for improper apart
+CAT26-009,cat_26_partial_fractions_rational_simplification,"""together(apart((x^2 + 1) / (x - 1), x)) - (x^2 + 1) / (x - 1) == 0""",,exact,true,,0,metamorphic,Rational: Metamorphic round-trip identity apart followed by together
+CAT26-010,cat_26_partial_fractions_rational_simplification,"""apart(1 / 0, x)""",,error,,division by zero,1,contradiction,Rational: Singularity division by zero error in apart

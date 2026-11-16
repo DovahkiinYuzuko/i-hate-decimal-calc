@@ -1,9 +1,11 @@
 package calc
 
 import (
-	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"fmt"
 	"math/big"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/provenance"
 )
 
 // polySub subtracts polynomial B from A: A - B.
@@ -357,6 +359,86 @@ func collectDenominatorFactors(denNode Node, varName string) ([]polyFactorPower,
 // EvalApart implements partial fraction decomposition (PFD).
 // Usage: apart(expr, [var])
 func EvalApart(expr Node, varNames ...string) (Node, error) {
+	return EvalApartWithTracer(expr, nil, varNames...)
+}
+
+// ExtractPolyQuotient returns the polynomial quotient Q(x) of a rational expression N(x)/D(x),
+// which can be reused for horizontal/oblique asymptote extraction.
+func ExtractPolyQuotient(expr Node, varName string) (Node, bool) {
+	if expr == nil || varName == "" {
+		return nil, false
+	}
+	unified, err := EvalTogether(expr)
+	if err != nil {
+		return nil, false
+	}
+	numNode, denNode := extractNumeratorDenominator(unified)
+	if isOne(denNode) {
+		return nil, false
+	}
+	polyNum, okNum := extractPoly(numNode, varName)
+	polyDen, okDen := extractPoly(denNode, varName)
+	if !okNum || !okDen || isPolyZero(polyDen) || polyDen.degree() == 0 {
+		return nil, false
+	}
+	quot, rem, divOk := polyDivide(polyNum, polyDen)
+	if !divOk || isPolyZero(rem) {
+		return nil, false
+	}
+	return quot.toNode(), true
+}
+
+func recordApartTraceLayers(rec *provenance.TraceRecorder, polyNum, polyDen, quot, rem *univariatePoly, factors []polyFactorPower, simplified, finalRes Node) {
+	if rec == nil {
+		return
+	}
+	qMulD := &MulNode{Factors: []Node{quot.toNode(), polyDen.toNode()}}
+	var divRHS Node
+	switch {
+	case isPolyZero(quot) && isPolyZero(rem):
+		divRHS = mustRational(0, 1)
+	case isPolyZero(quot):
+		divRHS = rem.toNode()
+	case isPolyZero(rem):
+		divRHS = qMulD
+	default:
+		divRHS = &AddNode{Terms: []Node{qMulD, rem.toNode()}}
+	}
+	rec.RecordStep(provenance.RuleAlgebraApartPoly, provenance.RelationEq, nil, polyNum.toNode(), divRHS, nil, nil, provenance.TrustCertified, provenance.VisPresentable)
+
+	var conds []provenance.SideCondition
+	seen := make(map[string]bool)
+	for _, f := range factors {
+		baseNode := f.base.toNode()
+		if len(collectVariables(baseNode)) > 0 {
+			key := baseNode.String()
+			if !seen[key] {
+				seen[key] = true
+				conds = append(conds, provenance.SideCondition{
+					Kind:        "NonZero",
+					Target:      baseNode,
+					Description: i18n.T("errors.apart_nonzero_factor"),
+				})
+			}
+		}
+	}
+	denTarget := polyDen.toNode()
+	if len(collectVariables(denTarget)) > 0 {
+		denKey := denTarget.String()
+		if !seen[denKey] {
+			conds = append(conds, provenance.SideCondition{
+				Kind:        "NonZero",
+				Target:      denTarget,
+				Description: i18n.T("errors.apart_nonzero_denominator"),
+			})
+		}
+	}
+	rec.RecordStep(provenance.RuleAlgebraApartRational, provenance.RelationEq, nil, simplified, finalRes, nil, conds, provenance.TrustCertified, provenance.VisPresentable)
+}
+
+// EvalApartWithTracer performs partial fraction decomposition and records two-layer provenance steps
+// (Layer 1: division-free polynomial identity; Layer 2: rational identity with atomic NonZero side conditions).
+func EvalApartWithTracer(expr Node, rec *provenance.TraceRecorder, varNames ...string) (Node, error) {
 	if expr == nil {
 		return nil, fmt.Errorf("%s", i18n.T("rational.err_apart_nil_expression"))
 	}
@@ -381,7 +463,7 @@ func EvalApart(expr Node, varNames ...string) (Node, error) {
 	if addNode, ok := simplified.(*AddNode); ok {
 		var decomposedTerms []Node
 		for _, t := range addNode.Terms {
-			dec, err := EvalApart(t, v)
+			dec, err := EvalApartWithTracer(t, rec, v)
 			if err != nil {
 				return nil, err
 			}
@@ -419,10 +501,16 @@ func EvalApart(expr Node, varNames ...string) (Node, error) {
 
 	if isPolyZero(rem) {
 		if len(resultTerms) == 0 {
-			return mustRational(0, 1), nil
+			res := mustRational(0, 1)
+			recordApartTraceLayers(rec, polyNum, polyDen, quot, rem, nil, simplified, res)
+			return res, nil
 		}
 		sum, _ := simplifyAdd(resultTerms)
-		return Eval(sum)
+		res, evalErr := Eval(sum)
+		if evalErr == nil {
+			recordApartTraceLayers(rec, polyNum, polyDen, quot, rem, nil, simplified, res)
+		}
+		return res, evalErr
 	}
 
 	// 2. Factor denominator
@@ -432,24 +520,33 @@ func EvalApart(expr Node, varNames ...string) (Node, error) {
 		frac, _ := simplifyMul([]Node{rem.toNode(), mustInv(polyDen.toNode())})
 		resultTerms = append(resultTerms, frac)
 		sum, _ := simplifyAdd(resultTerms)
-		return Eval(sum)
+		res, evalErr := Eval(sum)
+		if evalErr == nil {
+			recordApartTraceLayers(rec, polyNum, polyDen, quot, rem, nil, simplified, res)
+		}
+		return res, evalErr
 	}
 
 	// Divide remainder by scalarCoeff
+	remScaled := rem
 	if !isOne(scalarCoeff) {
 		invScalar, _ := simplifyPow(scalarCoeff, mustRational(-1, 1))
 		invScalarVal, _ := Eval(invScalar)
-		rem = polyScale(rem, invScalarVal)
+		remScaled = polyScale(rem, invScalarVal)
 	}
 
 	// 3. Kung & Tong (1977) + Henrici (1971) decomposition
-	terms, err := decomposeKungTong(rem, factors)
+	terms, err := decomposeKungTong(remScaled, factors)
 	if err != nil {
 		// Fallback to quotient + remainder / den
-		frac, _ := simplifyMul([]Node{rem.toNode(), mustInv(polyDen.toNode())})
+		frac, _ := simplifyMul([]Node{remScaled.toNode(), mustInv(polyDen.toNode())})
 		resultTerms = append(resultTerms, frac)
 		sum, _ := simplifyAdd(resultTerms)
-		return Eval(sum)
+		res, evalErr := Eval(sum)
+		if evalErr == nil {
+			recordApartTraceLayers(rec, polyNum, polyDen, quot, rem, factors, simplified, res)
+		}
+		return res, evalErr
 	}
 
 	// Convert terms to AST nodes
@@ -467,17 +564,25 @@ func EvalApart(expr Node, varNames ...string) (Node, error) {
 		resultTerms = append(resultTerms, fracVal)
 	}
 
+	var finalRes Node
 	if len(resultTerms) == 0 {
-		return mustRational(0, 1), nil
+		finalRes = mustRational(0, 1)
+	} else if len(resultTerms) == 1 {
+		finalRes = resultTerms[0]
+	} else {
+		sum, err := simplifyAdd(resultTerms)
+		if err != nil {
+			return nil, err
+		}
+		finalRes, err = Eval(sum)
+		if err != nil {
+			return nil, err
+		}
 	}
-	if len(resultTerms) == 1 {
-		return resultTerms[0], nil
-	}
-	sum, err := simplifyAdd(resultTerms)
-	if err != nil {
-		return nil, err
-	}
-	return Eval(sum)
+
+	recordApartTraceLayers(rec, polyNum, polyDen, quot, rem, factors, simplified, finalRes)
+
+	return finalRes, nil
 }
 
 // EvalTogether puts sums of rational expressions over a common denominator.

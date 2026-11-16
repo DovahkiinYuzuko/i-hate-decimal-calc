@@ -29,10 +29,31 @@ func (v *LeanCalcVisitor) SelectTactic(node *DerivationNode) (string, error) {
 
 	rule := strings.ToLower(strings.TrimSpace(node.RuleID))
 	switch {
-	case strings.HasPrefix(rule, "algebra.") || rule == "ring" || rule == "expand" || rule == "factor":
+	case rule == RuleAlgebraApartRational:
+		return "by field_simp; try ring", nil
+	case rule == RuleAlgebraApartPoly || strings.HasPrefix(rule, "algebra.") || rule == "ring" || rule == "expand" || rule == "factor":
 		return "by ring", nil
-	case strings.HasPrefix(rule, "arith") || rule == "norm_num" || rule == "eval_num":
+	case rule == RuleNTInvMod || rule == RuleNTCRT || rule == RuleNTBezout || strings.HasPrefix(rule, "arith") || rule == "norm_num" || rule == "eval_num":
 		return "by norm_num", nil
+	case rule == RuleDiophantineLinear:
+		if node.Parameters != nil {
+			if pNode, ok := node.Parameters["forall_param"]; ok && pNode != nil {
+				return fmt.Sprintf("by intro %s; ring", escapeLeanIdent(pNode.String())), nil
+			}
+		}
+		return "by omega", nil
+	case rule == RuleDiophantinePell || rule == RuleDiophantinePythagorean:
+		var nodes []ast.Node
+		if node.Before != nil {
+			nodes = append(nodes, node.Before)
+		}
+		if node.After != nil {
+			nodes = append(nodes, node.After)
+		}
+		if len(CollectFreeVariables(nodes...)) == 0 {
+			return "by norm_num", nil
+		}
+		return "by ring", nil
 	case rule == "decide":
 		return "by decide", nil
 	default:
@@ -53,9 +74,10 @@ func (v *LeanCalcVisitor) FlattenSteps(root *DerivationNode) []*DerivationNode {
 		if n == nil {
 			return
 		}
-		// If node has Before and After, it is a rewriting step
-		if n.Before != nil && n.After != nil {
+		// Leaf/atomic step with Before and After (container scopes that have children delegate to children)
+		if len(n.Children) == 0 && n.Before != nil && n.After != nil {
 			steps = append(steps, n)
+			return
 		}
 		for _, child := range n.Children {
 			walk(child)
@@ -83,6 +105,12 @@ func (v *LeanCalcVisitor) RenderCalc(root *DerivationNode, theoremName string) (
 	}
 
 	var allNodes []ast.Node
+	hasIntDomainRule := false
+	seenConds := make(map[string]bool)
+	var condBinders []string
+	condIdx := 0
+	hasRationalDomainRule := false
+
 	for _, s := range steps {
 		if s.Before != nil {
 			allNodes = append(allNodes, s.Before)
@@ -90,55 +118,94 @@ func (v *LeanCalcVisitor) RenderCalc(root *DerivationNode, theoremName string) (
 		if s.After != nil {
 			allNodes = append(allNodes, s.After)
 		}
+		rLower := strings.ToLower(strings.TrimSpace(s.RuleID))
+		if strings.HasPrefix(rLower, "nt.") || strings.HasPrefix(rLower, "diophantine.") {
+			hasIntDomainRule = true
+		}
+		if rLower == RuleAlgebraApartRational {
+			hasRationalDomainRule = true
+		}
+		for _, cond := range s.Conditions {
+			if cond.Kind == "NonZero" && cond.Target != nil {
+				condStr, err := ToLeanSyntax(cond.Target)
+				if err == nil && condStr != "" && !seenConds[condStr] {
+					seenConds[condStr] = true
+					condBinders = append(condBinders, fmt.Sprintf("(h_nz_%d : (%s) ≠ 0)", condIdx, condStr)) // txthc-ignore
+					condIdx++
+				}
+			}
+		}
 	}
 
-	// 1. Validate each step and construct the calc lines
-	var calcLines []string
-	calcLines = append(calcLines, "calc")
+	// Check whether steps form a single transitive calc chain
+	isTransitiveChain := true
+	for i := 1; i < len(steps); i++ {
+		if steps[i].Before == nil || steps[i-1].After == nil || !steps[i].Before.Equal(steps[i-1].After) {
+			isTransitiveChain = false
+			break
+		}
+	}
+	for _, step := range steps {
+		if step.Parameters != nil && step.Parameters["forall_param"] != nil {
+			isTransitiveChain = false
+			break
+		}
+	}
 
 	var requiredImportsMap = map[string]bool{
 		"Mathlib.Tactic.Ring": true,
 	}
+
+	type stepGoal struct {
+		prop   string
+		tactic string
+	}
+	var stepGoals []stepGoal
+	var calcLines []string
+	calcLines = append(calcLines, "calc")
 
 	for i, step := range steps {
 		tactic, err := v.SelectTactic(step)
 		if err != nil {
 			return "", err
 		}
-
 		if strings.Contains(tactic, "norm_num") {
 			requiredImportsMap["Mathlib.Tactic.NormNum"] = true
 		}
+		if strings.Contains(tactic, "field_simp") {
+			requiredImportsMap["Mathlib.Tactic.FieldSimp"] = true
+		}
+		if strings.Contains(tactic, "omega") {
+			requiredImportsMap["Mathlib.Tactic.Omega"] = true
+		}
 
+		beforeStr, err := ToLeanSyntax(step.Before)
+		if err != nil {
+			return "", err
+		}
 		afterStr, err := ToLeanSyntax(step.After)
 		if err != nil {
 			return "", err
 		}
-		afterStr = formatCalcTerm(afterStr)
+		beforeFmt := formatCalcTerm(beforeStr)
+		afterFmt := formatCalcTerm(afterStr)
 
-		if i == 0 {
-			beforeStr, err := ToLeanSyntax(step.Before)
-			if err != nil {
-				return "", err
+		if isTransitiveChain {
+			if i == 0 {
+				calcLines = append(calcLines, fmt.Sprintf("  %s = %s := %s", beforeFmt, afterFmt, tactic))
+			} else {
+				calcLines = append(calcLines, fmt.Sprintf("  _ = %s := %s", afterFmt, tactic))
 			}
-			beforeStr = formatCalcTerm(beforeStr)
-			calcLines = append(calcLines, fmt.Sprintf("  %s = %s := %s", beforeStr, afterStr, tactic))
 		} else {
-			calcLines = append(calcLines, fmt.Sprintf("  _ = %s := %s", afterStr, tactic))
+			prop := fmt.Sprintf("(%s = %s)", beforeFmt, afterFmt)
+			if step.Parameters != nil {
+				if pNode, ok := step.Parameters["forall_param"]; ok && pNode != nil {
+					prop = fmt.Sprintf("(∀ (%s : ℤ), %s = %s)", escapeLeanIdent(pNode.String()), beforeFmt, afterFmt) // txthc-ignore
+				}
+			}
+			stepGoals = append(stepGoals, stepGoal{prop: prop, tactic: tactic})
 		}
 	}
-
-	// 2. Determine LHS and RHS of theorem statement
-	firstBefore, err := ToLeanSyntax(steps[0].Before)
-	if err != nil {
-		return "", err
-	}
-	lastAfter, err := ToLeanSyntax(steps[len(steps)-1].After)
-	if err != nil {
-		return "", err
-	}
-	firstBefore = formatCalcTerm(firstBefore)
-	lastAfter = formatCalcTerm(lastAfter)
 
 	// 3. Format imports
 	var imports []string
@@ -149,9 +216,27 @@ func (v *LeanCalcVisitor) RenderCalc(root *DerivationNode, theoremName string) (
 
 	// 4. Collect free variables and determine type domain
 	vars := CollectFreeVariables(allNodes...)
-	typeAnnot := "ℚ"
+	typeAnnot := "ℚ" // txthc-ignore
 	if containsRealNodes(allNodes...) {
-		typeAnnot = "ℝ"
+		typeAnnot = "ℝ" // txthc-ignore
+	} else if hasIntDomainRule && !hasRationalDomainRule {
+		typeAnnot = "ℤ" // txthc-ignore
+	}
+
+	// Exclude bound forall_param variables from module-level variable declarations
+	boundVars := make(map[string]bool)
+	for _, step := range steps {
+		if step.Parameters != nil {
+			if pNode, ok := step.Parameters["forall_param"]; ok && pNode != nil {
+				boundVars[escapeLeanIdent(pNode.String())] = true
+			}
+		}
+	}
+	var freeModuleVars []string
+	for _, vr := range vars {
+		if !boundVars[vr] {
+			freeModuleVars = append(freeModuleVars, vr)
+		}
 	}
 
 	var b strings.Builder
@@ -162,16 +247,48 @@ func (v *LeanCalcVisitor) RenderCalc(root *DerivationNode, theoremName string) (
 	}
 	b.WriteString("\n")
 
-	if len(vars) > 0 {
-		b.WriteString(fmt.Sprintf("variable (%s : %s)\n\n", strings.Join(vars, " "), typeAnnot))
+	if len(freeModuleVars) > 0 {
+		b.WriteString(fmt.Sprintf("variable (%s : %s)\n\n", strings.Join(freeModuleVars, " "), typeAnnot))
 	}
 
-	// 5. Theorem definition and indented calc block
-	b.WriteString(fmt.Sprintf("theorem %s : %s = %s := by\n", escapeLeanIdent(theoremName), firstBefore, lastAfter))
-	for _, line := range calcLines {
-		b.WriteString("  ")
-		b.WriteString(line)
-		b.WriteByte('\n')
+	hypStr := ""
+	if len(condBinders) > 0 {
+		hypStr = " " + strings.Join(condBinders, " ")
+	}
+
+	// 5. Theorem definition
+	if isTransitiveChain {
+		firstBefore, err := ToLeanSyntax(steps[0].Before)
+		if err != nil {
+			return "", err
+		}
+		lastAfter, err := ToLeanSyntax(steps[len(steps)-1].After)
+		if err != nil {
+			return "", err
+		}
+		b.WriteString(fmt.Sprintf("theorem %s%s : %s = %s := by\n", escapeLeanIdent(theoremName), hypStr, formatCalcTerm(firstBefore), formatCalcTerm(lastAfter)))
+		for _, line := range calcLines {
+			b.WriteString("  ")
+			b.WriteString(line)
+			b.WriteByte('\n')
+		}
+	} else if len(stepGoals) == 1 {
+		prop := strings.TrimPrefix(strings.TrimSuffix(stepGoals[0].prop, ")"), "(")
+		b.WriteString(fmt.Sprintf("theorem %s%s : %s := %s\n", escapeLeanIdent(theoremName), hypStr, prop, stepGoals[0].tactic))
+	} else {
+		var props []string
+		for _, g := range stepGoals {
+			props = append(props, g.prop)
+		}
+		b.WriteString(fmt.Sprintf("theorem %s%s : %s := by\n", escapeLeanIdent(theoremName), hypStr, strings.Join(props, " ∧ "))) // txthc-ignore
+		for idx, g := range stepGoals {
+			if idx < len(stepGoals)-1 {
+				b.WriteString("  constructor\n")
+				b.WriteString(fmt.Sprintf("  · %s\n", strings.TrimPrefix(g.tactic, "by "))) // txthc-ignore
+			} else {
+				b.WriteString(fmt.Sprintf("  · %s\n", strings.TrimPrefix(g.tactic, "by "))) // txthc-ignore
+			}
+		}
 	}
 
 	// 6. Mechanically verifiable axiom verification

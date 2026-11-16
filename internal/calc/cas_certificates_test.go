@@ -72,8 +72,8 @@ func TestPellVerificationAndLean(t *testing.T) {
 	if !strings.Contains(leanCode, "theorem ihd_pell_test") {
 		t.Errorf("lean code missing theorem name: %s", leanCode)
 	}
-	if !strings.Contains(leanCode, "by decide") {
-		t.Errorf("lean code missing by decide: %s", leanCode)
+	if !strings.Contains(leanCode, "by norm_num") && !strings.Contains(leanCode, "by decide") {
+		t.Errorf("lean code missing by norm_num/by decide: %s", leanCode)
 	}
 }
 

@@ -59,6 +59,7 @@ func init() {
 
 	// Visualization
 	RegisterHandler("plot", handlePlot)
+	RegisterHandler("plot_svg", handlePlotSVG)
 
 	// Graph theory
 	RegisterHandler("graph_laplacian", handleGraphLaplacian)
@@ -241,11 +242,11 @@ func handleRand(args []Node, env *Env) (Node, error) {
 }
 
 func handleInvMod(args []Node, env *Env) (Node, error) {
-	return EvalInvMod(args[0], args[1])
+	return EvalInvModWithTracer(args[0], args[1], env.GetTracer())
 }
 
 func handleCRT(args []Node, env *Env) (Node, error) {
-	return EvalCRT(args)
+	return EvalCRTWithTracer(args, env.GetTracer())
 }
 
 func handleTotient(args []Node, env *Env) (Node, error) {
@@ -330,6 +331,10 @@ func handleTriangleArea(args []Node, env *Env) (Node, error) {
 
 func handleTriangleCenters(args []Node, env *Env) (Node, error) {
 	return evalTriangleCentersFunc(args[0], args[1], args[2])
+}
+
+func handlePlotSVG(args []Node, env *Env) (Node, error) {
+	return EvalPlotSVG(args)
 }
 
 func handlePlot(args []Node, env *Env) (Node, error) {
