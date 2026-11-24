@@ -761,9 +761,205 @@ func interpSegPoint(a, b projVert, t float64, perspective bool) ProjectedPoint2D
 	}
 }
 
+func effectiveAspect(cam Camera3D) float64 {
+	if !isFiniteFloat(cam.Aspect) || cam.Aspect <= 0 {
+		return 1.0
+	}
+	return cam.Aspect
+}
+
+func pointDist2D(a, b ProjectedPoint2D) float64 {
+	return math.Hypot(a.X-b.X, a.Y-b.Y)
+}
+
+func pointToSegmentDist2D(p, a, b ProjectedPoint2D) float64 {
+	dx := b.X - a.X
+	dy := b.Y - a.Y
+	segLenSq := dx*dx + dy*dy
+	if segLenSq <= 1e-18 {
+		return math.Hypot(p.X-a.X, p.Y-a.Y)
+	}
+	t := ((p.X-a.X)*dx + (p.Y-a.Y)*dy) / segLenSq
+	if t < 0 {
+		t = 0
+	} else if t > 1 {
+		t = 1
+	}
+	projX := a.X + t*dx
+	projY := a.Y + t*dy
+	return math.Hypot(p.X-projX, p.Y-projY)
+}
+
+func simplifyCollinearStrokePoints(pts []ProjectedPoint2D, eps float64) []ProjectedPoint2D {
+	if len(pts) <= 2 {
+		return pts
+	}
+	dmax := 0.0
+	idx := 0
+	p0 := pts[0]
+	pn := pts[len(pts)-1]
+	for i := 1; i < len(pts)-1; i++ {
+		d := pointToSegmentDist2D(pts[i], p0, pn)
+		if d > dmax {
+			dmax = d
+			idx = i
+		}
+	}
+	if dmax > eps {
+		left := simplifyCollinearStrokePoints(pts[:idx+1], eps)
+		right := simplifyCollinearStrokePoints(pts[idx:], eps)
+		res := make([]ProjectedPoint2D, 0, len(left)+len(right)-1)
+		res = append(res, left[:len(left)-1]...)
+		res = append(res, right...)
+		return res
+	}
+	return []ProjectedPoint2D{p0, pn}
+}
+
+func reverseProjectedPoints(pts []ProjectedPoint2D) []ProjectedPoint2D {
+	n := len(pts)
+	out := make([]ProjectedPoint2D, n)
+	for i := 0; i < n; i++ {
+		out[i] = pts[n-1-i]
+	}
+	return out
+}
+
+func strokeDepthBounds(pts []ProjectedPoint2D) (float64, float64, bool) {
+	minD, maxD := math.Inf(1), math.Inf(-1)
+	found := false
+	for _, pt := range pts {
+		if !isFiniteFloat(pt.Depth) {
+			continue
+		}
+		if pt.Depth < minD {
+			minD = pt.Depth
+		}
+		if pt.Depth > maxD {
+			maxD = pt.Depth
+		}
+		found = true
+	}
+	return minD, maxD, found
+}
+
+func mergeAdjacentStrokes(raw []Stroke2D, mergeTol float64) []Stroke2D {
+	if len(raw) <= 1 {
+		return raw
+	}
+
+	globalMinD, globalMaxD := math.Inf(1), math.Inf(-1)
+	sMinD := make([]float64, len(raw))
+	sMaxD := make([]float64, len(raw))
+	sHasD := make([]bool, len(raw))
+	for i, st := range raw {
+		lo, hi, ok := strokeDepthBounds(st.Points)
+		sMinD[i], sMaxD[i], sHasD[i] = lo, hi, ok
+		if ok {
+			if lo < globalMinD {
+				globalMinD = lo
+			}
+			if hi > globalMaxD {
+				globalMaxD = hi
+			}
+		}
+	}
+	depthSpan := 0.0
+	if isFiniteFloat(globalMinD) && isFiniteFloat(globalMaxD) && globalMaxD > globalMinD {
+		depthSpan = globalMaxD - globalMinD
+	}
+	maxStrokeDepthRange := depthSpan / 6.0
+
+	used := make([]bool, len(raw))
+	merged := make([]Stroke2D, 0, len(raw))
+
+	for i := 0; i < len(raw); i++ {
+		if used[i] || len(raw[i].Points) < 2 {
+			continue
+		}
+		used[i] = true
+		kind := raw[i].Kind
+		cur := make([]ProjectedPoint2D, len(raw[i].Points))
+		copy(cur, raw[i].Points)
+		curMinD, curMaxD, curHasD := sMinD[i], sMaxD[i], sHasD[i]
+
+		for {
+			joined := false
+			for j := 0; j < len(raw); j++ {
+				if used[j] || raw[j].Kind != kind || len(raw[j].Points) < 2 {
+					continue
+				}
+				cand := raw[j].Points
+				newMinD, newMaxD := curMinD, curMaxD
+				newHasD := curHasD
+				if sHasD[j] {
+					if !newHasD {
+						newMinD, newMaxD, newHasD = sMinD[j], sMaxD[j], true
+					} else {
+						if sMinD[j] < newMinD {
+							newMinD = sMinD[j]
+						}
+						if sMaxD[j] > newMaxD {
+							newMaxD = sMaxD[j]
+						}
+					}
+				}
+				if depthSpan > 1e-9 && newHasD && (newMaxD-newMinD) > maxStrokeDepthRange {
+					continue
+				}
+
+				curHead := cur[0]
+				curTail := cur[len(cur)-1]
+				candHead := cand[0]
+				candTail := cand[len(cand)-1]
+
+				switch {
+				case pointDist2D(curTail, candHead) <= mergeTol:
+					cur = append(cur, cand[1:]...)
+					joined = true
+				case pointDist2D(curTail, candTail) <= mergeTol:
+					rev := reverseProjectedPoints(cand)
+					cur = append(cur, rev[1:]...)
+					joined = true
+				case pointDist2D(curHead, candTail) <= mergeTol:
+					next := make([]ProjectedPoint2D, 0, len(cand)+len(cur)-1)
+					next = append(next, cand...)
+					next = append(next, cur[1:]...)
+					cur = next
+					joined = true
+				case pointDist2D(curHead, candHead) <= mergeTol:
+					rev := reverseProjectedPoints(cand)
+					next := make([]ProjectedPoint2D, 0, len(rev)+len(cur)-1)
+					next = append(next, rev...)
+					next = append(next, cur[1:]...)
+					cur = next
+					joined = true
+				}
+				if joined {
+					used[j] = true
+					curMinD, curMaxD, curHasD = newMinD, newMaxD, newHasD
+					break
+				}
+			}
+			if !joined {
+				break
+			}
+		}
+
+		merged = append(merged, Stroke2D{
+			Points: cur,
+			Kind:   kind,
+		})
+	}
+	return merged
+}
+
 func clipSegmentsHLR(segments []seg3DInput, tris []tri2D, perspective bool) []Stroke2D {
-	grid := buildTriGrid2D(tris, 32)
-	var strokes []Stroke2D
+	var grid *triGrid2D
+	if len(tris) > 0 {
+		grid = buildTriGrid2D(tris, 32)
+	}
+	var rawStrokes []Stroke2D
 
 	for _, seg := range segments {
 		if !seg.a.valid || !seg.b.valid {
@@ -790,20 +986,10 @@ func clipSegmentsHLR(segments []seg3DInput, tris []tri2D, perspective bool) []St
 		var cur []ProjectedPoint2D
 		flush := func() {
 			if len(cur) >= 2 {
-				totalLen := 0.0
-				for i := 0; i < len(cur)-1; i++ {
-					totalLen += math.Hypot(cur[i+1].X-cur[i].X, cur[i+1].Y-cur[i].Y)
-				}
-				minKeep := 0.015
-				if seg.kind == "box" || seg.kind == "axis" || len(tris) == 0 {
-					minKeep = 1e-6
-				}
-				if totalLen >= minKeep {
-					strokes = append(strokes, Stroke2D{
-						Points: cur,
-						Kind:   seg.kind,
-					})
-				}
+				rawStrokes = append(rawStrokes, Stroke2D{
+					Points: cur,
+					Kind:   seg.kind,
+				})
 			}
 			cur = nil
 		}
@@ -827,6 +1013,29 @@ func clipSegmentsHLR(segments []seg3DInput, tris []tri2D, perspective bool) []St
 			cur = append(cur, p1)
 		}
 		flush()
+	}
+
+	merged := mergeAdjacentStrokes(rawStrokes, 1e-4)
+	strokes := make([]Stroke2D, 0, len(merged))
+	for _, st := range merged {
+		pts := simplifyCollinearStrokePoints(st.Points, 1e-5)
+		if len(pts) < 2 {
+			continue
+		}
+		totalLen := 0.0
+		for i := 0; i < len(pts)-1; i++ {
+			totalLen += pointDist2D(pts[i], pts[i+1])
+		}
+		minKeep := 0.015
+		if st.Kind == "box" || st.Kind == "axis" || len(tris) == 0 {
+			minKeep = 1e-6
+		}
+		if totalLen >= minKeep {
+			strokes = append(strokes, Stroke2D{
+				Points: pts,
+				Kind:   st.Kind,
+			})
+		}
 	}
 	return strokes
 }
@@ -1142,9 +1351,6 @@ func buildSurface3DScene(
 		}
 	}
 
-	_ = xSpan
-	_ = ySpan
-
 	var segments []seg3DInput
 	unoccludedLen := 0.0
 	addSurfaceSeg := func(ca, cbv camVert, ownerA, ownerB int) {
@@ -1411,10 +1617,7 @@ func RenderBraille3D(scene *Plot3DScene) (string, string) {
 		}
 	}
 
-	aspect := scene.Camera.Aspect
-	if !isFiniteFloat(aspect) || aspect <= 0 {
-		aspect = 1.0
-	}
+	aspect := effectiveAspect(scene.Camera)
 	scale := math.Min(float64(pixelW-2), float64(pixelH-2)*aspect) * 0.5
 	centerX := float64(pixelW-1) * 0.5
 	centerY := float64(pixelH-1) * 0.5
@@ -1425,25 +1628,7 @@ func RenderBraille3D(scene *Plot3DScene) (string, string) {
 		return px, py
 	}
 
-	minDepth, maxDepth := math.Inf(1), math.Inf(-1)
-	for _, st := range scene.Strokes {
-		if st.Kind == "surface" || st.Kind == "curve" {
-			for _, pt := range st.Points {
-				if !isFiniteFloat(pt.Depth) {
-					continue
-				}
-				if pt.Depth < minDepth {
-					minDepth = pt.Depth
-				}
-				if pt.Depth > maxDepth {
-					maxDepth = pt.Depth
-				}
-			}
-		}
-	}
-	if !isFiniteFloat(minDepth) || !isFiniteFloat(maxDepth) || maxDepth-minDepth < 1e-9 {
-		minDepth, maxDepth = -1.0, 1.0
-	}
+	minDepth, maxDepth := computeMainDepthBounds(scene.Strokes)
 
 	plotDot := func(px, py int, d float64, isMain bool) {
 		if px < 0 || px >= pixelW || py < 0 || py >= pixelH {
