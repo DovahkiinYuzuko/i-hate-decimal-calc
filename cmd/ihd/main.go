@@ -433,11 +433,13 @@ func isTerminalWriter(w io.Writer) bool {
 	return false
 }
 
+var isTerminalWriterFn = isTerminalWriter
+
 func useColor(w io.Writer, noColorFlag bool) bool {
 	if noColorFlag || os.Getenv("NO_COLOR") != "" {
 		return false
 	}
-	return isTerminalWriter(w)
+	return isTerminalWriterFn(w)
 }
 
 func extractSVGString(node calc.Node) (string, bool) {
@@ -526,6 +528,12 @@ func outputNode(out io.Writer, node calc.Node, ro runOptions) error {
 	if ro.pretty {
 		_, err := fmt.Fprintln(out, calc.FormatPretty2D(node))
 		return err
+	}
+	if !ro.showApprox && !ro.opts.AsciiOnly {
+		if pn, ok := node.(*calc.PlotNode); ok && pn.ColorContent != "" && useColor(out, ro.noColor) {
+			_, err := fmt.Fprintln(out, pn.ColorContent)
+			return err
+		}
 	}
 	if ro.showApprox {
 		exactStr := calc.FormatWithOptions(node, ro.opts)

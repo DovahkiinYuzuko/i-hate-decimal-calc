@@ -105,11 +105,12 @@ func (n *MatrixNode) Equal(other Node) bool {
 // PlotNode (Rendered 2D Terminal Plot)
 // -------------------------------------------------------------------------
 
-// PlotNode represents a rendered 2D terminal plot string.
+// PlotNode represents a rendered 2D/3D terminal plot string.
 type PlotNode struct {
-	Content string
-	SVG     string
-	Typst   string
+	Content      string
+	ColorContent string
+	SVG          string
+	Typst        string
 }
 
 func NewPlotNode(content string) *PlotNode {
@@ -118,6 +119,10 @@ func NewPlotNode(content string) *PlotNode {
 
 func NewPlotNodeWithVectors(content, svg, typst string) *PlotNode {
 	return &PlotNode{Content: content, SVG: svg, Typst: typst}
+}
+
+func NewPlotNodeWithColorAndVectors(content, colorContent, svg, typst string) *PlotNode {
+	return &PlotNode{Content: content, ColorContent: colorContent, SVG: svg, Typst: typst}
 }
 
 func (n *PlotNode) Type() NodeType { return NodePlot }

@@ -60,6 +60,8 @@ func init() {
 	// Visualization
 	RegisterHandler("plot", handlePlot)
 	RegisterHandler("plot_svg", handlePlotSVG)
+	RegisterHandler("plot3d", handlePlot3D)
+	RegisterHandler("plot3d_svg", handlePlot3DSVG)
 
 	// Graph theory
 	RegisterHandler("graph_laplacian", handleGraphLaplacian)
@@ -335,6 +337,14 @@ func handleTriangleCenters(args []Node, env *Env) (Node, error) {
 
 func handlePlotSVG(args []Node, env *Env) (Node, error) {
 	return EvalPlotSVG(args)
+}
+
+func handlePlot3D(args []Node, env *Env) (Node, error) {
+	return EvalPlot3DWithEnv(args, env)
+}
+
+func handlePlot3DSVG(args []Node, env *Env) (Node, error) {
+	return EvalPlot3DSVGWithEnv(args, env)
 }
 
 func handlePlot(args []Node, env *Env) (Node, error) {
