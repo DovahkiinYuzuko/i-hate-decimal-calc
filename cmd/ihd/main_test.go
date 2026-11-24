@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -980,3 +981,56 @@ func TestCLI_BudgetAndResourceLimits(t *testing.T) {
 	}
 }
 
+
+func TestCLI_Plot3DOutputs(t *testing.T) {
+	// Non-TTY buffer must emit monochrome Braille without ANSI escapes
+	var out, errOut bytes.Buffer
+	code := run([]string{"--no-update-check", "plot3d(x^2 - y^2, [-2, 2], [-2, 2])"}, strings.NewReader(""), &out, &errOut)
+	if code != 0 {
+		t.Fatalf("expected exit code 0, got %d, stderr: %s", code, errOut.String())
+	}
+	if strings.Contains(out.String(), "\x1b[") {
+		t.Errorf("non-TTY plot3d output must not emit ANSI escapes")
+	}
+	if !strings.Contains(out.String(), "z ∈ [-4, 4]") {
+		t.Errorf("expected exact z domain [-4, 4] in output, got:\n%s", out.String())
+	}
+
+	// --format svg
+	out.Reset()
+	errOut.Reset()
+	code = run([]string{"--no-update-check", "--format", "svg", "plot3d(x^2 - y^2, [-2, 2], [-2, 2])"}, strings.NewReader(""), &out, &errOut)
+	if code != 0 || !strings.Contains(out.String(), "<svg") || !strings.Contains(out.String(), "<polyline") {
+		t.Fatalf("expected valid SVG from --format svg, code=%d, out=%s, err=%s", code, out.String(), errOut.String())
+	}
+
+	// --format typst
+	out.Reset()
+	errOut.Reset()
+	code = run([]string{"--no-update-check", "--format", "typst", "plot3d(x^2 - y^2, [-2, 2], [-2, 2])"}, strings.NewReader(""), &out, &errOut)
+	if code != 0 || !strings.Contains(out.String(), "cetz.canvas") {
+		t.Fatalf("expected valid Typst from --format typst, code=%d, out=%s, err=%s", code, out.String(), errOut.String())
+	}
+
+	// Simulated TTY: normal output emits ANSI 256-color escapes, while --ascii suppresses color
+	origTermFn := isTerminalWriterFn
+	isTerminalWriterFn = func(_ io.Writer) bool { return true }
+	t.Cleanup(func() { isTerminalWriterFn = origTermFn })
+
+	out.Reset()
+	errOut.Reset()
+	code = run([]string{"--no-update-check", "plot3d(x^2 - y^2, [-2, 2], [-2, 2])"}, strings.NewReader(""), &out, &errOut)
+	if code != 0 || !strings.Contains(out.String(), "\x1b[38;5;") {
+		t.Fatalf("expected ANSI 256-color escapes on TTY without --ascii, code=%d, err=%s", code, errOut.String())
+	}
+
+	out.Reset()
+	errOut.Reset()
+	code = run([]string{"--no-update-check", "--ascii", "plot3d(x^2 - y^2, [-2, 2], [-2, 2])"}, strings.NewReader(""), &out, &errOut)
+	if code != 0 {
+		t.Fatalf("expected exit code 0 for --ascii plot3d, got %d, err=%s", code, errOut.String())
+	}
+	if strings.Contains(out.String(), "\x1b[") {
+		t.Errorf("--ascii plot3d output must suppress ANSI color escapes even on TTY")
+	}
+}

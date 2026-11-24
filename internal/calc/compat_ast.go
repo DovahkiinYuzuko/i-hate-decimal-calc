@@ -144,8 +144,9 @@ var (
 	NewVar                  = ast.NewVar
 	NewList                 = ast.NewList
 	NewMatrix               = ast.NewMatrix
-	NewPlotNode             = ast.NewPlotNode
-	NewPlotNodeWithVectors  = ast.NewPlotNodeWithVectors
+	NewPlotNode                    = ast.NewPlotNode
+	NewPlotNodeWithVectors         = ast.NewPlotNodeWithVectors
+	NewPlotNodeWithColorAndVectors = ast.NewPlotNodeWithColorAndVectors
 	NewRelOp                = ast.NewRelOp
 	NewQuantifier           = ast.NewQuantifier
 	NewPiecewiseNode        = ast.NewPiecewiseNode

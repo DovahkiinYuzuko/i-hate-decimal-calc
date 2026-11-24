@@ -538,10 +538,16 @@ const (
 )
 
 func evalSampleFloat(expr Node, varName string, x float64) (float64, bool) {
-	if math.IsNaN(x) || math.IsInf(x, 0) {
-		return 0, false
+	return evalSampleFloatVars(expr, map[string]float64{varName: x})
+}
+
+func evalSampleFloatVars(expr Node, vars map[string]float64) (float64, bool) {
+	for _, v := range vars {
+		if math.IsNaN(v) || math.IsInf(v, 0) {
+			return 0, false
+		}
 	}
-	y, state := evalASTFloat64(expr, varName, x)
+	y, state := evalASTFloat64Vars(expr, vars)
 	switch state {
 	case evalFloatOK:
 		if math.IsNaN(y) || math.IsInf(y, 0) {
@@ -551,16 +557,19 @@ func evalSampleFloat(expr Node, varName string, x float64) (float64, bool) {
 	case evalFloatDomainError:
 		return 0, false
 	default:
-		return evalSampleIntervalFallback(expr, varName, x)
+		return evalSampleIntervalFallbackVars(expr, vars)
 	}
 }
 
-func evalSampleIntervalFallback(expr Node, varName string, x float64) (float64, bool) {
-	rRat := new(big.Rat).SetFloat64(x)
-	if rRat == nil {
-		return 0, false
+func evalSampleIntervalFallbackVars(expr Node, vars map[string]float64) (float64, bool) {
+	subExpr := expr
+	for varName, x := range vars {
+		rRat := new(big.Rat).SetFloat64(x)
+		if rRat == nil {
+			return 0, false
+		}
+		subExpr = substituteVar(subExpr, varName, NewRationalFromBigRat(rRat))
 	}
-	subExpr := substituteVar(expr, varName, NewRationalFromBigRat(rRat))
 	y, err := evalNodeFloat(subExpr)
 	if err != nil || math.IsNaN(y) || math.IsInf(y, 0) {
 		return 0, false
@@ -568,7 +577,7 @@ func evalSampleIntervalFallback(expr Node, varName string, x float64) (float64, 
 	return y, true
 }
 
-func evalASTFloat64(n Node, varName string, x float64) (float64, evalFloatState) {
+func evalASTFloat64Vars(n Node, vars map[string]float64) (float64, evalFloatState) {
 	if n == nil {
 		return 0, evalFloatUnsupported
 	}
@@ -580,8 +589,8 @@ func evalASTFloat64(n Node, varName string, x float64) (float64, evalFloatState)
 		}
 		return f, evalFloatOK
 	case *VarNode:
-		if v.Name == varName {
-			return x, evalFloatOK
+		if val, ok := vars[v.Name]; ok {
+			return val, evalFloatOK
 		}
 		return 0, evalFloatUnsupported
 	case *ConstNode:
@@ -596,7 +605,7 @@ func evalASTFloat64(n Node, varName string, x float64) (float64, evalFloatState)
 			return 0, evalFloatUnsupported
 		}
 	case *UnaryOpNode:
-		val, st := evalASTFloat64(v.Expr, varName, x)
+		val, st := evalASTFloat64Vars(v.Expr, vars)
 		if st != evalFloatOK {
 			return 0, st
 		}
@@ -607,7 +616,7 @@ func evalASTFloat64(n Node, varName string, x float64) (float64, evalFloatState)
 	case *AddNode:
 		sum := 0.0
 		for _, t := range v.Terms {
-			tv, st := evalASTFloat64(t, varName, x)
+			tv, st := evalASTFloat64Vars(t, vars)
 			if st != evalFloatOK {
 				return 0, st
 			}
@@ -620,7 +629,7 @@ func evalASTFloat64(n Node, varName string, x float64) (float64, evalFloatState)
 	case *MulNode:
 		prod := 1.0
 		for _, f := range v.Factors {
-			fv, st := evalASTFloat64(f, varName, x)
+			fv, st := evalASTFloat64Vars(f, vars)
 			if st != evalFloatOK {
 				return 0, st
 			}
@@ -631,11 +640,11 @@ func evalASTFloat64(n Node, varName string, x float64) (float64, evalFloatState)
 		}
 		return prod, evalFloatOK
 	case *PowNode:
-		base, stB := evalASTFloat64(v.Base, varName, x)
+		base, stB := evalASTFloat64Vars(v.Base, vars)
 		if stB != evalFloatOK {
 			return 0, stB
 		}
-		exp, stE := evalASTFloat64(v.Exp, varName, x)
+		exp, stE := evalASTFloat64Vars(v.Exp, vars)
 		if stE != evalFloatOK {
 			return 0, stE
 		}
@@ -666,7 +675,7 @@ func evalASTFloat64(n Node, varName string, x float64) (float64, evalFloatState)
 		}
 		return res, evalFloatOK
 	case *SqrtNode:
-		rad, st := evalASTFloat64(v.Radicand, varName, x)
+		rad, st := evalASTFloat64Vars(v.Radicand, vars)
 		if st != evalFloatOK {
 			return 0, st
 		}
@@ -678,7 +687,7 @@ func evalASTFloat64(n Node, varName string, x float64) (float64, evalFloatState)
 		if len(v.Args) != 1 {
 			return 0, evalFloatUnsupported
 		}
-		arg, st := evalASTFloat64(v.Args[0], varName, x)
+		arg, st := evalASTFloat64Vars(v.Args[0], vars)
 		if st != evalFloatOK {
 			return 0, st
 		}
