@@ -1033,4 +1033,26 @@ func TestCLI_Plot3DOutputs(t *testing.T) {
 	if strings.Contains(out.String(), "\x1b[") {
 		t.Errorf("--ascii plot3d output must suppress ANSI color escapes even on TTY")
 	}
+
+	// Simulated TTY with --no-color must suppress ANSI escapes
+	out.Reset()
+	errOut.Reset()
+	code = run([]string{"--no-update-check", "--no-color", "plot3d(x^2 - y^2, [-2, 2], [-2, 2])"}, strings.NewReader(""), &out, &errOut)
+	if code != 0 {
+		t.Fatalf("expected exit code 0 for --no-color plot3d, got %d, err=%s", code, errOut.String())
+	}
+	if strings.Contains(out.String(), "\x1b[") {
+		t.Errorf("--no-color plot3d output must suppress ANSI color escapes even on TTY")
+	}
+
+	// Simulated TTY with plot3d(..., "mono") must suppress ANSI escapes
+	out.Reset()
+	errOut.Reset()
+	code = run([]string{"--no-update-check", `plot3d(x^2 - y^2, [-2, 2], [-2, 2], "mono")`}, strings.NewReader(""), &out, &errOut)
+	if code != 0 {
+		t.Fatalf("expected exit code 0 for mono plot3d, got %d, err=%s", code, errOut.String())
+	}
+	if strings.Contains(out.String(), "\x1b[") {
+		t.Errorf(`plot3d "mono" option must suppress ANSI color escapes even on TTY`)
+	}
 }

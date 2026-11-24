@@ -6,7 +6,9 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
@@ -21,7 +23,7 @@ var svgDepthPalette = []string{
 }
 
 func depthBucketIndex(depth, minD, maxD float64, buckets int) int {
-	if maxD-minD < 1e-9 || buckets <= 1 {
+	if !isFiniteFloat(depth) || maxD-minD < 1e-9 || buckets <= 1 {
 		return 0
 	}
 	t := (depth - minD) / (maxD - minD)
@@ -45,6 +47,9 @@ func computeMainDepthBounds(strokes []Stroke2D) (float64, float64) {
 	for _, st := range strokes {
 		if st.Kind == "surface" || st.Kind == "curve" {
 			for _, pt := range st.Points {
+				if !isFiniteFloat(pt.Depth) {
+					continue
+				}
 				if pt.Depth < minD {
 					minD = pt.Depth
 				}
@@ -54,10 +59,95 @@ func computeMainDepthBounds(strokes []Stroke2D) (float64, float64) {
 			}
 		}
 	}
-	if math.IsInf(minD, 1) || maxD-minD < 1e-9 {
+	if !isFiniteFloat(minD) || !isFiniteFloat(maxD) || maxD-minD < 1e-9 {
 		return -1.0, 1.0
 	}
 	return minD, maxD
+}
+
+type orderedStroke struct {
+	stroke   Stroke2D
+	avgDepth float64
+	priority int
+}
+
+func strokeKindPriority(kind string) int {
+	switch kind {
+	case "box":
+		return 0
+	case "axis":
+		return 1
+	default:
+		return 2
+	}
+}
+
+func orderedVectorStrokes(strokes []Stroke2D) []orderedStroke {
+	out := make([]orderedStroke, 0, len(strokes))
+	for _, st := range strokes {
+		if len(st.Points) < 2 {
+			continue
+		}
+		sumD := 0.0
+		cnt := 0
+		for _, pt := range st.Points {
+			if isFiniteFloat(pt.Depth) {
+				sumD += pt.Depth
+				cnt++
+			}
+		}
+		avgD := 0.0
+		if cnt > 0 {
+			avgD = sumD / float64(cnt)
+		}
+		out = append(out, orderedStroke{
+			stroke:   st,
+			avgDepth: avgD,
+			priority: strokeKindPriority(st.Kind),
+		})
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		diff := out[i].avgDepth - out[j].avgDepth
+		if math.Abs(diff) > 1e-12 {
+			return out[i].avgDepth > out[j].avgDepth
+		}
+		return out[i].priority < out[j].priority
+	})
+	return out
+}
+
+func formatBoundSVG(n Node, fallback float64) string {
+	if n == nil {
+		return fmtSVGNum(fallback)
+	}
+	return Format(n)
+}
+
+func formatBoundTypst(n Node, fallback float64) string {
+	if n == nil {
+		return fmtTypstNum(fallback)
+	}
+	return formatTypstNode(n)
+}
+
+func formatTypstMathIdent(name string) string {
+	trimmed := strings.TrimSpace(name)
+	if trimmed == "" {
+		return "x"
+	}
+	runes := []rune(trimmed)
+	if len(runes) == 1 && unicode.IsLetter(runes[0]) {
+		return trimmed
+	}
+	escaped := strings.ReplaceAll(trimmed, `\`, `\\`)
+	escaped = strings.ReplaceAll(escaped, `"`, `\"`)
+	return fmt.Sprintf(`italic("%s")`, escaped)
+}
+
+type svgStrokeStyle struct {
+	color     string
+	width     string
+	roundCaps bool
 }
 
 // RenderPlot3DSVG renders a Plot3DScene into a standalone, XML-valid SVG string.
@@ -73,12 +163,13 @@ func RenderPlot3DSVG(scene *Plot3DScene) string {
 	)
 	plotW := width - 2*pad
 	plotH := height - 2*pad
-	scale := math.Min(plotW, plotH) * 0.48
+	aspect := effectiveAspect(scene.Camera)
+	scale := math.Min(plotW, plotH*aspect) * 0.48
 	cx := width * 0.5
 	cy := height * 0.5
 
 	toSVGX := func(x float64) float64 { return cx + x*scale }
-	toSVGY := func(y float64) float64 { return cy - y*scale }
+	toSVGY := func(y float64) float64 { return cy - y*scale/aspect }
 
 	var sb strings.Builder
 	sb.WriteString(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">`)
@@ -88,19 +179,26 @@ func RenderPlot3DSVG(scene *Plot3DScene) string {
 	if scene.Expr != nil {
 		exprText = Format(scene.Expr)
 	}
+	xMinText := formatBoundSVG(scene.XMinNode, scene.XMin)
+	xMaxText := formatBoundSVG(scene.XMaxNode, scene.XMax)
+	yMinText := formatBoundSVG(scene.YMinNode, scene.YMin)
+	yMaxText := formatBoundSVG(scene.YMaxNode, scene.YMax)
+	zMinText := formatBoundSVG(scene.ZMinNode, scene.ZMin)
+	zMaxText := formatBoundSVG(scene.ZMaxNode, scene.ZMax)
+
 	sb.WriteString(fmt.Sprintf("  <title>%s</title>\n", html.EscapeString(i18n.T("plot3d.svg_title", exprText))))
 	if scene.Kind == "curve" {
 		sb.WriteString(fmt.Sprintf("  <desc>%s</desc>\n",
 			html.EscapeString(i18n.T("plot3d.svg_desc_curve",
-				scene.VarX, Format(scene.XMinNode), Format(scene.XMaxNode),
-				Format(scene.ZMinNode), Format(scene.ZMaxNode),
+				scene.VarX, xMinText, xMaxText,
+				zMinText, zMaxText,
 			))))
 	} else {
 		sb.WriteString(fmt.Sprintf("  <desc>%s</desc>\n",
 			html.EscapeString(i18n.T("plot3d.svg_desc_surface",
-				scene.VarX, Format(scene.XMinNode), Format(scene.XMaxNode),
-				scene.VarY, Format(scene.YMinNode), Format(scene.YMaxNode),
-				Format(scene.ZMinNode), Format(scene.ZMaxNode),
+				scene.VarX, xMinText, xMaxText,
+				scene.VarY, yMinText, yMaxText,
+				zMinText, zMaxText,
 			))))
 	}
 
@@ -118,56 +216,60 @@ func RenderPlot3DSVG(scene *Plot3DScene) string {
 	sb.WriteString(`  <g clip-path="url(#plot3d-area)">`)
 	sb.WriteByte('\n')
 
-	// Box and axes first
-	for _, st := range scene.Strokes {
-		if (st.Kind != "box" && st.Kind != "axis") || len(st.Points) < 2 {
-			continue
+	// Depth-ordered drawing integrating box, axis, surface, and curve back-to-front.
+	// Consecutive strokes sharing an identical style are grouped into a single <g>.
+	minD, maxD := computeMainDepthBounds(scene.Strokes)
+	ordered := orderedVectorStrokes(scene.Strokes)
+	groupOpen := false
+	var currentStyle svgStrokeStyle
+
+	openGroup := func(style svgStrokeStyle) {
+		if style.roundCaps {
+			sb.WriteString(fmt.Sprintf(`    <g fill="none" stroke="%s" stroke-width="%s" stroke-linecap="round" stroke-linejoin="round">`,
+				style.color, style.width))
+		} else {
+			sb.WriteString(fmt.Sprintf(`    <g fill="none" stroke="%s" stroke-width="%s">`,
+				style.color, style.width))
 		}
-		strokeCol := "#cbd5e1"
-		strokeW := "1"
-		if st.Kind == "axis" {
-			strokeCol = "#64748b"
-			strokeW = "1.3"
-		}
+		sb.WriteByte('\n')
+		currentStyle = style
+		groupOpen = true
+	}
+
+	for _, item := range ordered {
+		st := item.stroke
 		var pts []string
 		for _, pt := range st.Points {
+			if !isFiniteFloat(pt.X) || !isFiniteFloat(pt.Y) {
+				continue
+			}
 			pts = append(pts, fmt.Sprintf("%s,%s", fmtSVGNum(toSVGX(pt.X)), fmtSVGNum(toSVGY(pt.Y))))
 		}
-		sb.WriteString(fmt.Sprintf(`    <polyline fill="none" stroke="%s" stroke-width="%s" points="%s"/>`,
-			strokeCol, strokeW, strings.Join(pts, " ")))
-		sb.WriteByte('\n')
-	}
-
-	// Main strokes grouped by depth bucket (back-to-front bucket order so closer lines draw last)
-	minD, maxD := computeMainDepthBounds(scene.Strokes)
-	buckets := make([][]Stroke2D, len(svgDepthPalette))
-	for _, st := range scene.Strokes {
-		if (st.Kind != "surface" && st.Kind != "curve") || len(st.Points) < 2 {
+		if len(pts) < 2 {
 			continue
 		}
-		avgD := 0.0
-		for _, pt := range st.Points {
-			avgD += pt.Depth
-		}
-		avgD /= float64(len(st.Points))
-		bi := depthBucketIndex(avgD, minD, maxD, len(svgDepthPalette))
-		buckets[bi] = append(buckets[bi], st)
-	}
 
-	for bi := len(svgDepthPalette) - 1; bi >= 0; bi-- {
-		if len(buckets[bi]) == 0 {
-			continue
+		var style svgStrokeStyle
+		switch st.Kind {
+		case "box":
+			style = svgStrokeStyle{color: "#cbd5e1", width: "1", roundCaps: false}
+		case "axis":
+			style = svgStrokeStyle{color: "#64748b", width: "1.3", roundCaps: false}
+		default:
+			bi := depthBucketIndex(item.avgDepth, minD, maxD, len(svgDepthPalette))
+			style = svgStrokeStyle{color: svgDepthPalette[bi], width: "1.6", roundCaps: true}
 		}
-		sb.WriteString(fmt.Sprintf(`    <g fill="none" stroke="%s" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">`, svgDepthPalette[bi]))
-		sb.WriteByte('\n')
-		for _, st := range buckets[bi] {
-			var pts []string
-			for _, pt := range st.Points {
-				pts = append(pts, fmt.Sprintf("%s,%s", fmtSVGNum(toSVGX(pt.X)), fmtSVGNum(toSVGY(pt.Y))))
+
+		if !groupOpen || style != currentStyle {
+			if groupOpen {
+				sb.WriteString("    </g>\n")
 			}
-			sb.WriteString(fmt.Sprintf(`      <polyline points="%s"/>`, strings.Join(pts, " ")))
-			sb.WriteByte('\n')
+			openGroup(style)
 		}
+		sb.WriteString(fmt.Sprintf(`      <polyline points="%s"/>`, strings.Join(pts, " ")))
+		sb.WriteByte('\n')
+	}
+	if groupOpen {
 		sb.WriteString("    </g>\n")
 	}
 
@@ -177,13 +279,13 @@ func RenderPlot3DSVG(scene *Plot3DScene) string {
 	var domainCaption string
 	if scene.Kind == "curve" {
 		domainCaption = i18n.T("plot3d.svg_caption_curve",
-			scene.VarX, Format(scene.XMinNode), Format(scene.XMaxNode),
-			Format(scene.ZMinNode), Format(scene.ZMaxNode))
+			scene.VarX, xMinText, xMaxText,
+			zMinText, zMaxText)
 	} else {
 		domainCaption = i18n.T("plot3d.svg_caption_surface",
-			scene.VarX, Format(scene.XMinNode), Format(scene.XMaxNode),
-			scene.VarY, Format(scene.YMinNode), Format(scene.YMaxNode),
-			Format(scene.ZMinNode), Format(scene.ZMaxNode))
+			scene.VarX, xMinText, xMaxText,
+			scene.VarY, yMinText, yMaxText,
+			zMinText, zMaxText)
 	}
 	sb.WriteString(fmt.Sprintf(`  <text x="400" y="480" font-family="sans-serif" font-size="12" fill="#334155" text-anchor="middle">%s</text>`,
 		html.EscapeString(domainCaption)))
@@ -207,7 +309,11 @@ func RenderPlot3DTypst(scene *Plot3DScene) string {
 	if scene == nil {
 		return ""
 	}
-	const scale = 4.2
+	const baseHalf = 4.2
+	aspect := effectiveAspect(scene.Camera)
+	scale := math.Min(baseHalf, baseHalf*aspect)
+	toTypstX := func(x float64) float64 { return x * scale }
+	toTypstY := func(y float64) float64 { return y * scale / aspect }
 
 	var sb strings.Builder
 	sb.WriteString(`#import "@preview/cetz:0.5.2"`)
@@ -216,57 +322,70 @@ func RenderPlot3DTypst(scene *Plot3DScene) string {
 	sb.WriteString("#cetz.canvas({\n")
 	sb.WriteString("  import cetz.draw: *\n")
 
-	// Box and axes
-	for _, st := range scene.Strokes {
-		if (st.Kind != "box" && st.Kind != "axis") || len(st.Points) < 2 {
-			continue
-		}
-		strokeStyle := "(paint: luma(200), thickness: 0.6pt)"
-		if st.Kind == "axis" {
-			strokeStyle = "(paint: luma(110), thickness: 0.9pt)"
-		}
+	minD, maxD := computeMainDepthBounds(scene.Strokes)
+	ordered := orderedVectorStrokes(scene.Strokes)
+	minTypstY := math.Inf(1)
+	hasPlottedY := false
+
+	for _, item := range ordered {
+		st := item.stroke
 		var pts []string
 		for _, pt := range st.Points {
-			pts = append(pts, fmt.Sprintf("(%s, %s)", fmtTypstNum(pt.X*scale), fmtTypstNum(pt.Y*scale)))
+			if !isFiniteFloat(pt.X) || !isFiniteFloat(pt.Y) {
+				continue
+			}
+			tx := toTypstX(pt.X)
+			ty := toTypstY(pt.Y)
+			if !isFiniteFloat(tx) || !isFiniteFloat(ty) {
+				continue
+			}
+			if ty < minTypstY {
+				minTypstY = ty
+				hasPlottedY = true
+			}
+			pts = append(pts, fmt.Sprintf("(%s, %s)", fmtTypstNum(tx), fmtTypstNum(ty)))
+		}
+		if len(pts) < 2 {
+			continue
+		}
+
+		var strokeStyle string
+		switch st.Kind {
+		case "box":
+			strokeStyle = "(paint: luma(200), thickness: 0.6pt)"
+		case "axis":
+			strokeStyle = "(paint: luma(110), thickness: 0.9pt)"
+		default:
+			bi := depthBucketIndex(item.avgDepth, minD, maxD, len(typstDepthPalette))
+			strokeStyle = fmt.Sprintf("(paint: %s, thickness: 1pt)", typstDepthPalette[bi])
 		}
 		sb.WriteString(fmt.Sprintf("  line(%s, stroke: %s)\n", strings.Join(pts, ", "), strokeStyle))
 	}
 
-	minD, maxD := computeMainDepthBounds(scene.Strokes)
-	buckets := make([][]Stroke2D, len(typstDepthPalette))
-	for _, st := range scene.Strokes {
-		if (st.Kind != "surface" && st.Kind != "curve") || len(st.Points) < 2 {
-			continue
-		}
-		avgD := 0.0
-		for _, pt := range st.Points {
-			avgD += pt.Depth
-		}
-		avgD /= float64(len(st.Points))
-		bi := depthBucketIndex(avgD, minD, maxD, len(typstDepthPalette))
-		buckets[bi] = append(buckets[bi], st)
+	captionY := -4.6
+	if hasPlottedY && isFiniteFloat(minTypstY) {
+		captionY = minTypstY - 0.35
 	}
-
-	for bi := len(typstDepthPalette) - 1; bi >= 0; bi-- {
-		col := typstDepthPalette[bi]
-		for _, st := range buckets[bi] {
-			var pts []string
-			for _, pt := range st.Points {
-				pts = append(pts, fmt.Sprintf("(%s, %s)", fmtTypstNum(pt.X*scale), fmtTypstNum(pt.Y*scale)))
-			}
-			sb.WriteString(fmt.Sprintf("  line(%s, stroke: (paint: %s, thickness: 1pt))\n", strings.Join(pts, ", "), col))
-		}
-	}
+	varXTypst := formatTypstMathIdent(scene.VarX)
+	varYTypst := formatTypstMathIdent(scene.VarY)
+	xMinTypst := formatBoundTypst(scene.XMinNode, scene.XMin)
+	xMaxTypst := formatBoundTypst(scene.XMaxNode, scene.XMax)
+	yMinTypst := formatBoundTypst(scene.YMinNode, scene.YMin)
+	yMaxTypst := formatBoundTypst(scene.YMaxNode, scene.YMax)
+	zMinTypst := formatBoundTypst(scene.ZMinNode, scene.ZMin)
+	zMaxTypst := formatBoundTypst(scene.ZMaxNode, scene.ZMax)
 
 	if scene.Kind == "curve" {
-		sb.WriteString(fmt.Sprintf("  content((0, -4.6), [$%s in [%s, %s], space z in [%s, %s]$])\n",
-			scene.VarX, formatTypstNode(scene.XMinNode), formatTypstNode(scene.XMaxNode),
-			formatTypstNode(scene.ZMinNode), formatTypstNode(scene.ZMaxNode)))
+		sb.WriteString(fmt.Sprintf("  content((0, %s), [$%s in [%s, %s], space z in [%s, %s]$], anchor: \"north\")\n",
+			fmtTypstNum(captionY),
+			varXTypst, xMinTypst, xMaxTypst,
+			zMinTypst, zMaxTypst))
 	} else {
-		sb.WriteString(fmt.Sprintf("  content((0, -4.6), [$%s in [%s, %s], space %s in [%s, %s], space z in [%s, %s]$])\n",
-			scene.VarX, formatTypstNode(scene.XMinNode), formatTypstNode(scene.XMaxNode),
-			scene.VarY, formatTypstNode(scene.YMinNode), formatTypstNode(scene.YMaxNode),
-			formatTypstNode(scene.ZMinNode), formatTypstNode(scene.ZMaxNode)))
+		sb.WriteString(fmt.Sprintf("  content((0, %s), [$%s in [%s, %s], space %s in [%s, %s], space z in [%s, %s]$], anchor: \"north\")\n",
+			fmtTypstNum(captionY),
+			varXTypst, xMinTypst, xMaxTypst,
+			varYTypst, yMinTypst, yMaxTypst,
+			zMinTypst, zMaxTypst))
 	}
 	sb.WriteString("})\n")
 	return sb.String()

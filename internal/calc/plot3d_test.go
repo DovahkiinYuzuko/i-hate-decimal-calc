@@ -5,6 +5,8 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -12,46 +14,107 @@ import (
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc"
 )
 
+func assertSVGPolylineCoordsFiniteAndBounded(t *testing.T, svg string, minX, maxX, minY, maxY float64) int {
+	t.Helper()
+	rePoints := regexp.MustCompile(`points="([^"]+)"`)
+	matches := rePoints.FindAllStringSubmatch(svg, -1)
+	if len(matches) == 0 {
+		t.Fatalf("expected at least one SVG polyline points attribute")
+	}
+	pointCount := 0
+	for _, m := range matches {
+		fields := strings.Fields(m[1])
+		for _, pair := range fields {
+			xy := strings.Split(pair, ",")
+			if len(xy) != 2 {
+				t.Fatalf("malformed SVG coordinate pair %q", pair)
+			}
+			x, errX := strconv.ParseFloat(xy[0], 64)
+			y, errY := strconv.ParseFloat(xy[1], 64)
+			if errX != nil || errY != nil || math.IsNaN(x) || math.IsInf(x, 0) || math.IsNaN(y) || math.IsInf(y, 0) {
+				t.Fatalf("non-finite or invalid SVG coordinate pair %q", pair)
+			}
+			if x < minX || x > maxX || y < minY || y > maxY {
+				t.Errorf("SVG coordinate (%v, %v) out of expected bounds [%v,%v] x [%v,%v]", x, y, minX, maxX, minY, maxY)
+			}
+			pointCount++
+		}
+	}
+	return pointCount
+}
+
 func TestPlot3D_Deductive_SurfaceAndParametricCurve(t *testing.T) {
 	cases := []struct {
 		name           string
 		expr           string
+		wantKind       string
 		wantSubstrings []string
 	}{
 		{
-			name: "saddle surface z = x^2 - y^2",
-			expr: "plot3d(x^2 - y^2, [-2, 2], [-2, 2])",
+			name:     "saddle surface z = x^2 - y^2",
+			expr:     "plot3d(x^2 - y^2, [-2, 2], [-2, 2])",
+			wantKind: "surface",
 			wantSubstrings: []string{
 				"x ∈ [-2, 2]",
 				"y ∈ [-2, 2]",
+				"z ∈ [-4, 4]",
 			},
 		},
 		{
-			name: "explicit variable ranges u, v",
-			expr: "plot3d(u^2 + v^2, [u, -2, 2], [v, -2, 2])",
+			name:     "explicit variable ranges u, v",
+			expr:     "plot3d(u^2 + v^2, [u, -2, 2], [v, -2, 2])",
+			wantKind: "surface",
 			wantSubstrings: []string{
 				"u ∈ [-2, 2]",
 				"v ∈ [-2, 2]",
+				"z ∈ [0, 8]",
 			},
 		},
 		{
-			name: "parametric 3d helix",
-			expr: "plot3d([cos(t), sin(t), t], [t, 0, 10])",
+			name:     "parametric 3d helix",
+			expr:     "plot3d([cos(t), sin(t), t], [t, 0, 10])",
+			wantKind: "curve",
 			wantSubstrings: []string{
 				"t ∈ [0, 10]",
+				"z ∈ [0, 10]",
 			},
 		},
 		{
-			name: "perspective option",
-			expr: `plot3d(x^2 + y^2, [-2, 2], [-2, 2], [az, 60], [el, 25], "perspective")`,
+			name:     "perspective option",
+			expr:     `plot3d(x^2 + y^2, [-2, 2], [-2, 2], [az, 60], [el, 25], "perspective")`,
+			wantKind: "surface",
 			wantSubstrings: []string{
 				"x ∈ [-2, 2]",
+				"z ∈ [0, 8]",
 			},
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			// Verify scene actually contains main surface/curve strokes (cannot pass on bounding box alone)
+			parsedRoot, err := calc.Parse(tc.expr)
+			if err != nil {
+				t.Fatalf("Parse(%q) failed: %v", tc.expr, err)
+			}
+			fnNode, okFn := parsedRoot.(*calc.FuncNode)
+			if !okFn {
+				t.Fatalf("expected *calc.FuncNode from Parse(%q), got %T", tc.expr, parsedRoot)
+			}
+			scene, err := calc.BuildPlot3DScene(fnNode.Args)
+			if err != nil {
+				t.Fatalf("BuildPlot3DScene failed: %v", err)
+			}
+			mainStrokeCount := 0
+			for _, st := range scene.Strokes {
+				if st.Kind == tc.wantKind && len(st.Points) >= 2 {
+					mainStrokeCount++
+				}
+			}
+			if mainStrokeCount == 0 {
+				t.Fatalf("expected non-zero %q strokes in Plot3DScene, got 0 (bounding-box-only false pass prevented)", tc.wantKind)
+			}
+
 			res, err := calc.EvalString(tc.expr)
 			if err != nil {
 				t.Fatalf("EvalString(%q) failed: %v", tc.expr, err)
@@ -83,10 +146,11 @@ func TestPlot3D_Deductive_SurfaceAndParametricCurve(t *testing.T) {
 				}
 			}
 
-			// SVG checks
+			// SVG checks including coordinate finiteness & viewport bounds
 			if !strings.Contains(pn.SVG, "<svg") || !strings.Contains(pn.SVG, "<polyline") {
 				t.Errorf("expected valid SVG with polylines, got:\n%s", pn.SVG)
 			}
+			assertSVGPolylineCoordsFiniteAndBounded(t, pn.SVG, -100, 900, -100, 600)
 			for _, bad := range []string{"NaN", "Inf", "-Inf", "+Inf"} {
 				if strings.Contains(pn.SVG, bad) || strings.Contains(pn.Typst, bad) {
 					t.Errorf("vector output contains invalid token %q", bad)
@@ -439,5 +503,278 @@ func TestPlot3D_ValidationHardening(t *testing.T) {
 				t.Errorf("expected jump cut on X/Y pole for [1/t, 1/t, t], found long segment len=%v", segLen)
 			}
 		}
+	}
+}
+
+func TestPlot3D_PerspectiveDiffersFromOrtho(t *testing.T) {
+	nExpr, _ := calc.Parse("x^2 + y^2")
+	rX, _ := calc.Parse("[-2, 2]")
+	rY, _ := calc.Parse("[-2, 2]")
+	azOpt, _ := calc.Parse("[az, 45]")
+	elOpt, _ := calc.Parse("[el, 25]")
+	orthoOpt, _ := calc.Parse(`"ortho"`)
+	perspOpt, _ := calc.Parse(`"perspective"`)
+
+	orthoScene, err := calc.BuildPlot3DScene([]calc.Node{nExpr, rX, rY, azOpt, elOpt, orthoOpt})
+	if err != nil {
+		t.Fatalf("ortho BuildPlot3DScene failed: %v", err)
+	}
+	perspScene, err := calc.BuildPlot3DScene([]calc.Node{nExpr, rX, rY, azOpt, elOpt, perspOpt})
+	if err != nil {
+		t.Fatalf("perspective BuildPlot3DScene failed: %v", err)
+	}
+
+	orthoSVG := calc.RenderPlot3DSVG(orthoScene)
+	perspSVG := calc.RenderPlot3DSVG(perspScene)
+	if orthoSVG == perspSVG {
+		t.Fatalf("expected perspective projection SVG to differ from orthographic projection SVG")
+	}
+
+	// Verify measurable coordinate difference on projected bounding box / surface points
+	var maxDiff float64
+	limit := len(orthoScene.Strokes)
+	if len(perspScene.Strokes) < limit {
+		limit = len(perspScene.Strokes)
+	}
+	for i := 0; i < limit; i++ {
+		oPts := orthoScene.Strokes[i].Points
+		pPts := perspScene.Strokes[i].Points
+		if len(oPts) == 0 || len(pPts) == 0 {
+			continue
+		}
+		d := math.Hypot(oPts[0].X-pPts[0].X, oPts[0].Y-pPts[0].Y)
+		if d > maxDiff {
+			maxDiff = d
+		}
+	}
+	if maxDiff < 1e-2 {
+		t.Errorf("expected noticeable projection difference between perspective and ortho, got maxDiff=%v", maxDiff)
+	}
+}
+
+func TestPlot3D_HLRPolylineMergeAndCollinearSimplify(t *testing.T) {
+	// 1. Curve mode (len(tris) == 0): 160 segments should merge into far fewer continuous polylines
+	//    while preserving multi-bucket depth shading in SVG.
+	nCurve, _ := calc.Parse("[cos(t), sin(t), t]")
+	rT, _ := calc.Parse("[t, 0, 10]")
+	curveScene, err := calc.BuildPlot3DScene([]calc.Node{nCurve, rT})
+	if err != nil {
+		t.Fatalf("BuildPlot3DScene curve failed: %v", err)
+	}
+	curveStrokes := 0
+	totalCurvePts := 0
+	for _, st := range curveScene.Strokes {
+		if st.Kind == "curve" {
+			curveStrokes++
+			totalCurvePts += len(st.Points)
+		}
+	}
+	if curveStrokes == 0 || totalCurvePts < 50 {
+		t.Fatalf("expected merged curve strokes with full geometry, got strokes=%d pts=%d", curveStrokes, totalCurvePts)
+	}
+	if curveStrokes >= 40 {
+		t.Errorf("expected adjacent curve segments to merge (<< 160 raw segments), got %d strokes", curveStrokes)
+	}
+
+	curveSVG := calc.RenderPlot3DSVG(curveScene)
+	paletteColors := []string{"#0284c7", "#0ea5e9", "#2563eb", "#4f46e5", "#7c3aed", "#9333ea"}
+	usedColors := 0
+	for _, c := range paletteColors {
+		if strings.Contains(curveSVG, c) {
+			usedColors++
+		}
+	}
+	if usedColors < 3 {
+		t.Errorf("expected depth-guarded polyline merge to preserve depth gradient (>=3 palette colors), got %d colors", usedColors)
+	}
+
+	// 2. Surface mode: straight edges (bounding box / planar isolines) must have collinear intermediate HLR points reduced
+	nPlane, _ := calc.Parse("x + y")
+	rX, _ := calc.Parse("[-2, 2]")
+	rY, _ := calc.Parse("[-2, 2]")
+	planeScene, err := calc.BuildPlot3DScene([]calc.Node{nPlane, rX, rY})
+	if err != nil {
+		t.Fatalf("BuildPlot3DScene plane failed: %v", err)
+	}
+	maxBoxPts := 0
+	for _, st := range planeScene.Strokes {
+		if (st.Kind == "box" || st.Kind == "axis") && len(st.Points) > maxBoxPts {
+			maxBoxPts = len(st.Points)
+		}
+	}
+	if maxBoxPts == 0 {
+		t.Fatalf("expected box/axis strokes in plane scene")
+	}
+	if maxBoxPts > 6 {
+		t.Errorf("expected collinear point reduction on straight box/axis edges (<=6 pts), got max %d pts", maxBoxPts)
+	}
+}
+
+func TestPlot3D_TypstMultiCharVarsNilGuardsAndDynamicCaption(t *testing.T) {
+	// 1. Multi-character surface variables must use Typst italic("...")
+	resSurf, err := calc.EvalString("plot3d(u1^2 - v2^2, [u1, -2, 2], [v2, -2, 2])")
+	if err != nil {
+		t.Fatalf("EvalString multi-char surface failed: %v", err)
+	}
+	pnSurf := resSurf.(*calc.PlotNode)
+	if !strings.Contains(pnSurf.Typst, `italic("u1")`) || !strings.Contains(pnSurf.Typst, `italic("v2")`) {
+		t.Errorf("expected italic(\"u1\") and italic(\"v2\") in Typst output, got:\n%s", pnSurf.Typst)
+	}
+	if strings.Contains(pnSurf.Typst, "$u1 in") || strings.Contains(pnSurf.Typst, "space v2 in") {
+		t.Errorf("raw multi-character identifier leaked into Typst math mode:\n%s", pnSurf.Typst)
+	}
+
+	// 2. Multi-character curve parameter must use Typst italic("...")
+	resCurve, err := calc.EvalString("plot3d([cos(tt), sin(tt), tt], [tt, 0, 6])")
+	if err != nil {
+		t.Fatalf("EvalString multi-char curve failed: %v", err)
+	}
+	pnCurve := resCurve.(*calc.PlotNode)
+	if !strings.Contains(pnCurve.Typst, `italic("tt")`) {
+		t.Errorf("expected italic(\"tt\") in curve Typst output, got:\n%s", pnCurve.Typst)
+	}
+
+	// 3. Single-letter variables must remain unquoted in Typst math mode
+	resSingle, err := calc.EvalString("plot3d(x^2 - y^2, [-2, 2], [-2, 2])")
+	if err != nil {
+		t.Fatalf("EvalString single-char surface failed: %v", err)
+	}
+	pnSingle := resSingle.(*calc.PlotNode)
+	if !strings.Contains(pnSingle.Typst, "$x in") || strings.Contains(pnSingle.Typst, `italic("x")`) {
+		t.Errorf("single-letter variable x should not be wrapped in italic(...), got:\n%s", pnSingle.Typst)
+	}
+
+	// 4. Nil *MinNode/*MaxNode guards + dynamic caption Y positioning
+	compactScene := &calc.Plot3DScene{
+		Kind:   "surface",
+		VarX:   "u1",
+		VarY:   "y",
+		XMin:   -1,
+		XMax:   1,
+		YMin:   -2,
+		YMax:   2,
+		ZMin:   0,
+		ZMax:   4,
+		Camera: calc.Camera3D{AzimuthDeg: 35, ElevationDeg: 25, Aspect: 2.0},
+		Strokes: []calc.Stroke2D{
+			{
+				Kind: "surface",
+				Points: []calc.ProjectedPoint2D{
+					{X: -0.5, Y: -0.2, Depth: 1.0, ZVal: 0},
+					{X: 0.5, Y: 0.2, Depth: 1.5, ZVal: 1},
+				},
+			},
+		},
+	}
+	svgOut := calc.RenderPlot3DSVG(compactScene)
+	var xmlCheck any
+	if err := xml.Unmarshal([]byte(svgOut), &xmlCheck); err != nil {
+		t.Errorf("RenderPlot3DSVG with nil bound nodes produced invalid XML: %v\n%s", err, svgOut)
+	}
+
+	typstOut := calc.RenderPlot3DTypst(compactScene)
+	if !strings.Contains(typstOut, `italic("u1")`) {
+		t.Errorf("expected italic(\"u1\") in compact Typst output:\n%s", typstOut)
+	}
+	if strings.Contains(typstOut, "(0, -4.6)") {
+		t.Errorf("expected dynamic caption Y coordinate instead of hardcoded (0, -4.6), got:\n%s", typstOut)
+	}
+	reCap := regexp.MustCompile(`content\(\(0,\s*([-0-9.]+)\)`)
+	capMatch := reCap.FindStringSubmatch(typstOut)
+	if len(capMatch) != 2 {
+		t.Fatalf("could not find content((0, y)) in Typst output:\n%s", typstOut)
+	}
+	capY, err := strconv.ParseFloat(capMatch[1], 64)
+	if err != nil {
+		t.Fatalf("failed to parse caption Y %q: %v", capMatch[1], err)
+	}
+	// With Y in [-0.2, 0.2], Aspect=2.0 -> plotted Y min is -0.2 * 4.2 / 2.0 = -0.42.
+	// Caption must sit cleanly below -0.42 (not overlapping) and much closer than -4.6.
+	if capY >= -0.42 || capY < -2.0 {
+		t.Errorf("expected dynamic caption Y in (-2.0, -0.42), got %v", capY)
+	}
+}
+
+func TestPlot3D_AspectAndDepthOrderedBoxAxes(t *testing.T) {
+	zeroNode, _ := calc.Parse("0")
+	oneNode, _ := calc.Parse("1")
+	makeTestScene := func(aspect float64) *calc.Plot3DScene {
+		return &calc.Plot3DScene{
+			Kind:     "surface",
+			VarX:     "x",
+			VarY:     "y",
+			XMinNode: zeroNode,
+			XMaxNode: oneNode,
+			YMinNode: zeroNode,
+			YMaxNode: oneNode,
+			ZMinNode: zeroNode,
+			ZMaxNode: oneNode,
+			Camera:   calc.Camera3D{AzimuthDeg: 35, ElevationDeg: 25, Aspect: aspect},
+			Strokes: []calc.Stroke2D{
+				{
+					Kind: "box", // front box edge (closest)
+					Points: []calc.ProjectedPoint2D{
+						{X: -0.5, Y: 0.5, Depth: 1.0, ZVal: 1},
+						{X: 0.5, Y: 0.5, Depth: 1.0, ZVal: 1},
+					},
+				},
+				{
+					Kind: "surface", // middle surface stroke
+					Points: []calc.ProjectedPoint2D{
+						{X: -0.5, Y: 0.0, Depth: 2.0, ZVal: 0.5},
+						{X: 0.5, Y: 0.0, Depth: 2.0, ZVal: 0.5},
+					},
+				},
+				{
+					Kind: "box", // back box edge (farthest)
+					Points: []calc.ProjectedPoint2D{
+						{X: -0.5, Y: -0.5, Depth: 3.0, ZVal: 0},
+						{X: 0.5, Y: -0.5, Depth: 3.0, ZVal: 0},
+					},
+				},
+			},
+		}
+	}
+
+	// 1. Aspect must affect both SVG and Typst Y coordinates
+	svgA1 := calc.RenderPlot3DSVG(makeTestScene(1.0))
+	svgA2 := calc.RenderPlot3DSVG(makeTestScene(2.0))
+	if svgA1 == svgA2 {
+		t.Errorf("expected RenderPlot3DSVG to respect Camera.Aspect=2.0")
+	}
+
+	typA1 := calc.RenderPlot3DTypst(makeTestScene(1.0))
+	typA2 := calc.RenderPlot3DTypst(makeTestScene(2.0))
+	if typA1 == typA2 {
+		t.Errorf("expected RenderPlot3DTypst to respect Camera.Aspect=2.0")
+	}
+
+	// 2. Depth ordering: back box (y=-0.5, depth=3) -> middle surface (y=0, depth=2) -> front box (y=0.5, depth=1)
+	// In SVG (aspect=1, width=800, height=500, pad=45 => plotH=410, scale=196.8, cy=250):
+	//   back box y=-0.5 -> svgy = 250 + 98.4 = 348.4
+	//   surface  y= 0.0 -> svgy = 250
+	//   front box y=0.5 -> svgy = 250 - 98.4 = 151.6
+	idxBackSVG := strings.Index(svgA1, ",348.4")
+	idxMidSVG := strings.Index(svgA1, ",250")
+	idxFrontSVG := strings.Index(svgA1, ",151.6")
+	if idxBackSVG < 0 || idxMidSVG < 0 || idxFrontSVG < 0 {
+		t.Fatalf("expected back/mid/front coordinates in SVG:\n%s", svgA1)
+	}
+	if !(idxBackSVG < idxMidSVG && idxMidSVG < idxFrontSVG) {
+		t.Errorf("expected SVG depth-ordered drawing (back box < mid surface < front box), got indices %d, %d, %d\n%s",
+			idxBackSVG, idxMidSVG, idxFrontSVG, svgA1)
+	}
+
+	// In Typst (aspect=1, scale=4.2):
+	//   back box y=-0.5 -> -2.1, surface y=0 -> 0, front box y=0.5 -> 2.1
+	idxBackTyp := strings.Index(typA1, ", -2.1)")
+	idxMidTyp := strings.Index(typA1, ", 0)")
+	idxFrontTyp := strings.Index(typA1, ", 2.1)")
+	if idxBackTyp < 0 || idxMidTyp < 0 || idxFrontTyp < 0 {
+		t.Fatalf("expected back/mid/front coordinates in Typst:\n%s", typA1)
+	}
+	if !(idxBackTyp < idxMidTyp && idxMidTyp < idxFrontTyp) {
+		t.Errorf("expected Typst depth-ordered drawing (back box < mid surface < front box), got indices %d, %d, %d\n%s",
+			idxBackTyp, idxMidTyp, idxFrontTyp, typA1)
 	}
 }

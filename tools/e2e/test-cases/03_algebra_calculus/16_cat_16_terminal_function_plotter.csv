@@ -12,5 +12,7 @@ CAT16-010,cat_16_terminal_function_plotter,"--format svg ""plot3d(x^2 - y^2, [-2
 CAT16-011,cat_16_terminal_function_plotter,"--format typst ""plot3d(x^2 - y^2, [-2, 2], [-2, 2])""",,contains,cetz.canvas,,0,metamorphic,Plotter3D: Shared HLR Typst output via --format typst
 CAT16-012,cat_16_terminal_function_plotter,"""plot3d_svg(x^2 + y^2, [-2, 2], [-2, 2])""",,contains,</svg>,,0,deductive,Plotter3D: Builtin plot3d_svg standalone SVG output
 CAT16-013,cat_16_terminal_function_plotter,"""plot3d(x^2 + y^2, [3, -3], [-2, 2])""",,error,,invalid plot domain,1,contradiction,Plotter3D: Error on inverted x domain
-CAT16-014,cat_16_terminal_function_plotter,"""plot3d([t, t^2], [t, 0, 1])""",,error,,,1,contrapositive,Plotter3D: Error on 2D list instead of 3D curve
+CAT16-014,cat_16_terminal_function_plotter,"""plot3d([t, t^2], [t, 0, 1])""",,error,,must have 3 components,1,contrapositive,Plotter3D: Error on 2D list instead of 3D curve
 CAT16-015,cat_16_terminal_function_plotter,"""plot3d(1/(x^2 + y^2), [-2, 2], [-2, 2])""",,contains,"az = 35°",,0,contradiction,Plotter3D: Singularity pole surface clipping without crash
+CAT16-016,cat_16_terminal_function_plotter,"""plot3d(x^2 + y^2, [x, -2, 2], [x, -2, 2])""",,error,,must be distinct,1,contrapositive,Plotter3D: Error on duplicate domain variables
+CAT16-017,cat_16_terminal_function_plotter,"--format typst ""plot3d(u1^2 - v2^2, [u1, -2, 2], [v2, -2, 2])""",,contains,"italic(""u1"")",,0,deductive,Plotter3D: Typst multi-character variable italic escaping
