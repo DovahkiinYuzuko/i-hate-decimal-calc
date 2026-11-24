@@ -537,11 +537,46 @@ const (
 	evalFloatUnsupported
 )
 
+type floatVarBinding struct {
+	singleName string
+	singleVal  float64
+	hasSingle  bool
+	vars       map[string]float64
+}
+
+func (b floatVarBinding) lookup(name string) (float64, bool) {
+	if b.hasSingle {
+		if name == b.singleName {
+			return b.singleVal, true
+		}
+		return 0, false
+	}
+	v, ok := b.vars[name]
+	return v, ok
+}
+
 func evalSampleFloat(expr Node, varName string, x float64) (float64, bool) {
 	if math.IsNaN(x) || math.IsInf(x, 0) {
 		return 0, false
 	}
-	y, state := evalASTFloat64(expr, varName, x)
+	return evalSampleFloatBound(expr, floatVarBinding{
+		singleName: varName,
+		singleVal:  x,
+		hasSingle:  true,
+	})
+}
+
+func evalSampleFloatVars(expr Node, vars map[string]float64) (float64, bool) {
+	for _, v := range vars {
+		if math.IsNaN(v) || math.IsInf(v, 0) {
+			return 0, false
+		}
+	}
+	return evalSampleFloatBound(expr, floatVarBinding{vars: vars})
+}
+
+func evalSampleFloatBound(expr Node, b floatVarBinding) (float64, bool) {
+	y, state := evalASTFloat64Bound(expr, b)
 	switch state {
 	case evalFloatOK:
 		if math.IsNaN(y) || math.IsInf(y, 0) {
@@ -551,16 +586,27 @@ func evalSampleFloat(expr Node, varName string, x float64) (float64, bool) {
 	case evalFloatDomainError:
 		return 0, false
 	default:
-		return evalSampleIntervalFallback(expr, varName, x)
+		return evalSampleIntervalFallbackBound(expr, b)
 	}
 }
 
-func evalSampleIntervalFallback(expr Node, varName string, x float64) (float64, bool) {
-	rRat := new(big.Rat).SetFloat64(x)
-	if rRat == nil {
-		return 0, false
+func evalSampleIntervalFallbackBound(expr Node, b floatVarBinding) (float64, bool) {
+	subExpr := expr
+	if b.hasSingle {
+		rRat := new(big.Rat).SetFloat64(b.singleVal)
+		if rRat == nil {
+			return 0, false
+		}
+		subExpr = substituteVar(subExpr, b.singleName, NewRationalFromBigRat(rRat))
+	} else {
+		for varName, x := range b.vars {
+			rRat := new(big.Rat).SetFloat64(x)
+			if rRat == nil {
+				return 0, false
+			}
+			subExpr = substituteVar(subExpr, varName, NewRationalFromBigRat(rRat))
+		}
 	}
-	subExpr := substituteVar(expr, varName, NewRationalFromBigRat(rRat))
 	y, err := evalNodeFloat(subExpr)
 	if err != nil || math.IsNaN(y) || math.IsInf(y, 0) {
 		return 0, false
@@ -568,20 +614,28 @@ func evalSampleIntervalFallback(expr Node, varName string, x float64) (float64, 
 	return y, true
 }
 
-func evalASTFloat64(n Node, varName string, x float64) (float64, evalFloatState) {
+func evalASTFloat64Bound(n Node, b floatVarBinding) (float64, evalFloatState) {
 	if n == nil {
 		return 0, evalFloatUnsupported
 	}
 	switch v := n.(type) {
 	case *RationalNode:
+		const maxExactFloatInt = int64(1) << 53
+		num, den := v.Val.Num(), v.Val.Denom()
+		if num.IsInt64() && den.IsInt64() {
+			ni, di := num.Int64(), den.Int64()
+			if ni >= -maxExactFloatInt && ni <= maxExactFloatInt && di > 0 && di <= maxExactFloatInt {
+				return float64(ni) / float64(di), evalFloatOK
+			}
+		}
 		f, _ := v.Val.Float64()
 		if math.IsNaN(f) || math.IsInf(f, 0) {
 			return 0, evalFloatDomainError
 		}
 		return f, evalFloatOK
 	case *VarNode:
-		if v.Name == varName {
-			return x, evalFloatOK
+		if val, ok := b.lookup(v.Name); ok {
+			return val, evalFloatOK
 		}
 		return 0, evalFloatUnsupported
 	case *ConstNode:
@@ -596,7 +650,7 @@ func evalASTFloat64(n Node, varName string, x float64) (float64, evalFloatState)
 			return 0, evalFloatUnsupported
 		}
 	case *UnaryOpNode:
-		val, st := evalASTFloat64(v.Expr, varName, x)
+		val, st := evalASTFloat64Bound(v.Expr, b)
 		if st != evalFloatOK {
 			return 0, st
 		}
@@ -607,7 +661,7 @@ func evalASTFloat64(n Node, varName string, x float64) (float64, evalFloatState)
 	case *AddNode:
 		sum := 0.0
 		for _, t := range v.Terms {
-			tv, st := evalASTFloat64(t, varName, x)
+			tv, st := evalASTFloat64Bound(t, b)
 			if st != evalFloatOK {
 				return 0, st
 			}
@@ -620,7 +674,7 @@ func evalASTFloat64(n Node, varName string, x float64) (float64, evalFloatState)
 	case *MulNode:
 		prod := 1.0
 		for _, f := range v.Factors {
-			fv, st := evalASTFloat64(f, varName, x)
+			fv, st := evalASTFloat64Bound(f, b)
 			if st != evalFloatOK {
 				return 0, st
 			}
@@ -631,11 +685,11 @@ func evalASTFloat64(n Node, varName string, x float64) (float64, evalFloatState)
 		}
 		return prod, evalFloatOK
 	case *PowNode:
-		base, stB := evalASTFloat64(v.Base, varName, x)
+		base, stB := evalASTFloat64Bound(v.Base, b)
 		if stB != evalFloatOK {
 			return 0, stB
 		}
-		exp, stE := evalASTFloat64(v.Exp, varName, x)
+		exp, stE := evalASTFloat64Bound(v.Exp, b)
 		if stE != evalFloatOK {
 			return 0, stE
 		}
@@ -650,7 +704,7 @@ func evalASTFloat64(n Node, varName string, x float64) (float64, evalFloatState)
 				}
 				return res, evalFloatOK
 			}
-			if r, okR := v.Exp.(*RationalNode); okR && r.Val.Denom().Cmp(big.NewInt(3)) == 0 {
+			if r, okR := v.Exp.(*RationalNode); okR && r.Val.Denom().IsInt64() && r.Val.Denom().Int64() == 3 {
 				num := float64(r.Val.Num().Int64())
 				res := math.Pow(math.Cbrt(base), num)
 				if math.IsNaN(res) || math.IsInf(res, 0) {
@@ -666,7 +720,7 @@ func evalASTFloat64(n Node, varName string, x float64) (float64, evalFloatState)
 		}
 		return res, evalFloatOK
 	case *SqrtNode:
-		rad, st := evalASTFloat64(v.Radicand, varName, x)
+		rad, st := evalASTFloat64Bound(v.Radicand, b)
 		if st != evalFloatOK {
 			return 0, st
 		}
@@ -678,7 +732,7 @@ func evalASTFloat64(n Node, varName string, x float64) (float64, evalFloatState)
 		if len(v.Args) != 1 {
 			return 0, evalFloatUnsupported
 		}
-		arg, st := evalASTFloat64(v.Args[0], varName, x)
+		arg, st := evalASTFloat64Bound(v.Args[0], b)
 		if st != evalFloatOK {
 			return 0, st
 		}

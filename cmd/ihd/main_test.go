@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -44,6 +45,7 @@ func TestCLI_OneShot(t *testing.T) {
 }
 
 func TestCLI_OneShot_Approx(t *testing.T) {
+	withTestLocale(t, "en")
 	out := new(bytes.Buffer)
 	errOut := new(bytes.Buffer)
 	code := run([]string{"--approx", "sqrt(2)"}, strings.NewReader(""), out, errOut)
@@ -142,6 +144,7 @@ func TestCLI_OneShot_Pretty(t *testing.T) {
 }
 
 func TestCLI_OneShot_Errors(t *testing.T) {
+	withTestLocale(t, "en")
 	testCases := []struct {
 		args          []string
 		expectedErrSub string
@@ -166,6 +169,7 @@ func TestCLI_OneShot_Errors(t *testing.T) {
 }
 
 func TestCLI_Help(t *testing.T) {
+	withTestLocale(t, "en")
 	out := new(bytes.Buffer)
 	errOut := new(bytes.Buffer)
 	code := run([]string{"-lang", "en", "--help"}, strings.NewReader(""), out, errOut)
@@ -322,6 +326,7 @@ func TestCLI_Pipe_Variables(t *testing.T) {
 }
 
 func TestCLI_Explain(t *testing.T) {
+	withTestLocale(t, "en")
 	out := new(bytes.Buffer)
 	errOut := new(bytes.Buffer)
 	code := run([]string{"--lang", "ja", "--explain", "1 / (sqrt(2) + 1)"}, nil, out, errOut)
@@ -338,7 +343,8 @@ func TestCLI_Explain(t *testing.T) {
 }
 
 func TestCLI_REPL_ExplainCommand(t *testing.T) {
-	input := "lang ja\nexplain 1 / (sqrt(2) + 1)\nexit\n"
+	withTestLocale(t, "ja")
+	input := "explain 1 / (sqrt(2) + 1)\nexit\n"
 	in := strings.NewReader(input)
 	out := new(bytes.Buffer)
 	errOut := new(bytes.Buffer)
@@ -980,3 +986,100 @@ func TestCLI_BudgetAndResourceLimits(t *testing.T) {
 	}
 }
 
+
+func TestCLI_Plot3DOutputs(t *testing.T) {
+	// Non-TTY buffer must emit monochrome Braille without ANSI escapes
+	var out, errOut bytes.Buffer
+	code := run([]string{"--no-update-check", "plot3d(x^2 - y^2, [-2, 2], [-2, 2])"}, strings.NewReader(""), &out, &errOut)
+	if code != 0 {
+		t.Fatalf("expected exit code 0, got %d, stderr: %s", code, errOut.String())
+	}
+	if strings.Contains(out.String(), "\x1b[") {
+		t.Errorf("non-TTY plot3d output must not emit ANSI escapes")
+	}
+	if !strings.Contains(out.String(), "z ∈ [-4, 4]") || !strings.Contains(out.String(), "[0, 0, 0]") {
+		t.Errorf("expected exact z domain [-4, 4] and saddle [0, 0, 0] in output, got:\n%s", out.String())
+	}
+
+	// --format svg
+	out.Reset()
+	errOut.Reset()
+	code = run([]string{"--no-update-check", "--format", "svg", "plot3d(x^2 - y^2, [-2, 2], [-2, 2])"}, strings.NewReader(""), &out, &errOut)
+	if code != 0 || !strings.Contains(out.String(), "<svg") || !strings.Contains(out.String(), "<polyline") || !strings.Contains(out.String(), `id="plot3d-axes"`) || !strings.Contains(out.String(), "<circle") {
+		t.Fatalf("expected valid SVG with axes and feature markers from --format svg, code=%d, out=%s, err=%s", code, out.String(), errOut.String())
+	}
+
+	// --format typst
+	out.Reset()
+	errOut.Reset()
+	code = run([]string{"--no-update-check", "--format", "typst", "plot3d(x^2 - y^2, [-2, 2], [-2, 2])"}, strings.NewReader(""), &out, &errOut)
+	if code != 0 || !strings.Contains(out.String(), "cetz.canvas") || !strings.Contains(out.String(), "circle(") {
+		t.Fatalf("expected valid Typst with axes and feature markers from --format typst, code=%d, out=%s, err=%s", code, out.String(), errOut.String())
+	}
+
+	// Simulated TTY: normal output emits ANSI 256-color escapes, while --ascii suppresses color
+	origTermFn := isTerminalWriterFn
+	isTerminalWriterFn = func(_ io.Writer) bool { return true }
+	t.Cleanup(func() { isTerminalWriterFn = origTermFn })
+
+	out.Reset()
+	errOut.Reset()
+	code = run([]string{"--no-update-check", "plot3d(x^2 - y^2, [-2, 2], [-2, 2])"}, strings.NewReader(""), &out, &errOut)
+	if code != 0 || !strings.Contains(out.String(), "\x1b[38;5;") {
+		t.Fatalf("expected ANSI 256-color escapes on TTY without --ascii, code=%d, err=%s", code, errOut.String())
+	}
+
+	out.Reset()
+	errOut.Reset()
+	code = run([]string{"--no-update-check", "--ascii", "plot3d(x^2 - y^2, [-2, 2], [-2, 2])"}, strings.NewReader(""), &out, &errOut)
+	if code != 0 {
+		t.Fatalf("expected exit code 0 for --ascii plot3d, got %d, err=%s", code, errOut.String())
+	}
+	if strings.Contains(out.String(), "\x1b[") {
+		t.Errorf("--ascii plot3d output must suppress ANSI color escapes even on TTY")
+	}
+
+	// Simulated TTY with --no-color must suppress ANSI escapes
+	out.Reset()
+	errOut.Reset()
+	code = run([]string{"--no-update-check", "--no-color", "plot3d(x^2 - y^2, [-2, 2], [-2, 2])"}, strings.NewReader(""), &out, &errOut)
+	if code != 0 {
+		t.Fatalf("expected exit code 0 for --no-color plot3d, got %d, err=%s", code, errOut.String())
+	}
+	if strings.Contains(out.String(), "\x1b[") {
+		t.Errorf("--no-color plot3d output must suppress ANSI color escapes even on TTY")
+	}
+
+	// Simulated TTY with plot3d(..., "mono") must suppress ANSI escapes
+	out.Reset()
+	errOut.Reset()
+	code = run([]string{"--no-update-check", `plot3d(x^2 - y^2, [-2, 2], [-2, 2], "mono")`}, strings.NewReader(""), &out, &errOut)
+	if code != 0 {
+		t.Fatalf("expected exit code 0 for mono plot3d, got %d, err=%s", code, errOut.String())
+	}
+	if strings.Contains(out.String(), "\x1b[") {
+		t.Errorf(`plot3d "mono" option must suppress ANSI color escapes even on TTY`)
+	}
+}
+
+func TestMain(m *testing.M) {
+	tmpDir, err := os.MkdirTemp("", "ihd-cmd-test-*")
+	if err == nil {
+		defer os.RemoveAll(tmpDir)
+		_ = os.Setenv("IHD_DIR", tmpDir)
+	}
+	_ = os.Setenv("IHD_LANG", "en")
+	_ = i18n.Init("en")
+	os.Exit(m.Run())
+}
+
+func withTestLocale(t *testing.T, locale string) {
+	t.Helper()
+	t.Setenv("IHD_DIR", t.TempDir())
+	t.Setenv("IHD_LANG", locale)
+	orig := i18n.CurrentLocale()
+	_ = i18n.Init(locale)
+	t.Cleanup(func() {
+		_ = i18n.Init(orig)
+	})
+}

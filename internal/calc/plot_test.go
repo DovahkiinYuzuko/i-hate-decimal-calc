@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"math"
 	"strings"
 	"testing"
 )
@@ -94,5 +95,35 @@ func TestPlot_Errors(t *testing.T) {
 				t.Errorf("expected error for %s, got nil", expr)
 			}
 		})
+	}
+}
+
+func TestPlot_EvalSampleFloatZeroAllocs(t *testing.T) {
+	expr, err := Parse("x^2 + sin(x) - 1/3")
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+
+	v, ok := evalSampleFloat(expr, "x", 1.5)
+	if !ok {
+		t.Fatalf("expected ok=true for x=1.5")
+	}
+	want := 1.5*1.5 + math.Sin(1.5) - 1.0/3.0
+	if math.Abs(v-want) > 1e-12 {
+		t.Fatalf("unexpected value: got %v, want %v", v, want)
+	}
+
+	if _, ok := evalSampleFloat(expr, "x", math.NaN()); ok {
+		t.Errorf("expected ok=false for NaN input")
+	}
+	if _, ok := evalSampleFloat(expr, "x", math.Inf(1)); ok {
+		t.Errorf("expected ok=false for +Inf input")
+	}
+
+	allocs := testing.AllocsPerRun(100, func() {
+		_, _ = evalSampleFloat(expr, "x", 1.5)
+	})
+	if allocs != 0 {
+		t.Errorf("expected 0 heap allocs/op in evalSampleFloat, got %v", allocs)
 	}
 }

@@ -6,3 +6,17 @@ CAT16-004,cat_16_terminal_function_plotter,"--format svg ""plot(x^2 - 2, [-2, 2]
 CAT16-005,cat_16_terminal_function_plotter,"""plot_svg(1/x, [-3, 3])""",,contains,</svg>,,0,deductive,Plotter: Builtin plot_svg function for rational function
 CAT16-006,cat_16_terminal_function_plotter,"""plot_svg(1/x, [3, -3])""",,error,,invalid plot domain,1,contradiction,Plotter: plot_svg error on inverted domain
 CAT16-007,cat_16_terminal_function_plotter,"""plot_svg(x^2, [-2, 2], [-5, 5], 123)""",,error,,,1,contrapositive,Plotter: plot_svg error on non-string output file argument
+CAT16-008,cat_16_terminal_function_plotter,"""plot3d(x^2 - y^2, [-2, 2], [-2, 2])""",,contains,"z ∈ [-4, 4]",,0,deductive,Plotter3D: Saddle surface exact domain and Braille output
+CAT16-009,cat_16_terminal_function_plotter,"""plot3d([cos(t), sin(t), t], [t, 0, 10])""",,contains,"t ∈ [0, 10]",,0,deductive,Plotter3D: Parametric 3D helix curve
+CAT16-010,cat_16_terminal_function_plotter,"--format svg ""plot3d(x^2 - y^2, [-2, 2], [-2, 2])""",,contains,<polyline,,0,metamorphic,Plotter3D: Shared HLR SVG output via --format svg
+CAT16-011,cat_16_terminal_function_plotter,"--format typst ""plot3d(x^2 - y^2, [-2, 2], [-2, 2])""",,contains,cetz.canvas,,0,metamorphic,Plotter3D: Shared HLR Typst output via --format typst
+CAT16-012,cat_16_terminal_function_plotter,"""plot3d_svg(x^2 + y^2, [-2, 2], [-2, 2])""",,contains,</svg>,,0,deductive,Plotter3D: Builtin plot3d_svg standalone SVG output
+CAT16-013,cat_16_terminal_function_plotter,"""plot3d(x^2 + y^2, [3, -3], [-2, 2])""",,error,,invalid plot domain,1,contradiction,Plotter3D: Error on inverted x domain
+CAT16-014,cat_16_terminal_function_plotter,"""plot3d([t, t^2], [t, 0, 1])""",,error,,must have 3 components,1,contrapositive,Plotter3D: Error on 2D list instead of 3D curve
+CAT16-015,cat_16_terminal_function_plotter,"""plot3d(1/(x^2 + y^2), [-2, 2], [-2, 2])""",,contains,"az = 35°",,0,contradiction,Plotter3D: Singularity pole surface clipping without crash
+CAT16-016,cat_16_terminal_function_plotter,"""plot3d(x^2 + y^2, [x, -2, 2], [x, -2, 2])""",,error,,must be distinct,1,contrapositive,Plotter3D: Error on duplicate domain variables
+CAT16-017,cat_16_terminal_function_plotter,"--format typst ""plot3d(u1^2 - v2^2, [u1, -2, 2], [v2, -2, 2])""",,contains,"italic(""u1"")",,0,deductive,Plotter3D: Typst multi-character variable italic escaping
+CAT16-018,cat_16_terminal_function_plotter,"""plot3d(x^2 - y^2, [-2, 2], [-2, 2])""",,contains,"[0, 0, 0]",,0,deductive,Plotter3D: CAS exact saddle point metadata output
+CAT16-019,cat_16_terminal_function_plotter,"""plot3d(x^2 + x*y + y^2 - 3*x, [-4, 4], [-4, 4])""",,contains,"[2, -1, -3]",,0,deductive,Plotter3D: Coupled polynomial critical point via lex Groebner elimination
+CAT16-020,cat_16_terminal_function_plotter,"--format svg ""plot3d(x^2 - y^2, [-2, 2], [-2, 2])""",,contains,<circle,,0,metamorphic,Plotter3D: SVG visible critical point marker and axis ticks
+CAT16-021,cat_16_terminal_function_plotter,"--format typst ""plot3d(x^2 - y^2, [-2, 2], [-2, 2])""",,contains,"circle(",,0,metamorphic,Plotter3D: Typst visible critical point marker and axis ticks

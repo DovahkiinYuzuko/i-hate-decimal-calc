@@ -163,7 +163,7 @@ ihd "１＋２×３"
 
 ### 可視化・形式出力・対話支援
 - **途中式ツリーと単一 DAG からの形式出力射影（`--explain` / `--typst` / `--lean`）**: 有理化・二重根号分解・因数分解・極限等の導出過程を 2D ツリーで表示し、同じ導出グラフから Typst レポート（`--explain --typst`）および Lean 4 等式連鎖証明（`--explain --lean`）を生成します。
-- **端末組版と点字プロッタ（`--pretty` / `plot`）**: 複数行ボックスモデルによる数式組版と、Unicode Braille 2×4 点字文字を使った端末グラフ描画を備えています。
+- **端末組版と 2D/3D 点字・ベクタープロッタ（`--pretty` / `plot` / `plot3d`）**: 複数行ボックスモデルによる数式組版に加え、Unicode Braille 2×4 点字文字および SVG / Typst による 2D 曲線プロット（`plot` / `plot_svg`）と 3D 曲面・空間曲線ワイヤーフレーム描画（`plot3d` / `plot3d_svg`、隠線処理・視点適応 3D 座標軸・CAS 厳密特徴点検出対応）を備えています。
 - **REPL 入力支援とコレクション制御**: 外部依存ゼロの FSM によるリアルタイム引数ガイド・レインボー括弧に加え、Python 互換スライス（`[start:end:step]`）、`range`、`lambda`、`map`、`filter`、反復安全ガード（`--warn-loop` / `--max-loop`）を搭載しています。
 
 ターミナル組版、点字プロット、途中式ツリー、Typst / Lean 4 の実出力例は **[出力サンプル集（日本語）](./sample/sample.ja.md)** / **[Visual Samples（English）](./sample/sample.en.md)** に収録しています。
@@ -243,6 +243,7 @@ ihd "１＋２×３"
 | **幾何学解析・自動証明** | `line_intersect`, `circle_intersect`, `triangle_area`, `geo_prove` |
 | **代数構造・p進数・数論幾何・量子** | `padic_val`, `padic_norm`, `padic_expand`, `galois_group`, `is_solvable_by_radicals`, `ec_p_order`, `ec_rank_bound`, `clifford`, `quantum_equiv` |
 | **物理単位・仮定・反復** | `convert_unit`, `assume`, `unassume`, `table`, `range`, `map`, `filter` |
+| **可視化・2D/3D 空間プロット** | `plot`, `plot_svg`, `plot3d`, `plot3d_svg` |
 
 全関数・引数仕様・優先順位・全 CLI フラグ一覧は、専用リファレンスまたは `ihd --help` で確認できます。
 - **Markdown 版**: [日本語版リファレンス](docs/references/ja/reference.ja.md) / [英語版リファレンス](docs/references/en/reference.en.md)

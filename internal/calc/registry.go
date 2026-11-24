@@ -216,6 +216,8 @@ var defaultFunctionArgs = map[string][]string{
 	"triangle_centers": {"a", "b", "c"},
 	"plot":             {"expr", "range"},
 	"plot_svg":         {"expr", "range"},
+	"plot3d":           {"expr", "x_range", "y_range"},
+	"plot3d_svg":       {"expr", "x_range", "y_range"},
 	"cad":              {"formula", "vars"},
 	"qe":               {"formula"},
 	"clifford":         {"expr", "p", "q", "r"},
@@ -950,6 +952,18 @@ func init() {
 		Name:    "plot_svg",
 		MinArgs: 2,
 		MaxArgs: 4,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:     "plot3d",
+		MinArgs:  2,
+		MaxArgs:  8,
+		LazyArgs: true,
+	})
+	RegisterFunction(FunctionSpec{
+		Name:     "plot3d_svg",
+		MinArgs:  2,
+		MaxArgs:  9,
+		LazyArgs: true,
 	})
 
 	// Assumptions
