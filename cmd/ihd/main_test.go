@@ -45,6 +45,7 @@ func TestCLI_OneShot(t *testing.T) {
 }
 
 func TestCLI_OneShot_Approx(t *testing.T) {
+	withTestLocale(t, "en")
 	out := new(bytes.Buffer)
 	errOut := new(bytes.Buffer)
 	code := run([]string{"--approx", "sqrt(2)"}, strings.NewReader(""), out, errOut)
@@ -143,6 +144,7 @@ func TestCLI_OneShot_Pretty(t *testing.T) {
 }
 
 func TestCLI_OneShot_Errors(t *testing.T) {
+	withTestLocale(t, "en")
 	testCases := []struct {
 		args          []string
 		expectedErrSub string
@@ -167,6 +169,7 @@ func TestCLI_OneShot_Errors(t *testing.T) {
 }
 
 func TestCLI_Help(t *testing.T) {
+	withTestLocale(t, "en")
 	out := new(bytes.Buffer)
 	errOut := new(bytes.Buffer)
 	code := run([]string{"-lang", "en", "--help"}, strings.NewReader(""), out, errOut)
@@ -323,6 +326,7 @@ func TestCLI_Pipe_Variables(t *testing.T) {
 }
 
 func TestCLI_Explain(t *testing.T) {
+	withTestLocale(t, "en")
 	out := new(bytes.Buffer)
 	errOut := new(bytes.Buffer)
 	code := run([]string{"--lang", "ja", "--explain", "1 / (sqrt(2) + 1)"}, nil, out, errOut)
@@ -339,7 +343,8 @@ func TestCLI_Explain(t *testing.T) {
 }
 
 func TestCLI_REPL_ExplainCommand(t *testing.T) {
-	input := "lang ja\nexplain 1 / (sqrt(2) + 1)\nexit\n"
+	withTestLocale(t, "ja")
+	input := "explain 1 / (sqrt(2) + 1)\nexit\n"
 	in := strings.NewReader(input)
 	out := new(bytes.Buffer)
 	errOut := new(bytes.Buffer)
@@ -1055,4 +1060,26 @@ func TestCLI_Plot3DOutputs(t *testing.T) {
 	if strings.Contains(out.String(), "\x1b[") {
 		t.Errorf(`plot3d "mono" option must suppress ANSI color escapes even on TTY`)
 	}
+}
+
+func TestMain(m *testing.M) {
+	tmpDir, err := os.MkdirTemp("", "ihd-cmd-test-*")
+	if err == nil {
+		defer os.RemoveAll(tmpDir)
+		_ = os.Setenv("IHD_DIR", tmpDir)
+	}
+	_ = os.Setenv("IHD_LANG", "en")
+	_ = i18n.Init("en")
+	os.Exit(m.Run())
+}
+
+func withTestLocale(t *testing.T, locale string) {
+	t.Helper()
+	t.Setenv("IHD_DIR", t.TempDir())
+	t.Setenv("IHD_LANG", locale)
+	orig := i18n.CurrentLocale()
+	_ = i18n.Init(locale)
+	t.Cleanup(func() {
+		_ = i18n.Init(orig)
+	})
 }

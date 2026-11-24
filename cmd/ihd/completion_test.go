@@ -102,6 +102,7 @@ func TestRunCompletion_InvalidShell(t *testing.T) {
 }
 
 func TestRunCompletion_I18n(t *testing.T) {
+	withTestLocale(t, "en")
 	_ = i18n.Init("ja")
 	var jaBuf bytes.Buffer
 	if err := RunCompletion("powershell", &jaBuf); err != nil {
