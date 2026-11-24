@@ -163,7 +163,7 @@ ihd "１＋２×３"
 
 ### Visualization, Formal Projection & Safety
 - **Derivation Trees & Single-DAG Formal Projection (`--explain` / `--typst` / `--lean`)**: Displays algebraic transformation trees and projects from the same provenance DAG into Typst reports (`--explain --typst`) or Lean 4 transitive equational proofs (`--explain --lean`).
-- **2D Typesetting & Braille Plotter (`--pretty` / `plot`)**: Renders fractions, roots, and matrices as multi-line terminal box models, and plots curves with Unicode 2×4 Braille characters.
+- **2D Typesetting & 2D/3D Braille/Vector Plotter (`--pretty` / `plot` / `plot3d`)**: Renders fractions, roots, and matrices as multi-line terminal box models, and renders 2D curves (`plot` / `plot_svg`) and 3D surfaces / space curves (`plot3d` / `plot3d_svg`, with hidden-line removal, viewpoint-adaptive 3D axes, and exact CAS critical-point detection) via Unicode 2×4 Braille, SVG, and Typst.
 - **REPL Assistance & Collection Control**: Zero-dependency FSM provides live signature guides and rainbow delimiters, alongside Python-style slicing (`[start:end:step]`), `range`, `lambda`, `map`, `filter`, and loop guards (`--warn-loop` / `--max-loop`).
 
 Concrete CLI outputs, terminal plots, derivation trees, and Typst/Lean 4 artifacts are shown in **[Visual Samples (English)](./sample/sample.en.md)** / **[出力サンプル集（日本語）](./sample/sample.ja.md)**.
@@ -243,6 +243,7 @@ Built-in functions span elementary algebra and calculus through number theory, r
 | **Computational Geometry & Automated Proving** | `line_intersect`, `circle_intersect`, `triangle_area`, `geo_prove` |
 | **Algebraic Structures, p-adic, Arithmetic Geometry & Quantum** | `padic_val`, `padic_norm`, `padic_expand`, `galois_group`, `is_solvable_by_radicals`, `ec_p_order`, `ec_rank_bound`, `clifford`, `quantum_equiv` |
 | **Units, Assumptions & CAS Iteration** | `convert_unit`, `assume`, `unassume`, `table`, `range`, `map`, `filter` |
+| **Visualization & 2D/3D Spatial Plotting** | `plot`, `plot_svg`, `plot3d`, `plot3d_svg` |
 
 All function signatures, operator precedence rules, and CLI flags are documented in the syntax references and `ihd --help`:
 - **Markdown Edition**: [Japanese Reference](docs/references/ja/reference.ja.md) / [English Reference](docs/references/en/reference.en.md)

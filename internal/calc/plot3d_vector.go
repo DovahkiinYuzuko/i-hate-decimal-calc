@@ -144,6 +144,77 @@ func formatTypstMathIdent(name string) string {
 	return fmt.Sprintf(`italic("%s")`, escaped)
 }
 
+func translatePlot3DFeatureKind(kind string) string {
+	switch kind {
+	case "min":
+		return i18n.T("plot3d.svg_feature_min")
+	case "max":
+		return i18n.T("plot3d.svg_feature_max")
+	case "saddle":
+		return i18n.T("plot3d.svg_feature_saddle")
+	default:
+		return i18n.T("plot3d.svg_feature_critical")
+	}
+}
+
+func svgFeatureFillColor(kind string) string {
+	switch kind {
+	case "min", "max":
+		return "#059669"
+	case "saddle":
+		return "#d97706"
+	default:
+		return "#6366f1"
+	}
+}
+
+func svgTextAnchorFromOutDir(outX float64) string {
+	if outX > 0.25 {
+		return "start"
+	}
+	if outX < -0.25 {
+		return "end"
+	}
+	return "middle"
+}
+
+func typstAnchorFromOutDir(outX, outY float64) string {
+	// Anchor is the side of the label box that touches the offset point,
+	// so it points opposite to the outward direction.
+	ns := ""
+	if outY > 0.35 {
+		ns = "south"
+	} else if outY < -0.35 {
+		ns = "north"
+	}
+	ew := ""
+	if outX > 0.35 {
+		ew = "west"
+	} else if outX < -0.35 {
+		ew = "east"
+	}
+	switch {
+	case ns != "" && ew != "":
+		return ns + "-" + ew
+	case ns != "":
+		return ns
+	case ew != "":
+		return ew
+	default:
+		return "center"
+	}
+}
+
+func clampFloatRange(v, lo, hi float64) float64 {
+	if v < lo {
+		return lo
+	}
+	if v > hi {
+		return hi
+	}
+	return v
+}
+
 type svgStrokeStyle struct {
 	color     string
 	width     string
@@ -187,20 +258,27 @@ func RenderPlot3DSVG(scene *Plot3DScene) string {
 	zMaxText := formatBoundSVG(scene.ZMaxNode, scene.ZMax)
 
 	sb.WriteString(fmt.Sprintf("  <title>%s</title>\n", html.EscapeString(i18n.T("plot3d.svg_title", exprText))))
+	var descText string
 	if scene.Kind == "curve" {
-		sb.WriteString(fmt.Sprintf("  <desc>%s</desc>\n",
-			html.EscapeString(i18n.T("plot3d.svg_desc_curve",
-				scene.VarX, xMinText, xMaxText,
-				zMinText, zMaxText,
-			))))
+		descText = i18n.T("plot3d.svg_desc_curve",
+			scene.VarX, xMinText, xMaxText,
+			zMinText, zMaxText,
+		)
 	} else {
-		sb.WriteString(fmt.Sprintf("  <desc>%s</desc>\n",
-			html.EscapeString(i18n.T("plot3d.svg_desc_surface",
-				scene.VarX, xMinText, xMaxText,
-				scene.VarY, yMinText, yMaxText,
-				zMinText, zMaxText,
-			))))
+		descText = i18n.T("plot3d.svg_desc_surface",
+			scene.VarX, xMinText, xMaxText,
+			scene.VarY, yMinText, yMaxText,
+			zMinText, zMaxText,
+		)
 	}
+	if len(scene.Features) > 0 {
+		var featParts []string
+		for _, feat := range scene.Features {
+			featParts = append(featParts, translatePlot3DFeatureKind(feat.Kind)+":"+feat.LabelStr)
+		}
+		descText = descText + "; " + strings.Join(featParts, "; ")
+	}
+	sb.WriteString(fmt.Sprintf("  <desc>%s</desc>\n", html.EscapeString(descText)))
 
 	sb.WriteString("  <defs>\n")
 	sb.WriteString(fmt.Sprintf(`    <clipPath id="plot3d-area"><rect x="%s" y="%s" width="%s" height="%s"/></clipPath>`,
@@ -273,7 +351,91 @@ func RenderPlot3DSVG(scene *Plot3DScene) string {
 		sb.WriteString("    </g>\n")
 	}
 
+	// Visible CAS-detected critical point markers and exact coordinate labels
+	for _, feat := range scene.Features {
+		if !feat.Visible || !isFiniteFloat(feat.Projected.X) || !isFiniteFloat(feat.Projected.Y) {
+			continue
+		}
+		fx := toSVGX(feat.Projected.X)
+		fy := toSVGY(feat.Projected.Y)
+		if !isFiniteFloat(fx) || !isFiniteFloat(fy) {
+			continue
+		}
+		sb.WriteString(fmt.Sprintf(`    <circle cx="%s" cy="%s" r="4" fill="%s" stroke="#ffffff" stroke-width="1"/>`,
+			fmtSVGNum(fx), fmtSVGNum(fy), svgFeatureFillColor(feat.Kind)))
+		sb.WriteByte('\n')
+
+		dx := 8.0
+		dy := -8.0
+		anchor := "start"
+		if fx > pad+plotW*0.72 {
+			dx = -8.0
+			anchor = "end"
+		}
+		if fy < pad+24 {
+			dy = 16.0
+		}
+		sb.WriteString(fmt.Sprintf(`    <text x="%s" y="%s" font-family="sans-serif" font-size="11" fill="#0f172a" text-anchor="%s">%s</text>`,
+			fmtSVGNum(fx+dx), fmtSVGNum(fy+dy), anchor, html.EscapeString(feat.LabelStr)))
+		sb.WriteByte('\n')
+	}
+
 	sb.WriteString("  </g>\n")
+
+	// 3D spatial axis ticks (min/max exact bounds) and axis name labels placed along outward normals
+	if len(scene.Axes) > 0 {
+		sb.WriteString("  <g id=\"plot3d-axes\">\n")
+		for _, ax := range scene.Axes {
+			for _, tk := range []Plot3DAxisTick{ax.MinTick, ax.MaxTick} {
+				if !tk.Valid || !isFiniteFloat(tk.Pos.X) || !isFiniteFloat(tk.Pos.Y) {
+					continue
+				}
+				tx := toSVGX(tk.Pos.X)
+				ty := toSVGY(tk.Pos.Y)
+				if !isFiniteFloat(tx) || !isFiniteFloat(ty) {
+					continue
+				}
+				outX := tk.OutDirX
+				outY := -tk.OutDirY // SVG Y increases downward
+				if norm := math.Hypot(outX, outY); norm > 1e-6 {
+					outX /= norm
+					outY /= norm
+				} else {
+					outX, outY = 0, 1
+				}
+				tx2 := clampFloatRange(tx+outX*5.0, 10, width-10)
+				ty2 := clampFloatRange(ty+outY*5.0, 10, height-34)
+				sb.WriteString(fmt.Sprintf(`    <line x1="%s" y1="%s" x2="%s" y2="%s" stroke="#64748b" stroke-width="1"/>`,
+					fmtSVGNum(tx), fmtSVGNum(ty), fmtSVGNum(tx2), fmtSVGNum(ty2)))
+				sb.WriteByte('\n')
+
+				lx := clampFloatRange(tx+outX*15.0, 14, width-14)
+				ly := clampFloatRange(ty+outY*15.0+3.5, 16, height-34)
+				tickText := formatBoundSVG(tk.ExactNode, tk.Val)
+				sb.WriteString(fmt.Sprintf(`    <text x="%s" y="%s" font-family="sans-serif" font-size="10" fill="#475569" text-anchor="%s">%s</text>`,
+					fmtSVGNum(lx), fmtSVGNum(ly), svgTextAnchorFromOutDir(outX), html.EscapeString(tickText)))
+				sb.WriteByte('\n')
+			}
+			if ax.Valid && strings.TrimSpace(ax.AxisName) != "" && isFiniteFloat(ax.LabelPos.X) && isFiniteFloat(ax.LabelPos.Y) {
+				axX := toSVGX(ax.LabelPos.X)
+				axY := toSVGY(ax.LabelPos.Y)
+				outX := ax.OutDirX
+				outY := -ax.OutDirY
+				if norm := math.Hypot(outX, outY); norm > 1e-6 {
+					outX /= norm
+					outY /= norm
+				} else {
+					outX, outY = 0, 1
+				}
+				lx := clampFloatRange(axX+outX*28.0, 14, width-14)
+				ly := clampFloatRange(axY+outY*28.0+4.0, 16, height-34)
+				sb.WriteString(fmt.Sprintf(`    <text x="%s" y="%s" font-family="sans-serif" font-size="12" font-weight="600" fill="#0f172a" text-anchor="%s">%s</text>`,
+					fmtSVGNum(lx), fmtSVGNum(ly), svgTextAnchorFromOutDir(outX), html.EscapeString(ax.AxisName)))
+				sb.WriteByte('\n')
+			}
+		}
+		sb.WriteString("  </g>\n")
+	}
 
 	// Exact domain caption
 	var domainCaption string
@@ -362,9 +524,93 @@ func RenderPlot3DTypst(scene *Plot3DScene) string {
 		sb.WriteString(fmt.Sprintf("  line(%s, stroke: %s)\n", strings.Join(pts, ", "), strokeStyle))
 	}
 
+	// 3D spatial axis ticks (min/max exact bounds) and axis name labels
+	for _, ax := range scene.Axes {
+		for _, tk := range []Plot3DAxisTick{ax.MinTick, ax.MaxTick} {
+			if !tk.Valid || !isFiniteFloat(tk.Pos.X) || !isFiniteFloat(tk.Pos.Y) {
+				continue
+			}
+			tx := toTypstX(tk.Pos.X)
+			ty := toTypstY(tk.Pos.Y)
+			if !isFiniteFloat(tx) || !isFiniteFloat(ty) {
+				continue
+			}
+			ox, oy := tk.OutDirX, tk.OutDirY
+			if norm := math.Hypot(ox, oy); norm > 1e-6 {
+				ox /= norm
+				oy /= norm
+			} else {
+				ox, oy = 0, -1
+			}
+			tx2 := tx + ox*0.14
+			ty2 := ty + oy*0.14
+			lx := tx + ox*0.24
+			ly := ty + oy*0.24
+			if ly < minTypstY {
+				minTypstY = ly
+				hasPlottedY = true
+			}
+			sb.WriteString(fmt.Sprintf("  line((%s, %s), (%s, %s), stroke: (paint: luma(110), thickness: 0.7pt))\n",
+				fmtTypstNum(tx), fmtTypstNum(ty), fmtTypstNum(tx2), fmtTypstNum(ty2)))
+			sb.WriteString(fmt.Sprintf("  content((%s, %s), [$%s$], anchor: \"%s\")\n",
+				fmtTypstNum(lx), fmtTypstNum(ly), formatBoundTypst(tk.ExactNode, tk.Val), typstAnchorFromOutDir(ox, oy)))
+		}
+		if ax.Valid && strings.TrimSpace(ax.AxisName) != "" && isFiniteFloat(ax.LabelPos.X) && isFiniteFloat(ax.LabelPos.Y) {
+			axX := toTypstX(ax.LabelPos.X)
+			axY := toTypstY(ax.LabelPos.Y)
+			ox, oy := ax.OutDirX, ax.OutDirY
+			if norm := math.Hypot(ox, oy); norm > 1e-6 {
+				ox /= norm
+				oy /= norm
+			} else {
+				ox, oy = 0, -1
+			}
+			lx := axX + ox*0.52
+			ly := axY + oy*0.52
+			if ly < minTypstY {
+				minTypstY = ly
+				hasPlottedY = true
+			}
+			sb.WriteString(fmt.Sprintf("  content((%s, %s), [$%s$], anchor: \"%s\")\n",
+				fmtTypstNum(lx), fmtTypstNum(ly), formatTypstMathIdent(ax.AxisName), typstAnchorFromOutDir(ox, oy)))
+		}
+	}
+
+	// Visible CAS-detected critical point markers and exact coordinate labels
+	for _, feat := range scene.Features {
+		if !feat.Visible || !isFiniteFloat(feat.Projected.X) || !isFiniteFloat(feat.Projected.Y) {
+			continue
+		}
+		fx := toTypstX(feat.Projected.X)
+		fy := toTypstY(feat.Projected.Y)
+		if !isFiniteFloat(fx) || !isFiniteFloat(fy) {
+			continue
+		}
+		if fy < minTypstY {
+			minTypstY = fy
+			hasPlottedY = true
+		}
+		sb.WriteString(fmt.Sprintf("  circle((%s, %s), radius: 0.08, fill: rgb(\"%s\"), stroke: (paint: white, thickness: 0.8pt))\n",
+			fmtTypstNum(fx), fmtTypstNum(fy), svgFeatureFillColor(feat.Kind)))
+		anchor := "south-west"
+		if fx > 2.2 {
+			anchor = "south-east"
+		}
+		sb.WriteString(fmt.Sprintf("  content((%s, %s), [$(%s, %s, %s)$], anchor: \"%s\", padding: 0.12)\n",
+			fmtTypstNum(fx), fmtTypstNum(fy),
+			formatBoundTypst(feat.XNode, feat.XVal),
+			formatBoundTypst(feat.YNode, feat.YVal),
+			formatBoundTypst(feat.ZNode, feat.ZVal),
+			anchor))
+	}
+
 	captionY := -4.6
 	if hasPlottedY && isFiniteFloat(minTypstY) {
-		captionY = minTypstY - 0.35
+		captionPad := 0.35
+		if len(scene.Axes) > 0 {
+			captionPad = 0.55
+		}
+		captionY = minTypstY - captionPad
 	}
 	varXTypst := formatTypstMathIdent(scene.VarX)
 	varYTypst := formatTypstMathIdent(scene.VarY)

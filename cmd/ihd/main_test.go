@@ -992,24 +992,24 @@ func TestCLI_Plot3DOutputs(t *testing.T) {
 	if strings.Contains(out.String(), "\x1b[") {
 		t.Errorf("non-TTY plot3d output must not emit ANSI escapes")
 	}
-	if !strings.Contains(out.String(), "z ∈ [-4, 4]") {
-		t.Errorf("expected exact z domain [-4, 4] in output, got:\n%s", out.String())
+	if !strings.Contains(out.String(), "z ∈ [-4, 4]") || !strings.Contains(out.String(), "[0, 0, 0]") {
+		t.Errorf("expected exact z domain [-4, 4] and saddle [0, 0, 0] in output, got:\n%s", out.String())
 	}
 
 	// --format svg
 	out.Reset()
 	errOut.Reset()
 	code = run([]string{"--no-update-check", "--format", "svg", "plot3d(x^2 - y^2, [-2, 2], [-2, 2])"}, strings.NewReader(""), &out, &errOut)
-	if code != 0 || !strings.Contains(out.String(), "<svg") || !strings.Contains(out.String(), "<polyline") {
-		t.Fatalf("expected valid SVG from --format svg, code=%d, out=%s, err=%s", code, out.String(), errOut.String())
+	if code != 0 || !strings.Contains(out.String(), "<svg") || !strings.Contains(out.String(), "<polyline") || !strings.Contains(out.String(), `id="plot3d-axes"`) || !strings.Contains(out.String(), "<circle") {
+		t.Fatalf("expected valid SVG with axes and feature markers from --format svg, code=%d, out=%s, err=%s", code, out.String(), errOut.String())
 	}
 
 	// --format typst
 	out.Reset()
 	errOut.Reset()
 	code = run([]string{"--no-update-check", "--format", "typst", "plot3d(x^2 - y^2, [-2, 2], [-2, 2])"}, strings.NewReader(""), &out, &errOut)
-	if code != 0 || !strings.Contains(out.String(), "cetz.canvas") {
-		t.Fatalf("expected valid Typst from --format typst, code=%d, out=%s, err=%s", code, out.String(), errOut.String())
+	if code != 0 || !strings.Contains(out.String(), "cetz.canvas") || !strings.Contains(out.String(), "circle(") {
+		t.Fatalf("expected valid Typst with axes and feature markers from --format typst, code=%d, out=%s, err=%s", code, out.String(), errOut.String())
 	}
 
 	// Simulated TTY: normal output emits ANSI 256-color escapes, while --ascii suppresses color
