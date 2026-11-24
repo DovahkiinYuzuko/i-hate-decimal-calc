@@ -33,23 +33,63 @@ type Stroke2D struct {
 	Kind   string // "surface", "curve", "axis", "box"
 }
 
-// Plot3DScene is the renderer-independent 3D plot scene containing HLR-processed 2D strokes.
+// Plot3DFeature represents a CAS-detected exact critical point on a 3D surface.
+type Plot3DFeature struct {
+	Kind      string // "min", "max", "saddle", "critical"
+	XNode     Node
+	YNode     Node
+	ZNode     Node
+	XVal      float64
+	YVal      float64
+	ZVal      float64
+	Projected ProjectedPoint2D
+	Visible   bool
+	LabelStr  string
+}
+
+// Plot3DAxisTick holds the projected endpoint, outward 2D direction, and exact symbolic value for a 3D axis tick.
+type Plot3DAxisTick struct {
+	Pos       ProjectedPoint2D
+	OutDirX   float64
+	OutDirY   float64
+	ExactNode Node
+	Val       float64
+	Valid     bool
+}
+
+// Plot3DAxisAnnotation holds projected label and min/max tick metadata for one spatial axis.
+type Plot3DAxisAnnotation struct {
+	AxisName string // surface: VarX, VarY, "z"; curve: "x", "y", "z"
+	LabelPos ProjectedPoint2D
+	OutDirX  float64
+	OutDirY  float64
+	MinTick  Plot3DAxisTick
+	MaxTick  Plot3DAxisTick
+	Valid    bool
+}
+
+// Plot3DScene is the renderer-independent 3D plot scene containing HLR-processed 2D strokes, CAS features, and 3D axes.
 type Plot3DScene struct {
-	Kind                 string // "surface" or "curve"
-	Expr                 Node
-	VarX                 string
-	VarY                 string
-	XMin, XMax           float64
-	YMin, YMax           float64
-	ZMin, ZMax           float64
-	XMinNode, XMaxNode   Node
-	YMinNode, YMaxNode   Node
-	ZMinNode, ZMaxNode   Node
-	Camera               Camera3D
-	Strokes              []Stroke2D
-	HasNaNHoles          bool
-	UnoccludedSurfaceLen float64
-	MonoColor            bool
+	Kind                    string // "surface" or "curve"
+	Expr                    Node
+	VarX                    string
+	VarY                    string
+	XMin, XMax              float64
+	YMin, YMax              float64
+	ZMin, ZMax              float64
+	XMinNode, XMaxNode      Node
+	YMinNode, YMaxNode      Node
+	ZMinNode, ZMaxNode      Node
+	SpaceXMin, SpaceXMax    float64
+	SpaceXMinNode           Node
+	SpaceXMaxNode           Node
+	Camera                  Camera3D
+	Strokes                 []Stroke2D
+	Features                []Plot3DFeature
+	Axes                    []Plot3DAxisAnnotation
+	HasNaNHoles             bool
+	UnoccludedSurfaceLen    float64
+	MonoColor               bool
 }
 
 const nearPlaneW = 0.2
@@ -959,6 +999,10 @@ func clipSegmentsHLR(segments []seg3DInput, tris []tri2D, perspective bool) []St
 	if len(tris) > 0 {
 		grid = buildTriGrid2D(tris, 32)
 	}
+	return clipSegmentsHLRWithGrid(segments, tris, grid, perspective)
+}
+
+func clipSegmentsHLRWithGrid(segments []seg3DInput, tris []tri2D, grid *triGrid2D, perspective bool) []Stroke2D {
 	var rawStrokes []Stroke2D
 
 	for _, seg := range segments {
@@ -1040,11 +1084,113 @@ func clipSegmentsHLR(segments []seg3DInput, tris []tri2D, perspective bool) []St
 	return strokes
 }
 
+// selectAxisHighs determines which of each pair of opposite unit-cube faces (-1 vs +1)
+// is closer to the camera, following Matplotlib mplot3d's parallel-plane depth comparison
+// with deterministic edge-on tie-breaking.
+func selectAxisHighs(cb cameraBasis) [3]bool {
+	corners := [8]vec3{
+		{-1, -1, -1}, {1, -1, -1}, {1, 1, -1}, {-1, 1, -1},
+		{-1, -1, 1}, {1, -1, 1}, {1, 1, 1}, {-1, 1, 1},
+	}
+	var pz [8]float64
+	for i, pt := range corners {
+		cv := cb.toCam(pt, pt.z)
+		pz[i] = cv.pz
+	}
+	// Parallel face vertex index pairs: (min-face, max-face) for X, Y, Z.
+	// Larger camera pz means closer to the camera.
+	facePairs := [3][2][4]int{
+		{{0, 3, 4, 7}, {1, 2, 5, 6}}, // X = -1 vs X = +1
+		{{0, 1, 4, 5}, {2, 3, 6, 7}}, // Y = -1 vs Y = +1
+		{{0, 1, 2, 3}, {4, 5, 6, 7}}, // Z = -1 vs Z = +1
+	}
+	var means0, means1 [3]float64
+	var highs [3]bool
+	var equals [3]bool
+	eqCount := 0
+	for axis := 0; axis < 3; axis++ {
+		m0, m1 := 0.0, 0.0
+		for k := 0; k < 4; k++ {
+			m0 += pz[facePairs[axis][0][k]]
+			m1 += pz[facePairs[axis][1][k]]
+		}
+		m0 *= 0.25
+		m1 *= 0.25
+		means0[axis], means1[axis] = m0, m1
+		highs[axis] = m0 < m1
+		if math.Abs(m0-m1) <= 1e-9 {
+			equals[axis] = true
+			eqCount++
+		}
+	}
+	// Edge-on view tie-breaking (mplot3d axis3d.py L321-330):
+	if eqCount >= 2 {
+		vertical := 2
+		for axis := 0; axis < 3; axis++ {
+			if !equals[axis] {
+				vertical = axis
+				break
+			}
+		}
+		switch vertical {
+		case 2: // looking directly at XY plane
+			highs = [3]bool{true, true, highs[2]}
+		case 1: // looking directly at XZ plane
+			highs = [3]bool{true, highs[1], false}
+		case 0: // looking directly at YZ plane
+			highs = [3]bool{highs[0], false, false}
+		}
+	}
+	return highs
+}
+
+func axisSign(high bool) (back, front float64) {
+	if high {
+		return -1.0, 1.0
+	}
+	return 1.0, -1.0
+}
+
+type axisEdgeEndpoints struct {
+	axisIdx int // 0=X, 1=Y, 2=Z
+	pMin    vec3
+	pMax    vec3
+}
+
+// selectViewAxisEdges chooses 3 outer bounding-box edges (one per X/Y/Z axis) aligned
+// with the back-facing panes for the current camera orientation.
+func selectViewAxisEdges(cb cameraBasis) [3]axisEdgeEndpoints {
+	highs := selectAxisHighs(cb)
+	backX, frontX := axisSign(highs[0])
+	_, frontY := axisSign(highs[1])
+	backZ, _ := axisSign(highs[2])
+	return [3]axisEdgeEndpoints{
+		{axisIdx: 0, pMin: vec3{x: -1, y: frontY, z: backZ}, pMax: vec3{x: 1, y: frontY, z: backZ}},
+		{axisIdx: 1, pMin: vec3{x: frontX, y: -1, z: backZ}, pMax: vec3{x: frontX, y: 1, z: backZ}},
+		{axisIdx: 2, pMin: vec3{x: backX, y: frontY, z: -1}, pMax: vec3{x: backX, y: frontY, z: 1}},
+	}
+}
+
+func sameVec3Approx(a, b vec3) bool {
+	return math.Abs(a.x-b.x) < 1e-6 && math.Abs(a.y-b.y) < 1e-6 && math.Abs(a.z-b.z) < 1e-6
+}
+
+func isSelectedAxisEdge(a, b vec3, axisEdges [3]axisEdgeEndpoints) bool {
+	for _, ae := range axisEdges {
+		if (sameVec3Approx(a, ae.pMin) && sameVec3Approx(b, ae.pMax)) ||
+			(sameVec3Approx(a, ae.pMax) && sameVec3Approx(b, ae.pMin)) {
+			return true
+		}
+	}
+	return false
+}
+
 func appendBoundingBoxSegments(segments []seg3DInput, cb cameraBasis) []seg3DInput {
 	corners := [8]vec3{
 		{-1, -1, -1}, {1, -1, -1}, {1, 1, -1}, {-1, 1, -1},
 		{-1, -1, 1}, {1, -1, 1}, {1, 1, 1}, {-1, 1, 1},
 	}
+	axisEdges := selectViewAxisEdges(cb)
 	var c [8]camVert
 	for i, pt := range corners {
 		c[i] = cb.toCam(pt, pt.z)
@@ -1054,7 +1200,7 @@ func appendBoundingBoxSegments(segments []seg3DInput, cb cameraBasis) []seg3DInp
 		{4, 5}, {5, 6}, {6, 7}, {7, 4},
 		{0, 4}, {1, 5}, {2, 6}, {3, 7},
 	}
-	for idx, e := range edges {
+	for _, e := range edges {
 		ca, cbv := c[e[0]], c[e[1]]
 		if cb.perspective {
 			var ok bool
@@ -1069,7 +1215,7 @@ func appendBoundingBoxSegments(segments []seg3DInput, cb cameraBasis) []seg3DInp
 			continue
 		}
 		kind := "box"
-		if idx == 0 || idx == 3 || idx == 8 {
+		if isSelectedAxisEdge(corners[e[0]], corners[e[1]], axisEdges) {
 			kind = "axis"
 		}
 		segments = append(segments, seg3DInput{
@@ -1077,6 +1223,512 @@ func appendBoundingBoxSegments(segments []seg3DInput, cb cameraBasis) []seg3DInp
 		})
 	}
 	return segments
+}
+
+func computeOutwardDir2D(cb cameraBasis, pt3 vec3, axisIdx int, pt2 ProjectedPoint2D) (float64, float64) {
+	// Push outward in 3D space from the box center along the two non-axis coordinates
+	// (equivalent to Matplotlib mplot3d _move_from_center with _axmask).
+	const push = 0.22
+	out3 := pt3
+	if axisIdx != 0 {
+		if pt3.x >= 0 {
+			out3.x += push
+		} else {
+			out3.x -= push
+		}
+	}
+	if axisIdx != 1 {
+		if pt3.y >= 0 {
+			out3.y += push
+		} else {
+			out3.y -= push
+		}
+	}
+	if axisIdx != 2 {
+		if pt3.z >= 0 {
+			out3.z += push
+		} else {
+			out3.z -= push
+		}
+	}
+	if pOut := cb.projectCam(cb.toCam(out3, out3.z)); pOut.valid {
+		dx := pOut.sx - pt2.X
+		dy := pOut.sy - pt2.Y
+		if n := math.Hypot(dx, dy); isFiniteFloat(n) && n > 1e-6 {
+			return dx / n, dy / n
+		}
+	}
+	// Fallback: radial direction from projected cube center (0, 0, 0) in 2D
+	if cProj := cb.projectCam(cb.toCam(vec3{}, 0)); cProj.valid {
+		dx := pt2.X - cProj.sx
+		dy := pt2.Y - cProj.sy
+		if n := math.Hypot(dx, dy); isFiniteFloat(n) && n > 1e-6 {
+			return dx / n, dy / n
+		}
+	}
+	if axisIdx == 2 {
+		return 1.0, 0.0
+	}
+	return 0.0, -1.0
+}
+
+func buildAxisAnnotations3D(
+	cb cameraBasis,
+	names [3]string,
+	minNodes [3]Node,
+	maxNodes [3]Node,
+	minVals [3]float64,
+	maxVals [3]float64,
+) []Plot3DAxisAnnotation {
+	edges := selectViewAxisEdges(cb)
+	out := make([]Plot3DAxisAnnotation, 3)
+	for i := 0; i < 3; i++ {
+		ae := edges[i]
+		mid3 := vec3{
+			x: 0.5 * (ae.pMin.x + ae.pMax.x),
+			y: 0.5 * (ae.pMin.y + ae.pMax.y),
+			z: 0.5 * (ae.pMin.z + ae.pMax.z),
+		}
+		ann := Plot3DAxisAnnotation{
+			AxisName: names[i],
+		}
+		if pMid := cb.projectCam(cb.toCam(mid3, mid3.z)); pMid.valid {
+			pos := ProjectedPoint2D{X: pMid.sx, Y: pMid.sy, Depth: pMid.depth, ZVal: mid3.z}
+			ox, oy := computeOutwardDir2D(cb, mid3, ae.axisIdx, pos)
+			ann.LabelPos = pos
+			ann.OutDirX = ox
+			ann.OutDirY = oy
+			ann.Valid = true
+		}
+		if pLo := cb.projectCam(cb.toCam(ae.pMin, ae.pMin.z)); pLo.valid {
+			pos := ProjectedPoint2D{X: pLo.sx, Y: pLo.sy, Depth: pLo.depth, ZVal: ae.pMin.z}
+			ox, oy := computeOutwardDir2D(cb, ae.pMin, ae.axisIdx, pos)
+			ann.MinTick = Plot3DAxisTick{
+				Pos:       pos,
+				OutDirX:   ox,
+				OutDirY:   oy,
+				ExactNode: minNodes[i],
+				Val:       minVals[i],
+				Valid:     true,
+			}
+		}
+		if pHi := cb.projectCam(cb.toCam(ae.pMax, ae.pMax.z)); pHi.valid {
+			pos := ProjectedPoint2D{X: pHi.sx, Y: pHi.sy, Depth: pHi.depth, ZVal: ae.pMax.z}
+			ox, oy := computeOutwardDir2D(cb, ae.pMax, ae.axisIdx, pos)
+			ann.MaxTick = Plot3DAxisTick{
+				Pos:       pos,
+				OutDirX:   ox,
+				OutDirY:   oy,
+				ExactNode: maxNodes[i],
+				Val:       maxVals[i],
+				Valid:     true,
+			}
+		}
+		out[i] = ann
+	}
+	return out
+}
+
+func plot3dHasVarName(vars []string, target string) bool {
+	for _, v := range vars {
+		if v == target {
+			return true
+		}
+	}
+	return false
+}
+
+func onlyAllowedVars(vars []string, vx, vy string) bool {
+	for _, v := range vars {
+		if v != vx && v != vy {
+			return false
+		}
+	}
+	return true
+}
+
+func solveRealRoots1D(expr Node, varName string) []Node {
+	if expr == nil || isZeroNode(expr) {
+		return nil
+	}
+	solList, err := solveEquation(expr, varName)
+	if err != nil || solList == nil {
+		return nil
+	}
+	var elems []Node
+	if list, ok := solList.(*ListNode); ok {
+		elems = list.Elements
+	} else {
+		elems = []Node{solList}
+	}
+	var out []Node
+	for _, r := range elems {
+		if r == nil {
+			continue
+		}
+		if ev, err := Eval(r); err == nil && ev != nil {
+			r = ev
+		}
+		if val, err := evalNodeFloat(r); err == nil && isFiniteFloat(val) {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+func evalTwoVarNode(expr Node, vx string, xNode Node, vy string, yNode Node) (Node, float64, bool) {
+	if expr == nil {
+		return nil, 0, false
+	}
+	sub := substituteVar(substituteVar(expr, vx, xNode), vy, yNode)
+	ev, err := Eval(sub)
+	if err != nil || ev == nil {
+		return nil, 0, false
+	}
+	val, err := evalNodeFloat(ev)
+	if err != nil || !isFiniteFloat(val) {
+		return ev, 0, false
+	}
+	return ev, val, true
+}
+
+type critPairCandidate struct {
+	xNode, yNode Node
+	xVal, yVal   float64
+}
+
+func solveGradientSystem2D(fx, fy Node, vx, vy string) []critPairCandidate {
+	if fx == nil || fy == nil || isZeroNode(fx) || isZeroNode(fy) {
+		return nil
+	}
+	fxVars := ExtractFreeVariables(fx)
+	fyVars := ExtractFreeVariables(fy)
+	if !onlyAllowedVars(fxVars, vx, vy) || !onlyAllowedVars(fyVars, vx, vy) {
+		return nil
+	}
+	hasVxInFx := plot3dHasVarName(fxVars, vx)
+	hasVyInFx := plot3dHasVarName(fxVars, vy)
+	hasVxInFy := plot3dHasVarName(fyVars, vx)
+	hasVyInFy := plot3dHasVarName(fyVars, vy)
+
+	// Non-zero constant partial derivative => no critical points.
+	if (!hasVxInFx && !hasVyInFx) || (!hasVxInFy && !hasVyInFy) {
+		return nil
+	}
+
+	const maxCandidates = 32
+	var cands []critPairCandidate
+	addCand := func(xn, yn Node) {
+		if len(cands) >= maxCandidates {
+			return
+		}
+		xv, errX := evalNodeFloat(xn)
+		yv, errY := evalNodeFloat(yn)
+		if errX != nil || errY != nil || !isFiniteFloat(xv) || !isFiniteFloat(yv) {
+			return
+		}
+		cands = append(cands, critPairCandidate{xNode: xn, yNode: yn, xVal: xv, yVal: yv})
+	}
+
+	// Strategy 1: Separable system (fx depends only on vx, fy depends only on vy).
+	if !hasVyInFx && !hasVxInFy {
+		xs := solveRealRoots1D(fx, vx)
+		ys := solveRealRoots1D(fy, vy)
+		for _, xn := range xs {
+			for _, yn := range ys {
+				addCand(xn, yn)
+			}
+		}
+		return cands
+	}
+
+	// Strategy 2: One equation is univariate; solve it first and back-substitute.
+	if !hasVyInFx {
+		for _, xn := range solveRealRoots1D(fx, vx) {
+			subFy, err := Eval(substituteVar(fy, vx, xn))
+			if err != nil || subFy == nil || isZeroNode(subFy) {
+				continue // positive-dimensional branch or invalid
+			}
+			for _, yn := range solveRealRoots1D(subFy, vy) {
+				addCand(xn, yn)
+			}
+		}
+		return cands
+	}
+	if !hasVxInFy {
+		for _, yn := range solveRealRoots1D(fy, vy) {
+			subFx, err := Eval(substituteVar(fx, vy, yn))
+			if err != nil || subFx == nil || isZeroNode(subFx) {
+				continue // positive-dimensional branch or invalid
+			}
+			for _, xn := range solveRealRoots1D(subFx, vx) {
+				addCand(xn, yn)
+			}
+		}
+		return cands
+	}
+
+	// Strategy 3: Coupled polynomial system via lex Groebner basis elimination
+	// with SymPy polysys.py zero-dimensionality guards.
+	gbNode, err := EvalGroebner(
+		NewList([]Node{fx, fy}),
+		NewList([]Node{NewVar(vx), NewVar(vy)}),
+		NewStringNode("lex"),
+		nil,
+	)
+	if err != nil || gbNode == nil {
+		return nil
+	}
+	gbList, ok := gbNode.(*ListNode)
+	if !ok || len(gbList.Elements) == 0 {
+		return nil
+	}
+	basis := gbList.Elements
+	// Constant ground basis [1] => inconsistent system (no solutions).
+	if len(basis) == 1 && len(ExtractFreeVariables(basis[0])) == 0 {
+		return nil
+	}
+	// Fewer generators than variables => positive-dimensional (non-isolated critical locus).
+	if len(basis) < 2 {
+		return nil
+	}
+
+	// Reduced zero-dimensional lex Groebner basis must contain exactly one univariate polynomial in vy.
+	var uniY Node
+	uniYIdx := -1
+	uniCount := 0
+	for i, b := range basis {
+		bVars := ExtractFreeVariables(b)
+		if !plot3dHasVarName(bVars, vx) && plot3dHasVarName(bVars, vy) {
+			uniY = b
+			uniYIdx = i
+			uniCount++
+		}
+	}
+	if uniCount != 1 || uniY == nil {
+		return nil
+	}
+
+	for _, yn := range solveRealRoots1D(uniY, vy) {
+		for i, b := range basis {
+			if i == uniYIdx {
+				continue
+			}
+			subB, err := Eval(substituteVar(b, vy, yn))
+			if err != nil || subB == nil || isZeroNode(subB) {
+				continue
+			}
+			if !plot3dHasVarName(ExtractFreeVariables(subB), vx) {
+				continue
+			}
+			for _, xn := range solveRealRoots1D(subB, vx) {
+				addCand(xn, yn)
+			}
+			break
+		}
+	}
+	return cands
+}
+
+func isFeatureOccluded(
+	px, py, pDepth float64,
+	nx, ny float64,
+	gridN int,
+	tris []tri2D,
+	grid *triGrid2D,
+) bool {
+	if len(tris) == 0 || grid == nil {
+		return false
+	}
+	candidates := grid.cellIndices(px, py)
+	// Exclude immediate mesh cells adjacent to the critical point itself to avoid self-occlusion.
+	ci := int(math.Floor((nx + 1.0) * 0.5 * float64(gridN)))
+	cj := int(math.Floor((ny + 1.0) * 0.5 * float64(gridN)))
+	const selfBias = 1.5e-2
+	for _, ti := range candidates {
+		tr := tris[ti]
+		if tr.cellID >= 0 {
+			tcI := tr.cellID / gridN
+			tcJ := tr.cellID % gridN
+			if tcI >= ci-1 && tcI <= ci+1 && tcJ >= cj-1 && tcJ <= cj+1 {
+				continue
+			}
+		}
+		tz, inside := pointInTriDepth(tr, px, py)
+		if inside && tz < pDepth-selfBias {
+			return true
+		}
+	}
+	return false
+}
+
+// findSurfaceCriticalPoints3D detects exact isolated critical points of z = f(x, y) within [xMin, xMax] x [yMin, yMax]
+// and classifies them using the second partial derivative test (Hessian determinant).
+func findSurfaceCriticalPoints3D(
+	expr Node,
+	vx, vy string,
+	xMin, xMax, yMin, yMax float64,
+) []Plot3DFeature {
+	fx, errX := differentiate(expr, vx)
+	fy, errY := differentiate(expr, vy)
+	if errX != nil || errY != nil || fx == nil || fy == nil {
+		return nil
+	}
+	if ev, err := Eval(fx); err == nil && ev != nil {
+		fx = ev
+	}
+	if ev, err := Eval(fy); err == nil && ev != nil {
+		fy = ev
+	}
+	cands := solveGradientSystem2D(fx, fy, vx, vy)
+	if len(cands) == 0 {
+		return nil
+	}
+
+	fxx, errXX := differentiate(fx, vx)
+	fyy, errYY := differentiate(fy, vy)
+	fxy, errXY := differentiate(fx, vy)
+	hasHessian := errXX == nil && errYY == nil && errXY == nil && fxx != nil && fyy != nil && fxy != nil
+	if hasHessian {
+		if ev, err := Eval(fxx); err == nil && ev != nil {
+			fxx = ev
+		}
+		if ev, err := Eval(fyy); err == nil && ev != nil {
+			fyy = ev
+		}
+		if ev, err := Eval(fxy); err == nil && ev != nil {
+			fxy = ev
+		}
+	}
+
+	const domEps = 1e-9
+	const resEps = 1e-8
+	const dupEps = 1e-6
+	const maxFeatures = 16
+
+	var features []Plot3DFeature
+	for _, c := range cands {
+		if len(features) >= maxFeatures {
+			break
+		}
+		if c.xVal < xMin-domEps || c.xVal > xMax+domEps || c.yVal < yMin-domEps || c.yVal > yMax+domEps {
+			continue
+		}
+		// Double-check gradient vanishing at candidate (x0, y0)
+		fxAt, fxVal, okFx := evalTwoVarNode(fx, vx, c.xNode, vy, c.yNode)
+		fyAt, fyVal, okFy := evalTwoVarNode(fy, vx, c.xNode, vy, c.yNode)
+		if !okFx || !okFy {
+			continue
+		}
+		if !(isZeroNode(fxAt) || math.Abs(fxVal) < resEps) || !(isZeroNode(fyAt) || math.Abs(fyVal) < resEps) {
+			continue
+		}
+
+		// Deduplicate numerically identical solutions
+		dup := false
+		for _, prev := range features {
+			if math.Abs(prev.XVal-c.xVal) < dupEps && math.Abs(prev.YVal-c.yVal) < dupEps {
+				dup = true
+				break
+			}
+		}
+		if dup {
+			continue
+		}
+
+		zNode, zVal, okZ := evalTwoVarNode(expr, vx, c.xNode, vy, c.yNode)
+		if !okZ {
+			continue
+		}
+
+		kind := "critical"
+		if hasHessian {
+			hxxNode, hxxVal, okXX := evalTwoVarNode(fxx, vx, c.xNode, vy, c.yNode)
+			hyyNode, hyyVal, okYY := evalTwoVarNode(fyy, vx, c.xNode, vy, c.yNode)
+			hxyNode, hxyVal, okXY := evalTwoVarNode(fxy, vx, c.xNode, vy, c.yNode)
+			if okXX && okYY && okXY {
+				detExpr := NewAdd([]Node{
+					NewMul([]Node{hxxNode, hyyNode}),
+					NewMul([]Node{mustRational(-1, 1), hxyNode, hxyNode}),
+				})
+				detNode, errDet := Eval(detExpr)
+				detVal := hxxVal*hyyVal - hxyVal*hxyVal
+				exactZeroDet := errDet == nil && detNode != nil && isZeroNode(detNode)
+				if errDet == nil && detNode != nil {
+					if v, errF := evalNodeFloat(detNode); errF == nil && isFiniteFloat(v) {
+						detVal = v
+					}
+				}
+				const hessEps = 1e-10
+				if !exactZeroDet && math.Abs(detVal) >= hessEps {
+					if detVal < 0 {
+						kind = "saddle"
+					} else if hxxVal > hessEps {
+						kind = "min"
+					} else if hxxVal < -hessEps {
+						kind = "max"
+					}
+				}
+			}
+		}
+
+		features = append(features, Plot3DFeature{
+			Kind:     kind,
+			XNode:    c.xNode,
+			YNode:    c.yNode,
+			ZNode:    zNode,
+			XVal:     c.xVal,
+			YVal:     c.yVal,
+			ZVal:     zVal,
+			LabelStr: fmt.Sprintf("[%s, %s, %s]", Format(c.xNode), Format(c.yNode), Format(zNode)),
+		})
+	}
+
+	sort.SliceStable(features, func(i, j int) bool {
+		if math.Abs(features[i].XVal-features[j].XVal) > dupEps {
+			return features[i].XVal < features[j].XVal
+		}
+		if math.Abs(features[i].YVal-features[j].YVal) > dupEps {
+			return features[i].YVal < features[j].YVal
+		}
+		return features[i].ZVal < features[j].ZVal
+	})
+	return features
+}
+
+// projectSurfaceFeatures3D filters critical points against [zMin, zMax], projects them to 2D, and runs HLR visibility checks.
+func projectSurfaceFeatures3D(
+	raw []Plot3DFeature,
+	xMin, xMax, yMin, yMax, zMin, zMax float64,
+	cb cameraBasis,
+	gridN int,
+	tris []tri2D,
+	grid *triGrid2D,
+) []Plot3DFeature {
+	if len(raw) == 0 {
+		return nil
+	}
+	xSpan := xMax - xMin
+	ySpan := yMax - yMin
+	zSpan := zMax - zMin
+	const domEps = 1e-9
+	out := make([]Plot3DFeature, 0, len(raw))
+	for _, f := range raw {
+		if f.ZVal < zMin-domEps || f.ZVal > zMax+domEps {
+			continue
+		}
+		nx := 2.0*(f.XVal-xMin)/xSpan - 1.0
+		ny := 2.0*(f.YVal-yMin)/ySpan - 1.0
+		nz := 2.0*(f.ZVal-zMin)/zSpan - 1.0
+		cv := cb.toCam(vec3{x: nx, y: ny, z: nz}, f.ZVal)
+		pv := cb.projectCam(cv)
+		if pv.valid {
+			f.Projected = ProjectedPoint2D{X: pv.sx, Y: pv.sy, Depth: pv.depth, ZVal: f.ZVal}
+			f.Visible = !isFeatureOccluded(pv.sx, pv.sy, pv.depth, nx, ny, gridN, tris, grid)
+		}
+		out = append(out, f)
+	}
+	return out
 }
 
 // BuildPlot3DScene parses plot3d arguments without an explicit environment and executes the single continuous 2D HLR pass.
@@ -1253,10 +1905,27 @@ func buildSurface3DScene(
 		return nil, fmt.Errorf("%s", i18n.T("errors.plot3d_no_valid_points"))
 	}
 
+	rawFeatures := findSurfaceCriticalPoints3D(expr, vx, vy, xMin, xMax, yMin, yMax)
+
 	if !explicitZ {
 		zMin, zMax = computeRobustRange(finiteZ)
 		zMinNode = makeExactBoundNode(zMin)
 		zMaxNode = makeExactBoundNode(zMax)
+		// Ensure true CAS-detected interior extrema are not clipped by discrete grid sampling gaps.
+		baseSpan := zMax - zMin
+		if baseSpan < 1e-6 {
+			baseSpan = 1.0
+		}
+		for _, f := range rawFeatures {
+			if f.ZVal < zMin && (zMin-f.ZVal) <= baseSpan*2.0 {
+				zMin = f.ZVal
+				zMinNode = f.ZNode
+			}
+			if f.ZVal > zMax && (f.ZVal-zMax) <= baseSpan*2.0 {
+				zMax = f.ZVal
+				zMaxNode = f.ZNode
+			}
+		}
 	}
 
 	xSpan := xMax - xMin
@@ -1415,7 +2084,20 @@ func buildSurface3DScene(
 	}
 
 	segments = appendBoundingBoxSegments(segments, cb)
-	strokes := clipSegmentsHLR(segments, tris, cb.perspective)
+	var hlrGrid *triGrid2D
+	if len(tris) > 0 {
+		hlrGrid = buildTriGrid2D(tris, 32)
+	}
+	strokes := clipSegmentsHLRWithGrid(segments, tris, hlrGrid, cb.perspective)
+	features := projectSurfaceFeatures3D(rawFeatures, xMin, xMax, yMin, yMax, zMin, zMax, cb, gridN, tris, hlrGrid)
+	axes := buildAxisAnnotations3D(
+		cb,
+		[3]string{vx, vy, "z"},
+		[3]Node{xMinNode, yMinNode, zMinNode},
+		[3]Node{xMaxNode, yMaxNode, zMaxNode},
+		[3]float64{xMin, yMin, zMin},
+		[3]float64{xMax, yMax, zMax},
+	)
 
 	return &Plot3DScene{
 		Kind:                 "surface",
@@ -1434,8 +2116,14 @@ func buildSurface3DScene(
 		YMaxNode:             yMaxNode,
 		ZMinNode:             zMinNode,
 		ZMaxNode:             zMaxNode,
+		SpaceXMin:            xMin,
+		SpaceXMax:            xMax,
+		SpaceXMinNode:        xMinNode,
+		SpaceXMaxNode:        xMaxNode,
 		Camera:               cam,
 		Strokes:              strokes,
+		Features:             features,
+		Axes:                 axes,
 		HasNaNHoles:          hasHoles,
 		UnoccludedSurfaceLen: unoccludedLen,
 		MonoColor:            mono,
@@ -1546,27 +2234,44 @@ func buildParametricCurve3DScene(
 
 	segments = appendBoundingBoxSegments(segments, cb)
 	strokes := clipSegmentsHLR(segments, nil, cb.perspective)
+	spaceXMinNode := makeExactBoundNode(xMin)
+	spaceXMaxNode := makeExactBoundNode(xMax)
+	yMinNode := makeExactBoundNode(yMin)
+	yMaxNode := makeExactBoundNode(yMax)
+	axes := buildAxisAnnotations3D(
+		cb,
+		[3]string{"x", "y", "z"},
+		[3]Node{spaceXMinNode, yMinNode, zMinNode},
+		[3]Node{spaceXMaxNode, yMaxNode, zMaxNode},
+		[3]float64{xMin, yMin, zMin},
+		[3]float64{xMax, yMax, zMax},
+	)
 
 	return &Plot3DScene{
-		Kind:        "curve",
-		Expr:        listNode,
-		VarX:        tVar,
-		XMin:        tMin,
-		XMax:        tMax,
-		YMin:        yMin,
-		YMax:        yMax,
-		ZMin:        zMin,
-		ZMax:        zMax,
-		XMinNode:    tMinNode,
-		XMaxNode:    tMaxNode,
-		YMinNode:    makeExactBoundNode(yMin),
-		YMaxNode:    makeExactBoundNode(yMax),
-		ZMinNode:    zMinNode,
-		ZMaxNode:    zMaxNode,
-		Camera:      cam,
-		Strokes:     strokes,
-		HasNaNHoles: hasHoles,
-		MonoColor:   mono,
+		Kind:          "curve",
+		Expr:          listNode,
+		VarX:          tVar,
+		XMin:          tMin,
+		XMax:          tMax,
+		YMin:          yMin,
+		YMax:          yMax,
+		ZMin:          zMin,
+		ZMax:          zMax,
+		XMinNode:      tMinNode,
+		XMaxNode:      tMaxNode,
+		YMinNode:      yMinNode,
+		YMaxNode:      yMaxNode,
+		ZMinNode:      zMinNode,
+		ZMaxNode:      zMaxNode,
+		SpaceXMin:     xMin,
+		SpaceXMax:     xMax,
+		SpaceXMinNode: spaceXMinNode,
+		SpaceXMaxNode: spaceXMaxNode,
+		Camera:        cam,
+		Strokes:       strokes,
+		Axes:          axes,
+		HasNaNHoles:   hasHoles,
+		MonoColor:     mono,
 	}, nil
 }
 
@@ -1742,12 +2447,12 @@ func RenderBraille3D(scene *Plot3DScene) (string, string) {
 	}
 
 	buildOutput := func(withColor bool) string {
-		var sb strings.Builder
-		sb.WriteString("\n")
+		gridRunes := make([][]rune, charH)
+		gridColor := make([][]int, charH)
 		depthSpan := maxDepth - minDepth
 		for cy := 0; cy < charH; cy++ {
-			sb.WriteString("  ")
-			lastColor := -1
+			gridRunes[cy] = make([]rune, charW)
+			gridColor[cy] = make([]int, charW)
 			for cx := 0; cx < charW; cx++ {
 				var mask rune
 				for dr := 0; dr < 4; dr++ {
@@ -1759,9 +2464,9 @@ func RenderBraille3D(scene *Plot3DScene) (string, string) {
 						}
 					}
 				}
-				r := rune(0x2800) + mask
-				if withColor && mask != 0 {
-					var targetColor int
+				gridRunes[cy][cx] = rune(0x2800) + mask
+				targetColor := -1
+				if mask != 0 {
 					if cellHasMain[cy][cx] {
 						normD := (cellMinDepth[cy][cx] - minDepth) / depthSpan
 						if normD < 0 {
@@ -1773,9 +2478,107 @@ func RenderBraille3D(scene *Plot3DScene) (string, string) {
 						targetColor = ansiDepthRamp256[idx]
 					} else if cellHasBox[cy][cx] {
 						targetColor = 244 // neutral mid-gray for bounding box / axes
-					} else {
-						targetColor = -1
 					}
+				}
+				gridColor[cy][cx] = targetColor
+			}
+		}
+
+		// Place 3D axis name labels outside the selected outer axis edges
+		for _, ax := range scene.Axes {
+			if !ax.Valid || strings.TrimSpace(ax.AxisName) == "" {
+				continue
+			}
+			labelRunes := []rune(strings.TrimSpace(ax.AxisName))
+			if len(labelRunes) == 0 || len(labelRunes) > 6 {
+				continue
+			}
+			lx := ax.LabelPos.X + ax.OutDirX*0.14
+			ly := ax.LabelPos.Y + ax.OutDirY*0.14
+			fx, fy := toPxFloat(lx, ly)
+			if !isFiniteFloat(fx) || !isFiniteFloat(fy) {
+				continue
+			}
+			baseCX := clampIntRange(int(math.Round(fx))/2, 0, charW-len(labelRunes))
+			baseCY := clampIntRange(int(math.Round(fy))/4, 0, charH-1)
+
+			// Prefer an empty cell adjacent to the ideal position to avoid overwriting Braille lines
+			placeCX, placeCY := baseCX, baseCY
+			foundEmpty := false
+			offsets := [][2]int{{0, 0}, {0, 1}, {1, 0}, {-1, 0}, {0, -1}, {2, 0}, {-2, 0}}
+			for _, off := range offsets {
+				cx := clampIntRange(baseCX+off[0], 0, charW-len(labelRunes))
+				cy := clampIntRange(baseCY+off[1], 0, charH-1)
+				clear := true
+				for k := range labelRunes {
+					if gridRunes[cy][cx+k] != rune(0x2800) {
+						clear = false
+						break
+					}
+				}
+				if clear {
+					placeCX, placeCY = cx, cy
+					foundEmpty = true
+					break
+				}
+			}
+			if !foundEmpty {
+				// Avoid overwriting existing non-Braille labels or markers
+				canWrite := true
+				for k := range labelRunes {
+					r := gridRunes[placeCY][placeCX+k]
+					if r < 0x2800 || r > 0x28FF {
+						canWrite = false
+						break
+					}
+				}
+				if !canWrite {
+					continue
+				}
+			}
+			for k, lr := range labelRunes {
+				gridRunes[placeCY][placeCX+k] = lr
+				gridColor[placeCY][placeCX+k] = 250 // crisp neutral label tone
+			}
+		}
+
+		// Place single-cell markers for visible CAS-detected critical points
+		for _, feat := range scene.Features {
+			if !feat.Visible {
+				continue
+			}
+			if !isFiniteFloat(feat.Projected.X) || !isFiniteFloat(feat.Projected.Y) {
+				continue
+			}
+			fx, fy := toPxFloat(feat.Projected.X, feat.Projected.Y)
+			if !isFiniteFloat(fx) || !isFiniteFloat(fy) || fx < 0 || fx >= float64(pixelW) || fy < 0 || fy >= float64(pixelH) {
+				continue
+			}
+			cx := clampIntRange(int(math.Round(fx))/2, 0, charW-1)
+			cy := clampIntRange(int(math.Round(fy))/4, 0, charH-1)
+			marker := '◇'
+			markerColor := 177 // soft violet for degenerate critical point
+			switch feat.Kind {
+			case "min", "max":
+				marker = '●'
+				markerColor = 42 // green for local extrema
+			case "saddle":
+				marker = '◆'
+				markerColor = 214 // amber for saddle point
+			}
+			gridRunes[cy][cx] = marker
+			gridColor[cy][cx] = markerColor
+		}
+
+		var sb strings.Builder
+		sb.WriteString("\n")
+		for cy := 0; cy < charH; cy++ {
+			sb.WriteString("  ")
+			lastColor := -1
+			for cx := 0; cx < charW; cx++ {
+				r := gridRunes[cy][cx]
+				targetColor := gridColor[cy][cx]
+				if withColor && r != rune(0x2800) {
 					if targetColor != lastColor {
 						if targetColor >= 0 {
 							sb.WriteString(fmt.Sprintf("\x1b[38;5;%dm", targetColor))
@@ -1784,7 +2587,7 @@ func RenderBraille3D(scene *Plot3DScene) (string, string) {
 						}
 						lastColor = targetColor
 					}
-				} else if withColor && mask == 0 && lastColor != -1 {
+				} else if withColor && r == rune(0x2800) && lastColor != -1 {
 					sb.WriteString("\x1b[0m")
 					lastColor = -1
 				}
@@ -1813,6 +2616,18 @@ func RenderBraille3D(scene *Plot3DScene) (string, string) {
 			fmtSVGNum(scene.Camera.AzimuthDeg),
 			fmtSVGNum(scene.Camera.ElevationDeg),
 		))
+		for _, feat := range scene.Features {
+			switch feat.Kind {
+			case "min":
+				sb.WriteString(i18n.T("plot3d.feature_min", feat.LabelStr))
+			case "max":
+				sb.WriteString(i18n.T("plot3d.feature_max", feat.LabelStr))
+			case "saddle":
+				sb.WriteString(i18n.T("plot3d.feature_saddle", feat.LabelStr))
+			default:
+				sb.WriteString(i18n.T("plot3d.feature_critical", feat.LabelStr))
+			}
+		}
 		return sb.String()
 	}
 

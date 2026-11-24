@@ -778,3 +778,283 @@ func TestPlot3D_AspectAndDepthOrderedBoxAxes(t *testing.T) {
 			idxBackTyp, idxMidTyp, idxFrontTyp, typA1)
 	}
 }
+
+func TestPlot3D_Deductive_CriticalPointsAndHessian(t *testing.T) {
+	type wantFeat struct {
+		kind  string
+		label string
+	}
+	cases := []struct {
+		name  string
+		expr  string
+		xRng  string
+		yRng  string
+		wants []wantFeat
+	}{
+		{
+			name:  "paraboloid local min",
+			expr:  "x^2 + y^2",
+			xRng:  "[-2, 2]",
+			yRng:  "[-2, 2]",
+			wants: []wantFeat{{kind: "min", label: "[0, 0, 0]"}},
+		},
+		{
+			name:  "inverted paraboloid local max",
+			expr:  "4 - x^2 - y^2",
+			xRng:  "[-2, 2]",
+			yRng:  "[-2, 2]",
+			wants: []wantFeat{{kind: "max", label: "[0, 0, 4]"}},
+		},
+		{
+			name:  "hyperbolic paraboloid saddle",
+			expr:  "x^2 - y^2",
+			xRng:  "[-2, 2]",
+			yRng:  "[-2, 2]",
+			wants: []wantFeat{{kind: "saddle", label: "[0, 0, 0]"}},
+		},
+		{
+			name:  "coupled quadratic via lex Groebner",
+			expr:  "x^2 + x*y + y^2 - 3*x",
+			xRng:  "[-4, 4]",
+			yRng:  "[-4, 4]",
+			wants: []wantFeat{{kind: "min", label: "[2, -1, -3]"}},
+		},
+		{
+			name: "multi critical points cubic+quadratic",
+			expr: "x^3 - 3*x + y^2",
+			xRng: "[-3, 3]",
+			yRng: "[-3, 3]",
+			wants: []wantFeat{
+				{kind: "saddle", label: "[-1, 0, 2]"},
+				{kind: "min", label: "[1, 0, -2]"},
+			},
+		},
+		{
+			name:  "degenerate quartic critical point D=0",
+			expr:  "x^4 + y^4",
+			xRng:  "[-2, 2]",
+			yRng:  "[-2, 2]",
+			wants: []wantFeat{{kind: "critical", label: "[0, 0, 0]"}},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			nExpr, err := calc.Parse(tc.expr)
+			if err != nil {
+				t.Fatalf("Parse expr failed: %v", err)
+			}
+			rX, _ := calc.Parse(tc.xRng)
+			rY, _ := calc.Parse(tc.yRng)
+
+			scene, err := calc.BuildPlot3DScene([]calc.Node{nExpr, rX, rY})
+			if err != nil {
+				t.Fatalf("BuildPlot3DScene failed: %v", err)
+			}
+			if len(scene.Features) != len(tc.wants) {
+				t.Fatalf("expected %d features, got %d: %+v", len(tc.wants), len(scene.Features), scene.Features)
+			}
+			for _, w := range tc.wants {
+				found := false
+				for _, f := range scene.Features {
+					if f.Kind == w.kind && f.LabelStr == w.label {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Errorf("missing expected feature (%s, %s); got %+v", w.kind, w.label, scene.Features)
+				}
+			}
+
+			mono, _ := calc.RenderBraille3D(scene)
+			for _, w := range tc.wants {
+				if !strings.Contains(mono, w.label) {
+					t.Errorf("expected Braille metadata to contain %q, got:\n%s", w.label, mono)
+				}
+			}
+		})
+	}
+}
+
+func TestPlot3D_Contradiction_PositiveDimAndOutOfDomainFeatures(t *testing.T) {
+	noFeatCases := []struct {
+		name string
+		expr string
+		xRng string
+		yRng string
+	}{
+		{name: "linear plane no critical points", expr: "x + y", xRng: "[-2, 2]", yRng: "[-2, 2]"},
+		{name: "univariate ridge non-isolated", expr: "x^2", xRng: "[-2, 2]", yRng: "[-2, 2]"},
+		{name: "coupled diagonal ridge positive-dim", expr: "(x - y)^2", xRng: "[-2, 2]", yRng: "[-2, 2]"},
+		{name: "out-of-domain critical point", expr: "(x - 5)^2 + y^2", xRng: "[-2, 2]", yRng: "[-2, 2]"},
+	}
+
+	for _, tc := range noFeatCases {
+		t.Run(tc.name, func(t *testing.T) {
+			nExpr, _ := calc.Parse(tc.expr)
+			rX, _ := calc.Parse(tc.xRng)
+			rY, _ := calc.Parse(tc.yRng)
+			scene, err := calc.BuildPlot3DScene([]calc.Node{nExpr, rX, rY})
+			if err != nil {
+				t.Fatalf("BuildPlot3DScene failed: %v", err)
+			}
+			if len(scene.Features) != 0 {
+				t.Errorf("expected 0 isolated features for %s, got %d: %+v", tc.expr, len(scene.Features), scene.Features)
+			}
+		})
+	}
+}
+
+func TestPlot3D_AxisAnnotations_ViewpointCurveAndMetamorphic(t *testing.T) {
+	// 1. Surface custom variable names u1, v2
+	nSurf, _ := calc.Parse("u1^2 - v2^2")
+	rU, _ := calc.Parse("[u1, -2, 2]")
+	rV, _ := calc.Parse("[v2, -3, 3]")
+	surfScene, err := calc.BuildPlot3DScene([]calc.Node{nSurf, rU, rV})
+	if err != nil {
+		t.Fatalf("BuildPlot3DScene surface failed: %v", err)
+	}
+	if len(surfScene.Axes) != 3 {
+		t.Fatalf("expected 3 axis annotations, got %d", len(surfScene.Axes))
+	}
+	wantNames := []string{"u1", "v2", "z"}
+	for i, wn := range wantNames {
+		ax := surfScene.Axes[i]
+		if ax.AxisName != wn || !ax.Valid {
+			t.Errorf("axis[%d]: expected valid name %q, got %+v", i, wn, ax)
+		}
+		if !ax.MinTick.Valid || !ax.MaxTick.Valid {
+			t.Errorf("axis[%d]: expected valid min/max ticks, got %+v", i, ax)
+		}
+		outNorm := math.Hypot(ax.OutDirX, ax.OutDirY)
+		if math.Abs(outNorm-1.0) > 1e-3 {
+			t.Errorf("axis[%d]: expected unit OutDir, got (%v, %v) norm=%v", i, ax.OutDirX, ax.OutDirY, outNorm)
+		}
+	}
+
+	// 2. Parametric curve must use spatial x,y,z axes and spatial x bounds (not t in [0, 10])
+	nCurve, _ := calc.Parse("[cos(t), sin(t), t]")
+	rT, _ := calc.Parse("[t, 0, 10]")
+	curveScene, err := calc.BuildPlot3DScene([]calc.Node{nCurve, rT})
+	if err != nil {
+		t.Fatalf("BuildPlot3DScene curve failed: %v", err)
+	}
+	if len(curveScene.Axes) != 3 {
+		t.Fatalf("expected 3 curve axes, got %d", len(curveScene.Axes))
+	}
+	if curveScene.Axes[0].AxisName != "x" || curveScene.Axes[1].AxisName != "y" || curveScene.Axes[2].AxisName != "z" {
+		t.Errorf("expected curve axis names [x, y, z], got [%s, %s, %s]",
+			curveScene.Axes[0].AxisName, curveScene.Axes[1].AxisName, curveScene.Axes[2].AxisName)
+	}
+	if curveScene.Axes[0].MinTick.Val < -1.2 || curveScene.Axes[0].MaxTick.Val > 1.2 {
+		t.Errorf("curve X axis ticks leaked parameter t bounds: [%v, %v]",
+			curveScene.Axes[0].MinTick.Val, curveScene.Axes[0].MaxTick.Val)
+	}
+
+	// 3. Edge-on views & near perspective safety + 180-deg metamorphic feature invariance
+	nSaddle, _ := calc.Parse("x^2 - y^2")
+	rX, _ := calc.Parse("[-2, 2]")
+	rY, _ := calc.Parse("[-2, 2]")
+	for _, opts := range [][]string{
+		{"[az, 0]", "[el, 0]"},
+		{"[az, 0]", "[el, 90]"},
+		{"[az, 215]", "[el, 25]"},
+		{"[az, 45]", "[el, 15]", "[dist, 1.85]", `"perspective"`},
+	} {
+		args := []calc.Node{nSaddle, rX, rY}
+		for _, os := range opts {
+			o, _ := calc.Parse(os)
+			args = append(args, o)
+		}
+		sc, err := calc.BuildPlot3DScene(args)
+		if err != nil {
+			t.Fatalf("BuildPlot3DScene(%v) failed: %v", opts, err)
+		}
+		if len(sc.Features) != 1 || sc.Features[0].Kind != "saddle" || sc.Features[0].LabelStr != "[0, 0, 0]" {
+			t.Errorf("expected viewpoint-invariant saddle [0, 0, 0] for %v, got %+v", opts, sc.Features)
+		}
+		for _, ax := range sc.Axes {
+			if ax.Valid && (math.IsNaN(ax.LabelPos.X) || math.IsInf(ax.LabelPos.X, 0) || math.IsNaN(ax.OutDirX) || math.IsInf(ax.OutDirX, 0)) {
+				t.Errorf("non-finite axis annotation for %v: %+v", opts, ax)
+			}
+		}
+	}
+}
+
+func TestPlot3D_VectorAxesAndFeatureAnnotations(t *testing.T) {
+	// 1. Saddle surface: SVG & Typst must include axis names, min/max ticks, tick lines, and visible feature marker/label
+	res, err := calc.EvalString("plot3d(x^2 - y^2, [-2, 2], [-2, 2])")
+	if err != nil {
+		t.Fatalf("EvalString saddle failed: %v", err)
+	}
+	pn := res.(*calc.PlotNode)
+
+	var xmlCheck any
+	if err := xml.Unmarshal([]byte(pn.SVG), &xmlCheck); err != nil {
+		t.Fatalf("saddle SVG invalid XML: %v\n%s", err, pn.SVG)
+	}
+	for _, wantSVG := range []string{
+		"<line ",
+		">x</text>",
+		">y</text>",
+		">z</text>",
+		">-2</text>",
+		">2</text>",
+		">-4</text>",
+		">4</text>",
+		"<circle ",
+		">[0, 0, 0]</text>",
+	} {
+		if !strings.Contains(pn.SVG, wantSVG) {
+			t.Errorf("expected saddle SVG to contain %q, got:\n%s", wantSVG, pn.SVG)
+		}
+	}
+	if !strings.Contains(pn.SVG, "[0, 0, 0]") {
+		t.Errorf("expected saddle SVG metadata to include [0, 0, 0]")
+	}
+
+	for _, wantTyp := range []string{
+		`[$x$]`,
+		`[$y$]`,
+		`[$z$]`,
+		`[$-2$]`,
+		`[$2$]`,
+		`[$-4$]`,
+		`[$4$]`,
+		`circle(`,
+		`[$(0, 0, 0)$]`,
+	} {
+		if !strings.Contains(pn.Typst, wantTyp) {
+			t.Errorf("expected saddle Typst to contain %q, got:\n%s", wantTyp, pn.Typst)
+		}
+	}
+
+	// 2. Multi-char variables in Typst axis labels must use italic("...")
+	resMulti, err := calc.EvalString("plot3d(u1^2 - v2^2, [u1, -2, 2], [v2, -3, 3])")
+	if err != nil {
+		t.Fatalf("EvalString multi-char failed: %v", err)
+	}
+	pnMulti := resMulti.(*calc.PlotNode)
+	if !strings.Contains(pnMulti.Typst, `[$italic("u1")$]`) || !strings.Contains(pnMulti.Typst, `[$italic("v2")$]`) {
+		t.Errorf("expected italic multi-char axis labels in Typst, got:\n%s", pnMulti.Typst)
+	}
+	if strings.Contains(pnMulti.Typst, `[$u1$]`) || strings.Contains(pnMulti.Typst, `[$v2$]`) {
+		t.Errorf("raw multi-char axis identifier leaked into Typst axis label:\n%s", pnMulti.Typst)
+	}
+
+	// 3. Space curve SVG must render spatial x/y/z axis labels cleanly and remain valid XML
+	resCurve, err := calc.EvalString("plot3d([cos(t), sin(t), t], [t, 0, 10])")
+	if err != nil {
+		t.Fatalf("EvalString curve failed: %v", err)
+	}
+	pnCurve := resCurve.(*calc.PlotNode)
+	if err := xml.Unmarshal([]byte(pnCurve.SVG), &xmlCheck); err != nil {
+		t.Fatalf("curve SVG invalid XML: %v\n%s", err, pnCurve.SVG)
+	}
+	for _, wantSVG := range []string{"<line ", ">x</text>", ">y</text>", ">z</text>"} {
+		if !strings.Contains(pnCurve.SVG, wantSVG) {
+			t.Errorf("expected curve SVG to contain %q, got:\n%s", wantSVG, pnCurve.SVG)
+		}
+	}
+}
