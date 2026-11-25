@@ -28,7 +28,7 @@
 !exam/*.ps1
 !exam/*.sh
 !exam/*.md
-# .gitignores/fomal.gitignore
+# .gitignores/formal.gitignore
 !formal/
 !formal/lean-toolchain
 !formal/lakefile.toml
