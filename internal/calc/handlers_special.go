@@ -47,7 +47,7 @@ func handleZeta(args []Node, env *Env) (Node, error) {
 
 func handleInterval(args []Node, env *Env) (Node, error) {
 	if len(args) < 1 || len(args) > 2 {
-		return nil, fmt.Errorf("%s", i18n.T("registry.func_args_between", "interval", 1, 2, len(args)))
+		return nil, fmt.Errorf("%s", i18n.T("errors.func_args_between", "interval", 1, 2, len(args)))
 	}
 
 	evalExpr, err := EvalWithEnv(args[0], env)

@@ -78,7 +78,7 @@ func (i RationalInterval) Mul(other RationalInterval) RationalInterval {
 // Inv computes reciprocal [1/High, 1/Low]. Returns error if interval contains zero.
 func (i RationalInterval) Inv() (RationalInterval, error) {
 	if i.ContainsZero() {
-		return RationalInterval{}, fmt.Errorf("%s", i18n.T("calc.interval_zero_division", i.String()))
+		return RationalInterval{}, fmt.Errorf("%s", i18n.T("errors.interval_zero_division", i.String()))
 	}
 	one := big.NewRat(1, 1)
 	low := new(big.Rat).Quo(one, i.High)
@@ -617,7 +617,7 @@ func rationalBoundLnReduced(x *big.Rat, steps int) RationalInterval {
 // series ln(m) = 2 * sum_{k=0}^n y^(2k+1) / (2k+1) where y = (m-1)/(m+1).
 func RationalBoundLn(x *big.Rat, steps int) (RationalInterval, error) {
 	if x.Sign() <= 0 {
-		return RationalInterval{}, fmt.Errorf("%s", i18n.T("calc.interval_ln_domain", x.RatString()))
+		return RationalInterval{}, fmt.Errorf("%s", i18n.T("errors.interval_ln_domain", x.RatString()))
 	}
 	one := big.NewRat(1, 1)
 	if x.Cmp(one) == 0 {
@@ -1173,7 +1173,7 @@ func EvalNodeInterval(n Node, steps int) (RationalInterval, error) {
 				return RationalInterval{}, err
 			}
 			if expExactRat.Sign() < 0 && baseInt.ContainsZero() {
-				return RationalInterval{}, fmt.Errorf("%s", i18n.T("calc.interval_zero_division", baseInt.String()))
+				return RationalInterval{}, fmt.Errorf("%s", i18n.T("errors.interval_zero_division", baseInt.String()))
 			}
 			if baseInt.IsStrictlyPositive() {
 				return evalPositiveBaseRatPow(baseInt, expExactRat, steps)

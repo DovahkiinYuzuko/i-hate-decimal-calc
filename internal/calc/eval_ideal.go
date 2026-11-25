@@ -227,7 +227,7 @@ func IdealIntersection(I, J []*MPoly, order MonomialOrder) ([]*MPoly, error) {
 // Returns q such that p = d * q.
 func exactPolyDiv(p, d *MPoly, order MonomialOrder) (*MPoly, error) {
 	if d.IsZero() {
-		return nil, fmt.Errorf("%s", i18n.T("poly.err_division_by_zero"))
+		return nil, fmt.Errorf("%s", i18n.T("err_division_by_zero"))
 	}
 	numVars := polyNumVars(p)
 	if numVars == 0 {

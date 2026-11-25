@@ -23,12 +23,12 @@ func CanonicalizeJSON(input []byte) ([]byte, error) {
 
 	var val interface{}
 	if err := dec.Decode(&val); err != nil {
-		return nil, fmt.Errorf("%s: %w", i18n.T("proof_trace.err_invalid_certificate_json"), err)
+		return nil, fmt.Errorf("%s", i18n.T("proof_trace.err_invalid_certificate_json", err))
 	}
 
 	// Ensure no trailing tokens exist
 	if dec.More() {
-		return nil, fmt.Errorf("%s: trailing data in JSON", i18n.T("proof_trace.err_invalid_certificate_json"))
+		return nil, fmt.Errorf("%s", i18n.T("proof_trace.err_invalid_certificate_json", "trailing data in JSON"))
 	}
 
 	var buf bytes.Buffer

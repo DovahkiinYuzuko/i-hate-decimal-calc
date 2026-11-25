@@ -16,11 +16,11 @@ import (
 // L'Hopital's rule, and infinite limits with degree comparison.
 func EvalLimit(expr Node, varNode Node, target Node, dirNode Node) (Node, error) {
 	if expr == nil {
-		return nil, fmt.Errorf("%s", i18n.T("errors.err_limit_expression_cannot_be_nil"))
+		return nil, fmt.Errorf("%s", i18n.T("err_limit_expression_cannot_be_nil"))
 	}
 	vNode, ok := varNode.(*VarNode)
 	if !ok {
-		return nil, fmt.Errorf("%s", i18n.T("errors.err_limit_second_argument_must_be", varNode.String()))
+		return nil, fmt.Errorf("%s", i18n.T("err_limit_second_argument_must_be", varNode.String()))
 	}
 	varName := vNode.Name
 
@@ -87,7 +87,7 @@ func isInfiniteTarget(target Node) (bool, int) {
 // evalFiniteLimit evaluates the limit as varName approaches finite target a.
 func evalFiniteLimit(expr Node, varName string, a Node, dir int, depth int) (Node, error) {
 	if depth > 5 {
-		return nil, fmt.Errorf("%s", i18n.T("errors.err_limit_recursion_depth_exceeded_possible"))
+		return nil, fmt.Errorf("%s", i18n.T("err_limit_recursion_depth_exceeded_possible"))
 	}
 
 	// If expr does not contain varName, limit is expr itself
@@ -104,7 +104,7 @@ func evalFiniteLimit(expr Node, varName string, a Node, dir int, depth int) (Nod
 // expressions, preventing catastrophic term explosion caused by distributing division across sums.
 func evalFiniteLimitFrac(origExpr Node, num Node, den Node, varName string, a Node, dir int, depth int) (Node, error) {
 	if depth > 5 {
-		return nil, fmt.Errorf("%s", i18n.T("errors.err_limit_recursion_depth_exceeded_possible"))
+		return nil, fmt.Errorf("%s", i18n.T("err_limit_recursion_depth_exceeded_possible"))
 	}
 
 	// Evaluate numerator and denominator at x = a
@@ -161,13 +161,13 @@ func evalFiniteLimitFrac(origExpr Node, num Node, den Node, varName string, a No
 		return val, nil
 	}
 
-	return nil, fmt.Errorf("%s", i18n.T("errors.err_limit_unable_to_resolve_limit", a.String(), err))
+	return nil, fmt.Errorf("%s", i18n.T("err_limit_unable_to_resolve_limit", a.String()))
 }
 
 // evalInfiniteLimit evaluates the limit as varName approaches +inf (sign = 1) or -inf (sign = -1).
 func evalInfiniteLimit(expr Node, varName string, sign int, depth int) (Node, error) {
 	if depth > 5 {
-		return nil, fmt.Errorf("%s", i18n.T("errors.err_limit_recursion_depth_exceeded_in"))
+		return nil, fmt.Errorf("%s", i18n.T("err_limit_recursion_depth_exceeded_in", expr.String()))
 	}
 
 	if !containsVar(expr, varName) {
@@ -232,7 +232,7 @@ func evalInfiniteLimit(expr Node, varName string, sign int, depth int) (Node, er
 		return evalInfiniteLimit(lhopitalExpr, varName, sign, depth+1)
 	}
 
-	return nil, fmt.Errorf("%s", i18n.T("errors.err_limit_unable_to_resolve_limit_1", expr.String()))
+	return nil, fmt.Errorf("%s", i18n.T("err_limit_unable_to_resolve_limit_1", expr.String()))
 }
 
 // toRationalFraction converts any expression expr into a single fraction num / den.
@@ -430,7 +430,7 @@ func evaluateSingularityLimit(numVal Node, den Node, varName string, a Node, dir
 		return simplifyUnaryOp("-", &VarNode{Name: "inf"})
 	}
 
-	return nil, fmt.Errorf("%s", i18n.T("errors.err_limit_two_sided_limit_does"))
+	return nil, fmt.Errorf("%s", i18n.T("err_limit_two_sided_limit_does", fmt.Sprintf("%+d", numSign*denSignLeft), fmt.Sprintf("%+d", numSign*denSignRight)))
 }
 
 // probeDenSign checks the algebraic sign of den when varName = a + delta (dir > 0) or a - delta (dir < 0).

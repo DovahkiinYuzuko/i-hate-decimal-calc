@@ -404,7 +404,7 @@ func verifyFactor(fn *FuncNode, factorResult Node, env *Env, fsm *VerifyLifecycl
 	} else if certainty == VerifyCertaintyRefuted && wit != nil {
 		_ = fsm.TransitionTo(VerifyStateRefuted)
 		evalRes := mustRational(-1, 1)
-		details := fmt.Sprintf("%s (%s)", i18n.T("verify.refuted_residual"), wit.Message)
+		details := i18n.T("verify.refuted_residual", wit.Message)
 		certIR := NewIdentityCertificate(IdentityKindFactor, orig, factorResult, evalRes, false, details)
 		return &VerificationCertificate{
 			Domain:     DomainFactor,
@@ -693,7 +693,7 @@ func verifyMatrixInv(fn *FuncNode, invResult Node, env *Env, fsm *VerifyLifecycl
 	}
 
 	_ = fsm.TransitionTo(VerifyStateRefuted)
-	details := i18n.T("verify.refuted_residual")
+	details := i18n.T("verify.refuted_residual", prod.String())
 	certIR := NewInvertibilityCertificate(A, AInv, nil, prod, false, details)
 	return &VerificationCertificate{
 		Domain:     DomainMatrix,
@@ -751,7 +751,7 @@ func verifyMatrixDecomp(fn *FuncNode, decompResult Node, env *Env, fsm *VerifyLi
 			}, nil
 		}
 		_ = fsm.TransitionTo(VerifyStateRefuted)
-		details := i18n.T("verify.refuted_residual")
+		details := i18n.T("verify.refuted_residual", LLT.String())
 		certIR := NewDecompositionCertificate(DecompCholesky, A, []Node{L, LT}, LLT, false, details)
 		return &VerificationCertificate{
 			Domain:     DomainMatrix,
@@ -800,7 +800,7 @@ func verifyMatrixDecomp(fn *FuncNode, decompResult Node, env *Env, fsm *VerifyLi
 			}, nil
 		}
 		_ = fsm.TransitionTo(VerifyStateRefuted)
-		details := i18n.T("verify.refuted_residual")
+		details := i18n.T("verify.refuted_residual", PA.String())
 		certIR := NewDecompositionCertificate(DecompLU, A, []Node{P, L, U}, PA, false, details)
 		return &VerificationCertificate{
 			Domain:     DomainMatrix,
@@ -868,7 +868,7 @@ func verifyMatrixDecomp(fn *FuncNode, decompResult Node, env *Env, fsm *VerifyLi
 			}, nil
 		}
 		_ = fsm.TransitionTo(VerifyStateRefuted)
-		details := i18n.T("verify.refuted_residual")
+		details := i18n.T("verify.refuted_residual", QR.String())
 		certIR := NewDecompositionCertificate(DecompQR, A, []Node{Q, R}, QR, false, details)
 		return &VerificationCertificate{
 			Domain:     DomainMatrix,

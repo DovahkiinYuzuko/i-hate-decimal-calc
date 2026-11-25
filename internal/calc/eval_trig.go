@@ -311,7 +311,7 @@ func evalInverseTrig(fn string, arg Node) (Node, bool, error) {
 			one := big.NewRat(1, 1)
 			negOne := big.NewRat(-1, 1)
 			if rat.Val.Cmp(one) > 0 || rat.Val.Cmp(negOne) < 0 {
-				return nil, false, fmt.Errorf("%s", i18n.T("errors.err_argument_must_be_in_1", fn, rat.String()))
+				return nil, false, fmt.Errorf("%s", i18n.T("err_argument_must_be_in_1", fn, rat.String()))
 			}
 		}
 	}
