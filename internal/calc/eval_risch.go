@@ -1,12 +1,13 @@
 package calc
 
 import (
-	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
 
 	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/calc/ast"
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
 
 // RischState refers to the Risch lifecycle states defined in eval_risch_fsm.go.
@@ -362,6 +363,39 @@ func RischIntegrate(expr ast.Node, varName string) (ast.Node, error) {
 		return Eval(res)
 	}
 
+	// 2.5 Pull constant factors out of products so normalized log ratios (e.g. ln(x)/ln(10)) integrate cleanly
+	if mul, ok := normExpr.(*ast.MulNode); ok {
+		var constFactors, varFactors []ast.Node
+		for _, f := range mul.Factors {
+			if containsVar(f, varName) {
+				varFactors = append(varFactors, f)
+			} else {
+				constFactors = append(constFactors, f)
+			}
+		}
+		if len(constFactors) > 0 && len(varFactors) > 0 {
+			if cNode, err := simplifyMul(constFactors); err == nil {
+				var rem ast.Node
+				if len(varFactors) == 1 {
+					rem = varFactors[0]
+				} else {
+					rem = ast.NewMul(varFactors)
+				}
+				subRes, subErr := RischIntegrate(rem, varName)
+				if subErr == nil && subRes != nil {
+					if combined, errMul := simplifyMul([]ast.Node{cNode, subRes}); errMul == nil {
+						return Eval(combined)
+					}
+				} else if subErr != nil {
+					var nonElemErr *NonelementaryIntegralError
+					if errors.As(subErr, &nonElemErr) {
+						return nil, nonElemErr
+					}
+				}
+			}
+		}
+	}
+
 	// 3. Try pure polynomial in varName
 	if poly, ok := extractPoly(normExpr, varName); ok {
 		intPoly, err := integrateUnivariatePoly(poly, varName)
@@ -415,18 +449,25 @@ func RischIntegrate(expr ast.Node, varName string) (ast.Node, error) {
 }
 
 // normalizeMonomialsAST performs pre-normalization on AST expressions:
-// exp(ln(u)) -> u, ln(exp(u)) -> u
+// log(u) -> ln(u)/ln(10), log(b, u) -> ln(u)/ln(b), exp(ln(u)) -> u, ln(exp(u)) -> u
 func normalizeMonomialsAST(n ast.Node) ast.Node {
+	if normLog, changed := normalizeLogToLn(n); changed {
+		if ev, err := Eval(normLog); err == nil && ev != nil {
+			n = ev
+		} else {
+			n = normLog
+		}
+	}
 	return ast.Transform(n, func(curr ast.Node) ast.Node {
 		if fn, ok := curr.(*ast.FuncNode); ok {
-			// exp(ln(u)) -> u
+			// exp(ln(u)) -> u (strictly natural log)
 			if (fn.Name == "exp" || fn.Name == "e") && len(fn.Args) == 1 {
-				if innerFn, ok2 := fn.Args[0].(*ast.FuncNode); ok2 && (innerFn.Name == "ln" || innerFn.Name == "log") && len(innerFn.Args) == 1 {
+				if innerFn, ok2 := fn.Args[0].(*ast.FuncNode); ok2 && innerFn.Name == "ln" && len(innerFn.Args) == 1 {
 					return innerFn.Args[0]
 				}
 			}
-			// ln(exp(u)) -> u
-			if (fn.Name == "ln" || fn.Name == "log") && len(fn.Args) == 1 {
+			// ln(exp(u)) -> u (strictly natural log)
+			if fn.Name == "ln" && len(fn.Args) == 1 {
 				if innerFn, ok2 := fn.Args[0].(*ast.FuncNode); ok2 && (innerFn.Name == "exp" || innerFn.Name == "e") && len(innerFn.Args) == 1 {
 					return innerFn.Args[0]
 				}
@@ -455,7 +496,7 @@ func buildDifferentialTower(expr ast.Node, varName string) ([]DifferentialExtens
 						Dt:      dArg,
 					})
 				}
-			} else if (fn.Name == "ln" || fn.Name == "log") && len(fn.Args) == 1 && containsVar(fn.Args[0], varName) {
+			} else if fn.Name == "ln" && len(fn.Args) == 1 && containsVar(fn.Args[0], varName) {
 				key := fmt.Sprintf("ln(%s)", fn.Args[0].String())
 				if !seen[key] {
 					seen[key] = true
@@ -572,7 +613,7 @@ func solveExponentialRisch(expr ast.Node, ext DifferentialExtension, varName str
 // solveLogarithmicRisch solves integrals involving a logarithmic extension t = ln(u(x)).
 func solveLogarithmicRisch(expr ast.Node, _ DifferentialExtension, varName string, fsm *RischLifecycleFSM) (ast.Node, error) {
 	// Case 1: Pure ln(x) -> x*ln(x) - x
-	if fn, ok := expr.(*ast.FuncNode); ok && (fn.Name == "ln" || fn.Name == "log") && len(fn.Args) == 1 {
+	if fn, ok := expr.(*ast.FuncNode); ok && fn.Name == "ln" && len(fn.Args) == 1 {
 		arg := fn.Args[0]
 		if v, okV := arg.(*ast.VarNode); okV && v.Name == varName {
 			_ = fsm.TransitionTo(RischStatePolynomialPartIntegrated)
@@ -736,7 +777,7 @@ func isVar(n ast.Node, name string) bool {
 }
 
 func isLogOfVar(n ast.Node, name string) bool {
-	if fn, ok := n.(*ast.FuncNode); ok && (fn.Name == "ln" || fn.Name == "log") && len(fn.Args) == 1 {
+	if fn, ok := n.(*ast.FuncNode); ok && fn.Name == "ln" && len(fn.Args) == 1 {
 		return isVar(fn.Args[0], name)
 	}
 	return false

@@ -5,3 +5,7 @@ CAT21-003,cat_21_symbolic_integration_integrate,"""integrate(cos(2*x), x)""",,ex
 CAT21-004,cat_21_symbolic_integration_integrate,"""integrate(sin(x), x, 0, pi)""",,exact,2,,0,deductive,Integrate: Trig definite
 CAT21-005,cat_21_symbolic_integration_integrate,"""integrate(x^(-1), x, 1, e)""",,exact,1,,0,deductive,Integrate: Rational log definite
 CAT21-006,cat_21_symbolic_integration_integrate,"""integrate(x * e^x, x, 0, 1)""",,exact,1,,0,deductive,Integrate: Integration by parts definite
+CAT21-007,cat_21_symbolic_integration_integrate,"""diff(integrate(log(x), x), x) - ln(x)/ln(10) == 0""",,exact,true,,0,metamorphic,Integrate: Common logarithm log(x) derivative round-trip
+CAT21-008,cat_21_symbolic_integration_integrate,"""diff(integrate(log(2, x), x), x) - ln(x)/ln(2) == 0""",,exact,true,,0,metamorphic,Integrate: Arbitrary base log(2, x) derivative round-trip
+CAT21-009,cat_21_symbolic_integration_integrate,"""integrate(log(x), x, 1, 10) - (10 - 9/ln(10)) == 0""",,exact,true,,0,deductive,Integrate: Definite integral of common logarithm over [1, 10]
+CAT21-010,cat_21_symbolic_integration_integrate,"""risch_integrate(log(exp(x)), x) - x^2/(2*ln(10)) == 0""",,exact,true,,0,contradiction,Risch: log(exp(x)) retains 1/ln(10) factor instead of collapsing to x

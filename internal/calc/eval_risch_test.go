@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"math"
 	"testing"
 )
 
@@ -189,4 +190,55 @@ func TestRisch_IntegrationDispatch(t *testing.T) {
 		t.Fatalf("expected closed form erf for exp(-x^2), got error: %v", err3)
 	}
 	t.Logf("Confirmed Gaussian integral via erf: %s", res3.String())
+}
+
+func TestRischIntegrate_LogBaseConsistency(t *testing.T) {
+	// 1. risch_integrate(log(x), x) -> d/dx at x=10 must be 1 (base 10), not ln(10)
+	fLog, err := RischIntegrate(parseExprForTest(t, "log(x)"), "x")
+	if err != nil {
+		t.Fatalf("RischIntegrate(log(x), x) failed: %v", err)
+	}
+	dLog, err := differentiate(fLog, "x")
+	if err != nil {
+		t.Fatalf("differentiate(%s) failed: %v", fLog.String(), err)
+	}
+	vLog10, ok := evalSampleFloat(dLog, "x", 10)
+	if !ok || math.Abs(vLog10-1.0) > 1e-12 {
+		t.Errorf("d/dx(risch_integrate(log(x), x)) at x=10 = %v (ok=%v), want 1 (F=%s)", vLog10, ok, fLog.String())
+	}
+
+	// 2. risch_integrate(1 / (x * log(x)), x) -> d/dx at x=100 must be 1/(100*2) = 0.005
+	fInvLog, err := RischIntegrate(parseExprForTest(t, "1 / (x * log(x))"), "x")
+	if err != nil {
+		t.Fatalf("RischIntegrate(1/(x*log(x)), x) failed: %v", err)
+	}
+	dInvLog, err := differentiate(fInvLog, "x")
+	if err != nil {
+		t.Fatalf("differentiate(%s) failed: %v", fInvLog.String(), err)
+	}
+	vInv, ok := evalSampleFloat(dInvLog, "x", 100)
+	if !ok || math.Abs(vInv-0.005) > 1e-12 {
+		t.Errorf("d/dx(risch_integrate(1/(x*log(x)), x)) at x=100 = %v (ok=%v), want 0.005 (F=%s)", vInv, ok, fInvLog.String())
+	}
+
+	// 3. risch_integrate(log(exp(x)), x) -> int(x / ln(10), x) = x^2 / (2*ln(10))
+	fLogExp, err := RischIntegrate(parseExprForTest(t, "log(exp(x))"), "x")
+	if err != nil {
+		t.Fatalf("RischIntegrate(log(exp(x)), x) failed: %v", err)
+	}
+	dLogExp, err := differentiate(fLogExp, "x")
+	if err != nil {
+		t.Fatalf("differentiate(%s) failed: %v", fLogExp.String(), err)
+	}
+	vLogExp, ok := evalSampleFloat(dLogExp, "x", 2)
+	wantLogExp := 2.0 / math.Ln10
+	if !ok || math.Abs(vLogExp-wantLogExp) > 1e-12 {
+		t.Errorf("d/dx(risch_integrate(log(exp(x)), x)) at x=2 = %v (ok=%v), want %.15g (F=%s)", vLogExp, ok, wantLogExp, fLogExp.String())
+	}
+
+	// 4. Contradiction: exp(log(x)) must NOT collapse to x (since log is base 10, not ln)
+	normExpLog := normalizeMonomialsAST(parseExprForTest(t, "exp(log(x))"))
+	if v, isVarNode := normExpLog.(*VarNode); isVarNode && v.Name == "x" {
+		t.Errorf("normalizeMonomialsAST(exp(log(x))) wrongly collapsed to x; got %s", normExpLog.String())
+	}
 }
