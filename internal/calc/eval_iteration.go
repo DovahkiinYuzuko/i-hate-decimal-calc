@@ -207,7 +207,7 @@ func handleTable(args []Node, env *Env) (Node, error) {
 		return nil, fmt.Errorf("%s", i18n.T("errors.iteration_max_exceeded", "table", maxLimit.String()))
 	}
 	if warnLimit != nil && warnLimit.Sign() > 0 && stepCountBig.Cmp(warnLimit) > 0 && warnWriter != nil {
-		fmt.Fprintf(warnWriter, "[WARN] %s\n", i18n.T("warnings.iteration_limit_exceeded", "table", stepCountBig.String(), warnLimit.String()))
+		fmt.Fprintf(warnWriter, "[WARN] %s\n", i18n.T("warnings.iteration_limit_exceeded", "table", warnLimit.String()))
 	}
 
 	// Check if expression is pure and candidate for parallel evaluation

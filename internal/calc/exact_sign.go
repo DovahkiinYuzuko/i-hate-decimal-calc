@@ -35,7 +35,7 @@ func (s Sign) String() string {
 // and quadratic irrationals (a + b*sqrt(c), a*sqrt(b) + c*sqrt(d)) via exact algebraic squaring and norm comparisons.
 func ExactSign(n Node) (Sign, error) {
 	if n == nil {
-		return SignUnknown, fmt.Errorf("%s", i18n.T("errors.err_cannot_determine_sign_of_nil"))
+		return SignUnknown, fmt.Errorf("%s", i18n.T("err_cannot_determine_sign_of_nil"))
 	}
 
 	simplified, err := Eval(n)
@@ -61,7 +61,7 @@ func signNode(n Node) (int, error) {
 	case SignZero:
 		return 0, nil
 	default:
-		return 0, fmt.Errorf("%s", i18n.T("errors.err_cannot_determine_exact_sign_for", n.String()))
+		return 0, fmt.Errorf("%s", i18n.T("err_cannot_determine_exact_sign_for", n.String()))
 	}
 }
 

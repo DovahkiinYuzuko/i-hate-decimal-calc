@@ -43,7 +43,7 @@ func EvalRSolve(eqNode, fnNode, initsNode Node, env *Env) (Node, error) {
 	// 1. Identify sequence name and index variable from fnNode (e.g. a(n))
 	seqName, idxVar, err := extractSequenceTarget(fnNode)
 	if err != nil {
-		return nil, fmt.Errorf("%s", i18n.T("calc.rsolve_func_required", fnNode.String()))
+		return nil, fmt.Errorf("%s", i18n.T("errors.rsolve_func_required", fnNode.String()))
 	}
 
 	// 2. Parse equation into homogeneous coefficients and inhomogeneous term f(n)
@@ -53,19 +53,19 @@ func EvalRSolve(eqNode, fnNode, initsNode Node, env *Env) (Node, error) {
 	}
 
 	if order < 1 {
-		return nil, fmt.Errorf("%s", i18n.T("calc.rsolve_linear_constant_coeff", eqNode.String()))
+		return nil, fmt.Errorf("%s", i18n.T("errors.rsolve_linear_constant_coeff", eqNode.String()))
 	}
 
 	// 3. Solve homogeneous recurrence part -> characteristic roots and basis functions
 	homogBases, err := solveHomogeneousRecurrence(coeffs, idxVar, order)
 	if err != nil {
-		return nil, fmt.Errorf("%s", i18n.T("calc.rsolve_failed", err))
+		return nil, fmt.Errorf("%s", i18n.T("errors.rsolve_failed", err))
 	}
 
 	// 4. Solve particular recurrence part for inhomogeneous term f(n)
 	partSol, err := solveParticularRecurrence(coeffs, fNode, idxVar, order)
 	if err != nil {
-		return nil, fmt.Errorf("%s", i18n.T("calc.rsolve_failed", err))
+		return nil, fmt.Errorf("%s", i18n.T("errors.rsolve_failed", err))
 	}
 
 	// 5. Parse initial conditions
@@ -77,7 +77,7 @@ func EvalRSolve(eqNode, fnNode, initsNode Node, env *Env) (Node, error) {
 	// 6. Fit initial conditions or keep symbolic constants (C1, C2, ...)
 	res, err := fitInitialConditions(homogBases, partSol, idxVar, inits)
 	if err != nil {
-		return nil, fmt.Errorf("%s", i18n.T("calc.rsolve_failed", err))
+		return nil, fmt.Errorf("%s", i18n.T("errors.rsolve_failed", err))
 	}
 
 	return Eval(res)
@@ -109,7 +109,7 @@ func parseRecurrenceEquation(eqNode Node, seqName, idxVar string) (map[int]*big.
 			return nil, nil, 0, err
 		}
 	} else {
-		return nil, nil, 0, fmt.Errorf("%s", i18n.T("calc.rsolve_equation_required", eqNode.String()))
+		return nil, nil, 0, fmt.Errorf("%s", i18n.T("errors.rsolve_equation_required", eqNode.String()))
 	}
 
 	expanded := expandNode(diffExpr)
@@ -198,12 +198,12 @@ func matchSequenceTerm(t Node, seqName, idxVar string) (shift int, coeff *big.Ra
 			}
 		} else if fn, ok := f.(*FuncNode); ok && fn.Name == seqName && len(fn.Args) == 1 {
 			if seqFunc != nil {
-				return 0, nil, false, fmt.Errorf("%s", i18n.T("calc.rsolve_linear_constant_coeff", t.String()))
+				return 0, nil, false, fmt.Errorf("%s", i18n.T("errors.rsolve_linear_constant_coeff", t.String()))
 			}
 			seqFunc = fn
 		} else {
 			if containsVariable(f, idxVar) {
-				return 0, nil, false, fmt.Errorf("%s", i18n.T("calc.rsolve_linear_constant_coeff", t.String()))
+				return 0, nil, false, fmt.Errorf("%s", i18n.T("errors.rsolve_linear_constant_coeff", t.String()))
 			}
 			evaled, err := Eval(f)
 			if err == nil {
@@ -212,7 +212,7 @@ func matchSequenceTerm(t Node, seqName, idxVar string) (shift int, coeff *big.Ra
 					continue
 				}
 			}
-			return 0, nil, false, fmt.Errorf("%s", i18n.T("calc.rsolve_linear_constant_coeff", t.String()))
+			return 0, nil, false, fmt.Errorf("%s", i18n.T("errors.rsolve_linear_constant_coeff", t.String()))
 		}
 	}
 

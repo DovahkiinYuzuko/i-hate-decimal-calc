@@ -27,6 +27,14 @@ jobs:
           go-version-file: 'go.mod'
           check-latest: true
 
+      - name: Run repo-lint (--all)
+        run: |
+          if [ -f "tools/repo-lint/main.go" ]; then
+            go run ./tools/repo-lint --all
+          else
+            echo "::warning::tools/repo-lint/main.go is not tracked in this branch; skipping repo-lint."
+          fi
+
       - name: Run Unit Tests
         env:
           IHD_NO_UPDATE_CHECK: "1"

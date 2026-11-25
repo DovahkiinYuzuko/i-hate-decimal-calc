@@ -126,7 +126,7 @@ func PseudoDividePrimitive(F, G Node, mainVar string, order []string) (Node, Nod
 	}
 
 	if isZero(evalG) {
-		return nil, nil, 0, nil, fmt.Errorf("%s", i18n.T("poly.err_division_by_zero"))
+		return nil, nil, 0, nil, fmt.Errorf("%s", i18n.T("err_division_by_zero"))
 	}
 	if isZero(evalF) {
 		return mustRational(0, 1), mustRational(0, 1), 0, mustRational(1, 1), nil
@@ -184,7 +184,7 @@ func SubresultantPrem(F, G Node, mainVar string, order []string) (Node, error) {
 	evalF, _ := Eval(expandNode(F))
 	evalG, _ := Eval(expandNode(G))
 	if isZero(evalG) {
-		return nil, fmt.Errorf("%s", i18n.T("poly.err_division_by_zero"))
+		return nil, fmt.Errorf("%s", i18n.T("err_division_by_zero"))
 	}
 	if isZero(evalF) {
 		return mustRational(0, 1), nil

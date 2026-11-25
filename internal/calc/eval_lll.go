@@ -576,7 +576,7 @@ func FindMinimalPolynomial(val Node, maxDegree int, env *Env) (Node, error) {
 // HandleLLL evaluates the built-in function `lll(matrix, [delta])`.
 func HandleLLL(args []Node, env *Env) (Node, error) {
 	if len(args) < 1 || len(args) > 2 {
-		return nil, fmt.Errorf("%s", i18n.T("calc.matrix_dimension_error"))
+		return nil, fmt.Errorf("%s", i18n.T("errors.func_args_between", "lll", 1, 2, len(args)))
 	}
 
 	matNode, ok := args[0].(*MatrixNode)

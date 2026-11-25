@@ -658,10 +658,10 @@ func AlgMul(a, b *AlgebraicReal) *AlgebraicReal {
 // AlgDiv computes a / b (b != 0).
 func AlgDiv(a, b *AlgebraicReal) (*AlgebraicReal, error) {
 	if a == nil || b == nil {
-		return nil, fmt.Errorf("%s", i18n.T("errors.domain_error", "alg_div"))
+		return nil, fmt.Errorf("%s", i18n.T("errors.domain_error"))
 	}
 	if AlgIsZero(b) {
-		return nil, fmt.Errorf("%s", i18n.T("errors.zero_division", "alg_div"))
+		return nil, fmt.Errorf("%s", i18n.T("errors.zero_division"))
 	}
 	if AlgIsZero(a) {
 		return NewAlgebraicRealFromRat(big.NewRat(0, 1)), nil
@@ -676,7 +676,7 @@ func AlgDiv(a, b *AlgebraicReal) (*AlgebraicReal, error) {
 		refineLimit--
 	}
 	if b.Low.Cmp(zero) <= 0 && b.High.Cmp(zero) >= 0 {
-		return nil, fmt.Errorf("%s", i18n.T("errors.zero_division", "alg_div"))
+		return nil, fmt.Errorf("%s", i18n.T("errors.zero_division"))
 	}
 
 	// 1 / b: reciprocal of polynomial b.Poly

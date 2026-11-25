@@ -353,7 +353,7 @@ func handleRange(args []Node, env *Env) (Node, error) {
 		return nil, fmt.Errorf("%s", i18n.T("errors.iteration_max_exceeded", "range", maxLimit.String()))
 	}
 	if warnLimit != nil && warnLimit.Sign() > 0 && stepBig.Cmp(warnLimit) > 0 {
-		fmt.Fprintf(warnWriter, "[WARN] %s\n", i18n.T("warnings.iteration_limit_exceeded", "range", stepBig.String(), warnLimit.String()))
+		fmt.Fprintf(warnWriter, "[WARN] %s\n", i18n.T("warnings.iteration_limit_exceeded", "range", warnLimit.String()))
 	}
 
 	results := make([]Node, count)
