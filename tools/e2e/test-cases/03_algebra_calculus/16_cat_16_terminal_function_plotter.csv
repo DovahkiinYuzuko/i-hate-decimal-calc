@@ -20,3 +20,11 @@ CAT16-018,cat_16_terminal_function_plotter,"""plot3d(x^2 - y^2, [-2, 2], [-2, 2]
 CAT16-019,cat_16_terminal_function_plotter,"""plot3d(x^2 + x*y + y^2 - 3*x, [-4, 4], [-4, 4])""",,contains,"[2, -1, -3]",,0,deductive,Plotter3D: Coupled polynomial critical point via lex Groebner elimination
 CAT16-020,cat_16_terminal_function_plotter,"--format svg ""plot3d(x^2 - y^2, [-2, 2], [-2, 2])""",,contains,<circle,,0,metamorphic,Plotter3D: SVG visible critical point marker and axis ticks
 CAT16-021,cat_16_terminal_function_plotter,"--format typst ""plot3d(x^2 - y^2, [-2, 2], [-2, 2])""",,contains,"circle(",,0,metamorphic,Plotter3D: Typst visible critical point marker and axis ticks
+CAT16-022,cat_16_terminal_function_plotter,"-a ""log(2)""",,contains,0.301029995663981195213738894724,,0,contradiction,LogBase: Common logarithm log(2) approx distinguishes base-10 from ln(2)
+CAT16-023,cat_16_terminal_function_plotter,"-a ""log(2, 3)""",,contains,1.584962500721156181453738943948,,0,deductive,LogBase: Arbitrary base log(2, 3) certified interval approx
+CAT16-024,cat_16_terminal_function_plotter,"-i ""(-32)^(1/5)""",,contains,"[-2, -2]",,0,deductive,OddRoot: Negative base odd fifth root exact zero-width interval
+CAT16-025,cat_16_terminal_function_plotter,"-a ""(-2)^(1/5)""",,contains,-1.148698354997035006798626946778,,0,deductive,OddRoot: Negative base irrational fifth root certified 30-digit approx
+CAT16-026,cat_16_terminal_function_plotter,"-i ""(-32)^(2/5)""",,contains,"[4, 4]",,0,metamorphic,OddRoot: Negative base even-numerator odd-denominator positive real root
+CAT16-027,cat_16_terminal_function_plotter,"""plot(log(2, x), [1, 8])""",,contains,"x ∈ [1, 8]",,0,deductive,Plotter: 2-arg arbitrary base logarithm plot
+CAT16-028,cat_16_terminal_function_plotter,"""plot(x^(1/5), [-32, 32])""",,contains,"x ∈ [-32, 32]",,0,deductive,Plotter: Negative base fifth root continuous real plot
+CAT16-029,cat_16_terminal_function_plotter,"""plot3d((x + y)^(1/5), [-4, 4], [-4, 4])""",,contains,"x ∈ [-4, 4]",,0,metamorphic,Plotter3D: Negative base odd root surface plot

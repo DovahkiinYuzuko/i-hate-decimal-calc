@@ -106,3 +106,36 @@ func TestApprox_CollectionsAndMatrix(t *testing.T) {
 		t.Errorf("list approx unexpected: %s", appList)
 	}
 }
+
+func TestApprox_LogBaseAndOddRoots(t *testing.T) {
+	testCases := []struct {
+		input    string
+		contains string
+	}{
+		{"log(2)", "0.301029995663981195213738894724"},
+		{"log(2, 3)", "1.584962500721156181453738943948"},
+		{"(-32)^(1/5)", "-2"},
+		{"(-32)^(2/5)", "4"},
+		{"(-2)^(1/5)", "-1.148698354997035006798626946778"},
+	}
+
+	for _, tc := range testCases {
+		node, err := EvalString(tc.input)
+		if err != nil {
+			t.Fatalf("eval error for %q: %v", tc.input, err)
+		}
+		app, err := Approx(node)
+		if err != nil {
+			t.Fatalf("approx error for %q: %v", tc.input, err)
+		}
+		if tc.input == "(-32)^(1/5)" || tc.input == "(-32)^(2/5)" {
+			if app != tc.contains {
+				t.Errorf("input %q: expected exact approx %q, got %q", tc.input, tc.contains, app)
+			}
+			continue
+		}
+		if !strings.Contains(app, tc.contains) {
+			t.Errorf("input %q: expected approx to contain %q, got %q", tc.input, tc.contains, app)
+		}
+	}
+}

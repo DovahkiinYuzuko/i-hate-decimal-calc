@@ -268,3 +268,136 @@ func TestRationalInterval_LargeExpAndBoundedCbrt(t *testing.T) {
 	}
 }
 
+func TestRationalInterval_LogBaseAndArbitraryBase(t *testing.T) {
+	// Deductive: log(2) is base-10 (~0.30102999566...), NOT ln(2) (~0.693147...)
+	log2Node, err := EvalString("log(2)")
+	if err != nil {
+		t.Fatalf("EvalString(log(2)) failed: %v", err)
+	}
+	ivLog2, err := EvalNodeInterval(log2Node, 20)
+	if err != nil {
+		t.Fatalf("EvalNodeInterval(log(2)) failed: %v", err)
+	}
+	loExpect := big.NewRat(301029, 1000000)
+	hiExpect := big.NewRat(301031, 1000000)
+	if ivLog2.Low.Cmp(loExpect) < 0 || ivLog2.High.Cmp(hiExpect) > 0 {
+		t.Errorf("EvalNodeInterval(log(2)) = %s, expected near 0.301030 (base-10)", ivLog2.String())
+	}
+
+	// Deductive: 2-arg log(2, 3) (~1.5849625...)
+	log23Node, err := EvalString("log(2, 3)")
+	if err != nil {
+		t.Fatalf("EvalString(log(2, 3)) failed: %v", err)
+	}
+	ivLog23, err := EvalNodeInterval(log23Node, 20)
+	if err != nil {
+		t.Fatalf("EvalNodeInterval(log(2, 3)) failed: %v", err)
+	}
+	if ivLog23.Low.Cmp(big.NewRat(158496, 100000)) < 0 || ivLog23.High.Cmp(big.NewRat(158497, 100000)) > 0 {
+		t.Errorf("EvalNodeInterval(log(2, 3)) = %s, expected near 1.5849625", ivLog23.String())
+	}
+
+	// Deductive: base < 1 -> log(1/2, 4) == -2
+	logHalf4Node, err := EvalString("log(1/2, 4)")
+	if err != nil {
+		t.Fatalf("EvalString(log(1/2, 4)) failed: %v", err)
+	}
+	ivLogHalf4, err := EvalNodeInterval(logHalf4Node, 20)
+	if err != nil {
+		t.Fatalf("EvalNodeInterval(log(1/2, 4)) failed: %v", err)
+	}
+	negTwo := big.NewRat(-2, 1)
+	if ivLogHalf4.Low.Cmp(negTwo) > 0 || ivLogHalf4.High.Cmp(negTwo) < 0 {
+		t.Errorf("EvalNodeInterval(log(1/2, 4)) = %s, must enclose -2", ivLogHalf4.String())
+	}
+
+	// Contrapositive: base interval spanning 1 ([1/2, 2]) must error because ln(base) contains 0
+	badBaseNode := &FuncNode{
+		Name: "log",
+		Args: []Node{
+			NewIntervalNode(big.NewRat(1, 2), big.NewRat(2, 1)),
+			mustRational(4, 1),
+		},
+	}
+	if iv, err := EvalNodeInterval(badBaseNode, 12); err == nil {
+		t.Errorf("expected error for log([1/2, 2], 4), got %s", iv.String())
+	}
+
+	// Contradiction: log(1, 5) and log(-2, 5) must fail
+	if _, err := EvalNodeInterval(&FuncNode{Name: "log", Args: []Node{mustRational(1, 1), mustRational(5, 1)}}, 12); err == nil {
+		t.Errorf("expected error for log(1, 5)")
+	}
+	if _, err := EvalNodeInterval(&FuncNode{Name: "log", Args: []Node{mustRational(-2, 1), mustRational(5, 1)}}, 12); err == nil {
+		t.Errorf("expected error for log(-2, 5)")
+	}
+}
+
+func TestRationalInterval_NegativeBaseOddRoot(t *testing.T) {
+	// Deductive: negative base with odd denominator rational exponents
+	cases := []struct {
+		expr   string
+		target *big.Rat
+	}{
+		{"(-32)^(1/5)", big.NewRat(-2, 1)},
+		{"(-32)^(2/5)", big.NewRat(4, 1)},
+		{"(-32)^(-1/5)", big.NewRat(-1, 2)},
+		{"(-8)^(2/3)", big.NewRat(4, 1)},
+	}
+	for _, tc := range cases {
+		node, err := EvalString(tc.expr)
+		if err != nil {
+			t.Fatalf("EvalString(%q) failed: %v", tc.expr, err)
+		}
+		iv, err := EvalNodeInterval(node, 20)
+		if err != nil {
+			t.Fatalf("EvalNodeInterval(%q) failed: %v", tc.expr, err)
+		}
+		if iv.Low.Cmp(tc.target) > 0 || iv.High.Cmp(tc.target) < 0 {
+			t.Errorf("EvalNodeInterval(%q) = %s, must enclose %s", tc.expr, iv.String(), tc.target.RatString())
+		}
+	}
+
+	// Zero-crossing intervals with positive odd-denominator exponents
+	oddSpan := &PowNode{
+		Base: NewIntervalNode(big.NewRat(-32, 1), big.NewRat(32, 1)),
+		Exp:  NewRationalFromBigRat(big.NewRat(1, 5)),
+	}
+	ivOddSpan, err := EvalNodeInterval(oddSpan, 20)
+	if err != nil {
+		t.Fatalf("EvalNodeInterval([-32, 32]^(1/5)) failed: %v", err)
+	}
+	if ivOddSpan.Low.Cmp(big.NewRat(-2, 1)) > 0 || ivOddSpan.High.Cmp(big.NewRat(2, 1)) < 0 {
+		t.Errorf("[-32, 32]^(1/5) = %s, must enclose [-2, 2]", ivOddSpan.String())
+	}
+
+	evenSpan := &PowNode{
+		Base: NewIntervalNode(big.NewRat(-32, 1), big.NewRat(32, 1)),
+		Exp:  NewRationalFromBigRat(big.NewRat(2, 5)),
+	}
+	ivEvenSpan, err := EvalNodeInterval(evenSpan, 20)
+	if err != nil {
+		t.Fatalf("EvalNodeInterval([-32, 32]^(2/5)) failed: %v", err)
+	}
+	if ivEvenSpan.Low.Sign() != 0 || ivEvenSpan.High.Cmp(big.NewRat(4, 1)) < 0 {
+		t.Errorf("[-32, 32]^(2/5) = %s, must enclose [0, 4] with Low == 0", ivEvenSpan.String())
+	}
+
+	// Contrapositive: zero-crossing interval with negative exponent must fail
+	negSpan := &PowNode{
+		Base: NewIntervalNode(big.NewRat(-1, 1), big.NewRat(1, 1)),
+		Exp:  NewRationalFromBigRat(big.NewRat(-1, 5)),
+	}
+	if iv, err := EvalNodeInterval(negSpan, 12); err == nil {
+		t.Errorf("expected error for [-1, 1]^(-1/5), got %s", iv.String())
+	}
+
+	// Contradiction: even denominator on negative base must fail
+	evenDenom := &PowNode{
+		Base: mustRational(-16, 1),
+		Exp:  NewRationalFromBigRat(big.NewRat(3, 4)),
+	}
+	if iv, err := EvalNodeInterval(evenDenom, 12); err == nil {
+		t.Errorf("expected error for (-16)^(3/4), got %s", iv.String())
+	}
+}
+
