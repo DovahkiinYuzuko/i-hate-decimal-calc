@@ -2,6 +2,10 @@
 *
 !.gitignore
 # ---AUTO-Generated---
+# .gitignores/.githooks.gitignore
+!.githooks/
+!.githooks/pre-commit
+!.githooks/pre-push
 # .gitignores/.github.gitignore
 !.github/
 !.github/workflows/
@@ -33,7 +37,8 @@
 !formal/lean-toolchain
 !formal/lakefile.toml
 !formal/test_cases.txt
-!formal/lake-manifest.json!formal/Tools/
+!formal/lake-manifest.json
+!formal/Tools/
 !formal/Tools/AxiomAudit.lean
 # .gitignores/internal.gitignore
 !internal/
@@ -112,3 +117,9 @@
 
 !tools/doc-auditor/
 !tools/doc-auditor/*.go
+
+!tools/repo-lint/
+!tools/repo-lint/*.go
+!tools/repo-lint/internal/
+!tools/repo-lint/internal/lint/
+!tools/repo-lint/internal/lint/*.go

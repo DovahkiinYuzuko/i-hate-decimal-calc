@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+# Git pre-push hook for i-hate-decimal-calc (.githooks/pre-push)
+# Runs fast non-interactive Smoke & Adversarial differential checks before pushing.
+
+echo "[pre-push] Running ihd Differential Fuzzing Smoke check..."
+
+if command -v pwsh >/dev/null 2>&1; then
+    pwsh -NoProfile -File ./test-scripts/go/fuzz/local-ci.ps1 -Mode Smoke
+    EXIT_CODE=$?
+elif command -v powershell >/dev/null 2>&1; then
+    powershell -NoProfile -File ./test-scripts/go/fuzz/local-ci.ps1 -Mode Smoke
+    EXIT_CODE=$?
+else
+    echo "[pre-push] Warning: Neither pwsh nor powershell found. Skipping local differential CI."
+    exit 0
+fi
+
+if [ $EXIT_CODE -ne 0 ]; then
+    echo "[pre-push] Blocked: Pre-push differential smoke check failed! Push rejected."
+    echo "[pre-push] Reason: One or more differential fuzzing smoke assertions failed."
+    echo "[pre-push] Remediation: Run 'pwsh -NoProfile -File ./test-scripts/go/fuzz/local-ci.ps1 -Mode Smoke' locally, fix the failing CAS regression, and push again."
+    exit $EXIT_CODE
+fi
+
+exit 0

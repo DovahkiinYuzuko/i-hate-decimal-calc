@@ -1,0 +1,76 @@
+#!/bin/sh
+# Unified Git pre-commit hook for i-hate-decimal-calc (.githooks/pre-commit)
+# Must remain LF-only for cross-platform POSIX sh / Git Bash compatibility.
+
+# 1. Auto-build reference HTML if Markdown sources are staged
+STAGED_MD=$(git diff --cached --name-only --diff-filter=ACM | grep -E "^docs/references/.+\.md$")
+
+if [ -n "$STAGED_MD" ]; then
+  echo "[pre-commit] Reference Markdown modification detected. Rebuilding HTML..."
+  node tools/reference-builder/index.js
+  if [ $? -ne 0 ]; then
+    echo "[pre-commit] Error: Reference HTML build failed!"
+    echo "[pre-commit] Reason: tools/reference-builder/index.js returned a non-zero exit code."
+    echo "[pre-commit] Remediation: Fix the Markdown syntax or builder error and re-run 'node tools/reference-builder/index.js'."
+    exit 1
+  fi
+  git add docs/references/*/*.html
+  echo "[pre-commit] Staged updated reference HTML files."
+fi
+
+# 2. Sync tools/reference-builder/package.json version with latest git tag
+LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')
+if [ -n "$LATEST_TAG" ] && [ -f "tools/reference-builder/package.json" ]; then
+  node -e '
+    const fs = require("fs");
+    const p = "tools/reference-builder/package.json";
+    const pkg = JSON.parse(fs.readFileSync(p, "utf-8"));
+    const tag = process.argv[1];
+    if (tag && pkg.version !== tag) {
+      pkg.version = tag;
+      fs.writeFileSync(p, JSON.stringify(pkg, null, 2) + "\n", "utf-8");
+      process.exit(10);
+    }
+  ' "$LATEST_TAG"
+  if [ $? -eq 10 ]; then
+    git add tools/reference-builder/package.json
+    echo "[pre-commit] Synced tools/reference-builder/package.json version to $LATEST_TAG"
+  fi
+fi
+
+# 3. Unified repository linter (fast staged mode)
+if [ -f "./tools/repo-lint/main.go" ] && command -v go >/dev/null 2>&1; then
+  echo "[pre-commit] Running tools/repo-lint --staged..."
+  go run ./tools/repo-lint --staged
+  LINT_EXIT=$?
+  if [ $LINT_EXIT -ne 0 ]; then
+    echo ""
+    echo "[pre-commit] Blocked by tools/repo-lint (--staged)."
+    echo "[pre-commit] Reason: One or more repository governance or static rules failed above."
+    echo "[pre-commit] Remediation: Follow the Remediation instructions printed for each [ERROR] above, re-stage your fixes, and commit again."
+    exit $LINT_EXIT
+  fi
+fi
+
+# 4. i18n hardcoded text audit via txthc
+if command -v pwsh >/dev/null 2>&1; then
+  PS_CMD="pwsh"
+elif command -v powershell.exe >/dev/null 2>&1; then
+  PS_CMD="powershell.exe"
+else
+  PS_CMD="powershell"
+fi
+
+if [ -f "./test-scripts/test-i18n-audit.ps1" ]; then
+  $PS_CMD -NoProfile -ExecutionPolicy Bypass -File "./test-scripts/test-i18n-audit.ps1" -Staged
+  I18N_EXIT=$?
+  if [ $I18N_EXIT -ne 0 ]; then
+    echo ""
+    echo "[pre-commit] Blocked: Hardcoded user-facing strings detected in staged diffs!"
+    echo "[pre-commit] Reason: All user-facing messages must be externalized into internal/i18n/locales/*.json."
+    echo "[pre-commit] Remediation: Move the string to internal/i18n/locales/{en,ja}.json and use i18n.T(...), or append '// txthc-ignore' for intentional internal strings."
+    exit $I18N_EXIT
+  fi
+fi
+
+exit 0
