@@ -1,11 +1,45 @@
 package calc
 
 import (
-	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
+
+	"github.com/DovahkiinYuzuko/i-hate-decimal-calc/internal/i18n"
 )
+
+// normalizeLogToLn converts common logarithm log(u) -> ln(u)/ln(10) and arbitrary-base
+// logarithm log(b, u) -> ln(u)/ln(b) so symbolic integration and Risch towers operate
+// strictly on natural logarithms.
+func normalizeLogToLn(expr Node) (Node, bool) {
+	if expr == nil {
+		return nil, false
+	}
+	changed := false
+	res := Transform(expr, func(curr Node) Node {
+		fn, ok := curr.(*FuncNode)
+		if !ok || strings.ToLower(fn.Name) != "log" {
+			return curr
+		}
+		if len(fn.Args) == 1 {
+			changed = true
+			lnU := &FuncNode{Name: "ln", Args: []Node{fn.Args[0]}}
+			ln10 := &FuncNode{Name: "ln", Args: []Node{mustRational(10, 1)}}
+			invLn10 := &PowNode{Base: ln10, Exp: mustRational(-1, 1)}
+			return NewMul([]Node{lnU, invLn10})
+		}
+		if len(fn.Args) == 2 {
+			changed = true
+			lnU := &FuncNode{Name: "ln", Args: []Node{fn.Args[1]}}
+			lnB := &FuncNode{Name: "ln", Args: []Node{fn.Args[0]}}
+			invLnB := &PowNode{Base: lnB, Exp: mustRational(-1, 1)}
+			return NewMul([]Node{lnU, invLnB})
+		}
+		return curr
+	})
+	return res, changed
+}
 
 // -------------------------------------------------------------------------
 // Symbolic Integration (Indefinite & Definite Integration)
@@ -251,6 +285,14 @@ func integrateCore(expr Node, varName string) (Node, error) {
 		return nil, fmt.Errorf("%s", i18n.T("integral.err_cannot_integrate_nil_expression"))
 	}
 
+	if normLog, changed := normalizeLogToLn(expr); changed {
+		if ev, err := Eval(normLog); err == nil && ev != nil {
+			expr = ev
+		} else {
+			expr = normLog
+		}
+	}
+
 	// 0. Piecewise function integration
 	if pw, ok := expr.(*PiecewiseNode); ok {
 		newCases := make([]PiecewiseCase, len(pw.Cases))
@@ -466,7 +508,7 @@ func integrateCore(expr Node, varName string) (Node, error) {
 					// int(exp(ax+b)) dx = 1/a * exp(ax+b)
 					return simplifyMul([]Node{invA, v})
 
-				case "ln", "log":
+				case "ln":
 					// int(ln(ax+b)) dx = 1/a * ((ax+b)*ln(ax+b) - (ax+b))
 					lnNode := &FuncNode{Name: "ln", Args: []Node{arg}}
 					prod, err := simplifyMul([]Node{arg, lnNode})
@@ -565,7 +607,7 @@ func tryIntegrationByParts(uCandidate, vPrimeCandidate Node, varName string) (No
 			if err != nil {
 				return nil, false
 			}
-		case "ln", "log":
+		case "ln":
 			// For ln: choose u = ln, v' = poly!
 			// This case is handled when candidates are swapped, but let's be explicit:
 			return nil, false

@@ -614,6 +614,54 @@ func evalSampleIntervalFallbackBound(expr Node, b floatVarBinding) (float64, boo
 	return y, true
 }
 
+type constRatExpInfo struct {
+	ok       bool
+	isInt    bool
+	numOdd   bool
+	denOdd   bool
+	hasInt64 bool
+	num64    int64
+	den64    int64
+}
+
+func extractConstRationalExp(n Node) constRatExpInfo {
+	if r, ok := n.(*RationalNode); ok {
+		if r.Val == nil {
+			return constRatExpInfo{}
+		}
+		num, den := r.Val.Num(), r.Val.Denom()
+		info := constRatExpInfo{
+			ok:     true,
+			isInt:  r.Val.IsInt(),
+			numOdd: num.Bit(0) == 1,
+			denOdd: den.Bit(0) == 1,
+		}
+		if num.IsInt64() && den.IsInt64() {
+			info.hasInt64 = true
+			info.num64 = num.Int64()
+			info.den64 = den.Int64()
+		}
+		return info
+	}
+	rat, ok := extractExactRationalNode(n)
+	if !ok || rat == nil {
+		return constRatExpInfo{}
+	}
+	num, den := rat.Num(), rat.Denom()
+	info := constRatExpInfo{
+		ok:     true,
+		isInt:  rat.IsInt(),
+		numOdd: num.Bit(0) == 1,
+		denOdd: den.Bit(0) == 1,
+	}
+	if num.IsInt64() && den.IsInt64() {
+		info.hasInt64 = true
+		info.num64 = num.Int64()
+		info.den64 = den.Int64()
+	}
+	return info
+}
+
 func evalASTFloat64Bound(n Node, b floatVarBinding) (float64, evalFloatState) {
 	if n == nil {
 		return 0, evalFloatUnsupported
@@ -697,16 +745,35 @@ func evalASTFloat64Bound(n Node, b floatVarBinding) (float64, evalFloatState) {
 			return 0, evalFloatDomainError
 		}
 		if base < 0 {
-			if r, okR := v.Exp.(*RationalNode); okR && r.Val.IsInt() {
-				res := math.Pow(base, exp)
+			info := extractConstRationalExp(v.Exp)
+			if !info.ok {
+				return 0, evalFloatDomainError
+			}
+			if info.isInt {
+				mag := math.Pow(-base, exp)
+				res := mag
+				if info.numOdd {
+					res = -mag
+				}
 				if math.IsNaN(res) || math.IsInf(res, 0) {
 					return 0, evalFloatDomainError
 				}
 				return res, evalFloatOK
 			}
-			if r, okR := v.Exp.(*RationalNode); okR && r.Val.Denom().IsInt64() && r.Val.Denom().Int64() == 3 {
-				num := float64(r.Val.Num().Int64())
-				res := math.Pow(math.Cbrt(base), num)
+			if info.denOdd {
+				var res float64
+				if info.hasInt64 && info.den64 == 3 && info.num64 == 1 {
+					res = math.Cbrt(base)
+				} else if info.hasInt64 && info.den64 == 3 && info.num64 == -1 {
+					res = 1.0 / math.Cbrt(base)
+				} else {
+					mag := math.Pow(-base, exp)
+					if info.numOdd {
+						res = -mag
+					} else {
+						res = mag
+					}
+				}
 				if math.IsNaN(res) || math.IsInf(res, 0) {
 					return 0, evalFloatDomainError
 				}
@@ -729,6 +796,25 @@ func evalASTFloat64Bound(n Node, b floatVarBinding) (float64, evalFloatState) {
 		}
 		return math.Sqrt(rad), evalFloatOK
 	case *FuncNode:
+		fnName := strings.ToLower(v.Name)
+		if fnName == "log" && len(v.Args) == 2 {
+			baseVal, stBase := evalASTFloat64Bound(v.Args[0], b)
+			if stBase != evalFloatOK {
+				return 0, stBase
+			}
+			argVal, stArg := evalASTFloat64Bound(v.Args[1], b)
+			if stArg != evalFloatOK {
+				return 0, stArg
+			}
+			if baseVal <= 0 || baseVal == 1 || argVal <= 0 {
+				return 0, evalFloatDomainError
+			}
+			res := math.Log(argVal) / math.Log(baseVal)
+			if math.IsNaN(res) || math.IsInf(res, 0) {
+				return 0, evalFloatDomainError
+			}
+			return res, evalFloatOK
+		}
 		if len(v.Args) != 1 {
 			return 0, evalFloatUnsupported
 		}
@@ -736,7 +822,7 @@ func evalASTFloat64Bound(n Node, b floatVarBinding) (float64, evalFloatState) {
 		if st != evalFloatOK {
 			return 0, st
 		}
-		switch strings.ToLower(v.Name) {
+		switch fnName {
 		case "sin":
 			return math.Sin(arg), evalFloatOK
 		case "cos":
@@ -779,11 +865,16 @@ func evalASTFloat64Bound(n Node, b floatVarBinding) (float64, evalFloatState) {
 				return 0, evalFloatDomainError
 			}
 			return res, evalFloatOK
-		case "ln", "log":
+		case "ln":
 			if arg <= 0 {
 				return 0, evalFloatDomainError
 			}
 			return math.Log(arg), evalFloatOK
+		case "log":
+			if arg <= 0 {
+				return 0, evalFloatDomainError
+			}
+			return math.Log10(arg), evalFloatOK
 		case "abs":
 			return math.Abs(arg), evalFloatOK
 		case "sqrt":

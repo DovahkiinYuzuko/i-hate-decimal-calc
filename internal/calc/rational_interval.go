@@ -577,31 +577,14 @@ func RationalBoundSinCos(x *big.Rat, isSin bool, steps int) RationalInterval {
 }
 
 // RationalBoundLn computes rigorous rational enclosure for ln(x) with x in Q, x > 0
-// using series ln(x) = 2 * sum_{k=0}^n y^(2k+1) / (2k+1) where y = (x-1)/(x+1) in (0, 1).
-func RationalBoundLn(x *big.Rat, steps int) (RationalInterval, error) {
-	if x.Sign() <= 0 {
-		return RationalInterval{}, fmt.Errorf("%s", i18n.T("calc.interval_ln_domain", x.RatString()))
-	}
-	if x.Cmp(big.NewRat(1, 1)) == 0 {
-		return NewExactRationalInterval(big.NewRat(0, 1)), nil
-	}
-
-	if steps < 4 {
-		steps = 10
-	}
-
-	if x.Cmp(big.NewRat(1, 1)) < 0 {
-		// ln(x) = -ln(1/x)
-		invX := new(big.Rat).Inv(x)
-		b, err := RationalBoundLn(invX, steps)
-		if err != nil {
-			return RationalInterval{}, err
-		}
-		return b.Neg(), nil
-	}
-
-	// x > 1: y = (x-1)/(x+1) in (0, 1)
+// rationalBoundLnReduced evaluates ln(x) for x in [1, 3/2] using the rapidly converging series
+// ln(x) = 2 * sum_{k=0}^n y^(2k+1)/(2k+1) where y = (x-1)/(x+1) in [0, 1/5].
+func rationalBoundLnReduced(x *big.Rat, steps int) RationalInterval {
 	one := big.NewRat(1, 1)
+	if x.Cmp(one) == 0 {
+		return NewExactRationalInterval(big.NewRat(0, 1))
+	}
+
 	y := new(big.Rat).Quo(new(big.Rat).Sub(x, one), new(big.Rat).Add(x, one))
 	ySquared := new(big.Rat).Mul(y, y)
 
@@ -619,14 +602,89 @@ func RationalBoundLn(x *big.Rat, steps int) (RationalInterval, error) {
 
 	// Remainder R_n < 2/(2n+3) * y^(2n+3) / (1 - y^2)
 	twoOver := big.NewRat(2, int64(2*steps+3))
-	oneMinusYSq := new(big.Rat).Sub(big.NewRat(1, 1), ySquared)
+	oneMinusYSq := new(big.Rat).Sub(one, ySquared)
 	remGeom := new(big.Rat).Quo(curPow, oneMinusYSq)
 	rem := new(big.Rat).Mul(twoOver, remGeom)
 
 	low := new(big.Rat).Set(sum)
 	high := new(big.Rat).Add(sum, rem)
 
-	return NewRationalInterval(low, high), nil
+	return NewRationalInterval(low, high)
+}
+
+// RationalBoundLn computes rigorous rational enclosure for ln(x) with x in Q, x > 0
+// using binary range reduction x = m * 2^k with m in [2/3, 4/3] and the rapidly converging
+// series ln(m) = 2 * sum_{k=0}^n y^(2k+1) / (2k+1) where y = (m-1)/(m+1).
+func RationalBoundLn(x *big.Rat, steps int) (RationalInterval, error) {
+	if x.Sign() <= 0 {
+		return RationalInterval{}, fmt.Errorf("%s", i18n.T("calc.interval_ln_domain", x.RatString()))
+	}
+	one := big.NewRat(1, 1)
+	if x.Cmp(one) == 0 {
+		return NewExactRationalInterval(big.NewRat(0, 1)), nil
+	}
+
+	if steps < 4 {
+		steps = 10
+	}
+
+	if x.Cmp(one) < 0 {
+		// ln(x) = -ln(1/x)
+		invX := new(big.Rat).Inv(x)
+		b, err := RationalBoundLn(invX, steps)
+		if err != nil {
+			return RationalInterval{}, err
+		}
+		return b.Neg(), nil
+	}
+
+	threeHalves := big.NewRat(3, 2)
+	if x.Cmp(threeHalves) <= 0 {
+		return rationalBoundLnReduced(x, steps), nil
+	}
+
+	// Binary range reduction: x = m * 2^k with m in [2/3, 4/3]
+	k := x.Num().BitLen() - x.Denom().BitLen()
+	var m *big.Rat
+	if k >= 0 {
+		denShifted := new(big.Int).Lsh(x.Denom(), uint(k))
+		m = new(big.Rat).SetFrac(x.Num(), denShifted)
+	} else {
+		numShifted := new(big.Int).Lsh(x.Num(), uint(-k))
+		m = new(big.Rat).SetFrac(numShifted, x.Denom())
+	}
+
+	fourThirds := big.NewRat(4, 3)
+	twoThirds := big.NewRat(2, 3)
+	half := big.NewRat(1, 2)
+	two := big.NewRat(2, 1)
+	for m.Cmp(fourThirds) > 0 {
+		m.Mul(m, half)
+		k++
+	}
+	for m.Cmp(twoThirds) < 0 {
+		m.Mul(m, two)
+		k--
+	}
+
+	var lnM RationalInterval
+	cmpM := m.Cmp(one)
+	if cmpM == 0 {
+		lnM = NewExactRationalInterval(big.NewRat(0, 1))
+	} else if cmpM > 0 {
+		lnM = rationalBoundLnReduced(m, steps)
+	} else {
+		invM := new(big.Rat).Inv(m)
+		lnM = rationalBoundLnReduced(invM, steps).Neg()
+	}
+
+	// Exact identity: 2 = (4/3)^2 * (9/8), so ln(2) = 2*ln(4/3) + ln(9/8)
+	ln43 := rationalBoundLnReduced(fourThirds, steps)
+	ln98 := rationalBoundLnReduced(big.NewRat(9, 8), steps)
+	ln2 := ln43.Add(ln43).Add(ln98)
+
+	kTerm := NewExactRationalInterval(big.NewRat(int64(k), 1)).Mul(ln2)
+	return lnM.Add(kTerm), nil
 }
 
 // RationalBoundSqrt computes rigorous rational enclosure for sqrt(x) with x in Q, x >= 0
@@ -741,6 +799,219 @@ func RationalBoundCbrt(x *big.Rat, steps int) (RationalInterval, error) {
 		return NewRationalInterval(new(big.Rat).Neg(high), new(big.Rat).Neg(low)), nil
 	}
 	return NewRationalInterval(low, high), nil
+}
+
+// extractExactRationalNode reduces a constant rational AST expression (including unsimplified
+// parser trees such as UnaryOp("-", ...) or Mul(a, Pow(b, -1))) into a canonical *big.Rat.
+func extractExactRationalNode(n Node) (*big.Rat, bool) {
+	if n == nil {
+		return nil, false
+	}
+	switch v := n.(type) {
+	case *RationalNode:
+		if v.Val == nil {
+			return nil, false
+		}
+		return new(big.Rat).Set(v.Val), true
+	case *UnaryOpNode:
+		if v.Op != "-" {
+			return nil, false
+		}
+		inner, ok := extractExactRationalNode(v.Expr)
+		if !ok {
+			return nil, false
+		}
+		return inner.Neg(inner), true
+	case *AddNode:
+		acc := big.NewRat(0, 1)
+		for _, t := range v.Terms {
+			r, ok := extractExactRationalNode(t)
+			if !ok {
+				return nil, false
+			}
+			acc.Add(acc, r)
+		}
+		return acc, true
+	case *MulNode:
+		acc := big.NewRat(1, 1)
+		for _, f := range v.Factors {
+			r, ok := extractExactRationalNode(f)
+			if !ok {
+				return nil, false
+			}
+			acc.Mul(acc, r)
+		}
+		return acc, true
+	case *PowNode:
+		baseRat, okB := extractExactRationalNode(v.Base)
+		expRat, okE := extractExactRationalNode(v.Exp)
+		if !okB || !okE || !expRat.IsInt() || !expRat.Num().IsInt64() {
+			return nil, false
+		}
+		e := expRat.Num().Int64()
+		if e < -64 || e > 64 {
+			return nil, false
+		}
+		if e == 0 {
+			return big.NewRat(1, 1), true
+		}
+		if e < 0 {
+			if baseRat.Sign() == 0 {
+				return nil, false
+			}
+			baseRat.Inv(baseRat)
+			e = -e
+		}
+		eBig := big.NewInt(e)
+		num := new(big.Int).Exp(baseRat.Num(), eBig, nil)
+		den := new(big.Int).Exp(baseRat.Denom(), eBig, nil)
+		return new(big.Rat).SetFrac(num, den), true
+	default:
+		return nil, false
+	}
+}
+
+// bigIntNthRootFloor computes floor(n^(1/q)) for non-negative integer n and q >= 1.
+func bigIntNthRootFloor(n *big.Int, q int64) *big.Int {
+	if n.Sign() <= 0 {
+		return big.NewInt(0)
+	}
+	if q <= 1 {
+		return new(big.Int).Set(n)
+	}
+	if q == 2 {
+		return new(big.Int).Sqrt(n)
+	}
+	if q == 3 {
+		return bigIntCbrtFloor(n)
+	}
+	one := big.NewInt(1)
+	if n.Cmp(one) == 0 {
+		return one
+	}
+
+	exp := (n.BitLen() + int(q) - 1) / int(q)
+	u := new(big.Int).Lsh(one, uint(exp))
+	qBig := big.NewInt(q)
+	qMinus1 := big.NewInt(q - 1)
+	uPow := new(big.Int)
+	next := new(big.Int)
+	term := new(big.Int)
+
+	for {
+		uPow.Exp(u, qMinus1, nil)
+		next.Quo(n, uPow)
+		term.Mul(qMinus1, u)
+		next.Add(next, term)
+		next.Quo(next, qBig)
+		if next.Cmp(u) >= 0 {
+			break
+		}
+		u.Set(next)
+	}
+
+	powVal := new(big.Int)
+	for {
+		powVal.Exp(u, qBig, nil)
+		if powVal.Cmp(n) <= 0 {
+			break
+		}
+		u.Sub(u, one)
+	}
+	uPlus1 := new(big.Int)
+	for {
+		uPlus1.Add(u, one)
+		powVal.Exp(uPlus1, qBig, nil)
+		if powVal.Cmp(n) > 0 {
+			break
+		}
+		u.Set(uPlus1)
+	}
+	return u
+}
+
+// RationalBoundNthRoot computes certified rational enclosure for the real q-th root of x
+// (for odd q >= 3 or x >= 0) using integer q-th root with dyadic scaling.
+func RationalBoundNthRoot(x *big.Rat, q int64, steps int) (RationalInterval, error) {
+	if x.Sign() == 0 {
+		return NewExactRationalInterval(big.NewRat(0, 1)), nil
+	}
+	neg := x.Sign() < 0
+	if neg && q%2 == 0 {
+		return RationalInterval{}, fmt.Errorf("%s", i18n.T("interval.err_non_positive_base_in_real", x.RatString()))
+	}
+	absX := new(big.Rat).Abs(x)
+
+	k := steps * 4
+	if k < 16 {
+		k = 16
+	}
+	maxK := int(16384 / q)
+	if maxK < 16 {
+		maxK = 16
+	}
+	if k > maxK {
+		k = maxK
+	}
+
+	scaledNum := new(big.Int).Lsh(absX.Num(), uint(int(q)*k))
+	div, rem := new(big.Int).QuoRem(scaledNum, absX.Denom(), new(big.Int))
+
+	m := bigIntNthRootFloor(div, q)
+	denom := new(big.Int).Lsh(big.NewInt(1), uint(k))
+
+	// Exact q-th root detection (zero-width enclosure)
+	if rem.Sign() == 0 && new(big.Int).Exp(m, big.NewInt(q), nil).Cmp(div) == 0 {
+		exact := new(big.Rat).SetFrac(m, denom)
+		if neg {
+			exact.Neg(exact)
+		}
+		return NewExactRationalInterval(exact), nil
+	}
+
+	mPlusOne := new(big.Int).Add(m, big.NewInt(1))
+	low := new(big.Rat).SetFrac(m, denom)
+	high := new(big.Rat).SetFrac(mPlusOne, denom)
+
+	if neg {
+		return NewRationalInterval(new(big.Rat).Neg(high), new(big.Rat).Neg(low)), nil
+	}
+	return NewRationalInterval(low, high), nil
+}
+
+func evalPositiveBaseRatPow(posInt RationalInterval, expRat *big.Rat, steps int) (RationalInterval, error) {
+	if expRat.Denom().IsInt64() && expRat.Num().IsInt64() {
+		q := expRat.Denom().Int64()
+		p := expRat.Num().Int64()
+		if q >= 2 && q <= 64 && p >= -64 && p <= 64 {
+			lowBound, err := RationalBoundNthRoot(posInt.Low, q, steps)
+			if err != nil {
+				return RationalInterval{}, err
+			}
+			highBound, err := RationalBoundNthRoot(posInt.High, q, steps)
+			if err != nil {
+				return RationalInterval{}, err
+			}
+			rootInt := NewRationalInterval(lowBound.Low, highBound.High)
+			if p == 1 {
+				return rootInt, nil
+			}
+			return rootInt.PowIntChecked(int(p))
+		}
+	}
+	lnLow, err := RationalBoundLn(posInt.Low, steps)
+	if err != nil {
+		return RationalInterval{}, err
+	}
+	lnHigh, err := RationalBoundLn(posInt.High, steps)
+	if err != nil {
+		return RationalInterval{}, err
+	}
+	lnInterval := NewRationalInterval(lnLow.Low, lnHigh.High)
+	prod := NewExactRationalInterval(expRat).Mul(lnInterval)
+	eLow := RationalBoundExp(prod.Low, steps)
+	eHigh := RationalBoundExp(prod.High, steps)
+	return NewRationalInterval(eLow.Low, eHigh.High), nil
 }
 
 // EvalNodeInterval recursively evaluates an AST expression into a RationalInterval enclosure.
@@ -858,12 +1129,14 @@ func EvalNodeInterval(n Node, steps int) (RationalInterval, error) {
 
 	case *PowNode:
 		// Base ^ Exp
+		expExactRat, expIsExactRat := extractExactRationalNode(node.Exp)
+
 		// Special case 1: Integer power
-		if expRat, isRat := node.Exp.(*RationalNode); isRat && expRat.Val.IsInt() {
-			if !expRat.Val.Num().IsInt64() {
+		if expIsExactRat && expExactRat.IsInt() {
+			if !expExactRat.Num().IsInt64() {
 				return RationalInterval{}, fmt.Errorf("%s", i18n.T("interval.err_unsupported_node_for_interval_evaluation", node.String()))
 			}
-			exp64 := expRat.Val.Num().Int64()
+			exp64 := expExactRat.Num().Int64()
 			expInt := int(exp64)
 			if int64(expInt) != exp64 {
 				return RationalInterval{}, fmt.Errorf("%s", i18n.T("interval.err_unsupported_node_for_interval_evaluation", node.String()))
@@ -891,6 +1164,68 @@ func EvalNodeInterval(n Node, steps int) (RationalInterval, error) {
 			lowBound := RationalBoundExp(expInt.Low, steps)
 			highBound := RationalBoundExp(expInt.High, steps)
 			return NewRationalInterval(lowBound.Low, highBound.High), nil
+		}
+
+		// Special case 3: Odd-denominator rational exponent p/q (q odd) supports negative & zero-crossing real bases
+		if expIsExactRat && expExactRat.Denom().Bit(0) == 1 {
+			baseInt, err := EvalNodeInterval(node.Base, steps)
+			if err != nil {
+				return RationalInterval{}, err
+			}
+			if expExactRat.Sign() < 0 && baseInt.ContainsZero() {
+				return RationalInterval{}, fmt.Errorf("%s", i18n.T("calc.interval_zero_division", baseInt.String()))
+			}
+			if baseInt.IsStrictlyPositive() {
+				return evalPositiveBaseRatPow(baseInt, expExactRat, steps)
+			}
+			if baseInt.IsStrictlyNegative() {
+				posRes, err := evalPositiveBaseRatPow(baseInt.Neg(), expExactRat, steps)
+				if err != nil {
+					return RationalInterval{}, err
+				}
+				if expExactRat.Num().Bit(0) == 1 {
+					return posRes.Neg(), nil
+				}
+				return posRes, nil
+			}
+			// baseInt contains zero and expExactRat > 0
+			zero := big.NewRat(0, 1)
+			if expExactRat.Num().Bit(0) == 1 {
+				// Odd numerator: strictly increasing on R
+				lowBound := zero
+				if baseInt.Low.Sign() < 0 {
+					negLow := new(big.Rat).Neg(baseInt.Low)
+					rLow, err := evalPositiveBaseRatPow(NewExactRationalInterval(negLow), expExactRat, steps)
+					if err != nil {
+						return RationalInterval{}, err
+					}
+					lowBound = rLow.Neg().Low
+				}
+				highBound := zero
+				if baseInt.High.Sign() > 0 {
+					rHigh, err := evalPositiveBaseRatPow(NewExactRationalInterval(baseInt.High), expExactRat, steps)
+					if err != nil {
+						return RationalInterval{}, err
+					}
+					highBound = rHigh.High
+				}
+				return NewRationalInterval(lowBound, highBound), nil
+			}
+			// Even numerator: even function with minimum 0 at x = 0
+			absLow := new(big.Rat).Abs(baseInt.Low)
+			absHigh := new(big.Rat).Abs(baseInt.High)
+			maxAbs := absLow
+			if absHigh.Cmp(maxAbs) > 0 {
+				maxAbs = absHigh
+			}
+			if maxAbs.Sign() == 0 {
+				return NewExactRationalInterval(zero), nil
+			}
+			hiRes, err := evalPositiveBaseRatPow(NewExactRationalInterval(maxAbs), expExactRat, steps)
+			if err != nil {
+				return RationalInterval{}, err
+			}
+			return NewRationalInterval(zero, hiRes.High), nil
 		}
 
 		// General real power A^B = exp(B * ln(A))
@@ -927,7 +1262,7 @@ func EvalNodeInterval(n Node, steps int) (RationalInterval, error) {
 		return NewRationalInterval(eLow.Low, eHigh.High), nil
 
 	case *FuncNode:
-		switch node.Name {
+		switch strings.ToLower(node.Name) {
 		case "exp":
 			if len(node.Args) != 1 {
 				return RationalInterval{}, fmt.Errorf("%s", i18n.T("interval.err_exp_expects_1_argument"))
@@ -940,7 +1275,7 @@ func EvalNodeInterval(n Node, steps int) (RationalInterval, error) {
 			highBound := RationalBoundExp(argInt.High, steps)
 			return NewRationalInterval(lowBound.Low, highBound.High), nil
 
-		case "ln", "log":
+		case "ln":
 			if len(node.Args) != 1 {
 				return RationalInterval{}, fmt.Errorf("%s", i18n.T("interval.err_ln_expects_1_argument"))
 			}
@@ -960,6 +1295,70 @@ func EvalNodeInterval(n Node, steps int) (RationalInterval, error) {
 				return RationalInterval{}, err
 			}
 			return NewRationalInterval(lowBound.Low, highBound.High), nil
+
+		case "log":
+			if len(node.Args) == 1 {
+				argInt, err := EvalNodeInterval(node.Args[0], steps)
+				if err != nil {
+					return RationalInterval{}, err
+				}
+				if !argInt.IsStrictlyPositive() {
+					return RationalInterval{}, fmt.Errorf("%s", i18n.T("errors.domain_log_arg", argInt.String()))
+				}
+				lowBound, err := RationalBoundLn(argInt.Low, steps)
+				if err != nil {
+					return RationalInterval{}, err
+				}
+				highBound, err := RationalBoundLn(argInt.High, steps)
+				if err != nil {
+					return RationalInterval{}, err
+				}
+				lnArg := NewRationalInterval(lowBound.Low, highBound.High)
+				ln10, err := RationalBoundLn(big.NewRat(10, 1), steps)
+				if err != nil {
+					return RationalInterval{}, err
+				}
+				return lnArg.Div(ln10)
+			}
+			if len(node.Args) == 2 {
+				baseInt, err := EvalNodeInterval(node.Args[0], steps)
+				if err != nil {
+					return RationalInterval{}, err
+				}
+				if !baseInt.IsStrictlyPositive() {
+					return RationalInterval{}, fmt.Errorf("%s", i18n.T("errors.domain_log_base", baseInt.String()))
+				}
+				argInt, err := EvalNodeInterval(node.Args[1], steps)
+				if err != nil {
+					return RationalInterval{}, err
+				}
+				if !argInt.IsStrictlyPositive() {
+					return RationalInterval{}, fmt.Errorf("%s", i18n.T("errors.domain_log_arg", argInt.String()))
+				}
+				lnBaseLow, err := RationalBoundLn(baseInt.Low, steps)
+				if err != nil {
+					return RationalInterval{}, err
+				}
+				lnBaseHigh, err := RationalBoundLn(baseInt.High, steps)
+				if err != nil {
+					return RationalInterval{}, err
+				}
+				lnBase := NewRationalInterval(lnBaseLow.Low, lnBaseHigh.High)
+				if lnBase.ContainsZero() {
+					return RationalInterval{}, fmt.Errorf("%s", i18n.T("errors.domain_log_base_one"))
+				}
+				lnArgLow, err := RationalBoundLn(argInt.Low, steps)
+				if err != nil {
+					return RationalInterval{}, err
+				}
+				lnArgHigh, err := RationalBoundLn(argInt.High, steps)
+				if err != nil {
+					return RationalInterval{}, err
+				}
+				lnArg := NewRationalInterval(lnArgLow.Low, lnArgHigh.High)
+				return lnArg.Div(lnBase)
+			}
+			return RationalInterval{}, fmt.Errorf("%s", i18n.T("errors.func_args_between", "log", 1, 2, len(node.Args)))
 
 		case "sin":
 			if len(node.Args) != 1 {
